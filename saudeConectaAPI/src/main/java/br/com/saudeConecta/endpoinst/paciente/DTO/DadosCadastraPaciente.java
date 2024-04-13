@@ -19,6 +19,7 @@ public record DadosCadastraPaciente(
 
         String PaciRg,
 
+        String PaciEmail,
         Long usuario,
 
         String PaciTelefone,

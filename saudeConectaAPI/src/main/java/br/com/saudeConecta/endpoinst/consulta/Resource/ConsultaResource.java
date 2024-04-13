@@ -31,6 +31,7 @@ import java.util.Optional;
 
 @RequestMapping(value = "/consulta")
 @RestController
+@CrossOrigin(origins = "http://localhost:4200")
 public class ConsultaResource {
 
     @Autowired
@@ -42,7 +43,7 @@ public class ConsultaResource {
     @Autowired
     private PacienteRepository pacienteRepository;
 
-
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/buscarId/{id}")
     @Transactional
     public ResponseEntity<DadosConsultaView> buscarPorId(@NotNull @Valid @PathVariable("id") Long Id) {
@@ -52,7 +53,6 @@ public class ConsultaResource {
     }
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    @RolesAllowed("ROLE_PROFESSOR")
     @PostMapping("/post")
     @Transactional
     public ResponseEntity<DadosConsultaView> Cadastra(@NotNull @RequestBody @Valid DadosCadastraConsulta dados, @NotNull BindingResult result,
@@ -88,8 +88,7 @@ public class ConsultaResource {
 
     }
 
-
-    @RolesAllowed("ROLE_DIRETOR")
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping("/pacientepagina")
     public Page<DadosConsultaView> BuscarPorPaginas(@PageableDefault(size = 12, sort = {"CIDCódigo"}) Pageable paginacao) {
         return service.BuscarPorPaginas(paginacao);

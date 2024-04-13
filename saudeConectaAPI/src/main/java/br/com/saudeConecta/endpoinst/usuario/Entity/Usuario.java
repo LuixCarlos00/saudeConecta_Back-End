@@ -1,5 +1,6 @@
 package br.com.saudeConecta.endpoinst.usuario.Entity;
 
+import br.com.saudeConecta.endpoinst.usuario.DTO.DadosLoginUsuario;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -41,6 +42,11 @@ public class Usuario implements Serializable , UserDetails {
         this.login =login;
         this.senha = senha;
 
+    }
+
+    public Usuario(DadosLoginUsuario dados, String senhaCriptografada) {
+        this.login=dados.login();
+        this.senha=senhaCriptografada;
     }
 
 

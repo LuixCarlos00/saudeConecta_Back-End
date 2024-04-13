@@ -8,12 +8,12 @@ import org.jetbrains.annotations.NotNull;
 import java.sql.Date;
 
 public record DadosPacienteView(Long PaciCodigo, String PaciNome, String PaciSexo, Date PaciDataNacimento,
-                                String PaciCpf, String PaciRg, Usuario usuario, String PaciTelefone, Endereco endereco
+                                String PaciCpf, String PaciRg,String PaciEmail, Usuario usuario, String PaciTelefone, Endereco endereco
 
 ) {
     public DadosPacienteView(@NotNull Paciente registro) {
         this(registro.getPaciCodigo(), registro.getPaciNome(), registro.getPaciSexo(), registro.getPaciDataNacimento(), registro.getPaciCpf(),
-                registro.getPaciRg(), registro.getUsuario(), registro.getPaciTelefone(), registro.getEndereco());
+                registro.getPaciRg(),registro.getPaciEmail(), registro.getUsuario(), registro.getPaciTelefone(), registro.getEndereco());
     }
 
 

@@ -1,13 +1,19 @@
 package br.com.saudeConecta.endpoinst.paciente.Service;
 
+import br.com.saudeConecta.email.EnviarEmail.EnviarEmail;
 import br.com.saudeConecta.endpoinst.paciente.DTO.DadosPacienteView;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
 import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
 import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
+import br.com.saudeConecta.util.RecuperaSenha;
+import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,6 +25,12 @@ public class PacienteService {
     @Autowired
     private PacienteRepository repository;
 
+
+    @Autowired
+    private EnviarEmail enviarEmail;
+
+    @Autowired
+    private RecuperaSenha recuperaSenha;
 
     public Optional<Paciente> buscarPacientePorId(Long id) {
         return repository.findById(id);
@@ -59,8 +71,23 @@ public class PacienteService {
 
 
     public void CadastraRegistroPaciente(Paciente medico) throws ResourceNotFoundException {
-         repository.save(medico);
+        repository.save(medico);
     }
 
 
+    public ResponseEntity<Object> buscarPacientePorEmail(String email) throws MessagingException {
+
+        Optional<Paciente> paciente = repository.findByPaciEmail(email);
+
+        if (!paciente.isPresent()) {
+            return ResponseEntity.notFound().build();
+        }else
+
+
+        enviarEmail.enviarEmailDestinatarioPaciente( paciente,  recuperaSenha.gerarCodigoVerificacaoTabelaUsuarios());
+
+
+
+        return ResponseEntity.status(HttpStatus.OK).build();
+    }
 }

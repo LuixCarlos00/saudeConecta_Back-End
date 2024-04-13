@@ -28,6 +28,7 @@ import java.util.Optional;
 
 @RequestMapping(value = "/medico")
 @RestController
+@CrossOrigin(origins = "http://localhost:4200")
 public class MedicoResource {
 
     @Autowired
@@ -41,8 +42,19 @@ public class MedicoResource {
 
     @GetMapping(value = "/buscarId/{id}")
     @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public ResponseEntity<DadosMedicoView> buscarMedicoPorId(@NotNull @Valid @PathVariable("id") Long Id) {
         Optional<Medico> medico = service.buscarMedicoPorId(Id);
+
+        return ResponseEntity.status(HttpStatus.OK).body(new DadosMedicoView((medico.get())));
+    }
+
+
+    @GetMapping(value = "/buscarPorEmail/{email}")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public ResponseEntity<DadosMedicoView> buscarMedicoPorEmail(@NotNull @Valid @PathVariable("email") String email) {
+        Optional<Medico> medico = service.buscarMedicoPorEmail(email);
 
         return ResponseEntity.status(HttpStatus.OK).body(new DadosMedicoView((medico.get())));
     }
@@ -52,7 +64,7 @@ public class MedicoResource {
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PostMapping("/post")
     @Transactional
-    public ResponseEntity<DadosMedicoView> CadastraPlano (@RequestBody @Valid DadosCadastraMedico dados,  @NotNull BindingResult result,
+    public ResponseEntity<DadosMedicoView> CadastraMedico (@RequestBody @Valid DadosCadastraMedico dados,  @NotNull @org.jetbrains.annotations.NotNull BindingResult result,
                                                           UriComponentsBuilder uriBuilder) {
 
 
@@ -89,6 +101,7 @@ public class MedicoResource {
 
 
     @GetMapping("/medicopagina")
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public Page<DadosMedicoView> BuscarPorPaginas(@PageableDefault(size = 12, sort = { "CIDCódigo" }) Pageable paginacao) {
         return service.BuscarPorPaginas(paginacao);
     }
@@ -108,5 +121,10 @@ public class MedicoResource {
         service.deletarPorId(id);
         return ResponseEntity.noContent().build();
     }
+
+
+
+
+
 
 }

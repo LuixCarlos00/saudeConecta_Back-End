@@ -1,5 +1,6 @@
 package br.com.saudeConecta.endpoinst.paciente.Resource;
 
+import br.com.saudeConecta.endpoinst.codigoVerificacao.Repository.CodigoVerificacaoRepository;
 import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
 import br.com.saudeConecta.endpoinst.endereco.Repository.EnderecoRepository;
 import br.com.saudeConecta.endpoinst.paciente.Service.PacienteService;
@@ -8,7 +9,6 @@ import br.com.saudeConecta.endpoinst.paciente.DTO.DadosPacienteView;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
 import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
 import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -28,6 +28,7 @@ import java.util.Optional;
 
 @RequestMapping(value = "/paciente")
 @RestController
+@CrossOrigin(origins = "http://localhost:4200")
 public class PacienteResource {
 
     @Autowired
@@ -39,14 +40,37 @@ public class PacienteResource {
 
     @Autowired
     private EnderecoRepository enderecoRepository;
+    @Autowired
+    private CodigoVerificacaoRepository codigoVerificacaoRepository;
 
     @GetMapping(value = "/buscarId/{id}")
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @Transactional
     public ResponseEntity<DadosPacienteView> buscarPorId(@NotNull @Valid @PathVariable("id") Long Id) {
         Optional<Paciente> medico = service.buscarPacientePorId(Id);
 
         return ResponseEntity.status(HttpStatus.OK).body(new DadosPacienteView((medico.get())));
     }
+
+
+
+
+
+
+
+    @GetMapping(value = "/buscarPorEmail/{email}")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public ResponseEntity<ResponseEntity<Object>> RecuperaSenhaDe(@NotNull @Valid @PathVariable("email") String email) throws Exception {
+
+        ResponseEntity<Object> paciente = service.buscarPacientePorEmail(email);
+
+
+        return  ResponseEntity.ok().body(paciente);
+    }
+
+
+
 
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
@@ -89,7 +113,7 @@ public class PacienteResource {
     }
 
 
-    @RolesAllowed("ROLE_DIRETOR")
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping("/pacientepagina")
     public Page<DadosPacienteView> BuscarPorPaginas(@PageableDefault(size = 12, sort = {"CIDCódigo"}) Pageable paginacao) {
         return service.BuscarPorPaginas(paginacao);

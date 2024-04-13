@@ -21,9 +21,10 @@ public record DadosCadastraMedico(
         String MedCpf,
         @NotNull
         String MedRg,
-
-
+        @NotNull
+        String MedEmail,
         String MedTelefone,
+        @NotNull
         Long usuario,
         @NotNull
         Long endereco

@@ -1,5 +1,6 @@
 package br.com.saudeConecta.endpoinst.usuario.Service;
 
+import br.com.saudeConecta.endpoinst.usuario.DTO.DadosLoginUsuario;
 import br.com.saudeConecta.endpoinst.usuario.DTO.DadosUsuarioView;
 import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
 
@@ -21,15 +22,11 @@ public class UsuarioService {
     private UsuarioRepository repository;
 
 
-    public Optional<Usuario> buscarPacientePorId(Long id) {
+    public Optional<Usuario> buscarUserPorId(Long id) {
         return repository.findById(id);
     }
 
 
-
-    public Page<DadosUsuarioView> BuscarPorPaginas(Pageable paginacao) {
-        return repository.findAll(paginacao).map(DadosUsuarioView::new);
-    }
 
 
     @Transactional
@@ -56,8 +53,8 @@ public class UsuarioService {
     }
 
 
-    public void CadastraRegistroMedico(Usuario usuario) throws ResourceNotFoundException {
-         repository.save(usuario);
+    public void CadastraUsuario(Usuario dados) throws ResourceNotFoundException {
+         repository.save(dados);
     }
 
 

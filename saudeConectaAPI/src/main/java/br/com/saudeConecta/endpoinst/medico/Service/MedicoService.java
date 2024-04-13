@@ -75,9 +75,7 @@ public class MedicoService {
     }
 
 
-
-
-
-
-
+    public Optional<Medico> buscarMedicoPorEmail(String email) {
+        return repository.findByMedEmail(email);
+    }
 }

@@ -3,9 +3,9 @@ package br.com.saudeConecta.endpoinst.paciente.Entity;
 import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
 import br.com.saudeConecta.endpoinst.paciente.DTO.DadosCadastraPaciente;
 import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.Serializable;
 import java.sql.Date;
@@ -41,6 +41,9 @@ public class Paciente implements Serializable {
     @Column(name = "PaciRg", nullable = false)
     private String PaciRg;
 
+    @Column(name = "PaciEmail", nullable = false)
+    private String paciEmail;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "Usuario")
     private Usuario usuario;
@@ -67,13 +70,14 @@ public class Paciente implements Serializable {
 //
 //    }
 
-    public Paciente(DadosCadastraPaciente dados, Usuario dadosIdUsuario, Endereco dadosEndereco) {
+    public Paciente(@NotNull DadosCadastraPaciente dados, Usuario dadosIdUsuario, Endereco dadosEndereco) {
 
         this.PaciNome= dados.PaciNome();
         this.PaciSexo= dados.PaciSexo();
         this.PaciDataNacimento=dados.PaciDataNacimento();
         this.PaciCpf= dados.PaciCpf();
         this.PaciRg= dados.PaciRg();
+        this.paciEmail = dados.PaciEmail();
         this.usuario = dadosIdUsuario;
         this.PaciTelefone= dados.PaciTelefone();
         this.endereco=dadosEndereco;

@@ -43,6 +43,9 @@ public class Medico implements Serializable {
     @Column(name = "MedRg", nullable = false)
     private String MedRg;
 
+    @Column(name = "MedEmail", nullable = false)
+    private String medEmail;
+
 
     @Column(name = "MedTelefone", nullable = true)
     private String MedTelefone;
@@ -57,7 +60,7 @@ public class Medico implements Serializable {
 
 
     public Medico(String medNome, String medSexo, Date medDataNacimento, String medCrm, String medCpf,
-                  String medRg,    String medTelefone, Usuario usuario, Endereco endereco) {
+                  String medRg,    String medTelefone,String medEmail,Usuario usuario, Endereco endereco) {
         this.MedNome=medNome;
         this.MedSexo=medSexo;
         this.MedDataNacimento=medDataNacimento;
@@ -67,7 +70,7 @@ public class Medico implements Serializable {
         this.MedTelefone=medTelefone;
         this.usuario = usuario ;
         this.endereco=endereco;
-
+        this.medEmail = medEmail;
 
 
     }
@@ -80,6 +83,7 @@ public class Medico implements Serializable {
         this.MedCrm= dados.MedCrm();
         this.MedCpf= dados.MedCpf();
         this.MedRg= dados.MedRg();
+        this.medEmail = dados.MedEmail();
         this.MedTelefone= dados.MedTelefone();
         this.usuario = usuario ;
         this.endereco=endereco;

@@ -19,6 +19,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.spring6.SpringTemplateEngine;
+import org.thymeleaf.spring6.templateresolver.SpringResourceTemplateResolver;
+import org.thymeleaf.templateresolver.ITemplateResolver;
+
+import static org.springframework.security.config.Customizer.withDefaults;
 
 
 @Configuration
@@ -38,31 +44,21 @@ public class SecurityConfigurations {
     public SecurityFilterChain securityFilterChain(@NotNull HttpSecurity http) throws Exception {
 
 
-        return http.csrf().disable()
+        return http.csrf().disable().cors(withDefaults())
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and().authorizeHttpRequests()
                 .requestMatchers(HttpMethod.POST, "/Home/login").permitAll()
-                .requestMatchers(HttpMethod.GET, "/Home/buscarId/{id}").permitAll()
+                .requestMatchers(HttpMethod.POST, "/Home/cadastralogin").permitAll()
+                .requestMatchers(HttpMethod.GET, "/paciente/buscarPorEmail/{email}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/medico/buscarPorEmail/{email}").permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .addFilterBefore(filtroAcesso, UsernamePasswordAuthenticationFilter.class)
                 .build();
 
 
-//                return http.csrf().disable()
-//                .cors(withDefaults())
-//                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-//                .and()
-//                .authorizeHttpRequests()
-//                .requestMatchers(HttpMethod.POST, "/Home/login").permitAll()
-//                .anyRequest().authenticated()
-//                .and().addFilterBefore(filtroAcesso, UsernamePasswordAuthenticationFilter.class)
-//                .build();
+
     }
-
-
-
-
 
     @Bean
     public AuthenticationManager authenticationManager(@NotNull AuthenticationConfiguration authenticationConfiguration) throws Exception {
@@ -74,6 +70,7 @@ public class SecurityConfigurations {
     public PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder();
     }
+
 
 
 
