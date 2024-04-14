@@ -61,13 +61,30 @@ public class PacienteResource {
     @GetMapping(value = "/buscarPorEmail/{email}")
     @Transactional
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    public ResponseEntity<ResponseEntity<Object>> RecuperaSenhaDe(@NotNull @Valid @PathVariable("email") String email) throws Exception {
+    public ResponseEntity<ResponseEntity<Object>> ObeterCodigoParaRecuperacaoDeSenha(@NotNull @Valid @PathVariable("email") String email) throws Exception {
 
         ResponseEntity<Object> paciente = service.buscarPacientePorEmail(email);
 
 
         return  ResponseEntity.ok().body(paciente);
     }
+
+
+
+    @GetMapping(value = "/InserirCodigo/{codigo}")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public ResponseEntity<ResponseEntity<Object>> InserirCodigoDeRecuperacaoDeSenhaValido(@NotNull @Valid @PathVariable("codigo") String codigo) throws Exception {
+
+        Boolean paciente = service.VerificarCodigoValido(codigo);
+
+        if (paciente){
+            return ResponseEntity.ok().build();
+        }
+
+        return  ResponseEntity.notFound().build();
+    }
+
 
 
 

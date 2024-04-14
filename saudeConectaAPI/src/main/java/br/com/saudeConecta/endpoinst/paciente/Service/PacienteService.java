@@ -1,6 +1,7 @@
 package br.com.saudeConecta.endpoinst.paciente.Service;
 
 import br.com.saudeConecta.email.EnviarEmail.EnviarEmail;
+import br.com.saudeConecta.endpoinst.codigoVerificacao.Repository.CodigoVerificacaoRepository;
 import br.com.saudeConecta.endpoinst.paciente.DTO.DadosPacienteView;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
 import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
@@ -12,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +25,8 @@ public class PacienteService {
     @Autowired
     private PacienteRepository repository;
 
+    @Autowired
+    private CodigoVerificacaoRepository codigoVerificacaoRepository;
 
     @Autowired
     private EnviarEmail enviarEmail;
@@ -81,13 +83,17 @@ public class PacienteService {
 
         if (!paciente.isPresent()) {
             return ResponseEntity.notFound().build();
-        }else
+        } else
 
 
-        enviarEmail.enviarEmailDestinatarioPaciente( paciente,  recuperaSenha.gerarCodigoVerificacaoTabelaUsuarios());
-
+            enviarEmail.enviarEmailDestinatarioPaciente(paciente, recuperaSenha.gerarCodigoVerificacaoTabelaUsuarios());
 
 
         return ResponseEntity.status(HttpStatus.OK).build();
+    }
+
+    public boolean VerificarCodigoValido(String codigo) {
+    return codigoVerificacaoRepository.existsByCodVerificacaoCodigo(codigo);
+
     }
 }

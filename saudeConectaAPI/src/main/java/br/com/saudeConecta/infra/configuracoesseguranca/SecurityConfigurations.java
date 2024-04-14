@@ -51,6 +51,7 @@ public class SecurityConfigurations {
                 .requestMatchers(HttpMethod.POST, "/Home/cadastralogin").permitAll()
                 .requestMatchers(HttpMethod.GET, "/paciente/buscarPorEmail/{email}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/medico/buscarPorEmail/{email}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/paciente/InserirCodigo/{codigo}").permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .addFilterBefore(filtroAcesso, UsernamePasswordAuthenticationFilter.class)
