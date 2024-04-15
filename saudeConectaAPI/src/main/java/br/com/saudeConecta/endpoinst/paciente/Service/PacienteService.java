@@ -2,9 +2,12 @@ package br.com.saudeConecta.endpoinst.paciente.Service;
 
 import br.com.saudeConecta.email.EnviarEmail.EnviarEmail;
 import br.com.saudeConecta.endpoinst.codigoVerificacao.Repository.CodigoVerificacaoRepository;
+import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
+import br.com.saudeConecta.endpoinst.paciente.DTO.DadosCadastraPaciente;
 import br.com.saudeConecta.endpoinst.paciente.DTO.DadosPacienteView;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
 import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
+import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
 import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
 import br.com.saudeConecta.util.RecuperaSenha;
 import jakarta.mail.MessagingException;
@@ -12,7 +15,6 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -34,14 +36,13 @@ public class PacienteService {
     @Autowired
     private RecuperaSenha recuperaSenha;
 
+
+
     public Optional<Paciente> buscarPacientePorId(Long id) {
         return repository.findById(id);
     }
 
 
-    public Optional<Paciente> BuscarPorId(Long id) {
-        return repository.findById(id);
-    }
 
     public Page<DadosPacienteView> BuscarPorPaginas(Pageable paginacao) {
         return repository.findAll(paginacao).map(DadosPacienteView::new);
@@ -77,23 +78,25 @@ public class PacienteService {
     }
 
 
-    public ResponseEntity<Object> buscarPacientePorEmail(String email) throws MessagingException {
+    public Optional<Paciente> buscarPacsientePorEmail(String email) throws MessagingException {
 
         Optional<Paciente> paciente = repository.findByPaciEmail(email);
-
-        if (!paciente.isPresent()) {
-            return ResponseEntity.notFound().build();
-        } else
 
 
             enviarEmail.enviarEmailDestinatarioPaciente(paciente, recuperaSenha.gerarCodigoVerificacaoTabelaUsuarios());
 
 
-        return ResponseEntity.status(HttpStatus.OK).build();
+        return paciente ;
     }
+
+
 
     public boolean VerificarCodigoValido(String codigo) {
-    return codigoVerificacaoRepository.existsByCodVerificacaoCodigo(codigo);
+        return codigoVerificacaoRepository.existsByCodVerificacaoCodigo(codigo);
 
     }
+
+
+
+
 }

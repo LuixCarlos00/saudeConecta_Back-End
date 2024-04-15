@@ -1,5 +1,8 @@
 package br.com.saudeConecta.endpoinst.usuario.Service;
 
+import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
+import br.com.saudeConecta.endpoinst.paciente.DTO.DadosCadastraPaciente;
+import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
 import br.com.saudeConecta.endpoinst.usuario.DTO.DadosLoginUsuario;
 import br.com.saudeConecta.endpoinst.usuario.DTO.DadosUsuarioView;
 import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
@@ -10,6 +13,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -58,4 +62,15 @@ public class UsuarioService {
     }
 
 
+    public void UpdateDeSenha(Usuario dados, Long id) {
+     Usuario usuario =  repository.getReferenceById(id);
+
+
+        if (usuario!=null){
+
+            usuario.update(dados);
+            repository.save(usuario);
+        }else   ResponseEntity.notFound().build();
+
+    }
 }

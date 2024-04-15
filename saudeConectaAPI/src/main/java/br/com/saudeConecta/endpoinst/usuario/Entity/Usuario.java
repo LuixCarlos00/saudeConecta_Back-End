@@ -1,5 +1,6 @@
 package br.com.saudeConecta.endpoinst.usuario.Entity;
 
+import br.com.saudeConecta.endpoinst.paciente.DTO.DadosCadastraPaciente;
 import br.com.saudeConecta.endpoinst.usuario.DTO.DadosLoginUsuario;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
@@ -50,6 +51,8 @@ public class Usuario implements Serializable , UserDetails {
     }
 
 
+
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_USER"));
@@ -83,5 +86,12 @@ public class Usuario implements Serializable , UserDetails {
     @Override
     public boolean isEnabled() {
         return true;
+    }
+
+    public void update(Usuario dados) {
+        this.login = dados.getLogin();
+        this.senha= dados.getSenha();
+
+
     }
 }

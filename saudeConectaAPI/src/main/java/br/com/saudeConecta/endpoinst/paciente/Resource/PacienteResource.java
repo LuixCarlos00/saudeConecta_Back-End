@@ -40,8 +40,7 @@ public class PacienteResource {
 
     @Autowired
     private EnderecoRepository enderecoRepository;
-    @Autowired
-    private CodigoVerificacaoRepository codigoVerificacaoRepository;
+
 
     @GetMapping(value = "/buscarId/{id}")
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
@@ -61,9 +60,9 @@ public class PacienteResource {
     @GetMapping(value = "/buscarPorEmail/{email}")
     @Transactional
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    public ResponseEntity<ResponseEntity<Object>> ObeterCodigoParaRecuperacaoDeSenha(@NotNull @Valid @PathVariable("email") String email) throws Exception {
+    public ResponseEntity<Optional<Paciente>> ObeterCodigoParaRecuperacaoDeSenha(@NotNull @Valid @PathVariable("email") String email) throws Exception {
 
-        ResponseEntity<Object> paciente = service.buscarPacientePorEmail(email);
+        Optional<Paciente> paciente = service.buscarPacsientePorEmail(email);
 
 
         return  ResponseEntity.ok().body(paciente);
@@ -84,6 +83,9 @@ public class PacienteResource {
 
         return  ResponseEntity.notFound().build();
     }
+
+
+
 
 
 
@@ -130,6 +132,10 @@ public class PacienteResource {
     }
 
 
+
+
+
+
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping("/pacientepagina")
     public Page<DadosPacienteView> BuscarPorPaginas(@PageableDefault(size = 12, sort = {"CIDCódigo"}) Pageable paginacao) {
@@ -137,11 +143,19 @@ public class PacienteResource {
     }
 
 
+
+
+
+
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/listatodospaciente")
     public List<Paciente> buscarTodos() {
         return service.buscarTodosPaciente();
     }
+
+
+
+
 
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")

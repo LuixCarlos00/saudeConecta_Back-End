@@ -2,6 +2,7 @@ package br.com.saudeConecta.endpoinst.usuario.Resource;
 
 
 import br.com.saudeConecta.endpoinst.consulta.DTO.DadosConsultaView;
+import br.com.saudeConecta.endpoinst.paciente.DTO.DadosCadastraPaciente;
 import br.com.saudeConecta.endpoinst.usuario.DTO.DadosCadastraUsuario;
 import br.com.saudeConecta.endpoinst.usuario.DTO.DadosLoginUsuario;
 import br.com.saudeConecta.endpoinst.usuario.DTO.DadosTokenJWT;
@@ -95,6 +96,28 @@ public class UsuarioResource {
         Optional<Usuario> usuario = userService.buscarUserPorId(Id);
 
         return ResponseEntity.status(HttpStatus.OK).body(new DadosUsuarioView((usuario.get())));
+    }
+
+
+
+    @PutMapping(value = "/trocaDeSenha/{Id}")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public ResponseEntity<ResponseEntity<Object>> updatedeSenha(@NotNull @Valid @PathVariable("Id") Long Id,
+                                                                @RequestBody DadosLoginUsuario dados,
+                                                                @NotNull  BindingResult result)  {
+
+        if (result.hasErrors()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        String senhaCriptografada = passwordEncoder.encode(dados.senha());
+        Usuario usuario = new Usuario(dados, senhaCriptografada);
+
+        userService.UpdateDeSenha(usuario,Id);
+
+
+        return  ResponseEntity.ok().build();
     }
 
 

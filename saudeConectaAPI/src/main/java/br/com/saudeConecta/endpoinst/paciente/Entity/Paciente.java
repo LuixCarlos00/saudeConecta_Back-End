@@ -82,4 +82,7 @@ public class Paciente implements Serializable {
         this.PaciTelefone= dados.PaciTelefone();
         this.endereco=dadosEndereco;
     }
+
+
+
 }
