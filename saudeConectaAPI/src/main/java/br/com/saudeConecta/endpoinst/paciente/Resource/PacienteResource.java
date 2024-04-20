@@ -76,8 +76,9 @@ public class PacienteResource {
     public ResponseEntity<ResponseEntity<Object>> InserirCodigoDeRecuperacaoDeSenhaValido(@NotNull @Valid @PathVariable("codigo") String codigo) throws Exception {
 
         Boolean paciente = service.VerificarCodigoValido(codigo);
-
+        service.deletraCodigoVerificacao(codigo);
         if (paciente){
+
             return ResponseEntity.ok().build();
         }
 

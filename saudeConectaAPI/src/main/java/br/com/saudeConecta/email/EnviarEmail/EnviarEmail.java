@@ -60,5 +60,29 @@ public class EnviarEmail {
     }
 
 
+    public void enviarLoginDePaciente(Optional<Paciente> Userpaciente, String login) throws MessagingException {
 
+        long id =  Userpaciente.get().getPaciCodigo();
+
+
+        Map<String, Object> model = new HashMap<>();
+        model.put("message", login);// "message" e uma variavel que dinamica que vai ser exibida dedo da pagina html
+        emailService.enviarEmailComLoginPaciente(Userpaciente.get().getPaciEmail(), "Login De Usuario ", "emaiLogin-template.html", model );
+
+
+    }
+
+    public void enviarLoginDeMedico( Optional<Medico> Usermedico, String login) throws MessagingException {
+
+
+        long id =  Usermedico.get().getMedCodigo();
+
+
+        Map<String, Object> model = new HashMap<>();
+        model.put("message", login);// "message" e uma variavel que dinamica que vai ser exibida dedo da pagina html
+        emailService.enviarEmailComLoginMedico(Usermedico.get().getMedEmail(), "Login De Usuario ", "emaiLogin-template.html", model );
+
+
+
+    }
 }

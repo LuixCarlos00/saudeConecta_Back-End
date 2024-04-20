@@ -50,7 +50,9 @@ public class Usuario implements Serializable , UserDetails {
         this.senha=senhaCriptografada;
     }
 
-
+    public Usuario(String login) {
+        this.login =getLogin();
+    }
 
 
     @Override

@@ -1,19 +1,23 @@
 package br.com.saudeConecta.endpoinst.usuario.Resource;
 
 
+import br.com.saudeConecta.email.EnviarEmail.EnviarEmail;
 import br.com.saudeConecta.endpoinst.consulta.DTO.DadosConsultaView;
+import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
+import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
 import br.com.saudeConecta.endpoinst.paciente.DTO.DadosCadastraPaciente;
-import br.com.saudeConecta.endpoinst.usuario.DTO.DadosCadastraUsuario;
-import br.com.saudeConecta.endpoinst.usuario.DTO.DadosLoginUsuario;
-import br.com.saudeConecta.endpoinst.usuario.DTO.DadosTokenJWT;
-import br.com.saudeConecta.endpoinst.usuario.DTO.DadosUsuarioView;
+import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
+import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
+import br.com.saudeConecta.endpoinst.usuario.DTO.*;
 import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
 import br.com.saudeConecta.endpoinst.usuario.Service.UsuarioService;
 
 
 import br.com.saudeConecta.infra.configuracoesseguranca.TokenService;
+import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +28,7 @@ import org.springframework.http.ResponseEntity;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
@@ -42,16 +47,22 @@ public class UsuarioResource {
     @Autowired
     private AuthenticationManager authenticationManager;
     @Autowired
-    private   PasswordEncoder passwordEncoder;
-
+    private PasswordEncoder passwordEncoder;
 
 
     @Autowired
     private TokenService tokenService;
+    @Autowired
+    private PacienteRepository pacienteRepository;
+    @Autowired
+    private MedicoRepository medicoRepository;
+
+    @Autowired
+    private EnviarEmail enviarEmail;
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PostMapping("/login")
-    public ResponseEntity<DadosTokenJWT> login(@RequestBody @NotNull   DadosLoginUsuario dados) {
+    public ResponseEntity<DadosTokenJWT> login(@RequestBody @NotNull DadosLoginUsuario dados) {
         var authenticatetoken = new UsernamePasswordAuthenticationToken(dados.login(), dados.senha());
         var authentication = authenticationManager.authenticate(authenticatetoken);
 
@@ -59,7 +70,6 @@ public class UsuarioResource {
 
         return ResponseEntity.ok(new DadosTokenJWT(TokenJWT));
     }
-
 
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
@@ -81,12 +91,10 @@ public class UsuarioResource {
         var authentication = authenticationManager.authenticate(authenticateToken);
         var tokenJWT = tokenService.gerarToken((Usuario) authentication.getPrincipal());
 
-        // Retorna o token JWT e os dados do usuário cadastrado encapsulados na classe CadastroResponse
+
         CadastroResponse response = new CadastroResponse(new DadosUsuarioView(usuario), tokenJWT);
         return ResponseEntity.ok().body(response);
     }
-
-
 
 
     @GetMapping(value = "/buscarId/{id}")
@@ -99,13 +107,12 @@ public class UsuarioResource {
     }
 
 
-
     @PutMapping(value = "/trocaDeSenha/{Id}")
     @Transactional
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public ResponseEntity<ResponseEntity<Object>> updatedeSenha(@NotNull @Valid @PathVariable("Id") Long Id,
                                                                 @RequestBody DadosLoginUsuario dados,
-                                                                @NotNull  BindingResult result)  {
+                                                                @NotNull BindingResult result) {
 
         if (result.hasErrors()) {
             return ResponseEntity.badRequest().build();
@@ -114,10 +121,57 @@ public class UsuarioResource {
         String senhaCriptografada = passwordEncoder.encode(dados.senha());
         Usuario usuario = new Usuario(dados, senhaCriptografada);
 
-        userService.UpdateDeSenha(usuario,Id);
+        userService.UpdateDeSenha(usuario, Id);
 
 
-        return  ResponseEntity.ok().build();
+        return ResponseEntity.ok().build();
+    }
+
+
+    @GetMapping(value = "/recuperaLogin={Id}&dados={tipoUsuario}")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public ResponseEntity<ResponseEntity<Object>> RecuperaLogin(@NotNull @Valid @PathVariable("Id") Long Id,
+                                                                @NotNull @Valid @PathVariable("tipoUsuario") String dados
+                                                                 ) throws MessagingException {
+
+
+
+
+        Usuario usuario = userService.RecuperaLogin(Id);
+
+        String login = usuario.getLogin();
+        Long IdUsuario = usuario.getId();
+
+        Optional<Medico>    medico = null;
+        Optional<Paciente> paciente =null ;
+        if (dados.equals("Medico")){
+
+              medico = medicoRepository.findByUsuario_Id(IdUsuario);
+
+
+            if (  medico == null) {
+                return ResponseEntity.notFound().build();
+            }
+            enviarEmail.enviarLoginDeMedico(medico, login);
+        }
+
+        if (dados.equals("Paciente")){
+              paciente = pacienteRepository.findByUsuario_Id(IdUsuario);
+
+
+            if (  paciente == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            System.out.println(paciente);
+            enviarEmail.enviarLoginDePaciente(paciente, login);
+
+        }
+
+
+
+        return ResponseEntity.ok().build();
     }
 
 

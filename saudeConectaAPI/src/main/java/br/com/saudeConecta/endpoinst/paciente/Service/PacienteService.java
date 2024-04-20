@@ -97,6 +97,8 @@ public class PacienteService {
     }
 
 
+    public void deletraCodigoVerificacao(String codigo) {
 
-
+          codigoVerificacaoRepository.deleteByCodVerificacaoCodigo(codigo);
+    }
 }

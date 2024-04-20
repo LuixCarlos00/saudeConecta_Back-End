@@ -11,4 +11,6 @@ public interface MedicoRepository  extends JpaRepository<Medico,Long> {
 
 
     Optional<Medico> findByMedEmail(String MedEmail);
+
+    Optional<Medico> findByUsuario_Id(Long id);
 }

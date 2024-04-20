@@ -19,6 +19,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.spring6.templateresolver.SpringResourceTemplateResolver;
@@ -53,6 +54,7 @@ public class SecurityConfigurations {
                 .requestMatchers(HttpMethod.GET, "/medico/buscarPorEmail/{email}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/paciente/InserirCodigo/{codigo}").permitAll()
                 .requestMatchers(HttpMethod.PUT, "/Home/trocaDeSenha/{Id}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/Home/recuperaLogin={Id}&dados={tipoUsuario}").permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .addFilterBefore(filtroAcesso, UsernamePasswordAuthenticationFilter.class)

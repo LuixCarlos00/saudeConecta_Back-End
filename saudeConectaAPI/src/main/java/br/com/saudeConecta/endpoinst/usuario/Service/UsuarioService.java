@@ -10,6 +10,7 @@ import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
 import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
 import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
 import jakarta.transaction.Transactional;
+import org.hibernate.tuple.CreationTimestampGeneration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -72,5 +73,9 @@ public class UsuarioService {
             repository.save(usuario);
         }else   ResponseEntity.notFound().build();
 
+    }
+
+    public Usuario RecuperaLogin(Long id) {
+        return repository.getReferenceById(id);
     }
 }

@@ -79,4 +79,43 @@ public class EmailServices {
     }
 
 
+    public void enviarEmailComLoginPaciente(String paciEmail, String LoginDeUsuario , String TemplateName, Map<String, Object> model) throws MessagingException {
+
+
+        MimeMessage mimeMessage = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
+
+        try {
+            helper.setTo(paciEmail);
+            helper.setSubject(LoginDeUsuario);
+
+            //Processar o template Thymeleaf com as variáveis do mapa
+            String htmlContent = templateEngine.process(TemplateName, new Context(Locale.getDefault(), model));
+            helper.setText(htmlContent, true);
+            mailSender.send(mimeMessage);
+        } catch (MessagingException e) {
+            throw new MessagingException("Erro ao enviar e-mail ");
+        }
+
+
+    }
+
+    public void enviarEmailComLoginMedico(String medEmail, String loginDeUsuario, String TemplateName, Map<String, Object> model) throws MessagingException {
+
+        MimeMessage mimeMessage = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
+
+        try {
+            helper.setTo(medEmail);
+            helper.setSubject(loginDeUsuario);
+
+            //Processar o template Thymeleaf com as variáveis do mapa
+            String htmlContent = templateEngine.process(TemplateName, new Context(Locale.getDefault(), model));
+            helper.setText(htmlContent, true);
+            mailSender.send(mimeMessage);
+        } catch (MessagingException e) {
+            throw new MessagingException("Erro ao enviar e-mail ");
+        }
+
+    }
 }
