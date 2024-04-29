@@ -15,6 +15,7 @@ public record DadosMedicoView(
         String MedCrm,
         String MedCpf,
         String MedRg,
+        String MedEspecialidade,
 
         String MedEmail,
         Usuario usuario,
@@ -24,7 +25,7 @@ public record DadosMedicoView(
 ) {
     public DadosMedicoView(@NotNull Medico registro) {
         this(registro.getMedCodigo(), registro.getMedNome(), registro.getMedSexo(), registro.getMedDataNacimento(), registro.getMedCrm(),
-                registro.getMedCpf(), registro.getMedRg(), registro.getMedEmail(),registro.getUsuario(), registro.getMedTelefone(), registro.getEndereco());
+                registro.getMedCpf(), registro.getMedRg(),registro.getMedEspecialidade() ,registro.getMedEmail(),registro.getUsuario(), registro.getMedTelefone(), registro.getEndereco());
     }
 
 

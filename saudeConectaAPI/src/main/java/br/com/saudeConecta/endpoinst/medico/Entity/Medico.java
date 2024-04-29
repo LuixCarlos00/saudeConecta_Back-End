@@ -26,7 +26,7 @@ public class Medico implements Serializable {
     private Long MedCodigo;
 
     @Column(name = "MedNome", nullable = false)
-    private String MedNome;
+    private String medNome;
 
     @Column(name = "MedSexo", nullable = false)
     private String MedSexo;
@@ -35,7 +35,7 @@ public class Medico implements Serializable {
     private Date MedDataNacimento;
 
     @Column(name = "MedCrm", nullable = false)
-    private String MedCrm;
+    private String medCrm;
 
     @Column(name = "MedCpf", nullable = false)
     private String MedCpf;
@@ -46,9 +46,13 @@ public class Medico implements Serializable {
     @Column(name = "MedEmail", nullable = false)
     private String medEmail;
 
-
     @Column(name = "MedTelefone", nullable = true)
     private String MedTelefone;
+
+    @Column(name = "MedEspecialidade", nullable = true)
+    private String medEspecialidade;
+
+
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "Usuario")
@@ -60,12 +64,13 @@ public class Medico implements Serializable {
 
 
     public Medico(String medNome, String medSexo, Date medDataNacimento, String medCrm, String medCpf,
-                  String medRg,    String medTelefone,String medEmail,Usuario usuario, Endereco endereco) {
-        this.MedNome=medNome;
+                  String medRg,  String medEspecialidade , String medTelefone,String medEmail,Usuario usuario, Endereco endereco) {
+        this.medNome=medNome;
         this.MedSexo=medSexo;
         this.MedDataNacimento=medDataNacimento;
-        this.MedCrm=medCrm;
+        this.medCrm=medCrm;
         this.MedCpf=medCpf;
+        this.medEspecialidade = medEspecialidade;
         this.MedRg=medRg;
         this.MedTelefone=medTelefone;
         this.usuario = usuario ;
@@ -77,12 +82,13 @@ public class Medico implements Serializable {
 
     public Medico(DadosCadastraMedico dados, Usuario usuario, Endereco endereco) {
 
-        this.MedNome= dados.MedNome();
+        this.medNome= dados.MedNome();
         this.MedSexo= dados.MedSexo();
         this.MedDataNacimento=getMedDataNacimento();
-        this.MedCrm= dados.MedCrm();
+        this.medCrm= dados.MedCrm();
         this.MedCpf= dados.MedCpf();
         this.MedRg= dados.MedRg();
+        this.medEspecialidade = dados.MedEspecialidade();
         this.medEmail = dados.MedEmail();
         this.MedTelefone= dados.MedTelefone();
         this.usuario = usuario ;

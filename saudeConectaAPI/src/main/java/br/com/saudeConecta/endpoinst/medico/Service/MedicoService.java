@@ -10,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,27 +26,25 @@ public class MedicoService {
     }
 
 
-
-    public void cadastrar(@NotNull Medico medico)   {
-
+    public void cadastrar(@NotNull Medico medico) {
 
 
-            repository.save(medico);
+        repository.save(medico);
 
     }
 
-    public Optional<Medico> BuscarPorId(Long id)  {
+    public Optional<Medico> BuscarPorId(Long id) {
         return repository.findById(id);
     }
+
 
     public Page<DadosMedicoView> BuscarPorPaginas(Pageable paginacao) {
         return repository.findAll(paginacao).map(DadosMedicoView::new);
     }
 
 
-
     @Transactional
-    public void deletarPorId(Long id)  throws  Exception {
+    public void deletarPorId(Long id) throws Exception {
         if (id == null || id <= 0) {
             throw new IllegalArgumentException("ID inválido");
         }
@@ -57,10 +56,9 @@ public class MedicoService {
         try {
             repository.deleteById(id);
         } catch (Exception e) {
-            throw new Exception("Violação de Integridade",e);
+            throw new Exception("Violação de Integridade", e);
         }
     }
-
 
 
     public List<Medico> buscarTodosMedicos() {
@@ -78,4 +76,23 @@ public class MedicoService {
     public Optional<Medico> buscarMedicoPorEmail(String email) {
         return repository.findByMedEmail(email);
     }
+
+
+    public List<Medico> buscarMedicoPorCRM(String crm) {
+        return repository.findByMedCrmContainingIgnoreCase(crm);
+    }
+
+    public List<Medico> buscarMedicoPorCidade(String cidade) {
+        return repository.findByEndereco_EndMunicipioContainingIgnoreCase(cidade);
+    }
+
+    public List<Medico> buscarMedicoPorEspecialidade(String especialidade) {
+        return repository.findByMedEspecialidadeContainingIgnoreCase(especialidade);
+    }
+
+
+    public List<Medico> buscarMedicoPorNome(String nome) {
+        return repository.findByMedNomeContainingIgnoreCase(nome);
+    }
+
 }

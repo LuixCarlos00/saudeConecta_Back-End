@@ -78,4 +78,8 @@ public class UsuarioService {
     public Usuario RecuperaLogin(Long id) {
         return repository.getReferenceById(id);
     }
+
+    public Boolean existeLogin(String login) {
+        return repository.existsByLogin(login);
+    }
 }

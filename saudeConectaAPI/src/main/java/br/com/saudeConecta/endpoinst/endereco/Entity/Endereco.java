@@ -32,7 +32,8 @@ import java.sql.Date;
     private String EndUF;
 
     @Column(name = "EndMunicipio",nullable = false)
-    private String EndMunicipio;
+    private String endMunicipio;
+
 
     @Column(name = "EndBairro",nullable = true)
     private String EndBairro;
@@ -56,7 +57,7 @@ import java.sql.Date;
         this.EndNacionalidade=endNacionalidade;
         this.EndEstado=endEstado;
         this.EndUF=endUF;
-        this.EndMunicipio=endMunicipio;
+        this.endMunicipio=endMunicipio;
         this.EndBairro=endBairro;
         this.EndCep=endCep;
         this.EndRua=endRua;

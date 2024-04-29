@@ -127,4 +127,36 @@ public class MedicoResource {
 
 
 
+
+
+    @GetMapping(value = "/buscarPorNome/{nome}")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public List<Medico> buscarMedicoPorNome(@NotNull @Valid @PathVariable("nome") String nome) {
+        return service.buscarMedicoPorNome(nome);
+    }
+
+    @GetMapping(value = "/buscarPorCRM/{crm}")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public List<Medico> buscarMedicoPorCRM(@NotNull @Valid @PathVariable("crm") String crm) {
+        return service.buscarMedicoPorCRM(crm);
+    }
+
+
+    @GetMapping(value = "/buscarPorCidade/{cidade}")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public List<Medico> buscarMedicoPorCidade(@NotNull @Valid @PathVariable("cidade") String cidade) {
+        return service.buscarMedicoPorCidade(cidade);
+    }
+
+    @GetMapping(value = "/buscarPorMedEspecialidade/{especialidade}")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public List<Medico>buscarMedicoPorMedEspecialidade(@NotNull @Valid @PathVariable("especialidade") String especialidade) {
+        return   service.buscarMedicoPorEspecialidade(especialidade);
+    }
+
+
 }

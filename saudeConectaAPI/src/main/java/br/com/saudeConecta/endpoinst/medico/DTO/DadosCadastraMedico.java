@@ -22,12 +22,17 @@ public record DadosCadastraMedico(
         @NotNull
         String MedRg,
         @NotNull
+        String MedEspecialidade,
+        @NotNull
         String MedEmail,
         String MedTelefone,
         @NotNull
         Long usuario,
         @NotNull
         Long endereco
+
+
+
 
 ) {
 //        public Medico toEntity() {

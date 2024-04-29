@@ -59,6 +59,8 @@ public class UsuarioResource {
 
     @Autowired
     private EnviarEmail enviarEmail;
+    @Autowired
+    private UsuarioService usuarioService;
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PostMapping("/login")
@@ -83,8 +85,14 @@ public class UsuarioResource {
         String senhaCriptografada = passwordEncoder.encode(dados.senha());
         Usuario usuario = new Usuario(dados, senhaCriptografada);
 
+       Boolean exite =  usuarioService.existeLogin(dados.login());
+
+       if (exite){
+           return ResponseEntity.badRequest().build();
+       }
+
         // Cadastra o usuário
-        userService.CadastraUsuario(usuario);
+       userService.CadastraUsuario(usuario);
 
         // Autentica o usuário recém-cadastrado para gerar o token JWT
         var authenticateToken = new UsernamePasswordAuthenticationToken(dados.login(), dados.senha());
