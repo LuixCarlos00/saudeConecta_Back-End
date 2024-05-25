@@ -24,10 +24,10 @@ public class Paciente implements Serializable {
     @Id
     @Column(name = "PaciCodigo")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long PaciCodigo;
+    private Long paciCodigo;
 
     @Column(name = "PaciNome", nullable = false)
-    private String PaciNome;
+    private String paciNome;
 
     @Column(name = "PaciSexo", nullable = false)
     private String PaciSexo;
@@ -36,10 +36,10 @@ public class Paciente implements Serializable {
     private Date PaciDataNacimento;
 
     @Column(name = "PaciCpf", nullable = false)
-    private String PaciCpf;
+    private String paciCpf;
 
     @Column(name = "PaciRg", nullable = false)
-    private String PaciRg;
+    private String paciRg;
 
     @Column(name = "PaciEmail", nullable = false)
     private String paciEmail;
@@ -49,7 +49,7 @@ public class Paciente implements Serializable {
     private Usuario usuario;
 
     @Column(name = "PaciTelefone", nullable = true)
-    private String PaciTelefone;
+    private String paciTelefone;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "Endereco")
@@ -72,14 +72,14 @@ public class Paciente implements Serializable {
 
     public Paciente(@NotNull DadosCadastraPaciente dados, Usuario dadosIdUsuario, Endereco dadosEndereco) {
 
-        this.PaciNome= dados.PaciNome();
+        this.paciNome = dados.PaciNome();
         this.PaciSexo= dados.PaciSexo();
         this.PaciDataNacimento=dados.PaciDataNacimento();
-        this.PaciCpf= dados.PaciCpf();
-        this.PaciRg= dados.PaciRg();
+        this.paciCpf = dados.PaciCpf();
+        this.paciRg = dados.PaciRg();
         this.paciEmail = dados.PaciEmail();
         this.usuario = dadosIdUsuario;
-        this.PaciTelefone= dados.PaciTelefone();
+        this.paciTelefone = dados.PaciTelefone();
         this.endereco=dadosEndereco;
     }
 

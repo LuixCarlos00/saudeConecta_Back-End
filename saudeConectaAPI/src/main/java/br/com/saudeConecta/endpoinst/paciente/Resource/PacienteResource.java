@@ -1,8 +1,8 @@
 package br.com.saudeConecta.endpoinst.paciente.Resource;
 
-import br.com.saudeConecta.endpoinst.codigoVerificacao.Repository.CodigoVerificacaoRepository;
 import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
 import br.com.saudeConecta.endpoinst.endereco.Repository.EnderecoRepository;
+import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.paciente.Service.PacienteService;
 import br.com.saudeConecta.endpoinst.paciente.DTO.DadosCadastraPaciente;
 import br.com.saudeConecta.endpoinst.paciente.DTO.DadosPacienteView;
@@ -51,6 +51,18 @@ public class PacienteResource {
         return ResponseEntity.status(HttpStatus.OK).body(new DadosPacienteView((medico.get())));
     }
 
+
+
+
+
+    @GetMapping(value = "/buscarIdDeUsusario/{id}")
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    @Transactional
+    public ResponseEntity<DadosPacienteView> buscarPorIdDeUsusario(@NotNull @Valid @PathVariable("id") Long Id) {
+        Optional<Paciente> medico = service.buscarPacientePorIdDeUsusario(Id);
+
+        return ResponseEntity.status(HttpStatus.OK).body(new DadosPacienteView((medico.get())));
+    }
 
 
 
@@ -165,5 +177,39 @@ public class PacienteResource {
         service.deletarPorId(id);
         return ResponseEntity.noContent().build();
     }
+
+
+
+
+    @GetMapping(value = "/buscarPorNome/{nome}")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public List<Paciente> buscarMedicoPorNome(@NotNull @Valid @PathVariable("nome") String nome) {
+        return service.buscarMedicoPorNome(nome);
+    }
+
+    @GetMapping(value = "/buscarPorCPF/{CPF}")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public List<Paciente> buscarMedicoPorCPF(@NotNull @Valid @PathVariable("CPF") String cpf) {
+        return service.buscarMedicoPorCPF(cpf);
+    }
+
+
+    @GetMapping(value = "/buscarPorRG/{rg}")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public List<Paciente> buscarMedicoPorRG(@NotNull @Valid @PathVariable("rg") String rg) {
+        return service.buscarMedicoPorRG(rg);
+    }
+
+    @GetMapping(value = "/buscarPorTelefone/{telefone}")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public List<Paciente>buscarMedicoPorMedTelefone(@NotNull @Valid @PathVariable("telefone") String telefone) {
+        return   service.buscarMedicoPorTelefone(telefone);
+    }
+
+
 
 }

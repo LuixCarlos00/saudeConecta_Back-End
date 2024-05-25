@@ -4,6 +4,14 @@ import br.com.saudeConecta.endpoinst.consulta.Entity.Consulta;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.sql.Date;
+import java.util.Optional;
+
 @Repository
 public interface ConsultaRepository extends JpaRepository<Consulta,Long> {
+
+
+    Optional<Consulta> findByConHorarioAndConDataAndConMedico_MedCodigo(String conHorario, Date conData, Long medCodigo);
+
+    boolean existsByConHorarioAndConDataAndConMedico_MedCodigo(String conHorario, String conData, Long medCodigo);
 }

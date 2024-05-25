@@ -1,6 +1,8 @@
 package br.com.saudeConecta.email.EnviarEmail;
 
 import br.com.saudeConecta.email.EnviarService.EmailServices;
+import br.com.saudeConecta.endpoinst.administrador.Entity.Administrador;
+import br.com.saudeConecta.endpoinst.administrador.Repository.AdministradorRepository;
 import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
@@ -31,20 +33,37 @@ public class EnviarEmail {
     private MedicoRepository medicoRepository;
 
     @Autowired
-    private PacienteRepository pacienteRepository;
+    private AdministradorRepository  AdministradorRepository;
+
+    @Autowired
+    private PacienteRepository  pacienteRepository; ;
+
+    public void enviarEmailDestinatarioAdministrador(@NotNull Optional<Administrador> principal, String codigoVerificacao) throws MessagingException {
+
+
+            long id = principal.get().getAdmCodigo();
+            Optional<Administrador> paciente = AdministradorRepository.findById(id);
+
+            Map<String, Object> model = new HashMap<>();
+            model.put("message", codigoVerificacao);// "message" e uma variavel que dinamica que vai ser exibida dedo da pagina html
+            emailService.enviarEmailComPaginaHTML(paciente.get().getAdmEmail(), "Verificação de duas Etapas", "email-template.html", model );
+
+
+    }
 
     public void enviarEmailDestinatarioPaciente(@NotNull Optional<Paciente> principal, String codigoVerificacao) throws MessagingException {
 
 
-            long id = principal.get().getPaciCodigo();
-            Optional<Paciente> paciente = pacienteRepository.findById(id);
+        long id = principal.get().getPaciCodigo();
+        Optional<Paciente> paciente = pacienteRepository.findById(id);
 
-            Map<String, Object> model = new HashMap<>();
-            model.put("message", codigoVerificacao);// "message" e uma variavel que dinamica que vai ser exibida dedo da pagina html
-            emailService.enviarEmailComPaginaHTML(paciente.get().getPaciEmail(), "Verificação de duas Etapas", "email-template.html", model );
+        Map<String, Object> model = new HashMap<>();
+        model.put("message", codigoVerificacao);// "message" e uma variavel que dinamica que vai ser exibida dedo da pagina html
+        emailService.enviarEmailComPaginaHTML(paciente.get().getPaciEmail(), "Verificação de duas Etapas", "email-template.html", model );
 
 
     }
+
 
     public void enviarEmailDestinatarioMedico(@NotNull Medico principal, String codigoVerificacao) throws MessagingException {
         System.out.println("Tipo do objeto principal: " + principal.getClass().getName());

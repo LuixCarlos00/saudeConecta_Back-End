@@ -53,6 +53,22 @@ public class ConsultaResource {
     }
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    @GetMapping(value = "/consultaData={data}&horario={horario}&medico={medico}")
+    @Transactional
+    public Boolean VericarSeExetemConsultasMarcadas(@NotNull @Valid @PathVariable("data") String data,
+                                                                              @PathVariable("horario") String horario,
+                                                                              @PathVariable("medico") Long medico ) {
+        System.out.println( data + horario + medico);
+        Boolean consulta = service.VericarSeExetemConsultasMarcadas(data,horario,medico);
+        System.out.println(consulta);
+        return consulta;
+    }
+
+
+
+
+
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PostMapping("/post")
     @Transactional
     public ResponseEntity<DadosConsultaView> Cadastra(@NotNull @RequestBody @Valid DadosCadastraConsulta dados, @NotNull BindingResult result,
@@ -62,6 +78,7 @@ public class ConsultaResource {
             return ResponseEntity.badRequest().build();
         }
 
+            System.out.println(dados.toString());
 
         Long idMedicos = dados.ConMedico();
         Long idPaciente = dados.ConPaciente();
@@ -87,6 +104,8 @@ public class ConsultaResource {
         return ResponseEntity.created(uri).body(new DadosConsultaView(consulta));
 
     }
+
+
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping("/pacientepagina")

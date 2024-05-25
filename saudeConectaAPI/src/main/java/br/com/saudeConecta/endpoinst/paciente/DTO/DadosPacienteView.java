@@ -6,7 +6,6 @@ import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.Date;
-import java.util.Optional;
 
 public record DadosPacienteView(Long PaciCodigo, String PaciNome, String PaciSexo, Date PaciDataNacimento,
                                 String PaciCpf, String PaciRg,String PaciEmail, Usuario usuario, String PaciTelefone, Endereco endereco

@@ -3,15 +3,14 @@ package br.com.saudeConecta.endpoinst.consulta.Entity;
 import br.com.saudeConecta.endpoinst.consulta.DTO.DadosCadastraConsulta;
 import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.jetbrains.annotations.NotNull;
 
 
 import java.io.Serializable;
-import java.sql.Date;
-import java.sql.Time;
+import java.util.Date;
+
 
 @Entity
 @Getter
@@ -29,46 +28,45 @@ public class Consulta implements Serializable {
 
     @ManyToOne
     @JoinColumn(name = "ConMedico")
-    private Medico ConMedico;
+    private Medico conMedico;
 
     @ManyToOne
     @JoinColumn(name = "ConPaciente")
-    private Paciente ConPaciente;
-
-
+    private Paciente conPaciente;
+    
     @Column(name = "ConDia_semana ")
     private String ConDia_semana;
 
     @Column(name = "ConHorario")
-    private Time ConHorario;
+    private String conHorario;
 
     @Column(name = "ConData")
-    private Date ConData;
+    private String conData;
 
     @Column(name = "ConObservacoes")
     private String ConObservacoes;
 
-//    public Consulta(Medico conMedico, Paciente conPaciente, String conDiaSemana,
-//                    Time conHorario, Date conData, String conObservacoes) {
-//        this.ConMedico = conMedico;
-//        this.ConPaciente = conPaciente;
-//        this.ConDia_semana = conDiaSemana;
-//        this.ConHorario = conHorario;
-//        this.ConData = conData;
-//        this.ConObservacoes = conObservacoes;
-//
-//
-//    }
+    @Column(name = "ConDataCriacao")
+    private String ConDataCriacao;
 
+    @Column(name = "ConFormaPagamento")
+    private Byte ConFormaPagamento;
+
+    @Column(name = "ConAdm")
+    private Long ConAdm;
+    
+ 
     public Consulta(Medico medico, Paciente paciente, @NotNull DadosCadastraConsulta dados) {
 
-        this.ConMedico = medico;
-        this.ConPaciente = paciente;
+        this.conMedico = medico;
+        this.conPaciente = paciente;
         this.ConDia_semana = dados.ConDia_semana();
-        this.ConHorario = dados.ConHorario();
-        this.ConData = dados.ConData();
+        this.conHorario = dados.ConHorario();
+        this.conData = dados.ConData();
         this.ConObservacoes = dados.ConObservacoes();
-
+        this.ConDataCriacao = dados.ConDadaCriacao();
+        this.ConFormaPagamento = dados.ConFormaPagamento();
+        this.ConAdm = dados.ConAdm();
 
 
     }

@@ -25,6 +25,17 @@ public record DadosCadastraMedico(
         String MedEspecialidade,
         @NotNull
         String MedEmail,
+
+        @NotNull
+        String MedEmpresa,
+
+        @NotNull
+        String MedGraduacao,
+
+        @NotNull
+        String MedFormacoes,
+
+
         String MedTelefone,
         @NotNull
         Long usuario,

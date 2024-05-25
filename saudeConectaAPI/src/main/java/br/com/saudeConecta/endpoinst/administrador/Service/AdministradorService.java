@@ -1,11 +1,11 @@
-package br.com.saudeConecta.endpoinst.paciente.Service;
+package br.com.saudeConecta.endpoinst.administrador.Service;
 
 import br.com.saudeConecta.email.EnviarEmail.EnviarEmail;
+import br.com.saudeConecta.endpoinst.administrador.DTO.DadosAdiministradorView;
+import br.com.saudeConecta.endpoinst.administrador.Entity.Administrador;
+
+import br.com.saudeConecta.endpoinst.administrador.Repository.AdministradorRepository;
 import br.com.saudeConecta.endpoinst.codigoVerificacao.Repository.CodigoVerificacaoRepository;
-import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
-import br.com.saudeConecta.endpoinst.paciente.DTO.DadosPacienteView;
-import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
-import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
 import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
 import br.com.saudeConecta.util.RecuperaSenha;
 import jakarta.mail.MessagingException;
@@ -19,10 +19,10 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class PacienteService {
+public class AdministradorService {
 
-    @Autowired
-    private PacienteRepository repository;
+
+    private AdministradorRepository repository;
 
     @Autowired
     private CodigoVerificacaoRepository codigoVerificacaoRepository;
@@ -35,14 +35,14 @@ public class PacienteService {
 
 
 
-    public Optional<Paciente> buscarPacientePorId(Long id) {
+    public Optional<Administrador> buscarPacientePorId(Long id) {
         return repository.findById(id);
     }
 
 
 
-    public Page<DadosPacienteView> BuscarPorPaginas(Pageable paginacao) {
-        return repository.findAll(paginacao).map(DadosPacienteView::new);
+    public Page<DadosAdiministradorView> BuscarPorPaginas(Pageable paginacao) {
+        return repository.findAll(paginacao).map(DadosAdiministradorView::new);
     }
 
 
@@ -64,23 +64,25 @@ public class PacienteService {
     }
 
 
-    public List<Paciente> buscarTodosPaciente() {
+    public List<Administrador> buscarTodosPaciente() {
         return repository.findAll();
 
     }
 
 
-    public void CadastraRegistroPaciente(Paciente paciente) throws ResourceNotFoundException {
+    public void CadastraRegistroPaciente(Administrador paciente) throws ResourceNotFoundException {
         repository.save(paciente);
     }
 
 
-    public Optional<Paciente> buscarPacsientePorEmail(String email) throws MessagingException {
+    public Optional<Administrador> buscarPacsientePorEmail(String email) throws MessagingException {
 
-        Optional<Paciente> paciente = repository.findByPaciEmail(email);
+        Optional<Administrador> paciente = repository.findByAdmEmail(email);
 
 
-            enviarEmail.enviarEmailDestinatarioPaciente(paciente, recuperaSenha.gerarCodigoVerificacaoTabelaUsuarios());
+            enviarEmail.enviarEmailDestinatarioAdministrador(paciente, recuperaSenha.gerarCodigoVerificacaoTabelaUsuarios());
+
+
         return paciente ;
     }
 
@@ -97,27 +99,7 @@ public class PacienteService {
           codigoVerificacaoRepository.deleteByCodVerificacaoCodigo(codigo);
     }
 
-    public Optional<Paciente> buscarPacientePorIdDeUsusario(Long id) {
-        return repository.findByUsuario_Id(id);
+    public Optional<Administrador> buscarPacientePorIdDeUsusario(Long id) {
+        return repository.findByAdmUsuario_Id(id);
     }
-
-
-
-    public List<Paciente> buscarMedicoPorCPF(String cpf) {
-        return repository.findByCpfIgnoringFormatting( cpf);
-    }
-
-    public List<Paciente> buscarMedicoPorRG(String rg) {
-        return repository.findByRgIgnoringFormatting(rg);
-    }
-
-    public List<Paciente> buscarMedicoPorTelefone(String telefone) {
-        return repository.findByPaciTelefoneContainingIgnoreCase(telefone);
-    }
-
-
-    public List<Paciente> buscarMedicoPorNome(String nome) {
-        return repository.findByPaciNomeContainingIgnoreCase(nome);
-    }
-
 }
