@@ -102,4 +102,11 @@ public class AdministradorService {
     public Optional<Administrador> buscarPacientePorIdDeUsusario(Long id) {
         return repository.findByAdmUsuario_Id(id);
     }
+
+    public boolean BuscarCodigodeAutorização(String codigo) {
+
+
+            return repository.existsByAdmCodigoAtorizacao(codigo);
+
+    }
 }

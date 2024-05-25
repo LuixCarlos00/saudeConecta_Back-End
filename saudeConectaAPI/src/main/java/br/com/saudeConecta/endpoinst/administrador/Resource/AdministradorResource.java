@@ -79,6 +79,24 @@ public class AdministradorResource {
     }
 
 
+    @GetMapping(value = "/buscarPorCoigoAutorizacao/{codigo}")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public ResponseEntity<ResponseEntity<Object>>BuscarCodigodeAutorização(@NotNull @Valid @PathVariable("codigo") String codigo) throws Exception {
+
+        Boolean paciente = service.BuscarCodigodeAutorização(codigo);
+
+        if (paciente){
+            return ResponseEntity.ok().build();
+        }
+
+        return  ResponseEntity.notFound().build();
+    }
+
+
+
+
+
 
     @GetMapping(value = "/InserirCodigo/{codigo}")
     @Transactional

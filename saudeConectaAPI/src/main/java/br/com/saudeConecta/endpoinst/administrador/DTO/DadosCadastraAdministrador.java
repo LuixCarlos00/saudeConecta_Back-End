@@ -8,8 +8,9 @@ public record DadosCadastraAdministrador(
         String AdmNome,
         Byte AdmStatus,
         Date AdmDataCriacao,
-       Long AdmUsuario,
-        String AdmEmail
+        Long AdmUsuario,
+        String AdmEmail,
+        String AdmCodigoAtorizacao
 
 ) {
 

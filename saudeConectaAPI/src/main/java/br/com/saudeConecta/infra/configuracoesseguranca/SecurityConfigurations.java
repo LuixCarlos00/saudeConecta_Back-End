@@ -55,6 +55,7 @@ public class SecurityConfigurations {
                 .requestMatchers(HttpMethod.GET, "/paciente/InserirCodigo/{codigo}").permitAll()
                 .requestMatchers(HttpMethod.PUT, "/Home/trocaDeSenha/{Id}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/Home/recuperaLogin={Id}&dados={tipoUsuario}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/adm/buscarPorCoigoAutorizacao/{codigo}").permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .addFilterBefore(filtroAcesso, UsernamePasswordAuthenticationFilter.class)

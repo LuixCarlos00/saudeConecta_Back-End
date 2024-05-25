@@ -36,6 +36,10 @@ public class Administrador implements Serializable {
     @Column(name = "AdmEmail")
     private String admEmail;
 
+
+    @Column(name = "AdmCodigoAtorizacao")
+    private String admCodigoAtorizacao;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "AdmUsuario")
     private Usuario admUsuario;
@@ -47,5 +51,6 @@ public class Administrador implements Serializable {
         this.AdmDataCriacao = dados.AdmDataCriacao();
         this.admUsuario = usuario;
         this.admEmail = dados.AdmEmail();
+        this.admCodigoAtorizacao = dados.AdmCodigoAtorizacao();
     }
 }
