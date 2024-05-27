@@ -20,22 +20,21 @@ public class Administrador implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @Id
-    @Column(name = "PaciCodigo")
+    @Column(name = "AdmCodigo")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long AdmCodigo;
 
-    @Column(name = "PaciNome")
+    @Column(name = "AdmNome")
     private String AdmNome;
 
-    @Column(name = "PaciStatus")
+    @Column(name = "AdmStatus")
     private byte AdmStatus;
 
-    @Column(name = "PaciDataCriacao")
+    @Column(name = "AdmDataCriacao")
     private Date AdmDataCriacao;
 
     @Column(name = "AdmEmail")
     private String admEmail;
-
 
     @Column(name = "AdmCodigoAtorizacao")
     private String admCodigoAtorizacao;
@@ -51,6 +50,6 @@ public class Administrador implements Serializable {
         this.AdmDataCriacao = dados.AdmDataCriacao();
         this.admUsuario = usuario;
         this.admEmail = dados.AdmEmail();
-        this.admCodigoAtorizacao = dados.AdmCodigoAtorizacao();
+
     }
 }

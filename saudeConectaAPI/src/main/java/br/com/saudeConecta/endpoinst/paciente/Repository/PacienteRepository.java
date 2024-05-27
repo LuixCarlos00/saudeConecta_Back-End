@@ -24,4 +24,6 @@ public interface PacienteRepository extends JpaRepository<Paciente,Long> {
 
     @Query("SELECT p FROM Paciente p WHERE REPLACE(REPLACE(REPLACE(p.paciCpf, '.', ''), '-', ''), '/', '') LIKE %:cpf%")
     List<Paciente> findByCpfIgnoringFormatting(@Param("cpf") String cpf);
+
+    boolean existsByUsuario_Id(Long id);
 }

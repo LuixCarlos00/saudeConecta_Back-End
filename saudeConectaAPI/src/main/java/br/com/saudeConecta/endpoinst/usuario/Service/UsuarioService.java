@@ -1,19 +1,14 @@
 package br.com.saudeConecta.endpoinst.usuario.Service;
 
-import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
-import br.com.saudeConecta.endpoinst.paciente.DTO.DadosCadastraPaciente;
-import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
-import br.com.saudeConecta.endpoinst.usuario.DTO.DadosLoginUsuario;
-import br.com.saudeConecta.endpoinst.usuario.DTO.DadosUsuarioView;
+import br.com.saudeConecta.endpoinst.administrador.Repository.AdministradorRepository;
+import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
+import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
 import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
 
 import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
 import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
 import jakarta.transaction.Transactional;
-import org.hibernate.tuple.CreationTimestampGeneration;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -32,6 +27,12 @@ public class UsuarioService {
     }
 
 
+    @Autowired
+    private MedicoRepository medicoRepository;
+    @Autowired
+    private PacienteRepository pacienteRepository;
+    @Autowired
+    private AdministradorRepository administradorRepository;
 
 
     @Transactional
@@ -81,5 +82,28 @@ public class UsuarioService {
 
     public Boolean existeLogin(String login) {
         return repository.existsByLogin(login);
+    }
+
+
+
+    public boolean buscarPorloginSeExiste(String login) {
+     Usuario user =   repository.findByLogin(login);
+     if (user==null){
+       return false;
+     }
+     boolean extistePaciente = pacienteRepository.existsByUsuario_Id(user.getId());
+        boolean extisteMedico = medicoRepository.existsByUsuario_Id(user.getId());
+        boolean extisteAdministrador = administradorRepository.existsByAdmUsuario_Id(user.getId());
+     if (extistePaciente){
+         return true;
+     }
+     if (extisteMedico){
+         return true;
+     }
+     if (extisteAdministrador){
+         return true;
+     }
+
+        return false;
     }
 }

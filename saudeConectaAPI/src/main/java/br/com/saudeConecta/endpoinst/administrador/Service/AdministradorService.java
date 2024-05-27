@@ -6,13 +6,22 @@ import br.com.saudeConecta.endpoinst.administrador.Entity.Administrador;
 
 import br.com.saudeConecta.endpoinst.administrador.Repository.AdministradorRepository;
 import br.com.saudeConecta.endpoinst.codigoVerificacao.Repository.CodigoVerificacaoRepository;
+import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
+import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
+import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
+import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
+import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
+import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
 import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
 import br.com.saudeConecta.util.RecuperaSenha;
+import ch.qos.logback.core.joran.conditional.IfAction;
 import jakarta.mail.MessagingException;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,8 +30,16 @@ import java.util.Optional;
 @Service
 public class AdministradorService {
 
-
+    @Autowired
     private AdministradorRepository repository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private PacienteRepository pacienteRepository;
+    @Autowired
+    private MedicoRepository medicoRepository;
 
     @Autowired
     private CodigoVerificacaoRepository codigoVerificacaoRepository;
@@ -32,13 +49,13 @@ public class AdministradorService {
 
     @Autowired
     private RecuperaSenha recuperaSenha;
-
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
 
     public Optional<Administrador> buscarPacientePorId(Long id) {
         return repository.findById(id);
     }
-
 
 
     public Page<DadosAdiministradorView> BuscarPorPaginas(Pageable paginacao) {
@@ -75,17 +92,30 @@ public class AdministradorService {
     }
 
 
-    public Optional<Administrador> buscarPacsientePorEmail(String email) throws MessagingException {
+    public Optional<Object> buscarPacsientePorEmail(String email) throws MessagingException {
 
-        Optional<Administrador> paciente = repository.findByAdmEmail(email);
+        Optional<Paciente> paciente = pacienteRepository.findByPaciEmail(email);
+
+        Optional<Medico> medico = medicoRepository.findByMedEmail(email);
+
+        Optional<Administrador> adm = repository.findByAdmEmail(email);
+
+        if (paciente.isPresent()) {
+            enviarEmail.enviarEmailDestinatarioPaciente(paciente, recuperaSenha.gerarCodigoVerificacaoTabelaUsuarios());
+            return Optional.of(paciente);
+        }
+        if (medico.isPresent()) {
+            enviarEmail.enviarEmailDestinatarioMedico(medico, recuperaSenha.gerarCodigoVerificacaoTabelaUsuarios());
+            return Optional.of(medico);
+        }
+        if (adm.isPresent()) {
+            enviarEmail.enviarEmailDestinatarioAdministrador(adm, recuperaSenha.gerarCodigoVerificacaoTabelaUsuarios());
+            return Optional.of(adm);
+        }
 
 
-            enviarEmail.enviarEmailDestinatarioAdministrador(paciente, recuperaSenha.gerarCodigoVerificacaoTabelaUsuarios());
-
-
-        return paciente ;
+        return Optional.of("Email invalido");
     }
-
 
 
     public boolean VerificarCodigoValido(String codigo) {
@@ -96,17 +126,56 @@ public class AdministradorService {
 
     public void deletraCodigoVerificacao(String codigo) {
 
-          codigoVerificacaoRepository.deleteByCodVerificacaoCodigo(codigo);
+        codigoVerificacaoRepository.deleteByCodVerificacaoCodigo(codigo);
     }
 
     public Optional<Administrador> buscarPacientePorIdDeUsusario(Long id) {
         return repository.findByAdmUsuario_Id(id);
     }
 
-    public boolean BuscarCodigodeAutorização(String codigo) {
 
-
-            return repository.existsByAdmCodigoAtorizacao(codigo);
-
+    public boolean BuscarCodigodeAutorizacao(String codigo) {
+        return repository.existsByAdmCodigoAtorizacao(codigo);
     }
+
+    public void BuscaPorSenhaAntiga(String SenhaNova, Long id) {
+        Administrador adm = repository.getReferenceById(id);
+        usuarioRepository.getReferenceById(adm.getAdmUsuario().getId()).setSenha(SenhaNova);
+    }
+
+
+
+
+    public boolean EsqueciMinhaSenha(String SenhaNova, String SenhaAntiga, Long id, String email) {
+        try {
+            Optional<Administrador> adm = repository.findById(id);
+            if (!adm.isPresent()) {
+                return false;
+            }
+
+            Long codigoUser = adm.get().getAdmUsuario().getId();
+            Optional<Usuario> usuario = usuarioRepository.findById(codigoUser);
+            if (!usuario.isPresent()) {
+                return false;
+            }
+
+            if (!adm.get().getAdmEmail().equals(email)) {
+                return false;
+            }
+
+            Usuario user = usuario.get();
+
+            if (passwordEncoder.matches(SenhaAntiga, user.getSenha())) {
+                user.setSenha(SenhaNova);
+                usuarioRepository.save(user);
+                return true;
+            } else {
+                return false;
+            }
+        } catch (EntityNotFoundException e) {
+            return false;
+        }
+    }
+
+
 }

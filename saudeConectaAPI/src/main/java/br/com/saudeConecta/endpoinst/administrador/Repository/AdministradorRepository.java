@@ -12,5 +12,10 @@ public interface AdministradorRepository extends JpaRepository<Administrador,Lon
 
     Optional<Administrador> findByAdmUsuario_Id(Long id);
 
+
     boolean existsByAdmCodigoAtorizacao(String admCodigoAtorizacao);
+
+
+
+    boolean existsByAdmUsuario_Id(Long id);
 }

@@ -2,6 +2,7 @@ package br.com.saudeConecta.endpoinst.administrador.Resource;
 
 import br.com.saudeConecta.endpoinst.administrador.DTO.DadosCadastraAdministrador;
 import br.com.saudeConecta.endpoinst.administrador.DTO.DadosAdiministradorView;
+import br.com.saudeConecta.endpoinst.administrador.DTO.DadosTrocaDeSenha;
 import br.com.saudeConecta.endpoinst.administrador.Entity.Administrador;
 import br.com.saudeConecta.endpoinst.administrador.Service.AdministradorService;
 import br.com.saudeConecta.endpoinst.endereco.Repository.EnderecoRepository;
@@ -16,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -24,21 +26,22 @@ import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
-@RequestMapping(value = "/amd")
+@RequestMapping(value = "/administrador")
 @RestController
 @CrossOrigin(origins = "http://localhost:4200")
 public class AdministradorResource {
 
     @Autowired
-    private AdministradorService service;
-
+    private UsuarioRepository usuarioRepository;
 
     @Autowired
-    private UsuarioRepository usuarioRepository;
+    private AdministradorService service;
 
     @Autowired
     private EnderecoRepository enderecoRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @GetMapping(value = "/buscarId/{id}")
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
@@ -48,9 +51,6 @@ public class AdministradorResource {
 
         return ResponseEntity.status(HttpStatus.OK).body(new DadosAdiministradorView((medico.get())));
     }
-
-
-
 
 
     @GetMapping(value = "/buscarIdDeUsusario/{id}")
@@ -63,35 +63,30 @@ public class AdministradorResource {
     }
 
 
-
-
-
-
     @GetMapping(value = "/buscarPorEmail/{email}")
     @Transactional
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    public ResponseEntity<Optional<Administrador>> ObeterCodigoParaRecuperacaoDeSenha(@NotNull @Valid @PathVariable("email") String email) throws Exception {
+    public ResponseEntity<Object> ObeterCodigoParaRecuperacaoDeSenhaPassandoOEmail(@NotNull @Valid @PathVariable("email") String email) throws Exception {
 
-        Optional<Administrador> paciente = service.buscarPacsientePorEmail(email);
+            Optional<Object> obj = service.buscarPacsientePorEmail(email);
 
 
-        return  ResponseEntity.ok().body(paciente);
+        return ResponseEntity.ok().body(obj);
     }
 
 
     @GetMapping(value = "/buscarPorCoigoAutorizacao/{codigo}")
     @Transactional
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    public ResponseEntity<ResponseEntity<Object>>BuscarCodigodeAutorização(@NotNull @Valid @PathVariable("codigo") String codigo) throws Exception {
-
-        Boolean paciente = service.BuscarCodigodeAutorização(codigo);
-
-        if (paciente){
+    public ResponseEntity<Void> buscarCodigodeAutorizacao(@NotNull @Valid @PathVariable("codigo") String codigo) throws Exception {
+        boolean existe = service.BuscarCodigodeAutorizacao(codigo);
+        if (existe) {
             return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.notFound().build();
         }
-
-        return  ResponseEntity.notFound().build();
     }
+
 
 
 
@@ -105,15 +100,13 @@ public class AdministradorResource {
 
         Boolean paciente = service.VerificarCodigoValido(codigo);
         service.deletraCodigoVerificacao(codigo);
-        if (paciente){
+        if (paciente) {
 
             return ResponseEntity.ok().build();
         }
 
-        return  ResponseEntity.notFound().build();
+        return ResponseEntity.notFound().build();
     }
-
-
 
 
 
@@ -125,40 +118,32 @@ public class AdministradorResource {
     @PostMapping("/post")
     @Transactional
     public ResponseEntity<DadosAdiministradorView> cadastrarAdministrador(@RequestBody @Valid DadosCadastraAdministrador dados,
-                                                                     BindingResult result,
-                                                                     UriComponentsBuilder uriBuilder) {
-
-        if (result.hasErrors()) { return ResponseEntity.badRequest().build(); }
-
-
+                                                                          BindingResult result,
+                                                                          UriComponentsBuilder uriBuilder) {
+        if (result.hasErrors()) {
+            return ResponseEntity.badRequest().build();
+        }
 
         Long idUsuario = dados.AdmUsuario();
 
-
-
         Optional<Usuario> usuarioOptional = usuarioRepository.findById(idUsuario);
 
-
-        if (usuarioOptional.isEmpty()  ) {
+        if (usuarioOptional.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
-
         Usuario usuario = usuarioOptional.get();
+        Administrador administrador = new Administrador(dados, usuario);
 
+        service.CadastraRegistroPaciente(administrador);
 
+        URI uri = uriBuilder.path("/administrador/administrador/{id}")
+                .buildAndExpand(administrador.getAdmCodigo())
+                .toUri();
 
-        Administrador paciente = new Administrador(dados, usuario );
-
-
-        service.CadastraRegistroPaciente(paciente );
-
-
-        URI uri = uriBuilder.path("/api/pacientes/{id}").buildAndExpand(paciente.getAdmCodigo()).toUri();
-
-
-        return ResponseEntity.created(uri).body(new DadosAdiministradorView(paciente));
+        return ResponseEntity.created(uri).body(new DadosAdiministradorView(administrador));
     }
+
 
 
 
@@ -176,11 +161,15 @@ public class AdministradorResource {
 
 
 
+
+
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/listatodospaciente")
     public List<Administrador> buscarTodos() {
         return service.buscarTodosPaciente();
     }
+
+
 
 
 
@@ -193,5 +182,44 @@ public class AdministradorResource {
         service.deletarPorId(id);
         return ResponseEntity.noContent().build();
     }
+
+
+
+
+
+
+
+    @PutMapping(value = "/esqueciMinhaSenhaADM")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public ResponseEntity<Object> esqueciMinhaSenha(@RequestBody @Valid DadosTrocaDeSenha dados, BindingResult result) {
+        if (result.hasErrors()) {
+            return ResponseEntity.badRequest().build();
+        }
+        String senhaNova = passwordEncoder.encode(dados.senhaNova());
+        service.BuscaPorSenhaAntiga(senhaNova, dados.id());
+        return ResponseEntity.ok().build();
+    }
+
+
+
+
+
+
+    @PutMapping(value = "/TrocaSenhaADM")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public boolean TrocaSenha(@RequestBody @Valid DadosTrocaDeSenha dados,
+                              @NotNull BindingResult result) {
+        if (result.hasErrors()) {
+            return false;
+        }
+        String SenhaNova = passwordEncoder.encode(dados.senhaNova());
+        // Não encode a senha antiga aqui, apenas passe-a para o serviço
+        boolean existe = service.EsqueciMinhaSenha(SenhaNova, dados.senhaAntiga(), dados.id(), dados.email());
+        return existe;
+    }
+
+
 
 }

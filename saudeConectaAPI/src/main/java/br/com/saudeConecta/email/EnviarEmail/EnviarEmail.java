@@ -40,10 +40,8 @@ public class EnviarEmail {
 
     public void enviarEmailDestinatarioAdministrador(@NotNull Optional<Administrador> principal, String codigoVerificacao) throws MessagingException {
 
-
             long id = principal.get().getAdmCodigo();
             Optional<Administrador> paciente = AdministradorRepository.findById(id);
-
             Map<String, Object> model = new HashMap<>();
             model.put("message", codigoVerificacao);// "message" e uma variavel que dinamica que vai ser exibida dedo da pagina html
             emailService.enviarEmailComPaginaHTML(paciente.get().getAdmEmail(), "Verificação de duas Etapas", "email-template.html", model );
@@ -53,23 +51,18 @@ public class EnviarEmail {
 
     public void enviarEmailDestinatarioPaciente(@NotNull Optional<Paciente> principal, String codigoVerificacao) throws MessagingException {
 
-
         long id = principal.get().getPaciCodigo();
         Optional<Paciente> paciente = pacienteRepository.findById(id);
-
         Map<String, Object> model = new HashMap<>();
         model.put("message", codigoVerificacao);// "message" e uma variavel que dinamica que vai ser exibida dedo da pagina html
         emailService.enviarEmailComPaginaHTML(paciente.get().getPaciEmail(), "Verificação de duas Etapas", "email-template.html", model );
 
-
     }
 
 
-    public void enviarEmailDestinatarioMedico(@NotNull Medico principal, String codigoVerificacao) throws MessagingException {
+    public void enviarEmailDestinatarioMedico(Optional<Medico> principal, String codigoVerificacao) throws MessagingException {
         System.out.println("Tipo do objeto principal: " + principal.getClass().getName());
-
-            long id = ((Medico) principal).getMedCodigo();
-
+            long id = principal.get().getMedCodigo();
             Optional<Medico> medico = medicoRepository.findById(id);
             Map<String, Object> model = new HashMap<>();
             model.put("message", codigoVerificacao);// "message" e uma variavel que dinamica que vai ser exibida dedo da pagina html
@@ -80,10 +73,7 @@ public class EnviarEmail {
 
 
     public void enviarLoginDePaciente(Optional<Paciente> Userpaciente, String login) throws MessagingException {
-
         long id =  Userpaciente.get().getPaciCodigo();
-
-
         Map<String, Object> model = new HashMap<>();
         model.put("message", login);// "message" e uma variavel que dinamica que vai ser exibida dedo da pagina html
         emailService.enviarEmailComLoginPaciente(Userpaciente.get().getPaciEmail(), "Login De Usuario ", "emaiLogin-template.html", model );
@@ -92,11 +82,7 @@ public class EnviarEmail {
     }
 
     public void enviarLoginDeMedico( Optional<Medico> Usermedico, String login) throws MessagingException {
-
-
         long id =  Usermedico.get().getMedCodigo();
-
-
         Map<String, Object> model = new HashMap<>();
         model.put("message", login);// "message" e uma variavel que dinamica que vai ser exibida dedo da pagina html
         emailService.enviarEmailComLoginMedico(Usermedico.get().getMedEmail(), "Login De Usuario ", "emaiLogin-template.html", model );

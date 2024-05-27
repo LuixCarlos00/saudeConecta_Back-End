@@ -2,10 +2,8 @@ package br.com.saudeConecta.endpoinst.usuario.Resource;
 
 
 import br.com.saudeConecta.email.EnviarEmail.EnviarEmail;
-import br.com.saudeConecta.endpoinst.consulta.DTO.DadosConsultaView;
 import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
-import br.com.saudeConecta.endpoinst.paciente.DTO.DadosCadastraPaciente;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
 import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
 import br.com.saudeConecta.endpoinst.usuario.DTO.*;
@@ -17,7 +15,6 @@ import br.com.saudeConecta.infra.configuracoesseguranca.TokenService;
 import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,11 +25,9 @@ import org.springframework.http.ResponseEntity;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Optional;
 
@@ -113,6 +108,17 @@ public class UsuarioResource {
 
         return ResponseEntity.status(HttpStatus.OK).body(new DadosUsuarioView((usuario.get())));
     }
+
+
+    @GetMapping(value = "/buscarUsuarioExistente/{login}")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public Boolean buscarPorloginSeExiste(@NotNull @Valid @PathVariable("login") String login) {
+        Boolean usuario = userService.buscarPorloginSeExiste(login);
+
+        return  usuario;
+    }
+
 
 
     @PutMapping(value = "/trocaDeSenha/{Id}")
