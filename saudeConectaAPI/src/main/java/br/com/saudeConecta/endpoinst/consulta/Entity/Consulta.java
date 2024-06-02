@@ -52,6 +52,9 @@ public class Consulta implements Serializable {
     @Column(name = "ConFormaPagamento")
     private Byte ConFormaPagamento;
 
+    @Column(name = "ConStatus")
+    private Byte ConStatus;
+
     @Column(name = "ConAdm")
     private Long ConAdm;
     
@@ -67,6 +70,7 @@ public class Consulta implements Serializable {
         this.ConDataCriacao = dados.ConDadaCriacao();
         this.ConFormaPagamento = dados.ConFormaPagamento();
         this.ConAdm = dados.ConAdm();
+        this.ConStatus = dados.ConStatus();
 
 
     }

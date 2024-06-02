@@ -26,13 +26,13 @@ public record DadosCadastraMedico(
         @NotNull
         String MedEmail,
 
-        @NotNull
+
         String MedEmpresa,
 
-        @NotNull
+
         String MedGraduacao,
 
-        @NotNull
+
         String MedFormacoes,
 
 

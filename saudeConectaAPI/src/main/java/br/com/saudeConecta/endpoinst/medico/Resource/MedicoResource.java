@@ -99,9 +99,9 @@ public class MedicoResource {
 
 
 
-    @GetMapping("/medicopagina")
+    @GetMapping(value = "/medicopagina")
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    public Page<DadosMedicoView> BuscarPorPaginas(@PageableDefault(size = 12, sort = { "CIDCódigo" }) Pageable paginacao) {
+    public Page<DadosMedicoView> BuscarPorPaginas(@PageableDefault(size = 12, sort = { "medCodigo" }) Pageable paginacao) {
         return service.BuscarPorPaginas(paginacao);
     }
 

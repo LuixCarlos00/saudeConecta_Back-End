@@ -4,17 +4,13 @@ import br.com.saudeConecta.endpoinst.consulta.DTO.DadosCadastraConsulta;
 import br.com.saudeConecta.endpoinst.consulta.DTO.DadosConsultaView;
 import br.com.saudeConecta.endpoinst.consulta.Entity.Consulta;
 import br.com.saudeConecta.endpoinst.consulta.Service.ConsultaService;
-import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
 import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
 import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
-import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-import org.apache.tomcat.util.bcel.Const;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -97,7 +93,7 @@ public class ConsultaResource {
 
         Consulta consulta = new Consulta(medico, paciente, dados);
 
-        service.CadastraRegistroMedico(consulta);
+        service.CadastraRegistroConsulta(consulta);
 
         URI uri = uriBuilder.path("/plano/{id}").buildAndExpand(consulta.getConCodigoConsulta()).toUri();
 
@@ -108,22 +104,30 @@ public class ConsultaResource {
 
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    @GetMapping("/pacientepagina")
-    public Page<DadosConsultaView> BuscarPorPaginas(@PageableDefault(size = 12, sort = {"CIDCódigo"}) Pageable paginacao) {
-        return service.BuscarPorPaginas(paginacao);
+    @GetMapping(value ="/Consultapagina")
+    public Page<DadosConsultaView> BuscarConsultaPorPaginas(@PageableDefault(sort = {"conMedico"}) Pageable paginacao) {
+        return service.BuscarConsultaPorPaginas(paginacao);
+    }
+
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    @GetMapping(value ="/BuscarRegistrosDeConsulta/{busca}")
+    public Page<DadosConsultaView> BuscarRegistrosDeConsulta( @NotNull @PathVariable("busca") String busca) {
+
+        return service.BuscarRegistrosDeConsulta(busca);
     }
 
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    @GetMapping(value = "/listatodospaciente")
-    public List<Consulta> buscarTodos() {
-        return service.buscarTodosMedicos();
+    @GetMapping(value = "/listatodasConsulta")
+    public List<Consulta> buscarTodasConsulta() {
+
+        return service.buscarTodasConsulta();
     }
 
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePacienteById(@PathVariable("id") Long id) throws Exception {
+    public ResponseEntity<Void> deleteConsultaById(@PathVariable("id") Long id) throws Exception {
         service.deletarPorId(id);
         return ResponseEntity.noContent().build();
     }

@@ -5,8 +5,6 @@ import br.com.saudeConecta.endpoinst.consulta.Entity.Consulta;
 import br.com.saudeConecta.endpoinst.consulta.Repository.ConsultaRepository;
 import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
-import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
-import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
 import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +34,7 @@ public class ConsultaService {
 
 
 
-    public Page<DadosConsultaView> BuscarPorPaginas(Pageable paginacao) {
+    public Page<DadosConsultaView> BuscarConsultaPorPaginas(Pageable paginacao) {
         return repository.findAll(paginacao).map(DadosConsultaView::new);
     }
 
@@ -59,13 +57,13 @@ public class ConsultaService {
     }
 
 
-    public List<Consulta> buscarTodosMedicos() {
+    public List<Consulta> buscarTodasConsulta() {
         return repository.findAll();
 
     }
 
 
-    public void CadastraRegistroMedico(Consulta consulta) throws ResourceNotFoundException {
+    public void CadastraRegistroConsulta(Consulta consulta) throws ResourceNotFoundException {
          repository.save(consulta);
     }
 
@@ -80,6 +78,23 @@ public class ConsultaService {
    Date data2 = Date.valueOf(data);
 
      return repository.existsByConHorarioAndConDataAndConMedico_MedCodigo(horario, data, medico);
+
+    }
+
+    public Page<DadosConsultaView> BuscarRegistrosDeConsulta(String busca) {
+
+//        String stringBusca = busca.toString();
+//        Date    dateBusca  = busca.toString();
+//        Long  longBusca = busca.toString();
+//
+//    if (){
+//        return repository.find
+//    }
+
+
+return  null;
+
+
 
     }
 }
