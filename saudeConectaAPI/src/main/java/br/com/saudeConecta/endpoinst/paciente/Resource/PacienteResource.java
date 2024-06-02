@@ -46,9 +46,9 @@ public class PacienteResource {
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @Transactional
     public ResponseEntity<DadosPacienteView> buscarPorId(@NotNull @Valid @PathVariable("id") Long Id) {
-        Optional<Paciente> medico = service.buscarPacientePorId(Id);
+        Optional<Paciente> paciente = service.buscarPacientePorId(Id);
 
-        return ResponseEntity.status(HttpStatus.OK).body(new DadosPacienteView((medico.get())));
+        return ResponseEntity.status(HttpStatus.OK).body(new DadosPacienteView((paciente.get())));
     }
 
 
