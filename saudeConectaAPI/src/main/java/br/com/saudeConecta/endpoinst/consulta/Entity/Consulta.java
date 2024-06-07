@@ -74,4 +74,20 @@ public class Consulta implements Serializable {
 
 
     }
+
+    public void update(Consulta consulta) {
+
+        this.ConObservacoes = consulta.ConObservacoes;
+        this.ConDataCriacao = consulta.ConDataCriacao;
+        this.ConFormaPagamento = consulta.ConFormaPagamento;
+        this.ConStatus = consulta.ConStatus;
+        this.ConAdm = consulta.ConAdm;
+        this.conMedico = consulta.conMedico;
+        this.conPaciente = consulta.conPaciente;
+        this.ConDia_semana = consulta.ConDia_semana;
+        this.conHorario = consulta.conHorario;
+        this.conData = consulta.conData;
+    }
+
+
 }

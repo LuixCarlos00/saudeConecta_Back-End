@@ -1,9 +1,9 @@
-package br.com.saudeConecta.endpoinst.consulta.Resource;
+package br.com.saudeConecta.endpoinst.consultaStatus.Resource;
 
-import br.com.saudeConecta.endpoinst.consulta.DTO.DadosCadastraConsulta;
-import br.com.saudeConecta.endpoinst.consulta.DTO.DadosConsultaView;
-import br.com.saudeConecta.endpoinst.consulta.Entity.Consulta;
-import br.com.saudeConecta.endpoinst.consulta.Service.ConsultaService;
+import br.com.saudeConecta.endpoinst.consultaStatus.DTO.DadosCadastraConsultaStatus;
+import br.com.saudeConecta.endpoinst.consultaStatus.DTO.DadosConsultaStatusView;
+import br.com.saudeConecta.endpoinst.consultaStatus.Entity.ConsultaStatus;
+import br.com.saudeConecta.endpoinst.consultaStatus.Service.ConsultaStatusService;
 import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
@@ -25,13 +25,13 @@ import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
-@RequestMapping(value = "/consulta")
+@RequestMapping(value = "/consultaStatus")
 @RestController
 @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-public class ConsultaResource {
+public class ConsultaStatusResource {
 
     @Autowired
-    private ConsultaService service;
+    private ConsultaStatusService service;
 
     @Autowired
     private MedicoRepository medicoRepository;
@@ -42,10 +42,10 @@ public class ConsultaResource {
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/buscarId/{id}")
     @Transactional
-    public ResponseEntity<DadosConsultaView> buscarPorId(@NotNull @Valid @PathVariable("id") Long Id) {
-        Optional<Consulta> consulta = service.buscarPacientePorId(Id);
+    public ResponseEntity<DadosConsultaStatusView> buscarPorId(@NotNull @Valid @PathVariable("id") Long Id) {
+        Optional<ConsultaStatus> consulta = service.buscarPacientePorId(Id);
 
-        return ResponseEntity.status(HttpStatus.OK).body(new DadosConsultaView((consulta.get())));
+        return ResponseEntity.status(HttpStatus.OK).body(new DadosConsultaStatusView((consulta.get())));
     }
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
@@ -67,8 +67,8 @@ public class ConsultaResource {
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PostMapping("/post")
     @Transactional
-    public ResponseEntity<DadosConsultaView> Cadastra(@NotNull @RequestBody @Valid DadosCadastraConsulta dados, @NotNull BindingResult result,
-                                                      UriComponentsBuilder uriBuilder) {
+    public ResponseEntity<DadosConsultaStatusView> Cadastra(@NotNull @RequestBody @Valid DadosCadastraConsultaStatus dados, @NotNull BindingResult result,
+                                                            UriComponentsBuilder uriBuilder) {
 
         if (result.hasErrors()) {
             return ResponseEntity.badRequest().build();
@@ -76,8 +76,8 @@ public class ConsultaResource {
 
             System.out.println(dados.toString());
 
-        Long idMedicos = dados.ConMedico();
-        Long idPaciente = dados.ConPaciente();
+        Long idMedicos = dados.ConSttMedico();
+        Long idPaciente = dados.ConSttPaciente();
 
 
         Optional<Medico> medicoOptional = medicoRepository.findById(idMedicos);
@@ -91,13 +91,13 @@ public class ConsultaResource {
         Medico medico = medicoOptional.get();
         Paciente paciente = pacienteOptional.get();
 
-        Consulta consulta = new Consulta(medico, paciente, dados);
+        ConsultaStatus consulta = new ConsultaStatus(medico, paciente, dados);
 
         service.CadastraRegistroConsulta(consulta);
 
-        URI uri = uriBuilder.path("/plano/{id}").buildAndExpand(consulta.getConCodigoConsulta()).toUri();
+        URI uri = uriBuilder.path("/plano/{id}").buildAndExpand(consulta.getConSttCodigoConsulata()).toUri();
 
-        return ResponseEntity.created(uri).body(new DadosConsultaView(consulta));
+        return ResponseEntity.created(uri).body(new DadosConsultaStatusView(consulta));
 
     }
 
@@ -105,13 +105,13 @@ public class ConsultaResource {
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value ="/Consultapagina")
-    public Page<DadosConsultaView> BuscarConsultaPorPaginas(@PageableDefault(sort = {"conMedico"}) Pageable paginacao) {
+    public Page<DadosConsultaStatusView> BuscarConsultaPorPaginas(@PageableDefault(sort = {"conSttMedico"}) Pageable paginacao) {
         return service.BuscarConsultaPorPaginas(paginacao);
     }
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value ="/BuscarRegistrosDeConsulta/{busca}")
-    public Page<DadosConsultaView> BuscarRegistrosDeConsulta( @NotNull @PathVariable("busca") String busca) {
+    public Page<DadosConsultaStatusView> BuscarRegistrosDeConsulta(@NotNull @PathVariable("busca") String busca) {
 
         return service.BuscarRegistrosDeConsulta(busca);
     }
@@ -119,7 +119,7 @@ public class ConsultaResource {
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/listatodasConsulta")
-    public List<Consulta> buscarTodasConsulta() {
+    public List<ConsultaStatus> buscarTodasConsulta() {
 
         return service.buscarTodasConsulta();
     }
@@ -139,10 +139,10 @@ public class ConsultaResource {
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PutMapping(value = "/editar/{id}")
     @Transactional
-    public ResponseEntity<DadosConsultaView> EditarConsulta(@NotNull @RequestBody @Valid DadosCadastraConsulta dados,
-                                                            @NotNull @PathVariable("id") Long id,
-                                                            @NotNull BindingResult result,
-                                                      UriComponentsBuilder uriBuilder) {
+    public ResponseEntity<DadosConsultaStatusView> EditarConsulta(@NotNull @RequestBody @Valid DadosCadastraConsultaStatus dados,
+                                                                  @NotNull @PathVariable("id") Long id,
+                                                                  @NotNull BindingResult result,
+                                                                  UriComponentsBuilder uriBuilder) {
 
         if (result.hasErrors()) {
             return ResponseEntity.badRequest().build();
@@ -150,8 +150,8 @@ public class ConsultaResource {
 
 
 
-        Long idMedicos = dados.ConMedico();
-        Long idPaciente = dados.ConPaciente();
+        Long idMedicos = dados.ConSttMedico();
+        Long idPaciente = dados.ConSttPaciente();
 
 
         Optional<Medico> medicoOptional = medicoRepository.findById(idMedicos);
@@ -167,13 +167,13 @@ public class ConsultaResource {
         Medico medico = medicoOptional.get();
         Paciente paciente = pacienteOptional.get();
 
-        Consulta consulta = new Consulta(medico, paciente, dados);
+        ConsultaStatus consulta = new ConsultaStatus(medico, paciente, dados);
 
         service.EditarConsulta(consulta, id);
 
-        URI uri = uriBuilder.path("/plano/{id}").buildAndExpand(consulta.getConCodigoConsulta()).toUri();
+        URI uri = uriBuilder.path("/plano/{id}").buildAndExpand(consulta.getConSttCodigoConsulata()).toUri();
 
-        return ResponseEntity.created(uri).body(new DadosConsultaView(consulta));
+        return ResponseEntity.created(uri).body(new DadosConsultaStatusView(consulta));
 
     }
 
@@ -182,9 +182,9 @@ public class ConsultaResource {
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PutMapping(value = "/concluido/{id}")
     @Transactional
-    public ResponseEntity<DadosConsultaView> FazerConclusaoConsulta( @NotNull @PathVariable("id") Long id) {
-        DadosConsultaView consulta =  service.ConcluirConsulta( id);
-        return ResponseEntity.ok().body(new DadosConsultaView(consulta));
+    public ResponseEntity<DadosConsultaStatusView> FazerConclusaoConsulta(@NotNull @PathVariable("id") Long id) {
+        DadosConsultaStatusView consulta =  service.ConcluirConsulta( id);
+        return ResponseEntity.ok().body(new DadosConsultaStatusView(consulta));
     }
 
 

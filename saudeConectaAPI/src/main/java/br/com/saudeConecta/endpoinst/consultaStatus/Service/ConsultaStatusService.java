@@ -1,8 +1,8 @@
-package br.com.saudeConecta.endpoinst.consulta.Service;
+package br.com.saudeConecta.endpoinst.consultaStatus.Service;
 
-import br.com.saudeConecta.endpoinst.consulta.DTO.DadosConsultaView;
-import br.com.saudeConecta.endpoinst.consulta.Entity.Consulta;
-import br.com.saudeConecta.endpoinst.consulta.Repository.ConsultaRepository;
+import br.com.saudeConecta.endpoinst.consultaStatus.DTO.DadosConsultaStatusView;
+import br.com.saudeConecta.endpoinst.consultaStatus.Entity.ConsultaStatus;
+import br.com.saudeConecta.endpoinst.consultaStatus.Repository.ConsultaStatusRepository;
 import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
 import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
@@ -18,22 +18,22 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class ConsultaService {
+public class ConsultaStatusService {
 
     @Autowired
-    private ConsultaRepository repository;
+    private ConsultaStatusRepository repository;
 
     @Autowired
     private MedicoRepository medicoRepository;
 
 
-    public Optional<Consulta> buscarPacientePorId(Long id) {
+    public Optional<ConsultaStatus> buscarPacientePorId(Long id) {
         return repository.findById(id);
     }
 
 
-    public Page<DadosConsultaView> BuscarConsultaPorPaginas(Pageable paginacao) {
-        return repository.findAll(paginacao).map(DadosConsultaView::new);
+    public Page<DadosConsultaStatusView> BuscarConsultaPorPaginas(Pageable paginacao) {
+        return repository.findAll(paginacao).map(DadosConsultaStatusView::new);
     }
 
 
@@ -55,13 +55,13 @@ public class ConsultaService {
     }
 
 
-    public List<Consulta> buscarTodasConsulta() {
+    public List<ConsultaStatus> buscarTodasConsulta() {
         return repository.findAll();
 
     }
 
 
-    public void CadastraRegistroConsulta(Consulta consulta) throws ResourceNotFoundException {
+    public void CadastraRegistroConsulta(ConsultaStatus consulta) throws ResourceNotFoundException {
         repository.save(consulta);
     }
 
@@ -75,11 +75,11 @@ public class ConsultaService {
         }
         Date data2 = Date.valueOf(data);
 
-        return repository.existsByConHorarioAndConDataAndConMedico_MedCodigo(horario, data, medico);
+        return repository.existsByConSttHorarioAndConSttDataAndConSttMedico_MedCodigo(horario, data, medico);
 
     }
 
-    public Page<DadosConsultaView> BuscarRegistrosDeConsulta(String busca) {
+    public Page<DadosConsultaStatusView> BuscarRegistrosDeConsulta(String busca) {
 
 //        String stringBusca = busca.toString();
 //        Date    dateBusca  = busca.toString();
@@ -95,23 +95,23 @@ public class ConsultaService {
 
     }
 
-    public DadosConsultaView EditarConsulta(Consulta consulta, Long id) {
+    public DadosConsultaStatusView EditarConsulta(ConsultaStatus consulta, Long id) {
 
-      Consulta consulta1 = repository.getReferenceById(id);
+      ConsultaStatus consulta1 = repository.getReferenceById(id);
       consulta1.update(consulta);
       repository.save(consulta1);
-      return new DadosConsultaView(consulta1);
+      return new DadosConsultaStatusView(consulta1);
 
     }
 
-    public DadosConsultaView ConcluirConsulta(Long id) {
-        Optional<Consulta> optionalConsulta = repository.findById(id);
+    public DadosConsultaStatusView ConcluirConsulta(Long id) {
+        Optional<ConsultaStatus> optionalConsulta = repository.findById(id);
 
         if (optionalConsulta.isPresent()) {
-            Consulta consulta = optionalConsulta.get();
-            consulta.setConStatus((byte) 1); // Usando (byte) para garantir o tipo correto
+            ConsultaStatus consulta = optionalConsulta.get();
+            consulta.setConSttStatus((byte) 1); // Usando (byte) para garantir o tipo correto
             repository.save(consulta);
-            return new DadosConsultaView(consulta);
+            return new DadosConsultaStatusView(consulta);
         } else {
             throw new EntityNotFoundException("Consulta não encontrada com o id: " + id);
         }
