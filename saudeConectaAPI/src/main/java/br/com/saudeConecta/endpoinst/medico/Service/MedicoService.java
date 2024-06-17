@@ -95,4 +95,8 @@ public class MedicoService {
         return repository.findByMedNomeContainingIgnoreCase(nome);
     }
 
+    public Optional<Medico> buscarMedicoPorIdDeUsusario(Long id) {
+
+        return repository.findByUsuario_Id(id);
+    }
 }

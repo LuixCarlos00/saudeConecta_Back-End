@@ -1,5 +1,7 @@
 package br.com.saudeConecta.endpoinst.medico.Resource;
 
+import br.com.saudeConecta.endpoinst.administrador.DTO.DadosAdiministradorView;
+import br.com.saudeConecta.endpoinst.administrador.Entity.Administrador;
 import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
 import br.com.saudeConecta.endpoinst.endereco.Repository.EnderecoRepository;
 import br.com.saudeConecta.endpoinst.medico.DTO.DadosCadastraMedico;
@@ -155,6 +157,18 @@ public class MedicoResource {
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public List<Medico>buscarMedicoPorMedEspecialidade(@NotNull @Valid @PathVariable("especialidade") String especialidade) {
         return   service.buscarMedicoPorEspecialidade(especialidade);
+    }
+
+
+
+
+    @GetMapping(value = "/buscarIdDeUsusario/{id}")
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    @Transactional
+    public ResponseEntity<DadosMedicoView> buscarPorIdDeUsusario(@NotNull @Valid @PathVariable("id") Long Id) {
+        Optional<Medico> medico = service.buscarMedicoPorIdDeUsusario(Id);
+
+        return ResponseEntity.status(HttpStatus.OK).body(new DadosMedicoView((medico.get())));
     }
 
 

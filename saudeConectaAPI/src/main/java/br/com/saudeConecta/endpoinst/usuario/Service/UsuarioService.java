@@ -91,12 +91,12 @@ public class UsuarioService {
      if (user==null){
        return false;
      }
-     boolean extistePaciente = pacienteRepository.existsByUsuario_Id(user.getId());
+     //boolean extistePaciente = pacienteRepository.existsByUsuario_Id(user.getId());
         boolean extisteMedico = medicoRepository.existsByUsuario_Id(user.getId());
         boolean extisteAdministrador = administradorRepository.existsByAdmUsuario_Id(user.getId());
-     if (extistePaciente){
-         return true;
-     }
+   //  if (extistePaciente){
+   //      return true;
+    // }
      if (extisteMedico){
          return true;
      }

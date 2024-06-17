@@ -54,15 +54,15 @@ public class PacienteResource {
 
 
 
-
-    @GetMapping(value = "/buscarIdDeUsusario/{id}")
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    @Transactional
-    public ResponseEntity<DadosPacienteView> buscarPorIdDeUsusario(@NotNull @Valid @PathVariable("id") Long Id) {
-        Optional<Paciente> medico = service.buscarPacientePorIdDeUsusario(Id);
-
-        return ResponseEntity.status(HttpStatus.OK).body(new DadosPacienteView((medico.get())));
-    }
+//
+//    @GetMapping(value = "/buscarIdDeUsusario/{id}")
+//    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+//    @Transactional
+//    public ResponseEntity<DadosPacienteView> buscarPorIdDeUsusario(@NotNull @Valid @PathVariable("id") Long Id) {
+//        Optional<Paciente> medico = service.buscarPacientePorIdDeUsusario(Id);
+//
+//        return ResponseEntity.status(HttpStatus.OK).body(new DadosPacienteView((medico.get())));
+//    }
 
 
 
@@ -116,23 +116,23 @@ public class PacienteResource {
 
 
 
-        Long idUsuario = dados.usuario();
+      //  Long idUsuario = dados.usuario();
         Long idEndereco = dados.endereco();
 
 
-        Optional<Usuario> usuarioOptional = usuarioRepository.findById(idUsuario);
+       // Optional<Usuario> usuarioOptional = usuarioRepository.findById(idUsuario);
         Optional<Endereco> enderecoOptional = enderecoRepository.findById(idEndereco);
 
-        if (usuarioOptional.isEmpty() || enderecoOptional.isEmpty()) {
+        if (  enderecoOptional.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
 
-        Usuario usuario = usuarioOptional.get();
+       // Usuario usuario = usuarioOptional.get();
         Endereco endereco = enderecoOptional.get();
 
 
-        Paciente paciente = new Paciente(dados, usuario, endereco);
+        Paciente paciente = new Paciente(dados,  endereco);
 
 
         service.CadastraRegistroPaciente(paciente );

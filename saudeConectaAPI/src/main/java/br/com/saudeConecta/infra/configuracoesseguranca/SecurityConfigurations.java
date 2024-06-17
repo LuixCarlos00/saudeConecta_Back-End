@@ -6,6 +6,7 @@ import br.com.saudeConecta.infra.configuracoesseguranca.filtroSeguranca.FiltroAc
 import jdk.jfr.Name;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -20,6 +21,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.spring6.templateresolver.SpringResourceTemplateResolver;
@@ -36,6 +39,9 @@ public class SecurityConfigurations {
     @Autowired
     private FiltroAcesso filtroAcesso;
 
+    @Value("${url_LocalHost}")
+    private String url_LocalHost;
+
 
 
 
@@ -45,7 +51,7 @@ public class SecurityConfigurations {
     public SecurityFilterChain securityFilterChain(@NotNull HttpSecurity http) throws Exception {
 
 
-        return http.csrf().disable().cors(withDefaults())
+        return http.cors().and().csrf().disable()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and().authorizeHttpRequests()
                 .requestMatchers(HttpMethod.POST, "/Home/login").permitAll()
@@ -79,7 +85,20 @@ public class SecurityConfigurations {
 
 
 
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(@NotNull CorsRegistry registry) {
+                String origins = url_LocalHost ;
 
-
+                registry.addMapping("/**")
+                        .allowedOrigins(origins )
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                        .allowedHeaders("*")
+                        .allowCredentials(true);
+            }
+        };
+    }
 
 }

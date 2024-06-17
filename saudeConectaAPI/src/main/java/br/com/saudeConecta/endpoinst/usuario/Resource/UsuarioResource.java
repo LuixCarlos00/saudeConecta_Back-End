@@ -170,18 +170,15 @@ public class UsuarioResource {
             enviarEmail.enviarLoginDeMedico(medico, login);
         }
 
-        if (dados.equals("Paciente")){
-              paciente = pacienteRepository.findByUsuario_Id(IdUsuario);
-
-
-            if (  paciente == null) {
-                return ResponseEntity.notFound().build();
-            }
-
-            System.out.println(paciente);
-            enviarEmail.enviarLoginDePaciente(paciente, login);
-
-        }
+//        if (dados.equals("Paciente")){
+//              paciente = pacienteRepository.findByUsuario_Id(IdUsuario);
+//            if (  paciente == null) {
+//                return ResponseEntity.notFound().build();
+//            }
+//            System.out.println(paciente);
+//            enviarEmail.enviarLoginDePaciente(paciente, login);
+//
+//        }
 
 
 

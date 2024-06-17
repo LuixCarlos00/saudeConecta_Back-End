@@ -1,5 +1,7 @@
 package br.com.saudeConecta.endpoinst.consulta.Resource;
 
+import br.com.saudeConecta.endpoinst.administrador.Entity.Administrador;
+import br.com.saudeConecta.endpoinst.administrador.Repository.AdministradorRepository;
 import br.com.saudeConecta.endpoinst.consulta.DTO.DadosCadastraConsulta;
 import br.com.saudeConecta.endpoinst.consulta.DTO.DadosConsultaView;
 import br.com.saudeConecta.endpoinst.consulta.Entity.Consulta;
@@ -38,6 +40,9 @@ public class ConsultaResource {
 
     @Autowired
     private PacienteRepository pacienteRepository;
+
+    @Autowired
+    private AdministradorRepository administradorRepository;
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/buscarId/{id}")
@@ -78,20 +83,24 @@ public class ConsultaResource {
 
         Long idMedicos = dados.ConMedico();
         Long idPaciente = dados.ConPaciente();
+        Long idAdm = dados.ConAdm();
 
 
         Optional<Medico> medicoOptional = medicoRepository.findById(idMedicos);
         Optional<Paciente> pacienteOptional = pacienteRepository.findById(idPaciente);
+        Optional<Administrador> admOptional = administradorRepository.findById(idAdm);
 
 
-        if (medicoOptional.isEmpty() || pacienteOptional.isEmpty()) {
+        if (medicoOptional.isEmpty() || pacienteOptional.isEmpty() || admOptional.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
+
+        Administrador adm = admOptional.get();
         Medico medico = medicoOptional.get();
         Paciente paciente = pacienteOptional.get();
 
-        Consulta consulta = new Consulta(medico, paciente, dados);
+        Consulta consulta = new Consulta(medico, paciente, adm,dados);
 
         service.CadastraRegistroConsulta(consulta);
 
@@ -152,22 +161,24 @@ public class ConsultaResource {
 
         Long idMedicos = dados.ConMedico();
         Long idPaciente = dados.ConPaciente();
+        Long idAdm = dados.ConAdm();
 
 
         Optional<Medico> medicoOptional = medicoRepository.findById(idMedicos);
         Optional<Paciente> pacienteOptional = pacienteRepository.findById(idPaciente);
+        Optional<Administrador> admOptional = administradorRepository.findById(idAdm);
 
 
-        if (medicoOptional.isEmpty() || pacienteOptional.isEmpty()) {
+        if (medicoOptional.isEmpty() || pacienteOptional.isEmpty() || admOptional.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
 
-
+        Administrador adm = admOptional.get();
         Medico medico = medicoOptional.get();
         Paciente paciente = pacienteOptional.get();
 
-        Consulta consulta = new Consulta(medico, paciente, dados);
+        Consulta consulta = new Consulta(medico, paciente, adm,dados);
 
         service.EditarConsulta(consulta, id);
 

@@ -1,5 +1,6 @@
 package br.com.saudeConecta.endpoinst.consulta.DTO;
 
+import br.com.saudeConecta.endpoinst.administrador.Entity.Administrador;
 import br.com.saudeConecta.endpoinst.consulta.Entity.Consulta;
 import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
@@ -17,7 +18,7 @@ public record DadosConsultaView(
         String ConDadaCriacao,
         Byte ConFormaPagamento,
         Byte ConStatus,
-        Long ConAdm
+        Administrador ConAdm
 
 ) {
     public DadosConsultaView(Consulta registro) {

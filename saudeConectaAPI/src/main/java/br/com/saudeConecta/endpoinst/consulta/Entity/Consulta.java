@@ -1,5 +1,6 @@
 package br.com.saudeConecta.endpoinst.consulta.Entity;
 
+import br.com.saudeConecta.endpoinst.administrador.Entity.Administrador;
 import br.com.saudeConecta.endpoinst.consulta.DTO.DadosCadastraConsulta;
 import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
@@ -55,11 +56,12 @@ public class Consulta implements Serializable {
     @Column(name = "ConStatus")
     private Byte ConStatus;
 
-    @Column(name = "ConAdm")
-    private Long ConAdm;
+    @ManyToOne
+    @JoinColumn(name = "ConAdm")
+    private Administrador ConAdm;
     
  
-    public Consulta(Medico medico, Paciente paciente, @NotNull DadosCadastraConsulta dados) {
+    public Consulta(Medico medico, Paciente paciente,Administrador administrador  , @NotNull DadosCadastraConsulta dados) {
 
         this.conMedico = medico;
         this.conPaciente = paciente;
@@ -69,7 +71,7 @@ public class Consulta implements Serializable {
         this.ConObservacoes = dados.ConObservacoes();
         this.ConDataCriacao = dados.ConDadaCriacao();
         this.ConFormaPagamento = dados.ConFormaPagamento();
-        this.ConAdm = dados.ConAdm();
+        this.ConAdm =  administrador;
         this.ConStatus = dados.ConStatus();
 
 

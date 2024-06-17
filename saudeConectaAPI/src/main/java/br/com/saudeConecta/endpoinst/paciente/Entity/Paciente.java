@@ -44,9 +44,9 @@ public class Paciente implements Serializable {
     @Column(name = "PaciEmail", nullable = false)
     private String paciEmail;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "Usuario")
-    private Usuario usuario;
+//    @ManyToOne(fetch = FetchType.LAZY)
+//    @JoinColumn(name = "Usuario")
+//    private Usuario usuario;
 
     @Column(name = "PaciTelefone", nullable = true)
     private String paciTelefone;
@@ -56,21 +56,9 @@ public class Paciente implements Serializable {
     private Endereco endereco;
 
 
-//    public Paciente(String paciNome, String paciSexo, Date paciDataNacimento, String paciCpf, String paciRg,
-//                    Usuario usuario, String paciTelefone, Endereco endereco) {
-//
-//        this.PaciNome=paciNome;
-//        this.PaciSexo=paciSexo;
-//        this.PaciDataNacimento=paciDataNacimento;
-//        this.PaciCpf=paciCpf;
-//        this.PaciRg=paciRg;
-//        this.usuario = usuario;
-//        this.PaciTelefone=paciTelefone;
-//        this.endereco=endereco;
-//
-//    }
 
-    public Paciente(@NotNull DadosCadastraPaciente dados, Usuario dadosIdUsuario, Endereco dadosEndereco) {
+
+    public Paciente(@NotNull DadosCadastraPaciente dados , Endereco dadosEndereco) {
 
         this.paciNome = dados.PaciNome();
         this.PaciSexo= dados.PaciSexo();
@@ -78,7 +66,7 @@ public class Paciente implements Serializable {
         this.paciCpf = dados.PaciCpf();
         this.paciRg = dados.PaciRg();
         this.paciEmail = dados.PaciEmail();
-        this.usuario = dadosIdUsuario;
+        //this.usuario = dadosIdUsuario;
         this.paciTelefone = dados.PaciTelefone();
         this.endereco=dadosEndereco;
     }

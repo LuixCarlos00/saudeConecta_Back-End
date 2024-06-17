@@ -36,6 +36,8 @@ public class Usuario implements Serializable , UserDetails {
     @Column(nullable = false, name = "senha")
     private String senha  ;
 
+    @Column(nullable = false, name = "TipoUsuario")
+    private Byte TipoUsuario ;
 
 
     public Usuario(String login, String senha ) {
@@ -57,7 +59,16 @@ public class Usuario implements Serializable , UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_USER"));
+        if (this.TipoUsuario == 1) {
+            return List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        }
+        else if (this.TipoUsuario == 2) {
+            return List.of(new SimpleGrantedAuthority("ROLE_Secretaria"));
+        }
+        else if (this.TipoUsuario == 3) {
+            return List.of(new SimpleGrantedAuthority("ROLE_Medico"));
+        }
+        else   return List.of(new SimpleGrantedAuthority("ROLE_USER"));
     }
 
     @Override

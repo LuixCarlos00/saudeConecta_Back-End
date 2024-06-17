@@ -26,10 +26,13 @@ public class TokenService {
 
 
     public String gerarToken(@NotNull Usuario usuario) {
+        System.out.printf("usuario %s",usuario.getAuthorities().toString());
+        String autorizacao = usuario.getAuthorities().toString();
         return JWT.create()
                 .withIssuer("saudeConecta")
                 .withSubject(usuario.getUsername())
                 .withClaim("id",usuario.getId())
+                .withAudience(autorizacao)
 
                 .withExpiresAt(TempoValidoToken()).sign(Algorithm.HMAC256(secret));
 
@@ -45,11 +48,11 @@ public class TokenService {
 //            Algorithm algorithm = Algorithm.HMAC256(secret);
 //            String autorizacao = userDetails.getAuthorities().toString();
 //           if (tipoUsuario.equals("Professor")){
-//              ProfessorSace professorSace = professorSaceRepository.findByUsername(userDetails.getUsername());
+//              ProfessorSace profess.withAudience(autorizacao)orSace = professorSaceRepository.findByUsername(userDetails.getUsername());
 //               return JWT.create()
 //                       .withIssuer("Portal Professor")
 //                       .withSubject(userDetails.getUsername())
-//                       .withAudience(autorizacao)
+//
 //                       .withClaim("id",professorSace.getProCodigo())
 //                       .withExpiresAt(TempoValidoToken())
 //                       .sign(algorithm);
