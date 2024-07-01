@@ -57,7 +57,7 @@ public class UsuarioResource {
     @Autowired
     private UsuarioService usuarioService;
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    @CrossOrigin(origins = "http://localhost:4200 , https://6594-45-5-171-55.ngrok-free.app", allowCredentials = "true")
     @PostMapping("/login")
     public ResponseEntity<DadosTokenJWT> login(@RequestBody @NotNull DadosLoginUsuario dados) {
         var authenticatetoken = new UsernamePasswordAuthenticationToken(dados.login(), dados.senha());
@@ -102,7 +102,7 @@ public class UsuarioResource {
 
     @GetMapping(value = "/buscarId/{id}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    @CrossOrigin(origins = "http://localhost:4200,https://6594-45-5-171-55.ngrok-free.app", allowCredentials = "true")
     public ResponseEntity<DadosUsuarioView> buscarPorId(@NotNull @Valid @PathVariable("id") Long Id) {
         Optional<Usuario> usuario = userService.buscarUserPorId(Id);
 
@@ -112,7 +112,7 @@ public class UsuarioResource {
 
     @GetMapping(value = "/buscarUsuarioExistente/{login}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    @CrossOrigin(origins = "http://localhost:4200,https://6594-45-5-171-55.ngrok-free.app   ", allowCredentials = "true")
     public Boolean buscarPorloginSeExiste(@NotNull @Valid @PathVariable("login") String login) {
         Boolean usuario = userService.buscarPorloginSeExiste(login);
 
@@ -167,7 +167,7 @@ public class UsuarioResource {
             if (  medico == null) {
                 return ResponseEntity.notFound().build();
             }
-            enviarEmail.enviarLoginDeMedico(medico, login);
+            enviarEmail.enviarLoginDeMedicoRecuperacaoDeLogin(medico, login);
         }
 
 //        if (dados.equals("Paciente")){

@@ -37,10 +37,10 @@ public class Medico implements Serializable {
     @Column(name = "MedCrm", nullable = false)
     private String medCrm;
 
-    @Column(name = "MedCpf", nullable = false)
+    @Column(name = "MedCpf", nullable = true)
     private String MedCpf;
 
-    @Column(name = "MedRg", nullable = false)
+    @Column(name = "MedRg", nullable = true)
     private String MedRg;
 
     @Column(name = "MedEmail", nullable = false)

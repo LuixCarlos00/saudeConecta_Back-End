@@ -38,56 +38,78 @@ public class EnviarEmail {
     @Autowired
     private PacienteRepository  pacienteRepository; ;
 
-    public void enviarEmailDestinatarioAdministrador(@NotNull Optional<Administrador> principal, String codigoVerificacao) throws MessagingException {
 
+
+    public void enviarEmailDestinatarioAdministradorVerificacaoDuasEtapas(@NotNull Optional<Administrador> principal, String codigoVerificacao) throws MessagingException {
             long id = principal.get().getAdmCodigo();
             Optional<Administrador> paciente = AdministradorRepository.findById(id);
             Map<String, Object> model = new HashMap<>();
-            model.put("message", codigoVerificacao);// "message" e uma variavel que dinamica que vai ser exibida dedo da pagina html
+            model.put("message", codigoVerificacao);// "message" e uma variavel que dinamica que vai ser exibida dentro
+        // da pagina html
             emailService.enviarEmailComPaginaHTML(paciente.get().getAdmEmail(), "Verificação de duas Etapas", "email-template.html", model );
-
-
     }
 
-    public void enviarEmailDestinatarioPaciente(@NotNull Optional<Paciente> principal, String codigoVerificacao) throws MessagingException {
-
+    public void enviarEmailDestinatarioPacienteVerificacaoDuasEtapas(@NotNull Optional<Paciente> principal, String codigoVerificacao) throws MessagingException {
         long id = principal.get().getPaciCodigo();
         Optional<Paciente> paciente = pacienteRepository.findById(id);
         Map<String, Object> model = new HashMap<>();
-        model.put("message", codigoVerificacao);// "message" e uma variavel que dinamica que vai ser exibida dedo da pagina html
+        model.put("message", codigoVerificacao);// "message" e uma variavel que dinamica que vai ser exibida dentro
+        // da pagina html
         emailService.enviarEmailComPaginaHTML(paciente.get().getPaciEmail(), "Verificação de duas Etapas", "email-template.html", model );
-
     }
 
 
-    public void enviarEmailDestinatarioMedico(Optional<Medico> principal, String codigoVerificacao) throws MessagingException {
-        System.out.println("Tipo do objeto principal: " + principal.getClass().getName());
+    public void enviarEmailDestinatarioMedicoVerificacaoDuasEtapas(Optional<Medico> principal, String codigoVerificacao) throws MessagingException {
             long id = principal.get().getMedCodigo();
             Optional<Medico> medico = medicoRepository.findById(id);
             Map<String, Object> model = new HashMap<>();
-            model.put("message", codigoVerificacao);// "message" e uma variavel que dinamica que vai ser exibida dedo da pagina html
+            model.put("message", codigoVerificacao);// "message" e uma variavel que dinamica que vai ser exibida dentro
+        // da pagina html
             emailService.enviarEmailComPaginaHTML(medico.get().getMedEmail(), "Verificação de duas Etapas", "email-template.html", model);
-
-
     }
+
+
+
+
+
 
 
     public void enviarLoginDePaciente(Optional<Paciente> Userpaciente, String login) throws MessagingException {
         long id =  Userpaciente.get().getPaciCodigo();
         Map<String, Object> model = new HashMap<>();
-        model.put("message", login);// "message" e uma variavel que dinamica que vai ser exibida dedo da pagina html
+        model.put("message", login);// "message" e uma variavel que dinamica que vai ser exibida dentro
+        // da pagina html
         emailService.enviarEmailComLoginPaciente(Userpaciente.get().getPaciEmail(), "Login De Usuario ", "emaiLogin-template.html", model );
-
-
     }
 
-    public void enviarLoginDeMedico( Optional<Medico> Usermedico, String login) throws MessagingException {
+    public void enviarLoginDeMedicoRecuperacaoDeLogin(Optional<Medico> Usermedico, String login) throws MessagingException {
         long id =  Usermedico.get().getMedCodigo();
         Map<String, Object> model = new HashMap<>();
-        model.put("message", login);// "message" e uma variavel que dinamica que vai ser exibida dedo da pagina html
+        model.put("message", login);// "message" e uma variavel que dinamica que vai ser exibida dentro
+        // da pagina html
         emailService.enviarEmailComLoginMedico(Usermedico.get().getMedEmail(), "Login De Usuario ", "emaiLogin-template.html", model );
-
-
-
     }
+
+
+
+
+
+    public void enviarLembreteDeAlertaParaPaciente(Optional<Paciente> Userpaciente, String messagem) throws MessagingException {
+        long id =  Userpaciente.get().getPaciCodigo();
+        Map<String, Object> model = new HashMap<>();
+        model.put("message", messagem);// "message" e uma variavel que dinamica que vai ser exibida dentro
+        // da pagina html
+        emailService.enviarLembreteDeAlertaParaPaciente(Userpaciente.get().getPaciEmail(), "  Lembrete ", "Lembrete-template.html", model );
+    }
+
+    public void enviarLembreteDeAlertaParaMedico(Optional<Medico> Usermedico, String messagem) throws MessagingException {
+        long id =  Usermedico.get().getMedCodigo();
+        Map<String, Object> model = new HashMap<>();
+        model.put("message", messagem);// "message" e uma variavel que dinamica que vai ser exibida dentro
+        // da pagina html
+        emailService.enviarLembreteDeAlertaParaMedico(Usermedico.get().getMedEmail(), "  Lembrete ", "Lembrete-template.html", model );
+    }
+
+
+
 }

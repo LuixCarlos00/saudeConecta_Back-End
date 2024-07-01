@@ -14,16 +14,21 @@ public class ConfiguracaoDeCORS {
 
 
 
-    @Value("${url_LocalHost}")
-    private String url_LocalHost;
+    @Value("${url_Front_End}")
+    private String url_Front_End;
+
+    @Value("${url_Back_End}")
+    private String url_Back_End;
+
 
 
 
     public void addCorsMappings(@NotNull @ NotNull CorsRegistry registry) {
-        String origins = url_LocalHost ;
+        String origins = url_Front_End;
+        String origins2 = url_Back_End;
 
         registry.addMapping("/**")
-                .allowedOrigins(origins )
+                .allowedOrigins(origins , origins2)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "TRACE", "CONNECT")
                 .allowedHeaders("*")
                 .allowCredentials(true)

@@ -4,12 +4,14 @@ import br.com.saudeConecta.endpoinst.administrador.Entity.Administrador;
 import br.com.saudeConecta.endpoinst.administrador.Repository.AdministradorRepository;
 import br.com.saudeConecta.endpoinst.consulta.DTO.DadosCadastraConsulta;
 import br.com.saudeConecta.endpoinst.consulta.DTO.DadosConsultaView;
+import br.com.saudeConecta.endpoinst.consulta.DTO.DadosSeendToNewMenssage;
 import br.com.saudeConecta.endpoinst.consulta.Entity.Consulta;
 import br.com.saudeConecta.endpoinst.consulta.Service.ConsultaService;
 import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
 import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
+import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -43,6 +45,9 @@ public class ConsultaResource {
 
     @Autowired
     private AdministradorRepository administradorRepository;
+
+
+
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/buscarId/{id}")
@@ -201,8 +206,59 @@ public class ConsultaResource {
 
 
 
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    @GetMapping(value = "/VerificarHorariosDisponiveisReferentesAoMedicoEData/medico={medico}&data={data}")
+    public  List<String>  VerificarHorariosDisponiveisReferentesAoMedicoEData(@Valid @NotNull @PathVariable("medico") Long medico,
+                                                                              @Valid @NotNull @PathVariable("data") String data) {
+
+        List<String>  list =     service.VerificarHorariosDisponiveisReferentesAoMedicoEData ( medico, data);
+        return list;
+    }
 
 
+
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    @PostMapping("/EnviarMensagem")
+    @Transactional
+    public  ResponseEntity<Object>  EnviarMensagem(@NotNull @RequestBody @Valid DadosSeendToNewMenssage dados, @NotNull BindingResult result,
+                                                            UriComponentsBuilder uriBuilder) throws MessagingException {
+
+        if (result.hasErrors()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        Optional<Object> obj = Optional.empty();
+
+        String medicoEmail = dados.medEmail();
+        String medicoTelefone = dados.medTelefone();
+        String pacienteEmail = dados.paciEmail();
+        String pacienteTelefone = dados.paciTelefone();
+
+        if (medicoEmail.isEmpty() && medicoTelefone.isEmpty() && pacienteEmail.isEmpty() && pacienteTelefone.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        else if (!medicoEmail.isEmpty()) {
+              obj = service.buscarPacientePorEmail(medicoEmail ,dados.mensagem() );
+        }
+        else if (!medicoTelefone.isEmpty()) {
+              obj = service.buscarPacientePorTelefone(medicoTelefone ,dados.mensagem() );
+        }
+        else if (!pacienteEmail.isEmpty()) {
+              obj = service.buscarPacientePorEmail(pacienteEmail ,dados.mensagem() );
+        }
+        else if (!pacienteTelefone.isEmpty()) {
+            obj  = service.buscarPacientePorTelefone(pacienteTelefone ,dados.mensagem() );
+        }
+
+
+
+
+
+        return ResponseEntity.ok().body(obj);
+
+
+    }
 
 
 

@@ -17,9 +17,9 @@ public record DadosCadastraMedico(
         Date MedDataNacimento,
         @NotNull
         String MedCrm,
-        @NotNull
+
         String MedCpf,
-        @NotNull
+
         String MedRg,
         @NotNull
         String MedEspecialidade,

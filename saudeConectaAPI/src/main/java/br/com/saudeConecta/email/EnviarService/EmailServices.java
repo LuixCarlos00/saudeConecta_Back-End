@@ -35,20 +35,16 @@ public class EmailServices {
     @Autowired
     public EmailServices(TemplateEngine templateEngine) {
         this.templateEngine = templateEngine;
-
     }
 
     @Name("Método utilizado para enviar  um email simples com um codigo e validação ")
     public void enviarEmail(String destinatario, String assunto, String corpo) throws EmailServiceException {
         MimeMessage message = mailSender.createMimeMessage();
-
         try {
             message.setFrom(new InternetAddress(fromEmail));
             message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(destinatario));
             message.setSubject(assunto);
             message.setText(corpo);
-
-
             mailSender.send(message);
         } catch (MessagingException e) {
             throw new EmailServiceException("Erro ao enviar e-mail");
@@ -64,11 +60,9 @@ public class EmailServices {
     public void enviarEmailComPaginaHTML(String to, String subject, String templateName, Map<String, Object> model) throws MessagingException {
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
-
         try {
             helper.setTo(to);
             helper.setSubject(subject);
-
             //Processar o template Thymeleaf com as variáveis do mapa
             String htmlContent = templateEngine.process(templateName, new Context(Locale.getDefault(), model));
             helper.setText(htmlContent, true);
@@ -80,15 +74,11 @@ public class EmailServices {
 
 
     public void enviarEmailComLoginPaciente(String paciEmail, String LoginDeUsuario , String TemplateName, Map<String, Object> model) throws MessagingException {
-
-
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
-
         try {
             helper.setTo(paciEmail);
             helper.setSubject(LoginDeUsuario);
-
             //Processar o template Thymeleaf com as variáveis do mapa
             String htmlContent = templateEngine.process(TemplateName, new Context(Locale.getDefault(), model));
             helper.setText(htmlContent, true);
@@ -105,6 +95,40 @@ public class EmailServices {
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
 
+        try {
+            helper.setTo(medEmail);
+            helper.setSubject(loginDeUsuario);
+
+            //Processar o template Thymeleaf com as variáveis do mapa
+            String htmlContent = templateEngine.process(TemplateName, new Context(Locale.getDefault(), model));
+            helper.setText(htmlContent, true);
+            mailSender.send(mimeMessage);
+        } catch (MessagingException e) {
+            throw new MessagingException("Erro ao enviar e-mail ");
+        }
+
+    }
+
+    public void enviarLembreteDeAlertaParaPaciente(String paciEmail, String loginDeUsuario, String TemplateName, Map<String, Object> model) throws MessagingException {
+        MimeMessage mimeMessage = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
+        try {
+            helper.setTo(paciEmail);
+            helper.setSubject(loginDeUsuario);
+
+            //Processar o template Thymeleaf com as variáveis do mapa
+            String htmlContent = templateEngine.process(TemplateName, new Context(Locale.getDefault(), model));
+            helper.setText(htmlContent, true);
+            mailSender.send(mimeMessage);
+        } catch (MessagingException e) {
+            throw new MessagingException("Erro ao enviar e-mail ");
+        }
+
+    }
+
+    public void enviarLembreteDeAlertaParaMedico(String medEmail, String loginDeUsuario, String TemplateName, Map<String, Object> model) throws MessagingException {
+        MimeMessage mimeMessage = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
         try {
             helper.setTo(medEmail);
             helper.setSubject(loginDeUsuario);

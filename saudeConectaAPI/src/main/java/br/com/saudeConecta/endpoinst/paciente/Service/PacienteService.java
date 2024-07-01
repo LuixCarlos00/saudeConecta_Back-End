@@ -2,7 +2,6 @@ package br.com.saudeConecta.endpoinst.paciente.Service;
 
 import br.com.saudeConecta.email.EnviarEmail.EnviarEmail;
 import br.com.saudeConecta.endpoinst.codigoVerificacao.Repository.CodigoVerificacaoRepository;
-import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.paciente.DTO.DadosPacienteView;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
 import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
@@ -80,7 +79,7 @@ public class PacienteService {
         Optional<Paciente> paciente = repository.findByPaciEmail(email);
 
 
-            enviarEmail.enviarEmailDestinatarioPaciente(paciente, recuperaSenha.gerarCodigoVerificacaoTabelaUsuarios());
+            enviarEmail.enviarEmailDestinatarioPacienteVerificacaoDuasEtapas(paciente, recuperaSenha.gerarCodigoVerificacaoTabelaUsuarios());
         return paciente ;
     }
 

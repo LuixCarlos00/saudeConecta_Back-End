@@ -14,7 +14,6 @@ import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
 import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
 import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
 import br.com.saudeConecta.util.RecuperaSenha;
-import ch.qos.logback.core.joran.conditional.IfAction;
 import jakarta.mail.MessagingException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -101,15 +100,15 @@ public class AdministradorService {
         Optional<Administrador> adm = repository.findByAdmEmail(email);
 
         if (paciente.isPresent()) {
-            enviarEmail.enviarEmailDestinatarioPaciente(paciente, recuperaSenha.gerarCodigoVerificacaoTabelaUsuarios());
+            enviarEmail.enviarEmailDestinatarioPacienteVerificacaoDuasEtapas(paciente, recuperaSenha.gerarCodigoVerificacaoTabelaUsuarios());
             return Optional.of(paciente);
         }
         if (medico.isPresent()) {
-            enviarEmail.enviarEmailDestinatarioMedico(medico, recuperaSenha.gerarCodigoVerificacaoTabelaUsuarios());
+            enviarEmail.enviarEmailDestinatarioMedicoVerificacaoDuasEtapas(medico, recuperaSenha.gerarCodigoVerificacaoTabelaUsuarios());
             return Optional.of(medico);
         }
         if (adm.isPresent()) {
-            enviarEmail.enviarEmailDestinatarioAdministrador(adm, recuperaSenha.gerarCodigoVerificacaoTabelaUsuarios());
+            enviarEmail.enviarEmailDestinatarioAdministradorVerificacaoDuasEtapas(adm, recuperaSenha.gerarCodigoVerificacaoTabelaUsuarios());
             return Optional.of(adm);
         }
 
