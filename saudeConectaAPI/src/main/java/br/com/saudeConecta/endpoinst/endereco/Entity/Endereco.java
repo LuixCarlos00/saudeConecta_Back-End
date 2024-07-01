@@ -25,8 +25,7 @@ import java.sql.Date;
     @Column(name = "EndNacionalidade",nullable = false)
     private String EndNacionalidade;
 
-    @Column(name = "EndEstado",nullable = false)
-    private String EndEstado;
+
 
     @Column(name = "EndUF",nullable = false)
     private String EndUF;
@@ -51,11 +50,11 @@ import java.sql.Date;
     private String EndComplemento;
 
 
-    public Endereco(String endNacionalidade, String endEstado, String endUF, String endMunicipio,
+    public Endereco(String endNacionalidade,   String endUF, String endMunicipio,
                     String endBairro, String endCep, String endRua, Long endNumero, String endComplemento) {
 
         this.EndNacionalidade=endNacionalidade;
-        this.EndEstado=endEstado;
+
         this.EndUF=endUF;
         this.endMunicipio=endMunicipio;
         this.EndBairro=endBairro;

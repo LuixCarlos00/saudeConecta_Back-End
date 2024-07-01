@@ -78,16 +78,17 @@ public class UsuarioResource {
         }
 
         String senhaCriptografada = passwordEncoder.encode(dados.senha());
+
         Usuario usuario = new Usuario(dados, senhaCriptografada);
 
-       Boolean exite =  usuarioService.existeLogin(dados.login());
+        Boolean exite = usuarioService.existeLogin(dados.login());
 
-       if (exite){
-           return ResponseEntity.badRequest().build();
-       }
+        if (exite) {
+            return ResponseEntity.badRequest().build();
+        }
 
         // Cadastra o usuário
-       userService.CadastraUsuario(usuario);
+        userService.CadastraUsuario(usuario);
 
         // Autentica o usuário recém-cadastrado para gerar o token JWT
         var authenticateToken = new UsernamePasswordAuthenticationToken(dados.login(), dados.senha());
@@ -116,9 +117,8 @@ public class UsuarioResource {
     public Boolean buscarPorloginSeExiste(@NotNull @Valid @PathVariable("login") String login) {
         Boolean usuario = userService.buscarPorloginSeExiste(login);
 
-        return  usuario;
+        return usuario;
     }
-
 
 
     @PutMapping(value = "/trocaDeSenha/{Id}")
@@ -147,9 +147,7 @@ public class UsuarioResource {
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public ResponseEntity<ResponseEntity<Object>> RecuperaLogin(@NotNull @Valid @PathVariable("Id") Long Id,
                                                                 @NotNull @Valid @PathVariable("tipoUsuario") String dados
-                                                                 ) throws MessagingException {
-
-
+    ) throws MessagingException {
 
 
         Usuario usuario = userService.RecuperaLogin(Id);
@@ -157,14 +155,14 @@ public class UsuarioResource {
         String login = usuario.getLogin();
         Long IdUsuario = usuario.getId();
 
-        Optional<Medico>    medico = null;
-        Optional<Paciente> paciente =null ;
-        if (dados.equals("Medico")){
+        Optional<Medico> medico = null;
+        Optional<Paciente> paciente = null;
+        if (dados.equals("Medico")) {
 
-              medico = medicoRepository.findByUsuario_Id(IdUsuario);
+            medico = medicoRepository.findByUsuario_Id(IdUsuario);
 
 
-            if (  medico == null) {
+            if (medico == null) {
                 return ResponseEntity.notFound().build();
             }
             enviarEmail.enviarLoginDeMedicoRecuperacaoDeLogin(medico, login);
@@ -179,7 +177,6 @@ public class UsuarioResource {
 //            enviarEmail.enviarLoginDePaciente(paciente, login);
 //
 //        }
-
 
 
         return ResponseEntity.ok().build();

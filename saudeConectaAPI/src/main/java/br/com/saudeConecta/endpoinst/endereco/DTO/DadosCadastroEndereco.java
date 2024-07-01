@@ -7,7 +7,7 @@ public record DadosCadastroEndereco(
 
         String EndNacionalidade,
 
-        String EndEstado,
+
 
         String EndUF,
 
@@ -24,6 +24,6 @@ public record DadosCadastroEndereco(
         String EndComplemento
 ) {
     public Endereco toEntity() {
-        return new Endereco(EndNacionalidade,EndEstado,EndUF,EndMunicipio,EndBairro,EndCep,EndRua,EndNumero,EndComplemento);
+        return new Endereco(EndNacionalidade,EndUF,EndMunicipio,EndBairro,EndCep,EndRua,EndNumero,EndComplemento);
     }
 }

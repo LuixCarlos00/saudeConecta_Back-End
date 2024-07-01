@@ -40,21 +40,19 @@ public class Usuario implements Serializable , UserDetails {
     private Byte TipoUsuario ;
 
 
-    public Usuario(String login, String senha ) {
 
-        this.login =login;
-        this.senha = senha;
 
-    }
-
-    public Usuario(DadosLoginUsuario dados, String senhaCriptografada) {
+    public Usuario(DadosLoginUsuario dados, String senhaCriptografada  ) {
         this.login=dados.login();
         this.senha=senhaCriptografada;
+        this.TipoUsuario = dados.tipoUsuario();
     }
 
     public Usuario(String login) {
         this.login =getLogin();
     }
+
+
 
 
     @Override
