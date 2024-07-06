@@ -93,7 +93,7 @@ public class ConsultaResource {
 
         Optional<Medico> medicoOptional = medicoRepository.findById(idMedicos);
         Optional<Paciente> pacienteOptional = pacienteRepository.findById(idPaciente);
-        Optional<Administrador> admOptional = administradorRepository.findById(idAdm);
+        Optional<Administrador> admOptional = administradorRepository.findByAdmUsuario_Id(idAdm);
 
 
         if (medicoOptional.isEmpty() || pacienteOptional.isEmpty() || admOptional.isEmpty()) {
@@ -134,7 +134,6 @@ public class ConsultaResource {
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/listatodasConsulta")
     public List<Consulta> buscarTodasConsulta() {
-
         return service.buscarTodasConsulta();
     }
 

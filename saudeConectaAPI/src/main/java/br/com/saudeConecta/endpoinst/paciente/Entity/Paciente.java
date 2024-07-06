@@ -35,10 +35,10 @@ public class Paciente implements Serializable {
     @Column(name = "PaciDataNacimento", nullable = true)
     private Date PaciDataNacimento;
 
-    @Column(name = "PaciCpf", nullable = false)
+    @Column(name = "PaciCpf", nullable = true)
     private String paciCpf;
 
-    @Column(name = "PaciRg", nullable = false)
+    @Column(name = "PaciRg", nullable = true)
     private String paciRg;
 
     @Column(name = "PaciEmail", nullable = false)
