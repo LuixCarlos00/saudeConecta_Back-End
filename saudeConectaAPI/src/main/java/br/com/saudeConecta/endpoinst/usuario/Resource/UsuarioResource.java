@@ -6,6 +6,7 @@ import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
 import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
+import br.com.saudeConecta.endpoinst.secretaria.Entity.BuscarTodosUsuarios;
 import br.com.saudeConecta.endpoinst.usuario.DTO.*;
 import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
 import br.com.saudeConecta.endpoinst.usuario.Service.UsuarioService;
@@ -57,7 +58,7 @@ public class UsuarioResource {
     @Autowired
     private UsuarioService usuarioService;
 
-    @CrossOrigin(origins = "http://localhost:4200 , https://6594-45-5-171-55.ngrok-free.app", allowCredentials = "true")
+    @CrossOrigin(origins = "http://localhost:4200  ", allowCredentials = "true")
     @PostMapping("/login")
     public ResponseEntity<DadosTokenJWT> login(@RequestBody @NotNull DadosLoginUsuario dados) {
         var authenticatetoken = new UsernamePasswordAuthenticationToken(dados.login(), dados.senha());
@@ -103,7 +104,7 @@ public class UsuarioResource {
 
     @GetMapping(value = "/buscarId/{id}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200,https://6594-45-5-171-55.ngrok-free.app", allowCredentials = "true")
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public ResponseEntity<DadosUsuarioView> buscarPorId(@NotNull @Valid @PathVariable("id") Long Id) {
         Optional<Usuario> usuario = userService.buscarUserPorId(Id);
 
@@ -113,7 +114,7 @@ public class UsuarioResource {
 
     @GetMapping(value = "/buscarUsuarioExistente/{login}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200,https://6594-45-5-171-55.ngrok-free.app   ", allowCredentials = "true")
+    @CrossOrigin(origins = "http://localhost:4200  ", allowCredentials = "true")
     public Boolean buscarPorloginSeExiste(@NotNull @Valid @PathVariable("login") String login) {
         Boolean usuario = userService.buscarPorloginSeExiste(login);
 
@@ -168,19 +169,23 @@ public class UsuarioResource {
             enviarEmail.enviarLoginDeMedicoRecuperacaoDeLogin(medico, login);
         }
 
-//        if (dados.equals("Paciente")){
-//              paciente = pacienteRepository.findByUsuario_Id(IdUsuario);
-//            if (  paciente == null) {
-//                return ResponseEntity.notFound().build();
-//            }
-//            System.out.println(paciente);
-//            enviarEmail.enviarLoginDePaciente(paciente, login);
-//
-//        }
 
 
         return ResponseEntity.ok().build();
     }
+
+
+
+    @GetMapping(value = "/BuscarTodosUsuarios")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public BuscarTodosUsuarios BuscarTodosUsuarios() {
+        return userService.BuscarTodosUsuarios();
+    }
+
+
+
+
 
 
 }

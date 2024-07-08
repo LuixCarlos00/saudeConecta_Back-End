@@ -41,14 +41,14 @@ public class Secretaria implements Serializable {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "SecreUsuario")
-    private Usuario SecreUsuario;
+    private Usuario secreUsuario;
 
 
     public Secretaria(DadosCadastraSecretaria dados, Usuario usuario) {
         this.SecreNome = dados.SecreNome();
         this.SecreStatus = dados.SecreStatus();
         this.SecreDataCriacao = dados.SecreDataCriacao();
-        this.SecreUsuario = usuario;
+        this.secreUsuario = usuario;
         this.SecreEmail = dados.SecreEmail();
 
     }

@@ -6,10 +6,10 @@ import org.jetbrains.annotations.NotNull;
 
 import java.sql.Date;
 
-public record DadosAdiministradorView( Long AdmCodigo,String AdmNome, Usuario AdmUsuario  ,Byte AdmStatus,Date AdmDataCriacao,String AdmEmail)
+public record DadosAdiministradorView( Long AdmCodigo,String AdmNome, Usuario AdmUsuario  ,Byte AdmStatus,Date AdmDataCriacao,String AdmEmail, String AdmCodigoAtorizacao)
 {
     public DadosAdiministradorView(@NotNull Administrador registro) {
-        this(registro.getAdmCodigo(), registro.getAdmNome(), registro.getAdmUsuario(), registro.getAdmStatus(),registro.getAdmDataCriacao() , registro.getAdmEmail()); }
+        this(registro.getAdmCodigo(), registro.getAdmNome(), registro.getAdmUsuario(), registro.getAdmStatus(),registro.getAdmDataCriacao() , registro.getAdmEmail() , registro.getAdmCodigoAtorizacao()); }
 
 
 

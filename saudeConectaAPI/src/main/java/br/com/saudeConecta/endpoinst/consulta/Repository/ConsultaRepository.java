@@ -2,6 +2,7 @@ package br.com.saudeConecta.endpoinst.consulta.Repository;
 
 import br.com.saudeConecta.endpoinst.consulta.Entity.Consulta;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.sql.Date;
@@ -17,4 +18,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta,Long> {
     boolean existsByConHorarioAndConDataAndConMedico_MedCodigo(String conHorario, String conData, Long medCodigo);
 
     List<Consulta> findByConMedico_MedCodigoAndConData(Long medCodigo, String conData);
+
+    @Query("select c from Consulta c where c.conData > ?1")
+    List<Consulta> BuscarConsultasComFiltroData(String conData);
 }

@@ -86,6 +86,13 @@ public class ConsultaService {
     }
 
 
+    public List<Consulta> BuscatodasAsConsultasPorDataSelecionada(String data) {
+
+        return repository.BuscarConsultasComFiltroData(data);
+
+    }
+
+
     public void CadastraRegistroConsulta(Consulta consulta) throws ResourceNotFoundException {
         repository.save(consulta);
     }
@@ -122,10 +129,10 @@ public class ConsultaService {
 
     public DadosConsultaView EditarConsulta(Consulta consulta, Long id) {
 
-      Consulta consulta1 = repository.getReferenceById(id);
-      consulta1.update(consulta);
-      repository.save(consulta1);
-      return new DadosConsultaView(consulta1);
+        Consulta consulta1 = repository.getReferenceById(id);
+        consulta1.update(consulta);
+        repository.save(consulta1);
+        return new DadosConsultaView(consulta1);
 
     }
 
@@ -142,32 +149,34 @@ public class ConsultaService {
         }
     }
 
+
+
     public List<String> VerificarHorariosDisponiveisReferentesAoMedicoEData(Long medico, String data) {
 
-        List<Consulta> consultas =  repository.findByConMedico_MedCodigoAndConData( medico, data);
+        List<Consulta> consultas = repository.findByConMedico_MedCodigoAndConData(medico, data);
 
         List<String> HorariosDisponiveis = new ArrayList<>();
 
         for (int i = 0; i < consultas.size(); i++) {
-                HorariosDisponiveis.add(consultas.get(i).getConHorario());
+            HorariosDisponiveis.add(consultas.get(i).getConHorario());
         }
 
         if (HorariosDisponiveis.size() > 0) {
-           return HorariosDisponiveis;
+            return HorariosDisponiveis;
         } else {
             return null;
         }
 
     }
 
-    public Optional<Object> buscarPacientePorEmail(String email , String messagem) throws MessagingException {
+    public Optional<Object> buscarPacientePorEmail(String email, String messagem) throws MessagingException {
 
         Optional<Paciente> paciente = pacienteRepository.findByPaciEmail(email);
 
         Optional<Medico> medico = medicoRepository.findByMedEmail(email);
 
         if (paciente.isPresent()) {
-            enviarEmail.enviarLembreteDeAlertaParaPaciente(paciente , messagem);
+            enviarEmail.enviarLembreteDeAlertaParaPaciente(paciente, messagem);
             return Optional.of(paciente);
         }
         if (medico.isPresent()) {

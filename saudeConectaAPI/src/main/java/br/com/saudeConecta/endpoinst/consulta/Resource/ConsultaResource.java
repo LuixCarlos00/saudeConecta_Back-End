@@ -138,6 +138,14 @@ public class ConsultaResource {
     }
 
 
+
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    @GetMapping(value = "/listatodasConsultaPorDataSelecionada/data={data}")
+    public List<Consulta> BuscatodasAsConsultasPorDataSelecionada(@NotNull @PathVariable("data") String data) {
+        return service.BuscatodasAsConsultasPorDataSelecionada(data);
+    }
+
+
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteConsultaById(@PathVariable("id") Long id) throws Exception {
