@@ -1,4 +1,4 @@
 package br.com.saudeConecta.endpoinst.usuario.DTO;
 
-public record DadosLoginUsuario( String login  , String senha , Byte tipoUsuario) {
+public record DadosLoginUsuario( String login  , String senha , Byte tipoUsuario , Byte Status ) {
 }

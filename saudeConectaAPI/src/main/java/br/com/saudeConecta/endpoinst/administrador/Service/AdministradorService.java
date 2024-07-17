@@ -51,15 +51,33 @@ public class AdministradorService {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    //============================================================================================================
+
+
+
+
 
     public Optional<Administrador> buscarPacientePorId(Long id) {
         return repository.findById(id);
     }
 
 
+
+
+
+
+
+
     public Page<DadosAdiministradorView> BuscarPorPaginas(Pageable paginacao) {
         return repository.findAll(paginacao).map(DadosAdiministradorView::new);
     }
+
+
+
+
+
+
+
 
 
     @Transactional
@@ -80,15 +98,30 @@ public class AdministradorService {
     }
 
 
+
+
+
+
+
+
+
     public List<Administrador> buscarTodosPaciente() {
         return repository.findAll();
 
     }
 
 
+
+
+
     public void CadastraRegistroPaciente(Administrador paciente) throws ResourceNotFoundException {
         repository.save(paciente);
     }
+
+
+
+
+
 
 
     public Optional<Object> buscarPacsientePorEmail(String email) throws MessagingException {
@@ -111,10 +144,12 @@ public class AdministradorService {
             enviarEmail.enviarEmailDestinatarioAdministradorVerificacaoDuasEtapas(adm, recuperaSenha.gerarCodigoVerificacaoTabelaUsuarios());
             return Optional.of(adm);
         }
-
-
         return Optional.of("Email invalido");
     }
+
+
+
+
 
 
     public boolean VerificarCodigoValido(String codigo) {
@@ -123,58 +158,28 @@ public class AdministradorService {
     }
 
 
-    public void deletraCodigoVerificacao(String codigo) {
 
+
+
+
+    public void deletraCodigoVerificacao(String codigo) {
         codigoVerificacaoRepository.deleteByCodVerificacaoCodigo(codigo);
     }
+
+
+
 
     public Optional<Administrador> buscarPacientePorIdDeUsusario(Long id) {
         return repository.findByAdmUsuario_Id(id);
     }
 
 
+
+
     public boolean BuscarCodigodeAutorizacao(String codigo) {
         return repository.existsByAdmCodigoAtorizacao(codigo);
     }
 
-    public void BuscaPorSenhaAntiga(String SenhaNova, Long id) {
-        Administrador adm = repository.getReferenceById(id);
-        usuarioRepository.getReferenceById(adm.getAdmUsuario().getId()).setSenha(SenhaNova);
-    }
-
-
-
-
-    public boolean EsqueciMinhaSenha(String SenhaNova, String SenhaAntiga, Long id, String email) {
-        try {
-            Optional<Administrador> adm = repository.findById(id);
-            if (!adm.isPresent()) {
-                return false;
-            }
-
-            Long codigoUser = adm.get().getAdmUsuario().getId();
-            Optional<Usuario> usuario = usuarioRepository.findById(codigoUser);
-            if (!usuario.isPresent()) {
-                return false;
-            }
-
-            if (!adm.get().getAdmEmail().equals(email)) {
-                return false;
-            }
-
-            Usuario user = usuario.get();
-
-            if (passwordEncoder.matches(SenhaAntiga, user.getSenha())) {
-                user.setSenha(SenhaNova);
-                usuarioRepository.save(user);
-                return true;
-            } else {
-                return false;
-            }
-        } catch (EntityNotFoundException e) {
-            return false;
-        }
-    }
 
 
 }

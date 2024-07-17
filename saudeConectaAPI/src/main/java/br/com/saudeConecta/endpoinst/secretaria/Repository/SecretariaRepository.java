@@ -17,4 +17,6 @@ public interface SecretariaRepository extends JpaRepository<Secretaria,Long> {
 //
 //    boolean existsByAdmUsuario_Id(Long id);
 boolean existsBySecreUsuario_Login(String login);
+
+   Optional <Secretaria>    findBySecreUsuario_Id(Long id);
 }

@@ -11,6 +11,10 @@ import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
 import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
+import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
+import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
+import br.com.saudeConecta.endpoinst.usuario.Resource.UsuarioResource;
+import com.twilio.rest.chat.v1.service.User;
 import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -46,8 +50,8 @@ public class ConsultaResource {
     @Autowired
     private AdministradorRepository administradorRepository;
 
-
-
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/buscarId/{id}")
@@ -58,20 +62,18 @@ public class ConsultaResource {
         return ResponseEntity.status(HttpStatus.OK).body(new DadosConsultaView((consulta.get())));
     }
 
+
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/consultaData={data}&horario={horario}&medico={medico}")
     @Transactional
     public Boolean VericarSeExetemConsultasMarcadas(@NotNull @Valid @PathVariable("data") String data,
-                                                                              @PathVariable("horario") String horario,
-                                                                              @PathVariable("medico") Long medico ) {
-        System.out.println( data + horario + medico);
-        Boolean consulta = service.VericarSeExetemConsultasMarcadas(data,horario,medico);
+                                                    @PathVariable("horario") String horario,
+                                                    @PathVariable("medico") Long medico) {
+        System.out.println(data + horario + medico);
+        Boolean consulta = service.VericarSeExetemConsultasMarcadas(data, horario, medico);
         System.out.println(consulta);
         return consulta;
     }
-
-
-
 
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
@@ -84,7 +86,7 @@ public class ConsultaResource {
             return ResponseEntity.badRequest().build();
         }
 
-            System.out.println(dados.toString());
+        System.out.println(dados.toString());
 
         Long idMedicos = dados.ConMedico();
         Long idPaciente = dados.ConPaciente();
@@ -105,7 +107,7 @@ public class ConsultaResource {
         Medico medico = medicoOptional.get();
         Paciente paciente = pacienteOptional.get();
 
-        Consulta consulta = new Consulta(medico, paciente, adm,dados);
+        Consulta consulta = new Consulta(medico, paciente, adm, dados);
 
         service.CadastraRegistroConsulta(consulta);
 
@@ -116,16 +118,16 @@ public class ConsultaResource {
     }
 
 
-
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    @GetMapping(value ="/Consultapagina")
+    @GetMapping(value = "/Consultapagina")
     public Page<DadosConsultaView> BuscarConsultaPorPaginas(@PageableDefault(sort = {"conMedico"}) Pageable paginacao) {
         return service.BuscarConsultaPorPaginas(paginacao);
     }
 
+
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    @GetMapping(value ="/BuscarRegistrosDeConsulta/{busca}")
-    public Page<DadosConsultaView> BuscarRegistrosDeConsulta( @NotNull @PathVariable("busca") String busca) {
+    @GetMapping(value = "/BuscarRegistrosDeConsulta/{busca}")
+    public Page<DadosConsultaView> BuscarRegistrosDeConsulta(@NotNull @PathVariable("busca") String busca) {
 
         return service.BuscarRegistrosDeConsulta(busca);
     }
@@ -138,11 +140,49 @@ public class ConsultaResource {
     }
 
 
+//    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+//    @GetMapping(value = "/listatodasConsultaPorDataSelecionada/data={data}")
+//    public List<Consulta> BuscatodasAsConsultasPorDataSelecionada(@NotNull @PathVariable("data") String data) {
+//        return service.BuscatodasAsConsultasPorDataSelecionada(data);
+//    }
+
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    @GetMapping(value = "/listatodasConsultaPorDataSelecionada/data={data}")
-    public List<Consulta> BuscatodasAsConsultasPorDataSelecionada(@NotNull @PathVariable("data") String data) {
-        return service.BuscatodasAsConsultasPorDataSelecionada(data);
+    @GetMapping(value = "/BuscandoTodasConsultasEmIntervaloDeDatas/dataInicial={dataInicial}&dataFinal={dataFinal}")
+    public List<Consulta> BuscandoTodasConsultasEmIntervaloDeDatas(@NotNull @PathVariable("dataInicial") String dataInicial,
+                                                                   @NotNull @PathVariable("dataFinal") String dataFinal) {
+        return service.BuscandoTodasConsultasEmIntervaloDeDatas(dataInicial, dataFinal);
+    }
+
+
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    @GetMapping(value = "/BuscandoTodasConsultasEmIntervaloDeDatasComEspecialidade/dataInicial={dataInicial}&dataFinal={dataFinal}&especialidades={especialidade}")
+    public List<Consulta> BuscandoTodasConsultasEmIntervaloDeDatasComEspecialidade(@NotNull @PathVariable("dataInicial") String dataInicial,
+                                                                                   @NotNull @PathVariable("dataFinal") String dataFinal,
+                                                                                   @NotNull @PathVariable("especialidade") String especialidade) {
+        return service.BuscandoTodasConsultasEmIntervaloDeDatasComEspecialidade(dataInicial, dataFinal, especialidade);
+    }
+
+
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    @GetMapping(value = "/BuscandoTodasConsultasPorMedico/{medicoID}")
+    public List<Consulta> BuscandoTodasConsultasPorMedico(@NotNull @PathVariable("medicoID") Long medicoID) {
+        return service.BuscandoTodasConsultasPorMedico(medicoID);
+    }
+
+
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    @GetMapping(value = "/BuscandoTodasConsultasPorMedicoEmIntervaloDeDatas/medico={medCodigo}&dataInicial={DataInicioFormatada}&dataFinal={DataFimFormatada}")
+    public List<Consulta> BuscandoTodasConsultasPorMedicoEmIntervaloDeDatas(@NotNull @PathVariable("medCodigo") Long medicoID,
+                                                                            @NotNull @PathVariable("DataInicioFormatada") String dataInicio,
+                                                                            @NotNull @PathVariable("DataFimFormatada") String dataFim) {
+        return service.BuscandoTodasConsultasPorMedicoEmIntervaloDeDatas(medicoID, dataInicio, dataFim);
+    }
+
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    @GetMapping(value = "/BuscandoTodasConsultasPorEspecialidade/especialidades={especialidades}")
+    public List<Consulta> BuscandoTodasConsultasPorEspecialidade(@NotNull @PathVariable("especialidades") String especialidades) {
+        return service.BuscandoTodasConsultasPorEspecialidade(especialidades);
     }
 
 
@@ -154,43 +194,38 @@ public class ConsultaResource {
     }
 
 
-
-
-
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PutMapping(value = "/editar/{id}")
     @Transactional
     public ResponseEntity<DadosConsultaView> EditarConsulta(@NotNull @RequestBody @Valid DadosCadastraConsulta dados,
                                                             @NotNull @PathVariable("id") Long id,
                                                             @NotNull BindingResult result,
-                                                      UriComponentsBuilder uriBuilder) {
+                                                            UriComponentsBuilder uriBuilder) {
 
         if (result.hasErrors()) {
             return ResponseEntity.badRequest().build();
         }
 
 
-
         Long idMedicos = dados.ConMedico();
         Long idPaciente = dados.ConPaciente();
-        Long idAdm = dados.ConAdm();
+        Long idUsusario = dados.ConAdm();
 
 
         Optional<Medico> medicoOptional = medicoRepository.findById(idMedicos);
         Optional<Paciente> pacienteOptional = pacienteRepository.findById(idPaciente);
-        Optional<Administrador> admOptional = administradorRepository.findById(idAdm);
+        Optional<Administrador> administradorOptional = administradorRepository.findByAdmUsuario_Id(idUsusario);
 
-
-        if (medicoOptional.isEmpty() || pacienteOptional.isEmpty() || admOptional.isEmpty()) {
+        if (medicoOptional.isEmpty() || pacienteOptional.isEmpty() || administradorOptional.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
 
-        Administrador adm = admOptional.get();
+        Administrador ususario = administradorOptional.get();
         Medico medico = medicoOptional.get();
         Paciente paciente = pacienteOptional.get();
 
-        Consulta consulta = new Consulta(medico, paciente, adm,dados);
+        Consulta consulta = new Consulta(medico, paciente, ususario, dados);
 
         service.EditarConsulta(consulta, id);
 
@@ -201,34 +236,30 @@ public class ConsultaResource {
     }
 
 
-
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PutMapping(value = "/concluido/{id}")
     @Transactional
-    public ResponseEntity<DadosConsultaView> FazerConclusaoConsulta( @NotNull @PathVariable("id") Long id) {
-        DadosConsultaView consulta =  service.ConcluirConsulta( id);
+    public ResponseEntity<DadosConsultaView> FazerConclusaoConsulta(@NotNull @PathVariable("id") Long id) {
+        DadosConsultaView consulta = service.ConcluirConsulta(id);
         return ResponseEntity.ok().body(new DadosConsultaView(consulta));
     }
 
 
-
-
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/VerificarHorariosDisponiveisReferentesAoMedicoEData/medico={medico}&data={data}")
-    public  List<String>  VerificarHorariosDisponiveisReferentesAoMedicoEData(@Valid @NotNull @PathVariable("medico") Long medico,
-                                                                              @Valid @NotNull @PathVariable("data") String data) {
+    public List<String> VerificarHorariosDisponiveisReferentesAoMedicoEData(@Valid @NotNull @PathVariable("medico") Long medico,
+                                                                            @Valid @NotNull @PathVariable("data") String data) {
 
-        List<String>  list =     service.VerificarHorariosDisponiveisReferentesAoMedicoEData ( medico, data);
+        List<String> list = service.VerificarHorariosDisponiveisReferentesAoMedicoEData(medico, data);
         return list;
     }
-
 
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PostMapping("/EnviarMensagem")
     @Transactional
-    public  ResponseEntity<Object>  EnviarMensagem(@NotNull @RequestBody @Valid DadosSeendToNewMenssage dados, @NotNull BindingResult result,
-                                                            UriComponentsBuilder uriBuilder) throws MessagingException {
+    public ResponseEntity<Object> EnviarMensagem(@NotNull @RequestBody @Valid DadosSeendToNewMenssage dados, @NotNull BindingResult result,
+                                                 UriComponentsBuilder uriBuilder) throws MessagingException {
 
         if (result.hasErrors()) {
             return ResponseEntity.badRequest().build();
@@ -243,30 +274,18 @@ public class ConsultaResource {
 
         if (medicoEmail.isEmpty() && medicoTelefone.isEmpty() && pacienteEmail.isEmpty() && pacienteTelefone.isEmpty()) {
             return ResponseEntity.badRequest().build();
+        } else if (!medicoEmail.isEmpty()) {
+            obj = service.buscarPacientePorEmail(medicoEmail, dados.mensagem());
+        } else if (!medicoTelefone.isEmpty()) {
+            obj = service.buscarPacientePorTelefone(medicoTelefone, dados.mensagem());
+        } else if (!pacienteEmail.isEmpty()) {
+            obj = service.buscarPacientePorEmail(pacienteEmail, dados.mensagem());
+        } else if (!pacienteTelefone.isEmpty()) {
+            obj = service.buscarPacientePorTelefone(pacienteTelefone, dados.mensagem());
         }
-
-        else if (!medicoEmail.isEmpty()) {
-              obj = service.buscarPacientePorEmail(medicoEmail ,dados.mensagem() );
-        }
-        else if (!medicoTelefone.isEmpty()) {
-              obj = service.buscarPacientePorTelefone(medicoTelefone ,dados.mensagem() );
-        }
-        else if (!pacienteEmail.isEmpty()) {
-              obj = service.buscarPacientePorEmail(pacienteEmail ,dados.mensagem() );
-        }
-        else if (!pacienteTelefone.isEmpty()) {
-            obj  = service.buscarPacientePorTelefone(pacienteTelefone ,dados.mensagem() );
-        }
-
-
-
-
-
         return ResponseEntity.ok().body(obj);
 
-
     }
-
 
 
 }

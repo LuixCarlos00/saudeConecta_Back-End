@@ -1,6 +1,7 @@
 package br.com.saudeConecta.infra.configuracoesseguranca;
 
 import br.com.saudeConecta.infra.configuracoesseguranca.filtroSeguranca.FiltroAcesso;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -65,9 +66,11 @@ public class SecurityConfigurations {
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
             @Override
-            public void addCorsMappings(CorsRegistry registry) {
+            public void addCorsMappings(@NotNull CorsRegistry registry) {
+                String url_Ngrok_Bac = url_Back_End ;
+                String url_Ngrok_Fron = url_Front_End;
                 registry.addMapping("/**")
-                        .allowedOrigins(url_Front_End, url_Back_End)
+                        .allowedOrigins(url_Ngrok_Bac, url_Ngrok_Fron)
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true);

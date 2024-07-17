@@ -1,4 +1,4 @@
-package br.com.saudeConecta.endpoinst.administrador.DTO;
+package br.com.saudeConecta.endpoinst.usuario.DTO;
 
 public record DadosTrocaDeSenha(
         Long id,

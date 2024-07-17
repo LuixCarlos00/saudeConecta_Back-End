@@ -86,12 +86,33 @@ public class ConsultaService {
     }
 
 
-    public List<Consulta> BuscatodasAsConsultasPorDataSelecionada(String data) {
+//    public List<Consulta> BuscatodasAsConsultasPorDataSelecionada(String data) {
+//        return repository.BuscarConsultasComFiltroData(data);
+//    }
 
-        return repository.BuscarConsultasComFiltroData(data);
 
+    public List<Consulta> BuscandoTodasConsultasEmIntervaloDeDatas(String dataInicial, String dataFinal) {
+        return repository.BuscandoTodasConsultasEmIntervaloDeDatas(dataInicial, dataFinal);
     }
 
+
+    public List<Consulta> BuscandoTodasConsultasEmIntervaloDeDatasComEspecialidade(String dataInicial, String dataFinal, String especialidade) {
+        return repository.BuscandoTodasConsultasEmIntervaloDeDatasComEspecialidade(dataInicial, dataFinal, especialidade);
+    }
+
+
+    public List<Consulta> BuscandoTodasConsultasPorMedico(Long medicoID) {
+        return repository.BuscandoTodasConsultasPorMedico(medicoID);
+    }
+
+    public List<Consulta> BuscandoTodasConsultasPorMedicoEmIntervaloDeDatas(Long medicoID, String dataInicio, String dataFim) {
+        return repository.BuscandoTodasConsultasPorMedicoEmIntervaloDeDatas(dataInicio, dataFim, medicoID);
+    }
+
+
+    public List<Consulta> BuscandoTodasConsultasPorEspecialidade(String especialidades) {
+    return  repository.BuscandoTodasConsultasPorEspecialidade(especialidades);
+    }
 
     public void CadastraRegistroConsulta(Consulta consulta) throws ResourceNotFoundException {
         repository.save(consulta);
@@ -111,6 +132,7 @@ public class ConsultaService {
 
     }
 
+
     public Page<DadosConsultaView> BuscarRegistrosDeConsulta(String busca) {
 
 //        String stringBusca = busca.toString();
@@ -127,6 +149,7 @@ public class ConsultaService {
 
     }
 
+
     public DadosConsultaView EditarConsulta(Consulta consulta, Long id) {
 
         Consulta consulta1 = repository.getReferenceById(id);
@@ -135,6 +158,7 @@ public class ConsultaService {
         return new DadosConsultaView(consulta1);
 
     }
+
 
     public DadosConsultaView ConcluirConsulta(Long id) {
         Optional<Consulta> optionalConsulta = repository.findById(id);
@@ -148,7 +172,6 @@ public class ConsultaService {
             throw new EntityNotFoundException("Consulta não encontrada com o id: " + id);
         }
     }
-
 
 
     public List<String> VerificarHorariosDisponiveisReferentesAoMedicoEData(Long medico, String data) {
@@ -166,8 +189,8 @@ public class ConsultaService {
         } else {
             return null;
         }
-
     }
+
 
     public Optional<Object> buscarPacientePorEmail(String email, String messagem) throws MessagingException {
 
@@ -188,6 +211,7 @@ public class ConsultaService {
 
     }
 
+
     public Optional<Object> buscarPacientePorTelefone(String medicoTelefone, String messagem) {
         Twilio.init(accountSid, authToken);
 
@@ -198,4 +222,7 @@ public class ConsultaService {
         ).create();
         return Optional.empty();
     }
+
+
+
 }

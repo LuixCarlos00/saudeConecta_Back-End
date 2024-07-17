@@ -3,6 +3,7 @@ package br.com.saudeConecta.endpoinst.consulta.Repository;
 import br.com.saudeConecta.endpoinst.consulta.Entity.Consulta;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.sql.Date;
@@ -19,6 +20,30 @@ public interface ConsultaRepository extends JpaRepository<Consulta,Long> {
 
     List<Consulta> findByConMedico_MedCodigoAndConData(Long medCodigo, String conData);
 
-    @Query("select c from Consulta c where c.conData > ?1")
+    @Query("select c from Consulta c where c.conData < ?1")
     List<Consulta> BuscarConsultasComFiltroData(String conData);
+
+
+
+
+    @Query("select c from Consulta c where c.conData between :dataInicial and :dataFinal")
+    List<Consulta> BuscandoTodasConsultasEmIntervaloDeDatas(@Param("dataInicial") String dataInicial, @Param("dataFinal") String dataFinal);
+
+
+    @Query("select c from Consulta c where c.conData between :dataInicial and :dataFinal and c.conMedico.medEspecialidade = :especialidade")
+    List<Consulta>  BuscandoTodasConsultasEmIntervaloDeDatasComEspecialidade(@Param("dataInicial") String dataInicial, @Param("dataFinal") String dataFinal, @Param("especialidade") String especialidade);
+
+
+    @Query("select c from Consulta c where c.conMedico.medCodigo = :medicoID")
+    List<Consulta>  BuscandoTodasConsultasPorMedico(@Param("medicoID") Long medicoID );
+
+
+    @Query("select c from Consulta c where c.conData between :dataInicial and :dataFinal and c.conMedico.medCodigo = :MedicoId")
+    List<Consulta>  BuscandoTodasConsultasPorMedicoEmIntervaloDeDatas(@Param("dataInicial") String dataInicial, @Param("dataFinal") String dataFinal, @Param("MedicoId") Long MedicoId);
+
+
+    @Query("select c from Consulta c where  c.conMedico.medEspecialidade = :especialidade")
+    List<Consulta>  BuscandoTodasConsultasPorEspecialidade(@Param("especialidade") String especialidade);
+
+
 }

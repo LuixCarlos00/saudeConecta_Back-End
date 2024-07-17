@@ -49,6 +49,7 @@ public class Usuario implements Serializable , UserDetails {
         this.login=dados.login();
         this.senha=senhaCriptografada;
         this.TipoUsuario = dados.tipoUsuario();
+        this.status = dados.Status();
     }
 
     public Usuario(String login) {

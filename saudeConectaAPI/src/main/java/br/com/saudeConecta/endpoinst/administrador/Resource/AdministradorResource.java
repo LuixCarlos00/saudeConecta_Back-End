@@ -2,7 +2,7 @@ package br.com.saudeConecta.endpoinst.administrador.Resource;
 
 import br.com.saudeConecta.endpoinst.administrador.DTO.DadosCadastraAdministrador;
 import br.com.saudeConecta.endpoinst.administrador.DTO.DadosAdiministradorView;
-import br.com.saudeConecta.endpoinst.administrador.DTO.DadosTrocaDeSenha;
+import br.com.saudeConecta.endpoinst.usuario.DTO.DadosTrocaDeSenha;
 import br.com.saudeConecta.endpoinst.administrador.Entity.Administrador;
 import br.com.saudeConecta.endpoinst.administrador.Service.AdministradorService;
 import br.com.saudeConecta.endpoinst.endereco.Repository.EnderecoRepository;
@@ -188,37 +188,6 @@ public class AdministradorResource {
 
 
 
-
-    @PutMapping(value = "/esqueciMinhaSenhaADM")
-    @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    public ResponseEntity<Object> esqueciMinhaSenha(@RequestBody @Valid DadosTrocaDeSenha dados, BindingResult result) {
-        if (result.hasErrors()) {
-            return ResponseEntity.badRequest().build();
-        }
-        String senhaNova = passwordEncoder.encode(dados.senhaNova());
-        service.BuscaPorSenhaAntiga(senhaNova, dados.id());
-        return ResponseEntity.ok().build();
-    }
-
-
-
-
-
-
-    @PutMapping(value = "/TrocaSenhaADM")
-    @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    public boolean TrocaSenha(@RequestBody @Valid DadosTrocaDeSenha dados,
-                              @NotNull BindingResult result) {
-        if (result.hasErrors()) {
-            return false;
-        }
-        String SenhaNova = passwordEncoder.encode(dados.senhaNova());
-        // Não encode a senha antiga aqui, apenas passe-a para o serviço
-        boolean existe = service.EsqueciMinhaSenha(SenhaNova, dados.senhaAntiga(), dados.id(), dados.email());
-        return existe;
-    }
 
 
 
