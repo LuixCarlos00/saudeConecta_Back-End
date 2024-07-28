@@ -25,7 +25,9 @@ public record DadosCadastraPaciente(
 
         String PaciTelefone,
 
-        Long endereco
+        Long endereco,
+
+        String PaciStatus
 
 
 ) {

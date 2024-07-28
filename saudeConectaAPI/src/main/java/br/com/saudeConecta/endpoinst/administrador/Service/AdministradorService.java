@@ -176,9 +176,6 @@ public class AdministradorService {
 
 
 
-    public boolean BuscarCodigodeAutorizacao(String codigo) {
-        return repository.existsByAdmCodigoAtorizacao(codigo);
-    }
 
 
 

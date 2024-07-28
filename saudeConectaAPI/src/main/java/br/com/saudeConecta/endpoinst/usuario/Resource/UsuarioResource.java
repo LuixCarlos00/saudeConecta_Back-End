@@ -39,6 +39,12 @@ import java.util.Optional;
 @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class UsuarioResource {
 
+
+
+
+
+
+
     @Autowired
     private UsuarioService userService;
 
@@ -46,9 +52,6 @@ public class UsuarioResource {
     private AuthenticationManager authenticationManager;
     @Autowired
     private PasswordEncoder passwordEncoder;
-
-
-
     @Autowired
     private UsuarioRepository repository;
     @Autowired
@@ -67,6 +70,12 @@ public class UsuarioResource {
 
 
 
+
+
+
+
+
+
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PostMapping("/login")
     public ResponseEntity<DadosTokenJWT> login(@RequestBody @NotNull DadosLoginUsuario dados) {
@@ -77,6 +86,8 @@ public class UsuarioResource {
 
         return ResponseEntity.ok(new DadosTokenJWT(TokenJWT));
     }
+
+
 
 
 
@@ -118,6 +129,8 @@ public class UsuarioResource {
 
 
 
+
+
     @GetMapping(value = "/buscarId/{id}")
     @Transactional
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
@@ -131,6 +144,9 @@ public class UsuarioResource {
 
 
 
+
+
+
     @GetMapping(value = "/buscarUsuarioExistente/{login}")
     @Transactional
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
@@ -138,6 +154,9 @@ public class UsuarioResource {
         Boolean usuarioExiste = userService.buscarPorloginSeExiste(login);
         return ResponseEntity.ok(usuarioExiste);
     }
+
+
+
 
 
 
@@ -158,10 +177,10 @@ public class UsuarioResource {
         Usuario usuario = new Usuario(dados, senhaCriptografada);
 
         userService.UpdateDeSenha(usuario, Id);
-
-
         return ResponseEntity.ok().build();
     }
+
+
 
 
 
@@ -194,9 +213,10 @@ public class UsuarioResource {
         }
 
 
-
         return ResponseEntity.ok().build();
     }
+
+
 
 
 
@@ -209,7 +229,6 @@ public class UsuarioResource {
     public BuscarTodosUsuarios BuscarTodosUsuarios() {
         return userService.BuscarTodosUsuarios();
     }
-
 
 
 
@@ -260,11 +279,13 @@ public class UsuarioResource {
 
 
 
+
+
     @PutMapping(value = "/TrocaSenhaADM")
     @Transactional
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    public ResponseEntity<?>  TrocaSenha(@RequestBody @Valid DadosTrocaDeSenha dados,
-                              @NotNull BindingResult result) {
+    public ResponseEntity<?> TrocaSenha(@RequestBody @Valid DadosTrocaDeSenha dados,
+                                        @NotNull BindingResult result) {
         if (result.hasErrors()) {
             return ResponseEntity.badRequest().body(result.getAllErrors());
         }
@@ -280,6 +301,53 @@ public class UsuarioResource {
             return ResponseEntity.ok().build();
         }
     }
+
+
+
+
+
+
+
+
+
+    @PutMapping(value = "/bloquearUsuario/usuario/{codigo}/status/{status}")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public ResponseEntity<?> bloquearUsuario(@PathVariable("codigo") Long codigo,
+                                             @PathVariable("status") Byte status) {
+        Usuario user = repository.findById(codigo).orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        } else {
+            userService.bloquearUsuario(user, status);
+            return ResponseEntity.ok().build();
+        }
+    }
+
+
+
+
+
+
+
+
+
+    @PutMapping(value = "/bloquearPaciente/usuario/{codigo}/status/{status}")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public ResponseEntity<?> bloquearPaciente(@PathVariable("codigo") Long codigo,
+                                              @PathVariable("status") String status) {
+        Paciente paciente = pacienteRepository.findById(codigo).orElse(null);
+
+        if (paciente == null) {
+            return ResponseEntity.notFound().build();
+        } else {
+            userService.bloquearPaciente(paciente, status);
+            return ResponseEntity.ok().build();
+        }
+    }
+
 
 
 

@@ -20,9 +20,6 @@ public interface ConsultaRepository extends JpaRepository<Consulta,Long> {
 
     List<Consulta> findByConMedico_MedCodigoAndConData(Long medCodigo, String conData);
 
-    @Query("select c from Consulta c where c.conData < ?1")
-    List<Consulta> BuscarConsultasComFiltroData(String conData);
-
 
 
 

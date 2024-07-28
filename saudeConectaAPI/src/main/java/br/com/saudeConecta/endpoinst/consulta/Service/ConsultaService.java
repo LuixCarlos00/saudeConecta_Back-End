@@ -8,10 +8,13 @@ import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
 import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
+import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
+import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
 import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
 import jakarta.mail.MessagingException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -38,6 +41,9 @@ public class ConsultaService {
 
     @Autowired
     private PacienteRepository pacienteRepository;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
     @Autowired
     private EnviarEmail enviarEmail;
@@ -225,4 +231,35 @@ public class ConsultaService {
 
 
 
+
+
+
+
+    // ##################################################
+    // ##################################################
+    // ##################################################
+    // ##################################################
+    // ###############- MEDICOS -########################
+    // ##################################################
+    // ##################################################
+    // ##################################################
+
+
+
+
+
+    public List<Consulta> BuscarTodaAgendaDeMedicoDoDia(Long IdUsuarioMedico, @NotNull String dataHoje) {
+        Optional<Usuario> user = usuarioRepository.findById(IdUsuarioMedico);
+        if (user.isPresent()) {
+            Optional<Medico> medico = medicoRepository.findByUsuario_Id(user.get().getId());
+            if (medico.isPresent()) {
+                return repository.findByConMedico_MedCodigoAndConData(medico.get().getMedCodigo(), dataHoje);
+            } else {
+                return null;
+            }
+        } else {
+            return null;
+        }
+
+    }
 }

@@ -28,7 +28,7 @@ public class TratadorDeErros {
             "- captura exceção do tipo  POST   de uma entidade que tem  relacionamento com outra entidade. Primeiramente e feito uma busca no repositorio," +
             "se essa entitdade relacionada exister é feito o cadastro , se NAO existir lanca o erro.")
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<String> TrataErroResourceNotFoundException(@NotNull ResourceNotFoundException ex) {
+    public ResponseEntity<String> TrataErroResourceNotFoundException(@NotNull @org.jetbrains.annotations.NotNull ResourceNotFoundException ex) {
         String mensageErro = ex.getMessage();
         return new ResponseEntity<>("Erro de validade. # -TratadorDeErros - T01# " + mensageErro, HttpStatus.BAD_REQUEST);
     }
@@ -43,7 +43,7 @@ public class TratadorDeErros {
     @Name("Funcionalidade do teste - #T03# " +
             "- captura exceção quando houver uma requisicao do tipo POST com chave duplicada (mais usado em tabelas compotas )")
     @ExceptionHandler(SQLException.class)
-    public ResponseEntity<String> tratarErroIntegridade(@NotNull SQLException ex) {
+    public ResponseEntity<String> tratarErroIntegridade(@NotNull @org.jetbrains.annotations.NotNull SQLException ex) {
         String mensagemErro = ex.getMessage() + " # -TratadorDeErros - T03# ";
         return new ResponseEntity<>(mensagemErro, HttpStatus.BAD_REQUEST);
     }
@@ -58,7 +58,7 @@ public class TratadorDeErros {
     @Name("Funcionalidade do teste  - #T05#  " +
             "- captura exceção do tipo   GET  quando houver uma requisicao passando o ID  vazio ou  uma String  ou long negativo ")
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<String> tratarErrodeParametroInvalido(@NotNull MethodArgumentTypeMismatchException ex) {
+    public ResponseEntity<String> tratarErrodeParametroInvalido(@NotNull @org.jetbrains.annotations.NotNull MethodArgumentTypeMismatchException ex) {
         return new ResponseEntity<>("O valor fornecido não é válido para o parâmetro: " + ex.getName() + " # -TratadorDeErros - T05# ", HttpStatus.BAD_REQUEST);
     }
 
@@ -67,7 +67,7 @@ public class TratadorDeErros {
             "- captura exceção do tipo   POST  quando houver uma requisicao passando os campos vazio ")
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public Map<String, String> ValidadoErros(@NotNull MethodArgumentNotValidException ex) {
+    public Map<String, String> ValidadoErros(@NotNull @org.jetbrains.annotations.NotNull MethodArgumentNotValidException ex) {
 
         Map<String, String> erros = new HashMap<>();
 
@@ -82,7 +82,7 @@ public class TratadorDeErros {
 
     @Name("Funcionalidade do teste - #T07# - captura exceção do tipo POST quando houver uma requisição passando uma String ',' ou JSON  vazio  ")
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<String> TratarErroJsonInvalido(@NotNull HttpMessageNotReadableException ex) {
+    public ResponseEntity<String> TratarErroJsonInvalido(@NotNull @org.jetbrains.annotations.NotNull HttpMessageNotReadableException ex) {
         String errorMessage = "Erro na requisição: JSON parse error. Causa: " + ex.getMessage() + " - TratadorDeErros - T07";
         return new ResponseEntity<>(errorMessage, HttpStatus.BAD_REQUEST);
     }

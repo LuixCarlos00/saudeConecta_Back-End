@@ -114,17 +114,6 @@ public class SecretariaResource {
 
 
 
-    @GetMapping(value = "/buscarPorCoigoAutorizacao/{codigo}")
-    @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    public ResponseEntity<Void> buscarCodigodeAutorizacao(@NotNull @Valid @PathVariable("codigo") String codigo) throws Exception {
-        boolean existe = service.BuscarCodigodeAutorizacao(codigo);
-        if (existe) {
-            return ResponseEntity.ok().build();
-        } else {
-            return ResponseEntity.notFound().build();
-        }
-    }
 
 
 

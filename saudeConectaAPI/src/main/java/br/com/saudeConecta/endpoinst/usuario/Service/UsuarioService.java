@@ -16,6 +16,7 @@ import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
 import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -217,4 +218,14 @@ public class UsuarioService {
     }
 
 
+    public void bloquearUsuario(@NotNull Usuario user, Byte status) {
+        user.setStatus(status);
+        repository.save(user);
+    }
+
+
+    public void bloquearPaciente(@NotNull Paciente user, String status) {
+        user.setPaciStatus(status);
+        pacienteRepository.save(user);
+    }
 }

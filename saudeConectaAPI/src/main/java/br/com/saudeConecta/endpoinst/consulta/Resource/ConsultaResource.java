@@ -11,10 +11,7 @@ import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
 import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
-import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
 import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
-import br.com.saudeConecta.endpoinst.usuario.Resource.UsuarioResource;
-import com.twilio.rest.chat.v1.service.User;
 import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -236,6 +233,9 @@ public class ConsultaResource {
     }
 
 
+
+
+
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PutMapping(value = "/concluido/{id}")
     @Transactional
@@ -243,6 +243,8 @@ public class ConsultaResource {
         DadosConsultaView consulta = service.ConcluirConsulta(id);
         return ResponseEntity.ok().body(new DadosConsultaView(consulta));
     }
+
+
 
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
@@ -286,6 +288,25 @@ public class ConsultaResource {
         return ResponseEntity.ok().body(obj);
 
     }
+
+    // ##################################################
+    // ##################################################
+    // ##################################################
+    // ##################################################
+    // ###############- MEDICOS -########################
+    // ##################################################
+    // ##################################################
+    // ##################################################
+
+
+
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    @GetMapping(value = "/BuscarTodaAgendaDeMedico/{IdMedico}/{dataHoje}")
+    public List<Consulta> BuscarTodaAgendaDeMedicoDoDia(@NotNull @PathVariable("IdMedico") Long IdUsuarioMedico,
+                                                         @NotNull @PathVariable("dataHoje") String dataHoje) {
+        return service.BuscarTodaAgendaDeMedicoDoDia(IdUsuarioMedico, dataHoje);
+    }
+
 
 
 }

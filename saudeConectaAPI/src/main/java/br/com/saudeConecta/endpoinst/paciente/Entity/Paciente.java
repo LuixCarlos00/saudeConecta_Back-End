@@ -55,6 +55,9 @@ public class Paciente implements Serializable {
     @JoinColumn(name = "Endereco")
     private Endereco endereco;
 
+    @Column(name = "PaciStatus", nullable = false)
+    private String PaciStatus;
+
 
 
 
@@ -69,6 +72,7 @@ public class Paciente implements Serializable {
         //this.usuario = dadosIdUsuario;
         this.paciTelefone = dados.PaciTelefone();
         this.endereco=dadosEndereco;
+        this.PaciStatus= dados.PaciStatus();
     }
 
 

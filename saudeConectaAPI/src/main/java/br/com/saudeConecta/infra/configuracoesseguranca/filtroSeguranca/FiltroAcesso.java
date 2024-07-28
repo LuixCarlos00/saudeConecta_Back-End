@@ -60,67 +60,6 @@ public class FiltroAcesso extends OncePerRequestFilter {
 
 
 
-//    @Override
-//    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-//        var tokenJwt = recuperarToken(request);
-//        if (tokenJwt != null) {
-//            var subject = this.tokenService.getSubjet(tokenJwt);
-//            String nome = subject.toString();
-//
-//            UserDetails userDetails = null;
-//            Set<SimpleGrantedAuthority> authorities = new HashSet<>();
-//
-//            ProfessorSace professor = professorSaceRepository.findByUsername(nome); // professor
-//            UsuarioSace usuarioSace = usuarioSaceRepository.findByUsername(nome);   // administração
-//            CursoAvaliacaoSace cursoSace = cursoAvaliacaoSaceRepository.findByPk_CavCoordProCodigo_Username(nome); // coordenador
-//            InstitutoSace institutoSace = null; // diretor
-//            if (professor != null) {
-//                institutoSace = institutoSaceRepository.findByInsProCodigoDiretor(professor.getProCodigo());
-//            }
-//
-//
-//            //1
-//            if (professor != null || usuarioSace != null) {
-//
-//                //2
-//                if (cursoSace != null && cursoSace.getCavCoordTipoAcesso().equals(1L)) {
-//                    userDetails = professor;
-//                    authorities.add(new SimpleGrantedAuthority("ROLE_PROFESSOR"));
-//                }
-//                //3
-//                else if (cursoSace != null && cursoSace.getCavCoordTipoAcesso().equals(2L)) {
-//                    userDetails = professor;
-//                    authorities.add(new SimpleGrantedAuthority("ROLE_COORDENADOR"));
-//
-//                }
-//                //4
-//                else if (institutoSace == null && cursoSace == null && professor != null) { // verifico se meu registro que esta na tabela professor TAMBEM existe na tabela institutoSace e  cursoSace
-//                    userDetails = professor;
-//                    authorities.add(new SimpleGrantedAuthority("ROLE_PROFESSOR"));
-//                }
-//                //5
-//                else if (institutoSace != null) {
-//                    userDetails = professor;
-//                    authorities.add(new SimpleGrantedAuthority("ROLE_DIRETOR"));
-//                }
-//                //6
-//                else if (usuarioSace != null) {
-//                    userDetails = usuarioSace;
-//                    authorities.add(new SimpleGrantedAuthority("ROLE_ADMINISTRATIVO"));
-//                }
-//
-//            } else {
-//                userDetails = null;
-//                authorities.add(new SimpleGrantedAuthority("ROLE_USUARIO_SEM_ACESSO"));
-//            }
-//
-//
-//            var authorization = new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
-//            SecurityContextHolder.getContext().setAuthentication(authorization);
-//        }
-//        filterChain.doFilter(request, response);
-//    }
-
     private @Nullable String recuperarToken(@NotNull HttpServletRequest request) {
 
         var authorizationHeader = request.getHeader("Authorization");

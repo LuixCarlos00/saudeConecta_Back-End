@@ -92,10 +92,6 @@ public class SecretariaService {
 
 
 
-    public boolean BuscarCodigodeAutorizacao(String codigo) {
-        return administradorRepository.existsByAdmCodigoAtorizacao(codigo);
-    }
-
 
 //
 //
