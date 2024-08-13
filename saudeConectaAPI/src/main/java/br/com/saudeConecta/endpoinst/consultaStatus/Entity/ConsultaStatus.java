@@ -25,7 +25,7 @@ public class ConsultaStatus implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ConSttCodigoConsulata")
-    private Long ConSttCodigoConsulata;
+    private Long conSttCodigoConsulata;
 
     @ManyToOne
     @JoinColumn(name = "ConSttMedico")
@@ -48,7 +48,7 @@ public class ConsultaStatus implements Serializable {
     private String ConSttObservacao;
 
     @Column(name = "ConSttDataCriacao")
-    private String ConSttDataCriacao;
+    private String conSttDataCriacao;
 
     @Column(name = "ConSttFormaPagamento")
     private Byte ConSttFormaPagamento;
@@ -57,8 +57,13 @@ public class ConsultaStatus implements Serializable {
     private Byte ConSttStatus;
 
     @Column(name = "ConSttAdm")
-    private Long ConSttAdm;
-    
+    private Long conSttAdm  ;
+
+
+
+
+
+
 
 
     public ConsultaStatus(Medico medico, Paciente paciente, @NotNull DadosCadastraConsultaStatus dados) {
@@ -69,9 +74,9 @@ public class ConsultaStatus implements Serializable {
         this.conSttHorario = dados.ConSttHorario();
         this.conSttData = dados.ConSttData();
         this.ConSttObservacao = dados.ConSttObservacao();
-        this.ConSttDataCriacao = dados.ConSttDataCriacao();
+        this.conSttDataCriacao = dados.ConSttDataCriacao();
         this.ConSttFormaPagamento = dados.ConSttFormaPagamento();
-        this.ConSttAdm = dados.ConSttAdm();
+        this.conSttAdm = dados.ConSttAdm();
         this.ConSttStatus = dados.ConSttStatus();
 
 
@@ -80,10 +85,10 @@ public class ConsultaStatus implements Serializable {
     public void update(ConsultaStatus consulta) {
 
         this.ConSttObservacao = consulta.ConSttObservacao;
-        this.ConSttDataCriacao = consulta.ConSttDataCriacao;
+        this.conSttDataCriacao = consulta.conSttDataCriacao;
         this.ConSttFormaPagamento = consulta.ConSttFormaPagamento;
         this.ConSttStatus = consulta.ConSttStatus;
-        this.ConSttAdm = consulta.ConSttAdm;
+        this.conSttAdm = consulta.conSttAdm;
         this.conSttMedico = consulta.conSttMedico;
         this.conSttPaciente = consulta.conSttPaciente;
         this.ConSttDia_semana = consulta.ConSttDia_semana;

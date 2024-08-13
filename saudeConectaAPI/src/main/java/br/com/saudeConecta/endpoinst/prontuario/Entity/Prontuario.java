@@ -1,6 +1,7 @@
 package br.com.saudeConecta.endpoinst.prontuario.Entity;
 
 import br.com.saudeConecta.endpoinst.consulta.Entity.Consulta;
+import br.com.saudeConecta.endpoinst.consultaStatus.Entity.ConsultaStatus;
 import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
 import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.prontuario.DTO.DadosCadastraProntuario;
@@ -37,7 +38,7 @@ public class Prontuario implements Serializable {
     private String prontTemperatura;
 
     @Column(name = "prontDataNacimento", nullable = false)
-    private Date prontDataNacimento;
+    private String prontDataNacimento;
 
     @Column(name = "prontSexo")
     private String prontSexo;
@@ -98,10 +99,29 @@ public class Prontuario implements Serializable {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "prontCodigoConsulta" )
-    private Consulta prontCodigoConsulta;
+    private ConsultaStatus prontCodigoConsulta;
 
 
-    public Prontuario(@NotNull DadosCadastraProntuario dados, Medico medico, Consulta consulta) {
+
+    @Column(name = "prontModeloExame")
+    private String prontModeloExame;
+
+    @Column(name = "prontTituloExame")
+    private String prontTituloExame;
+
+    @Column(name = "prontDataExame")
+    private String prontDataExame;
+
+    @Column(name = "prontExame")
+    private String prontExame;
+
+
+
+
+
+
+
+    public Prontuario(@NotNull DadosCadastraProntuario dados, Medico medico, ConsultaStatus consulta) {
         this.prontAltura = dados.prontAltura();
         this.prontPeso = dados.prontPeso();
         this.prontTemperatura = dados.prontTemperatura();
@@ -125,6 +145,10 @@ public class Prontuario implements Serializable {
         this.prontDataFinalizado = dados.prontDataFinalizado();
         this.prontCodigoMedico = medico;
         this.prontCodigoConsulta =consulta;
+        this.prontTituloExame = dados.prontTituloExame();
+        this.prontDataExame = dados.prontDataExame();
+        this.prontExame = dados.prontExame();
+        this.prontModeloExame = dados.prontModeloExame();
 
 
     }

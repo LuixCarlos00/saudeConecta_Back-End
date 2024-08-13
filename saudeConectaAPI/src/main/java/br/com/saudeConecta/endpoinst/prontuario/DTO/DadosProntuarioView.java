@@ -1,6 +1,7 @@
 package br.com.saudeConecta.endpoinst.prontuario.DTO;
 
 import br.com.saudeConecta.endpoinst.consulta.Entity.Consulta;
+import br.com.saudeConecta.endpoinst.consultaStatus.Entity.ConsultaStatus;
 import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
 import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.prontuario.Entity.Prontuario;
@@ -14,7 +15,7 @@ public record DadosProntuarioView(
         String prontPeso,
         String prontAltura,
         String prontTemperatura,
-        Date prontDataNacimento,
+        String prontDataNacimento,
         String prontSexo,
         String prontSaturacao,
         String prontHemoglobina,
@@ -33,7 +34,12 @@ public record DadosProntuarioView(
         String prontPrescricao,
         Date prontDataFinalizado,
         Medico prontCodigoMedico,
-        Consulta prontCodigoConsulta
+        ConsultaStatus prontCodigoConsulta,
+        String prontTituloExame,
+        String prontExame,
+        String prontDataExame,
+        String prontModeloExame
+
 
 ) {
     public DadosProntuarioView(@NotNull Prontuario registro) {
@@ -41,7 +47,8 @@ public record DadosProntuarioView(
                 registro.getProntSexo(),registro.getProntSaturacao(),   registro.getProntHemoglobina(), registro.getProntPressao(),registro.getProntFrequenciaRespiratoria(),
                 registro.getProntFrequenciaArterialSistolica(), registro.getProntFrequenciaArterialDiastolica(), registro.getProntObservacao(), registro.getProntCondulta(),
                 registro.getProntAnamnese(),registro.getProntQueixaPricipal() , registro.getProntDiagnostico(), registro.getProntModeloPrescricao(), registro.getProntTituloPrescricao(), registro.getProntDataPrescricao(),
-                registro.getProntPrescricao(), registro.getProntDataFinalizado(), registro.getProntCodigoMedico(), registro.getProntCodigoConsulta());
+                registro.getProntPrescricao(), registro.getProntDataFinalizado(), registro.getProntCodigoMedico(), registro.getProntCodigoConsulta(),registro.getProntTituloExame(), registro.getProntExame(), registro.getProntDataExame(),
+                registro.getProntModeloExame());
     }
 
 

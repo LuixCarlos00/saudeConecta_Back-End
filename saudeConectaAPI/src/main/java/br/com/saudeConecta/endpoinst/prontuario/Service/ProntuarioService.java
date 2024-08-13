@@ -33,4 +33,9 @@ private final ProntuarioRepository prontuarioRepository;
     public void CadastraProntuario(Prontuario prontuario) {
         prontuarioRepository.save(prontuario);
     }
+
+    public Optional<Prontuario> BuscaProntuario(Long id) {
+
+        return Optional.ofNullable(prontuarioRepository.findByProntCodigoConsulta_ConSttCodigoConsulata(id));
+    }
 }

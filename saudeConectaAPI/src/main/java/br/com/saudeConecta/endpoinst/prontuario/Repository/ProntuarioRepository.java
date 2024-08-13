@@ -12,4 +12,5 @@ import java.util.Optional;
 @Repository
 public interface ProntuarioRepository extends JpaRepository<Prontuario,Long> {
 
+    Prontuario findByProntCodigoConsulta_ConSttCodigoConsulata(Long ConSttCodigoConsulata);
 }

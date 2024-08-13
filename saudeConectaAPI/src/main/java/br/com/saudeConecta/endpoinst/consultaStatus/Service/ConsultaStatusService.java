@@ -5,6 +5,8 @@ import br.com.saudeConecta.endpoinst.consultaStatus.Entity.ConsultaStatus;
 import br.com.saudeConecta.endpoinst.consultaStatus.Repository.ConsultaStatusRepository;
 import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
+import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
+import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
 import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -25,6 +27,10 @@ public class ConsultaStatusService {
 
     @Autowired
     private MedicoRepository medicoRepository;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
 
 
     public Optional<ConsultaStatus> buscarPacientePorId(Long id) {
@@ -115,6 +121,16 @@ public class ConsultaStatusService {
         } else {
             throw new EntityNotFoundException("Consulta não encontrada com o id: " + id);
         }
+    }
+
+    public Optional<ConsultaStatus> BuscarRegistrosDeConsultaStatusPesquisandoPorTodosOsCampos(Long idMedico, String data, String horario, Long idPaciente, Long idAdm, String dataCriacao) {
+
+    return repository.findByConSttMedico_MedCodigoAndConSttPaciente_PaciCodigoAndConSttHorarioAndConSttDataAndConSttDataCriacaoAndConSttAdm(idMedico, idPaciente, horario, data, dataCriacao, idAdm);
+    }
+
+    public List<ConsultaStatus> BuscarHistoricoDeAgendaDoMedico(Long idMedico) {
+        Medico medico = medicoRepository.findByUsuario_Id(idMedico).orElseThrow(() -> new ResourceNotFoundException("Médico não encontrado"));
+        return repository.findByConSttMedico_MedCodigo(medico.getMedCodigo());
     }
 
 }

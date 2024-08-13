@@ -21,7 +21,7 @@ public record DadosCadastraProntuario(
         String prontTemperatura,
 
 
-        Date prontDataNacimento,
+        String prontDataNacimento,
 
 
         String prontSexo,
@@ -78,7 +78,25 @@ public record DadosCadastraProntuario(
         Long prontCodigoMedico,
 
 
-        Long prontCodigoConsulta
+        Long prontCodigoConsulta,
+
+
+
+
+        String prontTituloExame,
+
+
+        String prontExame,
+
+
+        String prontDataExame,
+
+
+        String prontModeloExame
+
+
+
+
 
 
 ) {

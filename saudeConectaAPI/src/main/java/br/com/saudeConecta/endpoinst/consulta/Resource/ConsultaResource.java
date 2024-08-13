@@ -233,9 +233,6 @@ public class ConsultaResource {
     }
 
 
-
-
-
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PutMapping(value = "/concluido/{id}")
     @Transactional
@@ -243,8 +240,6 @@ public class ConsultaResource {
         DadosConsultaView consulta = service.ConcluirConsulta(id);
         return ResponseEntity.ok().body(new DadosConsultaView(consulta));
     }
-
-
 
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
@@ -299,14 +294,12 @@ public class ConsultaResource {
     // ##################################################
 
 
-
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    @GetMapping(value = "/BuscarTodaAgendaDeMedico/{IdMedico}/{dataHoje}")
-    public List<Consulta> BuscarTodaAgendaDeMedicoDoDia(@NotNull @PathVariable("IdMedico") Long IdUsuarioMedico,
-                                                         @NotNull @PathVariable("dataHoje") String dataHoje) {
-        return service.BuscarTodaAgendaDeMedicoDoDia(IdUsuarioMedico, dataHoje);
-    }
+    @GetMapping(value = "/BuscarTodaAgendaDeMedico/{IdMedico}")
+    public List<Consulta> BuscarTodaAgendaDeMedicoDoDia(@NotNull @PathVariable("IdMedico") Long IdUsuarioMedico) {
+        return service.BuscarTodaAgendaDeMedicoDoDia(IdUsuarioMedico);
 
+    }
 
 
 }

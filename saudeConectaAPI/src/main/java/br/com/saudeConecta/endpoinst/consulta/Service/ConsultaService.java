@@ -248,12 +248,12 @@ public class ConsultaService {
 
 
 
-    public List<Consulta> BuscarTodaAgendaDeMedicoDoDia(Long IdUsuarioMedico, @NotNull String dataHoje) {
+    public List<Consulta> BuscarTodaAgendaDeMedicoDoDia(Long IdUsuarioMedico ) {
         Optional<Usuario> user = usuarioRepository.findById(IdUsuarioMedico);
         if (user.isPresent()) {
             Optional<Medico> medico = medicoRepository.findByUsuario_Id(user.get().getId());
             if (medico.isPresent()) {
-                return repository.findByConMedico_MedCodigoAndConData(medico.get().getMedCodigo(), dataHoje);
+                return repository.findByConMedico_MedCodigo(medico.get().getMedCodigo());
             } else {
                 return null;
             }

@@ -4,6 +4,9 @@ import br.com.saudeConecta.endpoinst.consultaStatus.Entity.ConsultaStatus;
 import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 public record DadosConsultaStatusView(
         Long ConSttCodigoConsulata,
         Medico ConSttMedico,
@@ -26,9 +29,10 @@ public record DadosConsultaStatusView(
     }
 
 
-    public DadosConsultaStatusView(DadosConsultaStatusView registro) {
-        this(registro.ConSttCodigoConsulata(), registro.ConSttMedico(), registro.ConSttPaciente(), registro.ConSttDia_semana(), registro.ConSttHorario(),
-                registro.ConSttData(), registro.ConSttObservacao() , registro.ConSttDataCriacao(), registro.ConSttFormaPagamento(),registro.ConSttStatus(),registro.ConSttAdm());
+    public static List<DadosConsultaStatusView> fromList(List<ConsultaStatus> registros) {
+        return registros.stream()
+                .map(DadosConsultaStatusView::new)
+                .collect(Collectors.toList());
     }
 
 }

@@ -20,7 +20,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta,Long> {
 
     List<Consulta> findByConMedico_MedCodigoAndConData(Long medCodigo, String conData);
 
-
+    List<Consulta> findByConMedico_MedCodigo(Long medCodigo);
 
 
     @Query("select c from Consulta c where c.conData between :dataInicial and :dataFinal")

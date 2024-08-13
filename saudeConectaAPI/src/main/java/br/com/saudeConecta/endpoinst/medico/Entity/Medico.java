@@ -1,11 +1,13 @@
 package br.com.saudeConecta.endpoinst.medico.Entity;
 
 import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
+import br.com.saudeConecta.endpoinst.medico.DTO.AlterarDadosMedicos;
 import br.com.saudeConecta.endpoinst.medico.DTO.DadosCadastraMedico;
 import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.Serializable;
 import java.sql.Date;
@@ -70,28 +72,13 @@ public class Medico implements Serializable {
     private Endereco endereco;
 
 
-    public Medico(String medNome, String medSexo, Date medDataNacimento, String medCrm, String medCpf,
-                  String medRg, String medEspecialidade, String medTelefone, String medEmail, String MedEmpresa,
-                  String MedGraduacao, String MedFormacoes , Usuario usuario, Endereco endereco) {
-        this.medNome = medNome;
-        this.MedSexo = medSexo;
-        this.MedDataNacimento = medDataNacimento;
-        this.medCrm = medCrm;
-        this.MedCpf = medCpf;
-        this.medEspecialidade = medEspecialidade;
-        this.MedRg = medRg;
-        this.MedTelefone = medTelefone;
-        this.usuario = usuario;
-        this.endereco = endereco;
-        this.medEmail = medEmail;
-        this.MedEmpresa = MedEmpresa;
-        this.MedGraduacao = MedGraduacao;
-        this.MedFormacoes = MedFormacoes;
+
+    @Column(name = "MedTempoDeConsulta", nullable = true)
+    private String MedTempoDeConsulta;
 
 
-    }
 
-    public Medico(DadosCadastraMedico dados, Usuario usuario, Endereco endereco) {
+    public Medico(@NotNull DadosCadastraMedico dados, Usuario usuario, Endereco endereco) {
 
         this.medNome = dados.MedNome();
         this.MedSexo = dados.MedSexo();
@@ -109,4 +96,7 @@ public class Medico implements Serializable {
         this.MedEmpresa = MedEmpresa;
 
     }
+
+
+
 }

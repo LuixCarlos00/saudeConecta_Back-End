@@ -39,68 +39,182 @@ public class ConsultaStatusResource {
     @Autowired
     private PacienteRepository pacienteRepository;
 
+
+
+
+
+
+
+//
+//    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+//    @GetMapping(value = "/buscarId/{id}")
+//    @Transactional
+//    public ResponseEntity<DadosConsultaStatusView> buscarPorId(@NotNull @Valid @PathVariable("id") Long Id) {
+//        Optional<ConsultaStatus> consulta = service.buscarPacientePorId(Id);
+//
+//        return ResponseEntity.status(HttpStatus.OK).body(new DadosConsultaStatusView((consulta.get())));
+//    }
+
+
+
+//
+//    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+//    @GetMapping(value = "/consultaData={data}&horario={horario}&medico={medico}")
+//    @Transactional
+//    public Boolean VericarSeExetemConsultasMarcadas(@NotNull @Valid @PathVariable("data") String data,
+//                                                                              @PathVariable("horario") String horario,
+//                                                                              @PathVariable("medico") Long medico ) {
+//        System.out.println( data + horario + medico);
+//        Boolean consulta = service.VericarSeExetemConsultasMarcadas(data,horario,medico);
+//        System.out.println(consulta);
+//        return consulta;
+//    }
+
+
+
+
+
+
+
+//
+//
+//    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+//    @PostMapping("/post")
+//    @Transactional
+//    public ResponseEntity<DadosConsultaStatusView> Cadastra(@NotNull @RequestBody @Valid DadosCadastraConsultaStatus dados, @NotNull BindingResult result,
+//                                                            UriComponentsBuilder uriBuilder) {
+//
+//        if (result.hasErrors()) {
+//            return ResponseEntity.badRequest().build();
+//        }
+//
+//            System.out.println(dados.toString());
+//
+//        Long idMedicos = dados.ConSttMedico();
+//        Long idPaciente = dados.ConSttPaciente();
+//
+//
+//        Optional<Medico> medicoOptional = medicoRepository.findById(idMedicos);
+//        Optional<Paciente> pacienteOptional = pacienteRepository.findById(idPaciente);
+//
+//
+//        if (medicoOptional.isEmpty() || pacienteOptional.isEmpty()) {
+//            return ResponseEntity.notFound().build();
+//        }
+//
+//        Medico medico = medicoOptional.get();
+//        Paciente paciente = pacienteOptional.get();
+//
+//        ConsultaStatus consulta = new ConsultaStatus(medico, paciente, dados);
+//
+//        service.CadastraRegistroConsulta(consulta);
+//
+//        URI uri = uriBuilder.path("/plano/{id}").buildAndExpand(consulta.getConSttCodigoConsulata()).toUri();
+//
+//        return ResponseEntity.created(uri).body(new DadosConsultaStatusView(consulta));
+//
+//    }
+
+
+
+
+
+
+//    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+//    @GetMapping(value ="/BuscarRegistrosDeConsulta/{busca}")
+//    public Page<DadosConsultaStatusView> BuscarRegistrosDeConsulta(@NotNull @PathVariable("busca") String busca) {
+//
+//        return service.BuscarRegistrosDeConsulta(busca);
+//    }
+//
+
+//    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+//    @GetMapping(value = "/listatodasConsulta")
+//    public List<ConsultaStatus> buscarTodasConsulta() {
+//
+//        return service.buscarTodasConsulta();
+//    }
+
+
+//    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+//    @DeleteMapping("/{id}")
+//    public ResponseEntity<Void> deleteConsultaById(@PathVariable("id") Long id) throws Exception {
+//        service.deletarPorId(id);
+//        return ResponseEntity.noContent().build();
+//    }
+
+
+
+
+
+//    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+//    @PutMapping(value = "/editar/{id}")
+//    @Transactional
+//    public ResponseEntity<DadosConsultaStatusView> EditarConsulta(@NotNull @RequestBody @Valid DadosCadastraConsultaStatus dados,
+//                                                                  @NotNull @PathVariable("id") Long id,
+//                                                                  @NotNull BindingResult result,
+//                                                                  UriComponentsBuilder uriBuilder) {
+//
+//        if (result.hasErrors()) {
+//            return ResponseEntity.badRequest().build();
+//        }
+//
+//
+//
+//        Long idMedicos = dados.ConSttMedico();
+//        Long idPaciente = dados.ConSttPaciente();
+//
+//
+//        Optional<Medico> medicoOptional = medicoRepository.findById(idMedicos);
+//        Optional<Paciente> pacienteOptional = pacienteRepository.findById(idPaciente);
+//
+//
+//        if (medicoOptional.isEmpty() || pacienteOptional.isEmpty()) {
+//            return ResponseEntity.notFound().build();
+//        }
+//
+//
+//
+//        Medico medico = medicoOptional.get();
+//        Paciente paciente = pacienteOptional.get();
+//
+//        ConsultaStatus consulta = new ConsultaStatus(medico, paciente, dados);
+//
+//        service.EditarConsulta(consulta, id);
+//
+//        URI uri = uriBuilder.path("/plano/{id}").buildAndExpand(consulta.getConSttCodigoConsulata()).toUri();
+//
+//        return ResponseEntity.created(uri).body(new DadosConsultaStatusView(consulta));
+//
+//    }
+
+
+
+//    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+//    @PutMapping(value = "/concluido/{id}")
+//    @Transactional
+//    public ResponseEntity<DadosConsultaStatusView> FazerConclusaoConsulta(@NotNull @PathVariable("id") Long id) {
+//        DadosConsultaStatusView consulta =  service.ConcluirConsulta( id);
+//        return ResponseEntity.ok().body(new DadosConsultaStatusView(consulta));
+//    }
+//
+
+
+
+
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    @GetMapping(value = "/buscarId/{id}")
+    @GetMapping(value = "/Allcampos/medico={ConMedico}&data={ConData}&horario={ConHorario}&paciente={ConPaciente}&Administrador={ConAdm}&DataCriacao={ConDadaCriacao}")
     @Transactional
-    public ResponseEntity<DadosConsultaStatusView> buscarPorId(@NotNull @Valid @PathVariable("id") Long Id) {
-        Optional<ConsultaStatus> consulta = service.buscarPacientePorId(Id);
+    public ResponseEntity<DadosConsultaStatusView> BuscarRegistrosDeConsultaStatusPesquisandoPorTodosOsCampos(@NotNull @Valid @PathVariable("ConMedico") Long IdMedico,
+                                                                                                              @PathVariable ("ConData")  String Data    ,
+                                                                                                              @PathVariable ("ConHorario") String Horario    ,
+                                                                                                              @PathVariable ("ConPaciente")   Long IdPaciente ,
+                                                                                                              @PathVariable ("ConAdm")   Long IdAdm ,
+                                                                                                              @PathVariable ("ConDadaCriacao") String DataCriacao) {
+        Optional<ConsultaStatus> consulta = service.BuscarRegistrosDeConsultaStatusPesquisandoPorTodosOsCampos(IdMedico,Data,Horario,IdPaciente,IdAdm,DataCriacao );
 
         return ResponseEntity.status(HttpStatus.OK).body(new DadosConsultaStatusView((consulta.get())));
     }
-
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    @GetMapping(value = "/consultaData={data}&horario={horario}&medico={medico}")
-    @Transactional
-    public Boolean VericarSeExetemConsultasMarcadas(@NotNull @Valid @PathVariable("data") String data,
-                                                                              @PathVariable("horario") String horario,
-                                                                              @PathVariable("medico") Long medico ) {
-        System.out.println( data + horario + medico);
-        Boolean consulta = service.VericarSeExetemConsultasMarcadas(data,horario,medico);
-        System.out.println(consulta);
-        return consulta;
-    }
-
-
-
-
-
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    @PostMapping("/post")
-    @Transactional
-    public ResponseEntity<DadosConsultaStatusView> Cadastra(@NotNull @RequestBody @Valid DadosCadastraConsultaStatus dados, @NotNull BindingResult result,
-                                                            UriComponentsBuilder uriBuilder) {
-
-        if (result.hasErrors()) {
-            return ResponseEntity.badRequest().build();
-        }
-
-            System.out.println(dados.toString());
-
-        Long idMedicos = dados.ConSttMedico();
-        Long idPaciente = dados.ConSttPaciente();
-
-
-        Optional<Medico> medicoOptional = medicoRepository.findById(idMedicos);
-        Optional<Paciente> pacienteOptional = pacienteRepository.findById(idPaciente);
-
-
-        if (medicoOptional.isEmpty() || pacienteOptional.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        Medico medico = medicoOptional.get();
-        Paciente paciente = pacienteOptional.get();
-
-        ConsultaStatus consulta = new ConsultaStatus(medico, paciente, dados);
-
-        service.CadastraRegistroConsulta(consulta);
-
-        URI uri = uriBuilder.path("/plano/{id}").buildAndExpand(consulta.getConSttCodigoConsulata()).toUri();
-
-        return ResponseEntity.created(uri).body(new DadosConsultaStatusView(consulta));
-
-    }
-
 
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
@@ -109,90 +223,17 @@ public class ConsultaStatusResource {
         return service.BuscarConsultaPorPaginas(paginacao);
     }
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    @GetMapping(value ="/BuscarRegistrosDeConsulta/{busca}")
-    public Page<DadosConsultaStatusView> BuscarRegistrosDeConsulta(@NotNull @PathVariable("busca") String busca) {
-
-        return service.BuscarRegistrosDeConsulta(busca);
-    }
-
-
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    @GetMapping(value = "/listatodasConsulta")
-    public List<ConsultaStatus> buscarTodasConsulta() {
-
-        return service.buscarTodasConsulta();
-    }
-
-
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteConsultaById(@PathVariable("id") Long id) throws Exception {
-        service.deletarPorId(id);
-        return ResponseEntity.noContent().build();
-    }
-
-
 
 
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    @PutMapping(value = "/editar/{id}")
+    @GetMapping(value = "/BuscarHistoricoDeAgendaDoMedico/{id}")
     @Transactional
-    public ResponseEntity<DadosConsultaStatusView> EditarConsulta(@NotNull @RequestBody @Valid DadosCadastraConsultaStatus dados,
-                                                                  @NotNull @PathVariable("id") Long id,
-                                                                  @NotNull BindingResult result,
-                                                                  UriComponentsBuilder uriBuilder) {
-
-        if (result.hasErrors()) {
-            return ResponseEntity.badRequest().build();
-        }
-
-
-
-        Long idMedicos = dados.ConSttMedico();
-        Long idPaciente = dados.ConSttPaciente();
-
-
-        Optional<Medico> medicoOptional = medicoRepository.findById(idMedicos);
-        Optional<Paciente> pacienteOptional = pacienteRepository.findById(idPaciente);
-
-
-        if (medicoOptional.isEmpty() || pacienteOptional.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-
-
-        Medico medico = medicoOptional.get();
-        Paciente paciente = pacienteOptional.get();
-
-        ConsultaStatus consulta = new ConsultaStatus(medico, paciente, dados);
-
-        service.EditarConsulta(consulta, id);
-
-        URI uri = uriBuilder.path("/plano/{id}").buildAndExpand(consulta.getConSttCodigoConsulata()).toUri();
-
-        return ResponseEntity.created(uri).body(new DadosConsultaStatusView(consulta));
-
+    public ResponseEntity<List<DadosConsultaStatusView>> BuscarHistoricoDeAgendaDoMedico(@NotNull @Valid @PathVariable("id") Long IdMedico) {
+        List<ConsultaStatus> consulta = service.BuscarHistoricoDeAgendaDoMedico(IdMedico);
+        List<DadosConsultaStatusView> dadosConsultaStatusViews = DadosConsultaStatusView.fromList(consulta);
+        return ResponseEntity.status(HttpStatus.OK).body(dadosConsultaStatusViews);
     }
-
-
-
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    @PutMapping(value = "/concluido/{id}")
-    @Transactional
-    public ResponseEntity<DadosConsultaStatusView> FazerConclusaoConsulta(@NotNull @PathVariable("id") Long id) {
-        DadosConsultaStatusView consulta =  service.ConcluirConsulta( id);
-        return ResponseEntity.ok().body(new DadosConsultaStatusView(consulta));
-    }
-
-
-
-
-
-
-
 
 
 }

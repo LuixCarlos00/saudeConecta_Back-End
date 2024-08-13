@@ -3,6 +3,8 @@ package br.com.saudeConecta.endpoinst.prontuario.Resource;
 import br.com.saudeConecta.endpoinst.consulta.Entity.Consulta;
 import br.com.saudeConecta.endpoinst.consulta.Repository.ConsultaRepository;
 import br.com.saudeConecta.endpoinst.consulta.Resource.ConsultaResource;
+import br.com.saudeConecta.endpoinst.consultaStatus.Entity.ConsultaStatus;
+import br.com.saudeConecta.endpoinst.consultaStatus.Repository.ConsultaStatusRepository;
 import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
 import br.com.saudeConecta.endpoinst.endereco.Repository.EnderecoRepository;
 import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
@@ -39,18 +41,19 @@ public class ProntuarioResource {
 
     private final ProntuarioService service;
     private final MedicoRepository medicoRepository;
-    private final ConsultaRepository consultaRepository;
+    private final ConsultaStatusRepository consultaStatusRepository;
 
     @Autowired
-    public ProntuarioResource(ProntuarioService service, MedicoRepository medicoRepository, ConsultaRepository consultaRepository) {
+    public ProntuarioResource(ProntuarioService service, MedicoRepository medicoRepository, ConsultaStatusRepository consultaStatusRepository) {
         this.service = service;
         this.medicoRepository = medicoRepository;
-        this.consultaRepository = consultaRepository;
+        this.consultaStatusRepository = consultaStatusRepository;
     }
 
 
     @PostMapping(value = "/Post")
     @Transactional
+    @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<DadosProntuarioView> CadastraProntuario(@RequestBody @Valid @NotNull DadosCadastraProntuario dados,
                                                                   UriComponentsBuilder uriBuilder,
                                                                   BindingResult result) {
@@ -64,7 +67,7 @@ public class ProntuarioResource {
 
 
         Optional<Medico> medicoOptional = medicoRepository.findById(Medico);
-        Optional<Consulta> consultaOptional = consultaRepository.findById(Consulta);
+        Optional<ConsultaStatus> consultaOptional = consultaStatusRepository.findById(Consulta);
 
         if (medicoOptional.isEmpty() || consultaOptional.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -79,6 +82,20 @@ public class ProntuarioResource {
 
         URI uri = uriBuilder.path("/prontuario/{id}").buildAndExpand(prontuario.getProntCodigoProntuario()).toUri();
         return ResponseEntity.created(uri).body(new DadosProntuarioView(prontuario));
+    }
+
+
+
+
+    @GetMapping(value = "/BuscarPorProntuarioPassadoIdDeConsultaStatus/{id}")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<DadosProntuarioView> BuscarPorProntuarioPassadoIdDeConsultaStatus(@PathVariable("id") Long id) {
+        Optional<Prontuario> prontuario = service.BuscaProntuario(id);
+        if (prontuario.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(new DadosProntuarioView(prontuario.get()));
     }
 
 

@@ -102,20 +102,20 @@ public class PacienteService {
 
 
 
-    public List<Paciente> buscarMedicoPorCPF(String cpf) {
+    public List<Paciente> buscarPacientePorCPF(String cpf) {
         return repository.findByCpfIgnoringFormatting( cpf);
     }
 
-    public List<Paciente> buscarMedicoPorRG(String rg) {
+    public List<Paciente> buscarPacientePorRG(String rg) {
         return repository.findByRgIgnoringFormatting(rg);
     }
 
-    public List<Paciente> buscarMedicoPorTelefone(String telefone) {
+    public List<Paciente> buscarPacientePorTelefone(String telefone) {
         return repository.findByPaciTelefoneContainingIgnoreCase(telefone);
     }
 
 
-    public List<Paciente> buscarMedicoPorNome(String nome) {
+    public List<Paciente> buscarPacientePorNome(String nome) {
         return repository.findByPaciNomeContainingIgnoreCase(nome);
     }
 

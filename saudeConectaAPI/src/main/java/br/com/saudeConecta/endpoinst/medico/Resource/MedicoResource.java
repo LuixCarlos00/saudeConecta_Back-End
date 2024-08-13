@@ -4,6 +4,8 @@ import br.com.saudeConecta.endpoinst.administrador.DTO.DadosAdiministradorView;
 import br.com.saudeConecta.endpoinst.administrador.Entity.Administrador;
 import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
 import br.com.saudeConecta.endpoinst.endereco.Repository.EnderecoRepository;
+import br.com.saudeConecta.endpoinst.medico.DTO.AlteraDadosEnderecoMedico;
+import br.com.saudeConecta.endpoinst.medico.DTO.AlterarDadosMedicos;
 import br.com.saudeConecta.endpoinst.medico.DTO.DadosCadastraMedico;
 import br.com.saudeConecta.endpoinst.medico.DTO.DadosMedicoView;
 import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
@@ -169,6 +171,24 @@ public class MedicoResource {
         Optional<Medico> medico = service.buscarMedicoPorIdDeUsusario(Id);
 
         return ResponseEntity.status(HttpStatus.OK).body(new DadosMedicoView((medico.get())));
+    }
+
+
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    @PutMapping("/AlterarDadosMedico/{id}")
+    public ResponseEntity<Void> AlterarDadosMedico(@PathVariable("id") Long id, @RequestBody @Valid AlterarDadosMedicos dados) throws Exception {
+        service.AleterarDadosMedico(id, dados);
+        return ResponseEntity.noContent().build();
+    }
+
+
+
+
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    @PutMapping("/AtualizarEnderecoMedico/{id}")
+    public ResponseEntity<Void> AtualizarEnderecoMedico(@PathVariable("id") Long id, @RequestBody @Valid AlteraDadosEnderecoMedico dados) throws Exception {
+        service.AtualizarEnderecoMedico(id, dados);
+        return ResponseEntity.noContent().build();
     }
 
 
