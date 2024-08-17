@@ -149,6 +149,14 @@ public class UsuarioService {
 
 
 
+
+    public void TrocaSenhaDoUsuario(String senhaNova, Usuario user) {
+        user.setSenha(senhaNova);
+        repository.save(user);
+    }
+
+
+
     public ResponseEntity<?> EsqueciMinhaSenha(String senhaNova,DadosTrocaDeSenha dados) {
         Optional<Usuario> usuario = repository.findById(dados.id()) ;
         if (usuario != null) {
@@ -228,4 +236,6 @@ public class UsuarioService {
         user.setPaciStatus(status);
         pacienteRepository.save(user);
     }
+
+
 }

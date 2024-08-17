@@ -92,7 +92,10 @@ public record DadosCadastraProntuario(
         String prontDataExame,
 
 
-        String prontModeloExame
+        String prontModeloExame,
+
+        String prontTempoDuracao
+
 
 
 

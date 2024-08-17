@@ -309,6 +309,32 @@ public class UsuarioResource {
 
 
 
+    @PutMapping(value = "/TrocaSenhaDoUsuario/{Id}")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    public ResponseEntity<?> TrocaSenhaDoUsuario(@RequestBody @Valid DadosTrocaDeSenha dados,
+                                        @NotNull @Valid @PathVariable("Id") Long Id,
+                                        @NotNull BindingResult result) {
+        if (result.hasErrors()) {
+            return ResponseEntity.badRequest().body(result.getAllErrors());
+        }
+
+        Usuario user = repository.findById(Id).orElse(null);
+
+
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        } else {
+            String senhaNova = passwordEncoder.encode(dados.senhaNova());
+            userService.TrocaSenhaDoUsuario(senhaNova, user);
+            return ResponseEntity.ok().build();
+        }
+    }
+
+
+
+
+
 
     @PutMapping(value = "/bloquearUsuario/usuario/{codigo}/status/{status}")
     @Transactional

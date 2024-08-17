@@ -101,8 +101,6 @@ public class Prontuario implements Serializable {
     @JoinColumn(name = "prontCodigoConsulta" )
     private ConsultaStatus prontCodigoConsulta;
 
-
-
     @Column(name = "prontModeloExame")
     private String prontModeloExame;
 
@@ -114,6 +112,10 @@ public class Prontuario implements Serializable {
 
     @Column(name = "prontExame")
     private String prontExame;
+
+    @Column(name = "prontTempoDuracao")
+    private String prontTempoDuracao;
+
 
 
 
@@ -149,6 +151,7 @@ public class Prontuario implements Serializable {
         this.prontDataExame = dados.prontDataExame();
         this.prontExame = dados.prontExame();
         this.prontModeloExame = dados.prontModeloExame();
+        this.prontTempoDuracao = dados.prontTempoDuracao();
 
 
     }
