@@ -11,6 +11,7 @@ import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
 import br.com.saudeConecta.endpoinst.prontuario.DTO.DadosCadastraProntuario;
 import br.com.saudeConecta.endpoinst.prontuario.DTO.DadosProntuarioView;
+import br.com.saudeConecta.endpoinst.prontuario.DTO.HistoricoPaciente;
 import br.com.saudeConecta.endpoinst.prontuario.Entity.Prontuario;
 import br.com.saudeConecta.endpoinst.prontuario.Service.ProntuarioService;
 import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
@@ -96,6 +97,17 @@ public class ProntuarioResource {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(new DadosProntuarioView(prontuario.get()));
+    }
+
+
+
+
+    @GetMapping(value = "/BuscandoHistoricoDoPaciente/{id}")
+    @Transactional
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<HistoricoPaciente> BuscandoHistoricoDoPaciente(@PathVariable("id") Long id) {
+        HistoricoPaciente historicoPaciente = service.BuscandoHistoricoDoPaciente(id);
+        return ResponseEntity.ok(historicoPaciente);
     }
 
 

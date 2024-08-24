@@ -92,12 +92,12 @@ public class Prontuario implements Serializable {
     private Date prontDataFinalizado;
 
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "prontCodigoMedico" )
     private Medico prontCodigoMedico;
 
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "prontCodigoConsulta" )
     private ConsultaStatus prontCodigoConsulta;
 

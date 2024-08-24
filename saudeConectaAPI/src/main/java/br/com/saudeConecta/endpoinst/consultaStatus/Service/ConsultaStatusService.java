@@ -133,4 +133,7 @@ public class ConsultaStatusService {
         return repository.findByConSttMedico_MedCodigo(medico.getMedCodigo());
     }
 
+    public List<ConsultaStatus> BuscarDadosDeAgendaDeTodosOsMedicos() {
+        return repository.findAll();
+    }
 }

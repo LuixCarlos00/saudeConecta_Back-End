@@ -22,4 +22,6 @@ public interface ConsultaStatusRepository extends JpaRepository<ConsultaStatus,L
 
     @Query("select c from ConsultaStatus c where c.conSttMedico.medCodigo = ?1")
     List<ConsultaStatus> findByConSttMedico_MedCodigo(Long medCodigo);
+
+    List<ConsultaStatus> findByConSttPaciente_PaciCodigo(Long paciCodigo);
 }

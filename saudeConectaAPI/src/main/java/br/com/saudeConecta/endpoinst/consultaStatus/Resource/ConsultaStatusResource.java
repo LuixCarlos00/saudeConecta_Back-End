@@ -236,4 +236,16 @@ public class ConsultaStatusResource {
     }
 
 
+
+
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    @GetMapping(value = "/BuscarDadosDeAgendaDeTodosOsMedicos")
+    @Transactional
+    public ResponseEntity<List<DadosConsultaStatusView>> BuscarDadosDeAgendaDeTodosOsMedicos() {
+        List<ConsultaStatus> consulta = service.BuscarDadosDeAgendaDeTodosOsMedicos();
+        List<DadosConsultaStatusView> dadosConsultaStatusViews = DadosConsultaStatusView.fromList(consulta);
+        return ResponseEntity.status(HttpStatus.OK).body(dadosConsultaStatusViews);
+    }
+
+
 }

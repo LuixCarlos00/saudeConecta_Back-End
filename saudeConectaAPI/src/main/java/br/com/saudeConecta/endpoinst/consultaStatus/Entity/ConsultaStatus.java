@@ -27,11 +27,11 @@ public class ConsultaStatus implements Serializable {
     @Column(name = "ConSttCodigoConsulata")
     private Long conSttCodigoConsulata;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "ConSttMedico")
     private Medico conSttMedico;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "ConSttPaciente")
     private Paciente conSttPaciente;
     
@@ -95,6 +95,7 @@ public class ConsultaStatus implements Serializable {
         this.conSttHorario = consulta.conSttHorario;
         this.conSttData = consulta.conSttData;
     }
+
 
 
 }
