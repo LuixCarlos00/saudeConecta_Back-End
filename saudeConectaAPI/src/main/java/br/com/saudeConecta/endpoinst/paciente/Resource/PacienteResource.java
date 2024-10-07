@@ -52,17 +52,7 @@ public class PacienteResource {
 
 
 
-//
-//    @GetMapping(value = "/buscarIdDeUsusario/{id}")
-//    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-//    @Transactional
-//    public ResponseEntity<DadosPacienteView> buscarPorIdDeUsusario(@NotNull @Valid @PathVariable("id") Long Id) {
-//        Optional<Paciente> medico = service.buscarPacientePorIdDeUsusario(Id);
-//
-//        return ResponseEntity.status(HttpStatus.OK).body(new DadosPacienteView((medico.get())));
-//    }
-
-
+ 
 
 
 

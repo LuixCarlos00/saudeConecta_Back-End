@@ -13,7 +13,7 @@ import java.util.Optional;
 public interface PacienteRepository extends JpaRepository<Paciente,Long> {
     Optional<Paciente> findByPaciEmail(String PaciEmail);
 
-  //  Optional<Paciente> findByUsuario_Id(Long id);
+ 
 
     List<Paciente> findByPaciNomeContainingIgnoreCase(String PaciNome);
 
@@ -25,5 +25,5 @@ public interface PacienteRepository extends JpaRepository<Paciente,Long> {
     @Query("SELECT p FROM Paciente p WHERE REPLACE(REPLACE(REPLACE(p.paciCpf, '.', ''), '-', ''), '/', '') LIKE %:cpf%")
     List<Paciente> findByCpfIgnoringFormatting(@Param("cpf") String cpf);
 
-    //boolean existsByUsuario_Id(Long id);
+ 
 }

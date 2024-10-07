@@ -8,14 +8,7 @@ import java.util.Optional;
 
 @Repository
 public interface SecretariaRepository extends JpaRepository<Secretaria,Long> {
-//    Optional<Secretaria> findByAdmEmail(String PaciEmail);
-//
-//    Optional<Secretaria> findByAdmUsuario_Id(Long id);
-//
-//
-//
-//
-//    boolean existsByAdmUsuario_Id(Long id);
+  
 boolean existsBySecreUsuario_Login(String login);
 
    Optional <Secretaria>    findBySecreUsuario_Id(Long id);

@@ -12,10 +12,7 @@ import java.util.Optional;
 @Repository
 public interface ConsultaStatusRepository extends JpaRepository<ConsultaStatus,Long> {
 
-
-    //Optional<ConsultaStatus> findByConHorarioAndConDataAndConMedico_MedCodigo(String conHorario, Date conData, Long medCodigo);
-
-   // boolean existsByConHorarioAndConDataAndConMedico_MedCodigo(String conHorario, String conData, Long medCodigo);
+ 
    boolean existsByConSttHorarioAndConSttDataAndConSttMedico_MedCodigo(String conSttHorario, String conSttData, Long medCodigo);
 
     Optional<ConsultaStatus> findByConSttMedico_MedCodigoAndConSttPaciente_PaciCodigoAndConSttHorarioAndConSttDataAndConSttDataCriacaoAndConSttAdm(Long medCodigo, Long paciCodigo, String conSttHorario, String conSttData, String ConSttDataCriacao, Long ConSttAdm);

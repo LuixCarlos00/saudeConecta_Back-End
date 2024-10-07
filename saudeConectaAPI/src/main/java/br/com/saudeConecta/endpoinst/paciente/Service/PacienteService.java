@@ -96,10 +96,7 @@ public class PacienteService {
           codigoVerificacaoRepository.deleteByCodVerificacaoCodigo(codigo);
     }
 
-   // public Optional<Paciente> buscarPacientePorIdDeUsusario(Long id) {
-   //     return repository.findByUsuario_Id(id);
-   // }
-
+ 
 
 
     public List<Paciente> buscarPacientePorCPF(String cpf) {
