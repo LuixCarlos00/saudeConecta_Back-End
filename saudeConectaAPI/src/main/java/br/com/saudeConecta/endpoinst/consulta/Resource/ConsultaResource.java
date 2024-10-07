@@ -121,14 +121,7 @@ public class ConsultaResource {
         return service.BuscarConsultaPorPaginas(paginacao);
     }
 
-
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    @GetMapping(value = "/BuscarRegistrosDeConsulta/{busca}")
-    public Page<DadosConsultaView> BuscarRegistrosDeConsulta(@NotNull @PathVariable("busca") String busca) {
-
-        return service.BuscarRegistrosDeConsulta(busca);
-    }
-
+ 
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/listatodasConsulta")
@@ -137,11 +130,7 @@ public class ConsultaResource {
     }
 
 
-//    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-//    @GetMapping(value = "/listatodasConsultaPorDataSelecionada/data={data}")
-//    public List<Consulta> BuscatodasAsConsultasPorDataSelecionada(@NotNull @PathVariable("data") String data) {
-//        return service.BuscatodasAsConsultasPorDataSelecionada(data);
-//    }
+ 
 
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")

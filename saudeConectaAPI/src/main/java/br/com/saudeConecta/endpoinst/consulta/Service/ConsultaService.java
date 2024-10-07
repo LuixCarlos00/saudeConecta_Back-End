@@ -138,22 +138,7 @@ public class ConsultaService {
 
     }
 
-
-    public Page<DadosConsultaView> BuscarRegistrosDeConsulta(String busca) {
-
-//        String stringBusca = busca.toString();
-//        Date    dateBusca  = busca.toString();
-//        Long  longBusca = busca.toString();
-//
-//    if (){
-//        return repository.find
-//    }
-
-
-        return null;
-
-
-    }
+ 
 
 
     public DadosConsultaView EditarConsulta(Consulta consulta, Long id) {
