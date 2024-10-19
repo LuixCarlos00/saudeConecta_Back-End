@@ -8,17 +8,17 @@ import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
 import java.util.Date;
 
 public record DadosConsultaView(
-        Long ConCodigoConsulta,
-        Medico ConMedico,
-        Paciente ConPaciente,
-        String ConDia_semana,
-        String ConHorario,
-        String ConData,
-        String ConObservacoes,
-        String ConDadaCriacao,
-        Byte ConFormaPagamento,
-        Byte ConStatus,
-        Administrador ConAdm
+        Long conCodigoConsulta,
+        Medico conMedico,
+        Paciente conPaciente,
+        String conDia_semana,
+        String conHorario,
+        String conData,
+        String conObservacoes,
+        String conDadaCriacao,
+        Byte conFormaPagamento,
+        Byte conStatus,
+        Administrador conAdm
 
 ) {
     public DadosConsultaView(Consulta registro) {
@@ -28,8 +28,8 @@ public record DadosConsultaView(
 
 
     public DadosConsultaView(DadosConsultaView registro) {
-        this(registro.ConCodigoConsulta(), registro.ConMedico(), registro.ConPaciente(), registro.ConDia_semana(), registro.ConHorario(),
-                registro.ConData(), registro.ConObservacoes() , registro.ConDadaCriacao(), registro.ConFormaPagamento(),registro.ConStatus(),registro.ConAdm());
+        this(registro.conCodigoConsulta(), registro.conMedico(), registro.conPaciente(), registro.conDia_semana(), registro.conHorario(),
+                registro.conData(), registro.conObservacoes() , registro.conDadaCriacao(), registro.conFormaPagamento(),registro.conStatus(),registro.conAdm());
     }
 
 }

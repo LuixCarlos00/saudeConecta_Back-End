@@ -27,6 +27,7 @@ import com.twilio.type.PhoneNumber;
 
 import java.sql.Date;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -63,8 +64,14 @@ public class ConsultaService {
     }
 
 
-    public Page<DadosConsultaView> BuscarConsultaPorPaginas(Pageable paginacao) {
-        return repository.findAll(paginacao).map(DadosConsultaView::new);
+    public List<Consulta> BuscarConsultaPorPaginas() {
+        List <Consulta> consultas = repository.findAll();
+        if (consultas.isEmpty()) {
+            return Collections.emptyList();
+        } else {
+            return consultas;
+        }
+
     }
 
 

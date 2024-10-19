@@ -40,34 +40,31 @@ public class ConsultaStatusResource {
     private PacienteRepository pacienteRepository;
 
 
-
-
-
-
- 
-
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/Allcampos/medico={ConMedico}&data={ConData}&horario={ConHorario}&paciente={ConPaciente}&Administrador={ConAdm}&DataCriacao={ConDadaCriacao}")
     @Transactional
     public ResponseEntity<DadosConsultaStatusView> BuscarRegistrosDeConsultaStatusPesquisandoPorTodosOsCampos(@NotNull @Valid @PathVariable("ConMedico") Long IdMedico,
-                                                                                                              @PathVariable ("ConData")  String Data    ,
-                                                                                                              @PathVariable ("ConHorario") String Horario    ,
-                                                                                                              @PathVariable ("ConPaciente")   Long IdPaciente ,
-                                                                                                              @PathVariable ("ConAdm")   Long IdAdm ,
-                                                                                                              @PathVariable ("ConDadaCriacao") String DataCriacao) {
-        Optional<ConsultaStatus> consulta = service.BuscarRegistrosDeConsultaStatusPesquisandoPorTodosOsCampos(IdMedico,Data,Horario,IdPaciente,IdAdm,DataCriacao );
+                                                                                                              @PathVariable("ConData") String Data,
+                                                                                                              @PathVariable("ConHorario") String Horario,
+                                                                                                              @PathVariable("ConPaciente") Long IdPaciente,
+                                                                                                              @PathVariable("ConAdm") Long IdAdm,
+                                                                                                              @PathVariable("ConDadaCriacao") String DataCriacao) {
+        Optional<ConsultaStatus> consulta = service.BuscarRegistrosDeConsultaStatusPesquisandoPorTodosOsCampos(IdMedico, Data, Horario, IdPaciente, IdAdm, DataCriacao);
 
         return ResponseEntity.status(HttpStatus.OK).body(new DadosConsultaStatusView((consulta.get())));
     }
 
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    @GetMapping(value ="/Consultapagina")
-    public Page<DadosConsultaStatusView> BuscarConsultaPorPaginas(@PageableDefault(sort = {"conSttMedico"}) Pageable paginacao) {
-        return service.BuscarConsultaPorPaginas(paginacao);
+    @GetMapping(value = "/Consultapagina")
+    public ResponseEntity<List<DadosConsultaStatusView>> BuscarConsultaPorPaginas() {
+
+        List<ConsultaStatus> consulta = service.BuscarConsultaPorPaginas();
+
+        List<DadosConsultaStatusView> dadosConsultaStatusViews = consulta.stream().map(DadosConsultaStatusView::new).toList();
+
+        return ResponseEntity.ok().body(dadosConsultaStatusViews);
     }
-
-
 
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
@@ -78,8 +75,6 @@ public class ConsultaStatusResource {
         List<DadosConsultaStatusView> dadosConsultaStatusViews = DadosConsultaStatusView.fromList(consulta);
         return ResponseEntity.status(HttpStatus.OK).body(dadosConsultaStatusViews);
     }
-
-
 
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")

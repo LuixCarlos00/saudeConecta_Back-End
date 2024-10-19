@@ -13,9 +13,12 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.sql.Date;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,8 +50,12 @@ public class ConsultaStatusService {
     
     
 
-    public Page<DadosConsultaStatusView> BuscarConsultaPorPaginas(Pageable paginacao) {
-        return repository.findAll(paginacao).map(DadosConsultaStatusView::new);
+    public List<ConsultaStatus> BuscarConsultaPorPaginas( ) {
+        List<ConsultaStatus> consulta = repository.findAll();
+        if (consulta.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return consulta;
     }
 
 

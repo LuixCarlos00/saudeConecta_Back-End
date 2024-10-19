@@ -117,9 +117,11 @@ public class ConsultaResource {
 
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/Consultapagina")
-    public Page<DadosConsultaView> BuscarConsultaPorPaginas(@PageableDefault(sort = {"conMedico"}) Pageable paginacao) {
-        return service.BuscarConsultaPorPaginas(paginacao);
-    }
+    public ResponseEntity<List<DadosConsultaView>> BuscarConsultaPorPaginas() {
+        List <Consulta> list = service.BuscarConsultaPorPaginas();
+        List <DadosConsultaView> Dados = list.stream().map(DadosConsultaView::new).toList();
+        return ResponseEntity.ok().body(Dados);
+     }
 
  
 

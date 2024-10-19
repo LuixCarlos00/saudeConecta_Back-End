@@ -8,17 +8,17 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public record DadosConsultaStatusView(
-        Long ConSttCodigoConsulata,
-        Medico ConSttMedico,
-        Paciente ConSttPaciente,
-        String ConSttDia_semana,
-        String ConSttHorario,
-        String ConSttData,
-        String ConSttObservacao,
-        String ConSttDataCriacao,
-        Byte ConSttFormaPagamento,
-        Byte ConSttStatus,
-        Long ConSttAdm
+        Long conSttCodigoConsulta,
+        Medico conSttMedico,
+        Paciente conSttPaciente,
+        String conSttDia_semana,
+        String conSttHorario,
+        String conSttData,
+        String conSttObservacao,
+        String conSttDataCriacao,
+        Byte conSttFormaPagamento,
+        Byte conSttStatus,
+        Long conSttAdm
 
 
 
