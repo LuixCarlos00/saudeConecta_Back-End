@@ -15,7 +15,7 @@ public record DadosConsultaView(
         String conHorario,
         String conData,
         String conObservacoes,
-        String conDadaCriacao,
+        String conDataCriacao,
         Byte conFormaPagamento,
         Byte conStatus,
         Administrador conAdm
@@ -29,7 +29,7 @@ public record DadosConsultaView(
 
     public DadosConsultaView(DadosConsultaView registro) {
         this(registro.conCodigoConsulta(), registro.conMedico(), registro.conPaciente(), registro.conDia_semana(), registro.conHorario(),
-                registro.conData(), registro.conObservacoes() , registro.conDadaCriacao(), registro.conFormaPagamento(),registro.conStatus(),registro.conAdm());
+                registro.conData(), registro.conObservacoes() , registro.conDataCriacao(), registro.conFormaPagamento(),registro.conStatus(),registro.conAdm());
     }
 
 }

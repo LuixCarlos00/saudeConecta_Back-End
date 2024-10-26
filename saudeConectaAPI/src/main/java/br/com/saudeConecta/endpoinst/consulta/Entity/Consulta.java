@@ -65,14 +65,14 @@ public class Consulta implements Serializable {
 
         this.conMedico = medico;
         this.conPaciente = paciente;
-        this.ConDia_semana = dados.ConDia_semana();
-        this.conHorario = dados.ConHorario();
-        this.conData = dados.ConData();
-        this.ConObservacoes = dados.ConObservacoes();
-        this.ConDataCriacao = dados.ConDadaCriacao();
-        this.ConFormaPagamento = dados.ConFormaPagamento();
+        this.ConDia_semana = dados.conDia_semana();
+        this.conHorario = dados.conHorario();
+        this.conData = dados.conData();
+        this.ConObservacoes = dados.conObservacoes();
+        this.ConDataCriacao = dados.conDadaCriacao();
+        this.ConFormaPagamento = dados.conFormaPagamento();
         this.ConAdm =  administrador;
-        this.ConStatus = dados.ConStatus();
+        this.ConStatus = dados.conStatus();
 
 
     }

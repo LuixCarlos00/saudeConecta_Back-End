@@ -85,9 +85,9 @@ public class ConsultaResource {
 
         System.out.println(dados.toString());
 
-        Long idMedicos = dados.ConMedico();
-        Long idPaciente = dados.ConPaciente();
-        Long idAdm = dados.ConAdm();
+        Long idMedicos = dados.conMedico();
+        Long idPaciente = dados.conPaciente();
+        Long idAdm = dados.conAdm();
 
 
         Optional<Medico> medicoOptional = medicoRepository.findById(idMedicos);
@@ -195,9 +195,9 @@ public class ConsultaResource {
         }
 
 
-        Long idMedicos = dados.ConMedico();
-        Long idPaciente = dados.ConPaciente();
-        Long idUsusario = dados.ConAdm();
+        Long idMedicos = dados.conMedico();
+        Long idPaciente = dados.conPaciente();
+        Long idUsusario = dados.conAdm();
 
 
         Optional<Medico> medicoOptional = medicoRepository.findById(idMedicos);
