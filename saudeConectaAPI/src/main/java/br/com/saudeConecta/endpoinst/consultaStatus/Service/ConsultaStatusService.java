@@ -72,4 +72,10 @@ public class ConsultaStatusService {
         return repository.findByConSttMedico_MedCodigo(medico.getMedCodigo());
     }
 
+
+
+
+    public List<ConsultaStatus> BuscandoTodasConsultas_CONCLUIDADAS_EmIntervaloDeDatas(String dataInicial, String dataFinal) {
+        return repository.BuscandoTodasConsultas_CONCLUIDADAS_EmIntervaloDeDatas(dataInicial, dataFinal);
+    }
 }

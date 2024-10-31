@@ -135,6 +135,7 @@ public class ConsultaResource {
  
 
 
+
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/BuscandoTodasConsultasEmIntervaloDeDatas/dataInicial={dataInicial}&dataFinal={dataFinal}")
     public List<Consulta> BuscandoTodasConsultasEmIntervaloDeDatas(@NotNull @PathVariable("dataInicial") String dataInicial,
