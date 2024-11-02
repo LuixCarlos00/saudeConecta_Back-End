@@ -82,4 +82,9 @@ public class ConsultaStatusService {
     public List<ConsultaStatus> BuscandoTodasConsultas_Concluidas_EmIntervaloDeDatasComEspecialidade(String dataInicial, String dataFinal, String especialidade) {
         return  repository.BuscandoTodasConsultasEmIntervaloDeDatasComEspecialidade(dataInicial, dataFinal, especialidade);
     }
+
+
+    public List<ConsultaStatus> BuscandoTodasConsultas_Concluidas_PorMedico(Long medicoID) {
+        return repository.BuscandoTodasConsultas_Concluidas_PorMedico(medicoID);
+    }
 }
