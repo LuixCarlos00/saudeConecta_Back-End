@@ -41,5 +41,9 @@ public interface ConsultaStatusRepository extends JpaRepository<ConsultaStatus, 
     List<ConsultaStatus>  BuscandoTodasConsultas_Concluidas_PorMedicoEmIntervaloDeDatas(@Param("dataInicial") String dataInicial, @Param("dataFinal") String dataFinal, @Param("MedicoId") Long MedicoId);
 
 
+    @Query("select c from ConsultaStatus c where  c.conSttMedico.medEspecialidade = :especialidade")
+    List<ConsultaStatus>  BuscandoTodasConsultasPorEspecialidade(@Param("especialidade") String especialidade);
+
+
 
 }
