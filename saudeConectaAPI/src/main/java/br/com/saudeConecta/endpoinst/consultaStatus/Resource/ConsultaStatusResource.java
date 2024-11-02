@@ -134,4 +134,21 @@ public class ConsultaStatusResource {
 
 
 
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    @GetMapping(value = "/BuscandoTodasConsultas_Concluidas_PorMedicoEmIntervaloDeDatas/medico={medCodigo}&dataInicial={DataInicioFormatada}&dataFinal={DataFimFormatada}")
+    public ResponseEntity<List<DadosConsultaStatusView>> BuscandoTodasConsultas_Concluidas_PorMedicoEmIntervaloDeDatas(@NotNull @PathVariable("medCodigo") Long medicoID,
+                                                                            @NotNull @PathVariable("DataInicioFormatada") String dataInicio,
+                                                                            @NotNull @PathVariable("DataFimFormatada") String dataFim) {
+        List<ConsultaStatus> consulta = service.BuscandoTodasConsultas_Concluidas_PorMedicoEmIntervaloDeDatas(medicoID, dataInicio, dataFim);
+        if (consulta.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+
+        List<DadosConsultaStatusView> result = DadosConsultaStatusView.fromList(consulta);
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
+
+
+
+
 }
