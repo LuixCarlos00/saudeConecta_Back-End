@@ -88,29 +88,33 @@ public class ConsultaStatusResource {
     }
 
 
-
-
-
-
-
-
-
-
     @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/BuscandoTodasConsultas_CONCLUIDADAS_EmIntervaloDeDatas/dataInicial={dataInicial}&dataFinal={dataFinal}")
     public ResponseEntity<List<DadosConsultaStatusView>> BuscandoTodasConsultas_CONCLUIDADAS_EmIntervaloDeDatas(@NotNull @PathVariable("dataInicial") String dataInicial,
-                                                                   @NotNull @PathVariable("dataFinal") String dataFinal) {
-       List <ConsultaStatus> consulta = service.BuscandoTodasConsultas_CONCLUIDADAS_EmIntervaloDeDatas(dataInicial, dataFinal);
-       if (consulta.isEmpty()) {
-           return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-       }
-       List <DadosConsultaStatusView> result = DadosConsultaStatusView.fromList(consulta);
+                                                                                                                @NotNull @PathVariable("dataFinal") String dataFinal) {
+        List<ConsultaStatus> consulta = service.BuscandoTodasConsultas_CONCLUIDADAS_EmIntervaloDeDatas(dataInicial, dataFinal);
+        if (consulta.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+        List<DadosConsultaStatusView> result = DadosConsultaStatusView.fromList(consulta);
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
 
 
+    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+    @GetMapping(value = "/BuscandoTodasConsultas_Concluidas_EmIntervaloDeDatasComEspecialidade/dataInicial={dataInicial}&dataFinal={dataFinal}&especialidades={especialidade}")
+    public ResponseEntity<List<DadosConsultaStatusView>> BuscandoTodasConsultasEmIntervaloDeDatasComEspecialidade(@NotNull @PathVariable("dataInicial") String dataInicial,
+                                                                                                                  @NotNull @PathVariable("dataFinal") String dataFinal,
+                                                                                                                  @NotNull @PathVariable("especialidade") String especialidade) {
+        List<ConsultaStatus> consulta = service.BuscandoTodasConsultas_Concluidas_EmIntervaloDeDatasComEspecialidade(dataInicial, dataFinal, especialidade);
+        if (consulta.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
 
+        List<DadosConsultaStatusView> result = DadosConsultaStatusView.fromList(consulta);
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
 
 
 }
