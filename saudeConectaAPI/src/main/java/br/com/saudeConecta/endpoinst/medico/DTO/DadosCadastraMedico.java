@@ -1,10 +1,6 @@
 package br.com.saudeConecta.endpoinst.medico.DTO;
 
-import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
-import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
-import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
 import jakarta.validation.constraints.NotNull;
-
 
 import java.sql.Date;
 
@@ -42,11 +38,5 @@ public record DadosCadastraMedico(
         @NotNull
         Long endereco
 
-
-
-
 ) {
-//        public Medico toEntity() {
-//                return new  Medico(MedNome,MedSexo,MedDataNacimento,MedCrm,MedCpf,MedRg ,MedTelefone,usuario,endereco);
-//        }
 }

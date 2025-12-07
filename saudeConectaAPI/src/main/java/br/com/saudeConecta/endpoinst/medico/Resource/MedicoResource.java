@@ -1,7 +1,5 @@
 package br.com.saudeConecta.endpoinst.medico.Resource;
 
-import br.com.saudeConecta.endpoinst.administrador.DTO.DadosAdiministradorView;
-import br.com.saudeConecta.endpoinst.administrador.Entity.Administrador;
 import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
 import br.com.saudeConecta.endpoinst.endereco.Repository.EnderecoRepository;
 import br.com.saudeConecta.endpoinst.medico.DTO.AlteraDadosEnderecoMedico;
@@ -31,7 +29,7 @@ import java.util.Optional;
 
 @RequestMapping(value = "/medico")
 @RestController
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class MedicoResource {
 
     @Autowired
@@ -45,7 +43,6 @@ public class MedicoResource {
 
     @GetMapping(value = "/buscarId/{id}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public ResponseEntity<DadosMedicoView> buscarMedicoPorId(@NotNull @Valid @PathVariable("id") Long Id) {
         Optional<Medico> medico = service.buscarMedicoPorId(Id);
 
@@ -55,7 +52,6 @@ public class MedicoResource {
 
     @GetMapping(value = "/buscarPorEmail/{email}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public ResponseEntity<DadosMedicoView> buscarMedicoPorEmail(@NotNull @Valid @PathVariable("email") String email) {
         Optional<Medico> medico = service.buscarMedicoPorEmail(email);
 
@@ -63,11 +59,9 @@ public class MedicoResource {
     }
 
 
-    //@RolesAllowed("ROLE_PROFESSOR")
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PostMapping("/post")
     @Transactional
-    public ResponseEntity<DadosMedicoView> CadastraMedico (@RequestBody @Valid DadosCadastraMedico dados,  @NotNull @org.jetbrains.annotations.NotNull BindingResult result,
+    public ResponseEntity<DadosMedicoView> cadastrarMedico(@RequestBody @Valid DadosCadastraMedico dados, @NotNull BindingResult result,
                                                           UriComponentsBuilder uriBuilder) {
 
 
@@ -93,7 +87,7 @@ public class MedicoResource {
 
         Medico medico = new Medico(dados , usuario , endereco );
 
-        service.CadastraRegistroMedico(medico);
+        service.cadastrarMedico(medico);
 
         URI uri = uriBuilder.path("/plano/{id}").buildAndExpand(medico.getMedCodigo()).toUri();
 
@@ -104,13 +98,11 @@ public class MedicoResource {
 
 
     @GetMapping(value = "/medicopagina")
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    public Page<DadosMedicoView> BuscarPorPaginas(@PageableDefault(size = 12, sort = { "medCodigo" }) Pageable paginacao) {
-        return service.BuscarPorPaginas(paginacao);
+    public Page<DadosMedicoView> buscarPorPaginas(@PageableDefault(size = 12, sort = { "medCodigo" }) Pageable paginacao) {
+        return service.buscarPorPaginas(paginacao);
     }
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/listatodosmedicos")
     public List<Medico> buscarTodosMedicos() {
         return 	 service.buscarTodosMedicos();
@@ -118,8 +110,7 @@ public class MedicoResource {
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    @DeleteMapping("/{id}" )
+    @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteById(@PathVariable("id") Long id)  throws  Exception{
         service.deletarPorId(id);
         return ResponseEntity.noContent().build();
@@ -134,14 +125,12 @@ public class MedicoResource {
 
     @GetMapping(value = "/buscarPorNome/{nome}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public List<Medico> buscarMedicoPorNome(@NotNull @Valid @PathVariable("nome") String nome) {
         return service.buscarMedicoPorNome(nome);
     }
 
     @GetMapping(value = "/buscarPorCRM/{crm}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public List<Medico> buscarMedicoPorCRM(@NotNull @Valid @PathVariable("crm") String crm) {
         return service.buscarMedicoPorCRM(crm);
     }
@@ -149,14 +138,12 @@ public class MedicoResource {
 
     @GetMapping(value = "/buscarPorCidade/{cidade}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public List<Medico> buscarMedicoPorCidade(@NotNull @Valid @PathVariable("cidade") String cidade) {
         return service.buscarMedicoPorCidade(cidade);
     }
 
     @GetMapping(value = "/buscarPorMedEspecialidade/{especialidade}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public List<Medico>buscarMedicoPorMedEspecialidade(@NotNull @Valid @PathVariable("especialidade") String especialidade) {
         return   service.buscarMedicoPorEspecialidade(especialidade);
     }
@@ -165,29 +152,26 @@ public class MedicoResource {
 
 
     @GetMapping(value = "/buscarIdDeUsusario/{id}")
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @Transactional
-    public ResponseEntity<DadosMedicoView> buscarPorIdDeUsusario(@NotNull @Valid @PathVariable("id") Long Id) {
-        Optional<Medico> medico = service.buscarMedicoPorIdDeUsusario(Id);
+    public ResponseEntity<DadosMedicoView> buscarPorIdUsuario(@NotNull @Valid @PathVariable("id") Long Id) {
+        Optional<Medico> medico = service.buscarMedicoPorIdUsuario(Id);
 
         return ResponseEntity.status(HttpStatus.OK).body(new DadosMedicoView((medico.get())));
     }
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PutMapping("/AlterarDadosMedico/{id}")
-    public ResponseEntity<Void> AlterarDadosMedico(@PathVariable("id") Long id, @RequestBody @Valid AlterarDadosMedicos dados) throws Exception {
-        service.AleterarDadosMedico(id, dados);
+    public ResponseEntity<Void> atualizarDadosMedico(@PathVariable("id") Long id, @RequestBody @Valid AlterarDadosMedicos dados) throws Exception {
+        service.atualizarDadosMedico(id, dados);
         return ResponseEntity.noContent().build();
     }
 
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PutMapping("/AtualizarEnderecoMedico/{id}")
-    public ResponseEntity<Void> AtualizarEnderecoMedico(@PathVariable("id") Long id, @RequestBody @Valid AlteraDadosEnderecoMedico dados) throws Exception {
-        service.AtualizarEnderecoMedico(id, dados);
+    public ResponseEntity<Void> atualizarEnderecoMedico(@PathVariable("id") Long id, @RequestBody @Valid AlteraDadosEnderecoMedico dados) throws Exception {
+        service.atualizarEnderecoMedico(id, dados);
         return ResponseEntity.noContent().build();
     }
 

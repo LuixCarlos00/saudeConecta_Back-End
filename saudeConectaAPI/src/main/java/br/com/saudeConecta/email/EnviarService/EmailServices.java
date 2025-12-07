@@ -5,13 +5,12 @@ import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
-import jdk.jfr.Name;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
-
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
@@ -19,6 +18,7 @@ import java.util.Locale;
 import java.util.Map;
 
 
+@Slf4j
 @Service
 public class EmailServices {
 
@@ -28,7 +28,6 @@ public class EmailServices {
 
     private final TemplateEngine templateEngine;
 
-    @Name("Falando de forma mais objetiva esse atributo entra no arquivo aplications.proprites e LÊ tudo que começa com \"spring.mail.username\" e pega as informações de contato  ")
     @Value("${spring.mail.username}")
     private String fromEmail;
 
@@ -37,8 +36,8 @@ public class EmailServices {
         this.templateEngine = templateEngine;
     }
 
-    @Name("Método utilizado para enviar  um email simples com um codigo e validação ")
     public void enviarEmail(String destinatario, String assunto, String corpo) throws EmailServiceException {
+        log.info("Iniciando envio de e-mail para: {}", destinatario);
         MimeMessage message = mailSender.createMimeMessage();
         try {
             message.setFrom(new InternetAddress(fromEmail));
@@ -46,7 +45,9 @@ public class EmailServices {
             message.setSubject(assunto);
             message.setText(corpo);
             mailSender.send(message);
+            log.info("E-mail enviado com sucesso para: {}", destinatario);
         } catch (MessagingException e) {
+            log.error("Erro ao enviar e-mail para: {} - Erro: {}", destinatario, e.getMessage());
             throw new EmailServiceException("Erro ao enviar e-mail");
         }
     }
@@ -56,90 +57,89 @@ public class EmailServices {
 
 
 
-    @Name("Método utilizado para enviar  um email com uma mensagem instrutiva +  o codigo de validação ")
     public void enviarEmailComPaginaHTML(String to, String subject, String templateName, Map<String, Object> model) throws MessagingException {
+        log.info("Enviando e-mail HTML para: {} com template: {}", to, templateName);
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
         try {
             helper.setTo(to);
             helper.setSubject(subject);
-            //Processar o template Thymeleaf com as variáveis do mapa
             String htmlContent = templateEngine.process(templateName, new Context(Locale.getDefault(), model));
             helper.setText(htmlContent, true);
             mailSender.send(mimeMessage);
+            log.info("E-mail HTML enviado com sucesso para: {}", to);
         } catch (MessagingException e) {
+            log.error("Erro ao enviar e-mail HTML para: {} - Erro: {}", to, e.getMessage());
             throw new MessagingException("Erro ao enviar e-mail ");
         }
     }
 
 
     public void enviarEmailComLoginPaciente(String paciEmail, String LoginDeUsuario , String TemplateName, Map<String, Object> model) throws MessagingException {
+        log.info("Enviando e-mail de login para paciente: {}", paciEmail);
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
         try {
             helper.setTo(paciEmail);
             helper.setSubject(LoginDeUsuario);
-            //Processar o template Thymeleaf com as variáveis do mapa
             String htmlContent = templateEngine.process(TemplateName, new Context(Locale.getDefault(), model));
             helper.setText(htmlContent, true);
             mailSender.send(mimeMessage);
+            log.info("E-mail de login enviado com sucesso para paciente: {}", paciEmail);
         } catch (MessagingException e) {
+            log.error("Erro ao enviar e-mail de login para paciente: {} - Erro: {}", paciEmail, e.getMessage());
             throw new MessagingException("Erro ao enviar e-mail ");
         }
-
-
     }
 
     public void enviarEmailComLoginMedico(String medEmail, String loginDeUsuario, String TemplateName, Map<String, Object> model) throws MessagingException {
-
+        log.info("Enviando e-mail de login para médico: {}", medEmail);
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
-
         try {
             helper.setTo(medEmail);
             helper.setSubject(loginDeUsuario);
-
-            //Processar o template Thymeleaf com as variáveis do mapa
             String htmlContent = templateEngine.process(TemplateName, new Context(Locale.getDefault(), model));
             helper.setText(htmlContent, true);
             mailSender.send(mimeMessage);
+            log.info("E-mail de login enviado com sucesso para médico: {}", medEmail);
         } catch (MessagingException e) {
+            log.error("Erro ao enviar e-mail de login para médico: {} - Erro: {}", medEmail, e.getMessage());
             throw new MessagingException("Erro ao enviar e-mail ");
         }
-
     }
 
     public void enviarLembreteDeAlertaParaPaciente(String paciEmail, String loginDeUsuario, String TemplateName, Map<String, Object> model) throws MessagingException {
+        log.info("Enviando lembrete de alerta para paciente: {}", paciEmail);
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
         try {
             helper.setTo(paciEmail);
             helper.setSubject(loginDeUsuario);
-
-            //Processar o template Thymeleaf com as variáveis do mapa
             String htmlContent = templateEngine.process(TemplateName, new Context(Locale.getDefault(), model));
             helper.setText(htmlContent, true);
             mailSender.send(mimeMessage);
+            log.info("Lembrete de alerta enviado com sucesso para paciente: {}", paciEmail);
         } catch (MessagingException e) {
+            log.error("Erro ao enviar lembrete para paciente: {} - Erro: {}", paciEmail, e.getMessage());
             throw new MessagingException("Erro ao enviar e-mail ");
         }
-
     }
 
     public void enviarLembreteDeAlertaParaMedico(String medEmail, String loginDeUsuario, String TemplateName, Map<String, Object> model) throws MessagingException {
+        log.info("Enviando lembrete de alerta para médico: {}", medEmail);
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
         try {
             helper.setTo(medEmail);
             helper.setSubject(loginDeUsuario);
-
-            //Processar o template Thymeleaf com as variáveis do mapa
             String htmlContent = templateEngine.process(TemplateName, new Context(Locale.getDefault(), model));
             helper.setText(htmlContent, true);
             mailSender.send(mimeMessage);
+            log.info("Lembrete de alerta enviado com sucesso para médico: {}", medEmail);
         } catch (MessagingException e) {
+            log.error("Erro ao enviar lembrete para médico: {} - Erro: {}", medEmail, e.getMessage());
             throw new MessagingException("Erro ao enviar e-mail ");
         }
-
     }
 }

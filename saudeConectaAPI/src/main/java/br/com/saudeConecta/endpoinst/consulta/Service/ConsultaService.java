@@ -14,16 +14,9 @@ import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
 import jakarta.mail.MessagingException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
-import jakarta.validation.constraints.NotNull;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-
-import com.twilio.Twilio;
-import com.twilio.rest.api.v2010.account.Message;
-import com.twilio.type.PhoneNumber;
 
 import java.sql.Date;
 import java.util.ArrayList;
@@ -31,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 public class ConsultaService {
 
@@ -49,22 +43,15 @@ public class ConsultaService {
     @Autowired
     private EnviarEmail enviarEmail;
 
-    @Value("${twilio.accountSid}")
-    private String accountSid;
-
-    @Value("${twilio.authToken}")
-    private String authToken;
-
-    @Value("${twilio.phoneNumber}")
-    private String phoneNumber;
 
 
-    public Optional<Consulta> buscarPacientePorId(Long id) {
+    public Optional<Consulta> buscarConsultaPorId(Long id) {
+        log.debug("Buscando consulta por ID: {}", id);
         return repository.findById(id);
     }
 
 
-    public List<Consulta> BuscarConsultaPorPaginas() {
+    public List<Consulta> listarTodasConsultas() {
         List <Consulta> consultas = repository.findAll();
         if (consultas.isEmpty()) {
             return Collections.emptyList();
@@ -93,46 +80,44 @@ public class ConsultaService {
     }
 
 
-    public List<Consulta> buscarTodasConsulta() {
+    public List<Consulta> buscarTodasConsultas() {
         return repository.findAll();
 
     }
 
 
-//    public List<Consulta> BuscatodasAsConsultasPorDataSelecionada(String data) {
-//        return repository.BuscarConsultasComFiltroData(data);
-//    }
 
-
-    public List<Consulta> BuscandoTodasConsultasEmIntervaloDeDatas(String dataInicial, String dataFinal) {
+    public List<Consulta> buscarConsultasPorIntervalo(String dataInicial, String dataFinal) {
         return repository.BuscandoTodasConsultasEmIntervaloDeDatas(dataInicial, dataFinal);
     }
 
 
-    public List<Consulta> BuscandoTodasConsultasEmIntervaloDeDatasComEspecialidade(String dataInicial, String dataFinal, String especialidade) {
+    public List<Consulta> buscarConsultasPorIntervaloEEspecialidade(String dataInicial, String dataFinal, String especialidade) {
         return repository.BuscandoTodasConsultasEmIntervaloDeDatasComEspecialidade(dataInicial, dataFinal, especialidade);
     }
 
 
-    public List<Consulta> BuscandoTodasConsultasPorMedico(Long medicoID) {
+    public List<Consulta> buscarConsultasPorMedico(Long medicoID) {
         return repository.BuscandoTodasConsultasPorMedico(medicoID);
     }
 
-    public List<Consulta> BuscandoTodasConsultasPorMedicoEmIntervaloDeDatas(Long medicoID, String dataInicio, String dataFim) {
+    public List<Consulta> buscarConsultasPorMedicoEIntervalo(Long medicoID, String dataInicio, String dataFim) {
         return repository.BuscandoTodasConsultasPorMedicoEmIntervaloDeDatas(dataInicio, dataFim, medicoID);
     }
 
 
-    public List<Consulta> BuscandoTodasConsultasPorEspecialidade(String especialidades) {
+    public List<Consulta> buscarConsultasPorEspecialidade(String especialidades) {
     return  repository.BuscandoTodasConsultasPorEspecialidade(especialidades);
     }
 
-    public void CadastraRegistroConsulta(Consulta consulta) throws ResourceNotFoundException {
+    public void cadastrarConsulta(Consulta consulta) throws ResourceNotFoundException {
+        log.info("Cadastrando nova consulta para paciente: {}", consulta.getConPaciente().getPaciNome());
         repository.save(consulta);
+        log.info("Consulta cadastrada com sucesso ID: {}", consulta.getConCodigoConsulta());
     }
 
 
-    public Boolean VericarSeExetemConsultasMarcadas(String data, String horario, Long medico) {
+    public Boolean verificarDisponibilidadeHorario(String data, String horario, Long medico) {
 
         Optional<Medico> Medico = medicoRepository.findById(medico);
 
@@ -148,7 +133,7 @@ public class ConsultaService {
  
 
 
-    public DadosConsultaView EditarConsulta(Consulta consulta, Long id) {
+    public DadosConsultaView editarConsulta(Consulta consulta, Long id) {
 
         Consulta consulta1 = repository.getReferenceById(id);
         consulta1.update(consulta);
@@ -158,12 +143,12 @@ public class ConsultaService {
     }
 
 
-    public DadosConsultaView ConcluirConsulta(Long id) {
+    public DadosConsultaView concluirConsulta(Long id) {
         Optional<Consulta> optionalConsulta = repository.findById(id);
 
         if (optionalConsulta.isPresent()) {
             Consulta consulta = optionalConsulta.get();
-            consulta.setConStatus((byte) 1); // Usando (byte) para garantir o tipo correto
+            consulta.setConStatus((byte) 1);
             repository.save(consulta);
             return new DadosConsultaView(consulta);
         } else {
@@ -172,7 +157,7 @@ public class ConsultaService {
     }
 
 
-    public List<String> VerificarHorariosDisponiveisReferentesAoMedicoEData(Long medico, String data) {
+    public List<String> buscarHorariosOcupados(Long medico, String data) {
 
         List<Consulta> consultas = repository.findByConMedico_MedCodigoAndConData(medico, data);
 
@@ -190,18 +175,17 @@ public class ConsultaService {
     }
 
 
-    public Optional<Object> buscarPacientePorEmail(String email, String messagem) throws MessagingException {
-
+    public Optional<Object> enviarNotificacaoPorEmail(String email, String mensagem) throws MessagingException {
+        log.info("Enviando notificação por e-mail para: {}", email);
         Optional<Paciente> paciente = pacienteRepository.findByPaciEmail(email);
-
         Optional<Medico> medico = medicoRepository.findByMedEmail(email);
 
         if (paciente.isPresent()) {
-            enviarEmail.enviarLembreteDeAlertaParaPaciente(paciente, messagem);
+            enviarEmail.enviarLembreteDeAlertaParaPaciente(paciente, mensagem);
             return Optional.of(paciente);
         }
         if (medico.isPresent()) {
-            enviarEmail.enviarLembreteDeAlertaParaMedico(medico, messagem);
+            enviarEmail.enviarLembreteDeAlertaParaMedico(medico, mensagem);
             return Optional.of(medico);
         }
 
@@ -210,38 +194,13 @@ public class ConsultaService {
     }
 
 
-    public Optional<Object> buscarPacientePorTelefone(String medicoTelefone, String messagem) {
-        Twilio.init(accountSid, authToken);
-
-        Message.creator(
-                new PhoneNumber(medicoTelefone),
-                new PhoneNumber(phoneNumber),
-                messagem
-        ).create();
-        return Optional.empty();
-    }
 
 
 
 
 
-
-
-    // ##################################################
-    // ##################################################
-    // ##################################################
-    // ##################################################
-    // ###############- MEDICOS -########################
-    // ##################################################
-    // ##################################################
-    // ##################################################
-
-
-
-
-
-    public List<Consulta> BuscarTodaAgendaDeMedicoDoDia(Long IdUsuarioMedico ) {
-        Optional<Usuario> user = usuarioRepository.findById(IdUsuarioMedico);
+    public List<Consulta> buscarAgendaMedico(Long idUsuarioMedico) {
+        Optional<Usuario> user = usuarioRepository.findById(idUsuarioMedico);
         if (user.isPresent()) {
             Optional<Medico> medico = medicoRepository.findByUsuario_Id(user.get().getId());
             if (medico.isPresent()) {

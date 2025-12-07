@@ -3,19 +3,16 @@ package br.com.saudeConecta.endpoinst.administrador.Service;
 import br.com.saudeConecta.email.EnviarEmail.EnviarEmail;
 import br.com.saudeConecta.endpoinst.administrador.DTO.DadosAdiministradorView;
 import br.com.saudeConecta.endpoinst.administrador.Entity.Administrador;
-
 import br.com.saudeConecta.endpoinst.administrador.Repository.AdministradorRepository;
 import br.com.saudeConecta.endpoinst.codigoVerificacao.Repository.CodigoVerificacaoRepository;
 import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
 import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
-import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
 import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
 import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
 import br.com.saudeConecta.util.RecuperaSenha;
 import jakarta.mail.MessagingException;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -51,13 +48,7 @@ public class AdministradorService {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
-    //============================================================================================================
-
-
-
-
-
-    public Optional<Administrador> buscarPacientePorId(Long id) {
+    public Optional<Administrador> buscarAdministradorPorId(Long id) {
         return repository.findById(id);
     }
 
@@ -68,7 +59,7 @@ public class AdministradorService {
 
 
 
-    public Page<DadosAdiministradorView> BuscarPorPaginas(Pageable paginacao) {
+    public Page<DadosAdiministradorView> buscarPorPaginas(Pageable paginacao) {
         return repository.findAll(paginacao).map(DadosAdiministradorView::new);
     }
 
@@ -105,7 +96,7 @@ public class AdministradorService {
 
 
 
-    public List<Administrador> buscarTodosPaciente() {
+    public List<Administrador> buscarTodosAdministradores() {
         return repository.findAll();
 
     }
@@ -114,8 +105,8 @@ public class AdministradorService {
 
 
 
-    public void CadastraRegistroPaciente(Administrador paciente) throws ResourceNotFoundException {
-        repository.save(paciente);
+    public void cadastrarAdministrador(Administrador administrador) throws ResourceNotFoundException {
+        repository.save(administrador);
     }
 
 
@@ -124,7 +115,7 @@ public class AdministradorService {
 
 
 
-    public Optional<Object> buscarPacsientePorEmail(String email) throws MessagingException {
+    public Optional<Object> buscarPorEmailEnviarCodigo(String email) throws MessagingException {
 
         Optional<Paciente> paciente = pacienteRepository.findByPaciEmail(email);
 
@@ -152,7 +143,7 @@ public class AdministradorService {
 
 
 
-    public boolean VerificarCodigoValido(String codigo) {
+    public boolean verificarCodigoValido(String codigo) {
         return codigoVerificacaoRepository.existsByCodVerificacaoCodigo(codigo);
 
     }
@@ -162,14 +153,14 @@ public class AdministradorService {
 
 
 
-    public void deletraCodigoVerificacao(String codigo) {
+    public void deletarCodigoVerificacao(String codigo) {
         codigoVerificacaoRepository.deleteByCodVerificacaoCodigo(codigo);
     }
 
 
 
 
-    public Optional<Administrador> buscarPacientePorIdDeUsusario(Long id) {
+    public Optional<Administrador> buscarAdministradorPorIdUsuario(Long id) {
         return repository.findByAdmUsuario_Id(id);
     }
 

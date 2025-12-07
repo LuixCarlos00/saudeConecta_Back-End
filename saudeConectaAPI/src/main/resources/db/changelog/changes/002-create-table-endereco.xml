@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="002-create-table-endereco" author="saudeConecta">
+        <createTable tableName="endereco">
+            <column name="EndCodigo" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="EndNacionalidade" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="EndUF" type="VARCHAR(2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="EndMunicipio" type="VARCHAR(150)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="EndBairro" type="VARCHAR(150)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="EndCep" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="EndRua" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="EndNumero" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="EndComplemento" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

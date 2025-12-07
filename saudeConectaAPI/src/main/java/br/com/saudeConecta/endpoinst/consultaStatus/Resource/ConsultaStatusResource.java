@@ -1,28 +1,18 @@
 package br.com.saudeConecta.endpoinst.consultaStatus.Resource;
 
-import br.com.saudeConecta.endpoinst.consulta.Entity.Consulta;
-import br.com.saudeConecta.endpoinst.consultaStatus.DTO.DadosCadastraConsultaStatus;
 import br.com.saudeConecta.endpoinst.consultaStatus.DTO.DadosConsultaStatusView;
 import br.com.saudeConecta.endpoinst.consultaStatus.Entity.ConsultaStatus;
 import br.com.saudeConecta.endpoinst.consultaStatus.Service.ConsultaStatusService;
-import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
-import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
 import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.util.UriComponentsBuilder;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,7 +31,6 @@ public class ConsultaStatusResource {
     private PacienteRepository pacienteRepository;
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/Allcampos/medico={ConMedico}&data={ConData}&horario={ConHorario}&paciente={ConPaciente}&Administrador={ConAdm}&DataCriacao={ConDadaCriacao}")
     @Transactional
     public ResponseEntity<DadosConsultaStatusView> BuscarRegistrosDeConsultaStatusPesquisandoPorTodosOsCampos(@NotNull @Valid @PathVariable("ConMedico") Long IdMedico,
@@ -56,7 +45,6 @@ public class ConsultaStatusResource {
     }
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/Consultapagina")
     public ResponseEntity<List<DadosConsultaStatusView>> BuscarConsultaPorPaginas() {
 
@@ -68,7 +56,6 @@ public class ConsultaStatusResource {
     }
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/BuscarHistoricoDeAgendaDoMedico/{id}")
     @Transactional
     public ResponseEntity<List<DadosConsultaStatusView>> BuscarHistoricoDeAgendaDoMedico(@NotNull @Valid @PathVariable("id") Long IdMedico) {
@@ -78,7 +65,6 @@ public class ConsultaStatusResource {
     }
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/BuscarDadosDeAgendaDeTodosOsMedicos")
     @Transactional
     public ResponseEntity<List<DadosConsultaStatusView>> BuscarDadosDeAgendaDeTodosOsMedicos() {
@@ -88,7 +74,6 @@ public class ConsultaStatusResource {
     }
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/BuscandoTodasConsultas_CONCLUIDADAS_EmIntervaloDeDatas/dataInicial={dataInicial}&dataFinal={dataFinal}")
     public ResponseEntity<List<DadosConsultaStatusView>> BuscandoTodasConsultas_CONCLUIDADAS_EmIntervaloDeDatas(@NotNull @PathVariable("dataInicial") String dataInicial,
                                                                                                                 @NotNull @PathVariable("dataFinal") String dataFinal) {
@@ -102,7 +87,6 @@ public class ConsultaStatusResource {
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/BuscandoTodasConsultas_Concluidas_EmIntervaloDeDatasComEspecialidade/dataInicial={dataInicial}&dataFinal={dataFinal}&especialidades={especialidade}")
     public ResponseEntity<List<DadosConsultaStatusView>> BuscandoTodasConsultasEmIntervaloDeDatasComEspecialidade(@NotNull @PathVariable("dataInicial") String dataInicial,
                                                                                                                   @NotNull @PathVariable("dataFinal") String dataFinal,
@@ -120,7 +104,6 @@ public class ConsultaStatusResource {
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/BuscandoTodasConsultas_Concluidas_PorMedico/{medicoID}")
     public ResponseEntity<List<DadosConsultaStatusView>> BuscandoTodasConsultas_Concluidas_PorMedico(@NotNull @PathVariable("medicoID") Long medicoID) {
         List<ConsultaStatus> consulta = service.BuscandoTodasConsultas_Concluidas_PorMedico(medicoID);
@@ -134,7 +117,6 @@ public class ConsultaStatusResource {
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/BuscandoTodasConsultas_Concluidas_PorMedicoEmIntervaloDeDatas/medico={medCodigo}&dataInicial={DataInicioFormatada}&dataFinal={DataFimFormatada}")
     public ResponseEntity<List<DadosConsultaStatusView>> BuscandoTodasConsultas_Concluidas_PorMedicoEmIntervaloDeDatas(@NotNull @PathVariable("medCodigo") Long medicoID,
                                                                             @NotNull @PathVariable("DataInicioFormatada") String dataInicio,
@@ -151,7 +133,6 @@ public class ConsultaStatusResource {
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/BuscandoTodasConsultas_Concluidas_PorEspecialidade/especialidades={especialidades}")
     public ResponseEntity<List<DadosConsultaStatusView>> BuscandoTodasConsultas_Concluidas_PorEspecialidade(@NotNull @PathVariable("especialidades") String especialidades) {
 

@@ -4,7 +4,6 @@ import br.com.saudeConecta.endpoinst.endereco.DTO.DadosCadastroEndereco;
 import br.com.saudeConecta.endpoinst.endereco.DTO.DadosEnderecoView;
 import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
 import br.com.saudeConecta.endpoinst.endereco.Service.EnderecoService;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -23,7 +22,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping(value = "/endereco")
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class EnderecoResource {
 
 
@@ -32,7 +31,6 @@ public class EnderecoResource {
     private EnderecoService service;
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/buscarId/{id}")
     @Transactional
     public ResponseEntity<DadosEnderecoView> buscarMedicoPorId(@NotNull @Valid @PathVariable("id") Long Id) {
@@ -45,8 +43,6 @@ public class EnderecoResource {
 
 
 
-    // @RolesAllowed("ROLE_PROFESSOR")
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PostMapping("/post")
     @Transactional
     public ResponseEntity<DadosEnderecoView> CadastraEndereco (@RequestBody @Valid @org.jetbrains.annotations.NotNull DadosCadastroEndereco dados, @NotNull @org.jetbrains.annotations.NotNull UriComponentsBuilder uriBuilder ) {
@@ -60,21 +56,18 @@ public class EnderecoResource {
     }
 
     @GetMapping(value = "/{id}")
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public ResponseEntity<DadosEnderecoView> BuscaPorId(@PathVariable("id") Long id) {
         Optional<Endereco> registro = service.BuscarPorId(id);
         return registro.map(cidade -> ResponseEntity.ok().body(new DadosEnderecoView(cidade))).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping("/medicopagina")
     public Page<DadosEnderecoView> BuscarPorPaginas(@PageableDefault(size = 12, sort = { "CIDCódigo" }) Pageable paginacao) {
         return service.BuscarPorPaginas(paginacao);
     }
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/listatodosmedicos")
     public List<Endereco> buscarTodosEnderecos() {
         return 	 service.buscarTodosEndereco();
@@ -82,8 +75,7 @@ public class EnderecoResource {
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    @DeleteMapping("/{id}" )
+    @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteById(@PathVariable("id") Long id)  throws  Exception{
         service.deletarPorId(id);
         return ResponseEntity.noContent().build();

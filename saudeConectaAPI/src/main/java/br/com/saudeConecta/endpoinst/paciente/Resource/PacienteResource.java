@@ -2,10 +2,10 @@ package br.com.saudeConecta.endpoinst.paciente.Resource;
 
 import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
 import br.com.saudeConecta.endpoinst.endereco.Repository.EnderecoRepository;
-import br.com.saudeConecta.endpoinst.paciente.Service.PacienteService;
 import br.com.saudeConecta.endpoinst.paciente.DTO.DadosCadastraPaciente;
 import br.com.saudeConecta.endpoinst.paciente.DTO.DadosPacienteView;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
+import br.com.saudeConecta.endpoinst.paciente.Service.PacienteService;
 import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -26,7 +26,7 @@ import java.util.Optional;
 
 @RequestMapping(value = "/paciente")
 @RestController
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class PacienteResource {
 
     @Autowired
@@ -41,7 +41,6 @@ public class PacienteResource {
 
 
     @GetMapping(value = "/buscarId/{id}")
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @Transactional
     public ResponseEntity<DadosPacienteView> buscarPorId(@NotNull @Valid @PathVariable("id") Long Id) {
         Optional<Paciente> paciente = service.buscarPacientePorId(Id);
@@ -59,10 +58,9 @@ public class PacienteResource {
 
     @GetMapping(value = "/buscarPorEmail/{email}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    public ResponseEntity<Optional<Paciente>> ObeterCodigoParaRecuperacaoDeSenha(@NotNull @Valid @PathVariable("email") String email) throws Exception {
+    public ResponseEntity<Optional<Paciente>> buscarPorEmail(@NotNull @Valid @PathVariable("email") String email) throws Exception {
 
-        Optional<Paciente> paciente = service.buscarPacsientePorEmail(email);
+        Optional<Paciente> paciente = service.buscarPacientePorEmail(email);
 
 
         return  ResponseEntity.ok().body(paciente);
@@ -72,11 +70,10 @@ public class PacienteResource {
 
     @GetMapping(value = "/InserirCodigo/{codigo}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    public ResponseEntity<ResponseEntity<Object>> InserirCodigoDeRecuperacaoDeSenhaValido(@NotNull @Valid @PathVariable("codigo") String codigo) throws Exception {
+    public ResponseEntity<ResponseEntity<Object>> verificarCodigoRecuperacao(@NotNull @Valid @PathVariable("codigo") String codigo) throws Exception {
 
-        Boolean paciente = service.VerificarCodigoValido(codigo);
-        service.deletraCodigoVerificacao(codigo);
+        Boolean paciente = service.verificarCodigoValido(codigo);
+        service.deletarCodigoVerificacao(codigo);
         if (paciente){
 
             return ResponseEntity.ok().build();
@@ -93,7 +90,6 @@ public class PacienteResource {
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PostMapping("/post")
     @Transactional
     public ResponseEntity<DadosPacienteView> cadastrarPaciente(@RequestBody @Valid DadosCadastraPaciente dados,
@@ -104,26 +100,20 @@ public class PacienteResource {
 
 
 
-      //  Long idUsuario = dados.usuario();
         Long idEndereco = dados.endereco();
-
-
-       // Optional<Usuario> usuarioOptional = usuarioRepository.findById(idUsuario);
         Optional<Endereco> enderecoOptional = enderecoRepository.findById(idEndereco);
 
-        if (  enderecoOptional.isEmpty()) {
+        if (enderecoOptional.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
-
-       // Usuario usuario = usuarioOptional.get();
         Endereco endereco = enderecoOptional.get();
 
 
         Paciente paciente = new Paciente(dados,  endereco);
 
 
-        service.CadastraRegistroPaciente(paciente );
+        service.cadastrarPaciente(paciente);
 
 
         URI uri = uriBuilder.path("/api/pacientes/{id}").buildAndExpand(paciente.getPaciCodigo()).toUri();
@@ -137,10 +127,9 @@ public class PacienteResource {
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping("/pacientepagina")
-    public Page<DadosPacienteView> BuscarPorPaginas(@PageableDefault(size = 12, sort = {"CIDCódigo"}) Pageable paginacao) {
-        return service.BuscarPorPaginas(paginacao);
+    public Page<DadosPacienteView> buscarPorPaginas(@PageableDefault(size = 12, sort = {"CIDCódigo"}) Pageable paginacao) {
+        return service.buscarPorPaginas(paginacao);
     }
 
 
@@ -148,7 +137,6 @@ public class PacienteResource {
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/listatodospaciente")
     public List<Paciente> buscarTodos() {
         return service.buscarTodosPaciente();
@@ -159,7 +147,6 @@ public class PacienteResource {
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePacienteById(@PathVariable("id") Long id) throws Exception {
         service.deletarPorId(id);
@@ -171,14 +158,12 @@ public class PacienteResource {
 
     @GetMapping(value = "/buscarPorNome/{nome}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public List<Paciente> buscarPacientePorNome(@NotNull @Valid @PathVariable("nome") String nome) {
         return service.buscarPacientePorNome(nome);
     }
 
     @GetMapping(value = "/buscarPorCPF/{CPF}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public List<Paciente> buscarPacientePorCPF(@NotNull @Valid @PathVariable("CPF") String cpf) {
         return service.buscarPacientePorCPF(cpf);
     }
@@ -186,14 +171,12 @@ public class PacienteResource {
 
     @GetMapping(value = "/buscarPorRG/{rg}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public List<Paciente> buscarPacientePorRG(@NotNull @Valid @PathVariable("rg") String rg) {
         return service.buscarPacientePorRG(rg);
     }
 
     @GetMapping(value = "/buscarPorTelefone/{telefone}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public List<Paciente>buscarPacientePorTelefone(@NotNull @Valid @PathVariable("telefone") String telefone) {
         return   service.buscarPacientePorTelefone(telefone);
     }

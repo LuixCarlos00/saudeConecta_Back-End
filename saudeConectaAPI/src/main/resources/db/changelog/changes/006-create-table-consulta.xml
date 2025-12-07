@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="006-create-table-consulta" author="saudeConecta">
+        <createTable tableName="consulta">
+            <column name="ConCodigoConsulta" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="ConMedico" type="BIGINT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="ConPaciente" type="BIGINT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="ConDia_semana" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="ConHorario" type="VARCHAR(20)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="ConData" type="VARCHAR(20)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="ConObservacoes" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="ConDataCriacao" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="ConFormaPagamento" type="TINYINT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="ConStatus" type="TINYINT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="ConAdm" type="BIGINT">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="consulta"
+            baseColumnNames="ConMedico"
+            referencedTableName="medico"
+            referencedColumnNames="MedCodigo"
+            constraintName="fk_consulta_medico"/>
+
+        <addForeignKeyConstraint
+            baseTableName="consulta"
+            baseColumnNames="ConPaciente"
+            referencedTableName="paciente"
+            referencedColumnNames="PaciCodigo"
+            constraintName="fk_consulta_paciente"/>
+
+        <addForeignKeyConstraint
+            baseTableName="consulta"
+            baseColumnNames="ConAdm"
+            referencedTableName="administrador"
+            referencedColumnNames="AdmCodigo"
+            constraintName="fk_consulta_administrador"/>
+    </changeSet>
+
+</databaseChangeLog>

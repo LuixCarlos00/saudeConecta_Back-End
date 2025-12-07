@@ -4,11 +4,9 @@ import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
 import br.com.saudeConecta.endpoinst.endereco.Repository.EnderecoRepository;
 import br.com.saudeConecta.endpoinst.medico.DTO.AlteraDadosEnderecoMedico;
 import br.com.saudeConecta.endpoinst.medico.DTO.AlterarDadosMedicos;
-import br.com.saudeConecta.endpoinst.medico.DTO.DadosCadastraMedico;
 import br.com.saudeConecta.endpoinst.medico.DTO.DadosMedicoView;
 import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
-import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
 import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -18,7 +16,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -46,12 +43,12 @@ public class MedicoService {
 
     }
 
-    public Optional<Medico> BuscarPorId(Long id) {
+    public Optional<Medico> buscarPorId(Long id) {
         return repository.findById(id);
     }
 
 
-    public Page<DadosMedicoView> BuscarPorPaginas(Pageable paginacao) {
+    public Page<DadosMedicoView> buscarPorPaginas(Pageable paginacao) {
         return repository.findAll(paginacao).map(DadosMedicoView::new);
     }
 
@@ -80,7 +77,7 @@ public class MedicoService {
     }
 
 
-    public void CadastraRegistroMedico(Medico medico) {
+    public void cadastrarMedico(Medico medico) {
 
         repository.save(medico);
     }
@@ -108,19 +105,18 @@ public class MedicoService {
         return repository.findByMedNomeContainingIgnoreCase(nome);
     }
 
-    public Optional<Medico> buscarMedicoPorIdDeUsusario(Long id) {
+    public Optional<Medico> buscarMedicoPorIdUsuario(Long id) {
 
         return repository.findByUsuario_Id(id);
     }
 
-    public void AleterarDadosMedico(Long id, AlterarDadosMedicos dados) {
+    public void atualizarDadosMedico(Long id, AlterarDadosMedicos dados) {
         if (id == null) {
             throw new IllegalArgumentException("O ID não pode ser nulo");
         }
 
         Medico medico = repository.findById(id).orElseThrow(() -> new EntityNotFoundException("Médico não encontrado"));
 
-        // Atualize o médico conforme os dados
         medico.setMedCpf(dados.MedCpf());
         medico.setMedCrm(dados.MedCrm());
         medico.setMedDataNacimento(dados.MedDataNacimento());
@@ -138,7 +134,7 @@ public class MedicoService {
         repository.save(medico);
     }
 
-    public void AtualizarEnderecoMedico(Long id, AlteraDadosEnderecoMedico dados) {
+    public void atualizarEnderecoMedico(Long id, AlteraDadosEnderecoMedico dados) {
         if (id == null) {
             throw new IllegalArgumentException("O ID não pode ser nulo");
         }

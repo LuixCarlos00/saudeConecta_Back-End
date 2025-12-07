@@ -2,7 +2,6 @@ package br.com.saudeConecta.endpoinst.paciente.Entity;
 
 import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
 import br.com.saudeConecta.endpoinst.paciente.DTO.DadosCadastraPaciente;
-import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
 import org.jetbrains.annotations.NotNull;
@@ -16,7 +15,7 @@ import java.sql.Date;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "paciente")
-@EqualsAndHashCode(of = "PaciCodigo")
+@EqualsAndHashCode(of = "paciCodigo")
 
 public class Paciente implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -44,10 +43,6 @@ public class Paciente implements Serializable {
     @Column(name = "PaciEmail", nullable = false)
     private String paciEmail;
 
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "Usuario")
-//    private Usuario usuario;
-
     @Column(name = "PaciTelefone", nullable = true)
     private String paciTelefone;
 
@@ -69,7 +64,6 @@ public class Paciente implements Serializable {
         this.paciCpf = dados.PaciCpf();
         this.paciRg = dados.PaciRg();
         this.paciEmail = dados.PaciEmail();
-        //this.usuario = dadosIdUsuario;
         this.paciTelefone = dados.PaciTelefone();
         this.endereco=dadosEndereco;
         this.PaciStatus= dados.PaciStatus();
