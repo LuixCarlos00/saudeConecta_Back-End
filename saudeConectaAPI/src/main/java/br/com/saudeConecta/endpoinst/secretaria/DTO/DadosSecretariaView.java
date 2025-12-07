@@ -1,7 +1,7 @@
 package br.com.saudeConecta.endpoinst.secretaria.DTO;
 
-import br.com.saudeConecta.endpoinst.secretaria.Entity.Secretaria;
-import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
+import br.com.saudeConecta.domain.secretaria.Secretaria;
+import br.com.saudeConecta.domain.usuario.Usuario;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.Date;

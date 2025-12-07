@@ -1,18 +1,11 @@
 package br.com.saudeConecta.endpoinst.secretaria.Service;
 
+import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.email.EnviarEmail.EnviarEmail;
-import br.com.saudeConecta.endpoinst.administrador.Repository.AdministradorRepository;
-import br.com.saudeConecta.endpoinst.codigoVerificacao.Repository.CodigoVerificacaoRepository;
-import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
-import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
 import br.com.saudeConecta.endpoinst.secretaria.DTO.DadosSecretariaView;
-import br.com.saudeConecta.endpoinst.secretaria.Entity.Secretaria;
-import br.com.saudeConecta.endpoinst.secretaria.Repository.SecretariaRepository;
-import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
-import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
 import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
+import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.util.RecuperaSenha;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -65,17 +58,17 @@ public class SecretariaService {
     @Transactional
     public void deletarPorId(Long id) throws ResourceNotFoundException {
         if (id == null || id <= 0) {
-            throw new IllegalArgumentException("ID inválido");
+            throw new IllegalArgumentException("ID invalido");
         }
 
         if (!repository.existsById(id)) {
-            throw new ResourceNotFoundException("Registro não encontrado");
+            throw new ResourceNotFoundException("Registro nao encontrado");
         }
 
         try {
             repository.deleteById(id);
         } catch (ResourceNotFoundException e) {
-            throw new ResourceNotFoundException("Violação de Integridade");
+            throw new ResourceNotFoundException("Violacao de Integridade");
         }
     }
 

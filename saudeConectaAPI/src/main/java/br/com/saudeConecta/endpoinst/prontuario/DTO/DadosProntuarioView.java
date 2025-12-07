@@ -1,10 +1,8 @@
 package br.com.saudeConecta.endpoinst.prontuario.DTO;
 
-import br.com.saudeConecta.endpoinst.consulta.Entity.Consulta;
-import br.com.saudeConecta.endpoinst.consultaStatus.Entity.ConsultaStatus;
-import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
-import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
-import br.com.saudeConecta.endpoinst.prontuario.Entity.Prontuario;
+import br.com.saudeConecta.domain.consultastatus.ConsultaStatus;
+import br.com.saudeConecta.domain.medico.Medico;
+import br.com.saudeConecta.domain.prontuario.Prontuario;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.Date;

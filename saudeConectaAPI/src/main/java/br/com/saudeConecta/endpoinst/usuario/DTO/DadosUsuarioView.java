@@ -1,6 +1,6 @@
 package br.com.saudeConecta.endpoinst.usuario.DTO;
 
-import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
+import br.com.saudeConecta.domain.usuario.Usuario;
 import org.jetbrains.annotations.NotNull;
 
 public record DadosUsuarioView(

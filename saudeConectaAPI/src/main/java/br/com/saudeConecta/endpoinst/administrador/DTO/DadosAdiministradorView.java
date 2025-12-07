@@ -1,7 +1,7 @@
 package br.com.saudeConecta.endpoinst.administrador.DTO;
 
-import br.com.saudeConecta.endpoinst.administrador.Entity.Administrador;
-import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
+import br.com.saudeConecta.domain.administrador.Administrador;
+import br.com.saudeConecta.domain.usuario.Usuario;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.Date;

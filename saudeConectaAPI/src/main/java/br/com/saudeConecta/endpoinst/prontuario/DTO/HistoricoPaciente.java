@@ -1,7 +1,7 @@
 package br.com.saudeConecta.endpoinst.prontuario.DTO;
 
-import br.com.saudeConecta.endpoinst.consultaStatus.Entity.ConsultaStatus;
-import br.com.saudeConecta.endpoinst.prontuario.Entity.Prontuario;
+import br.com.saudeConecta.domain.consultastatus.ConsultaStatus;
+import br.com.saudeConecta.domain.prontuario.Prontuario;
 
 import java.util.List;
 

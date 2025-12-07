@@ -1,12 +1,12 @@
 package br.com.saudeConecta.endpoinst.administrador.Resource;
 
+import br.com.saudeConecta.domain.administrador.Administrador;
+import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.endpoinst.administrador.DTO.DadosAdiministradorView;
 import br.com.saudeConecta.endpoinst.administrador.DTO.DadosCadastraAdministrador;
-import br.com.saudeConecta.endpoinst.administrador.Entity.Administrador;
 import br.com.saudeConecta.endpoinst.administrador.Service.AdministradorService;
-import br.com.saudeConecta.endpoinst.endereco.Repository.EnderecoRepository;
-import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
-import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -131,7 +131,7 @@ public class AdministradorResource {
 
 
     @GetMapping("/pacientepagina")
-    public Page<DadosAdiministradorView> buscarPorPaginas(@PageableDefault(size = 12, sort = {"CIDCódigo"}) Pageable paginacao) {
+    public Page<DadosAdiministradorView> buscarPorPaginas(@PageableDefault(size = 12, sort = {"admCodigo"}) Pageable paginacao) {
         return service.buscarPorPaginas(paginacao);
     }
 

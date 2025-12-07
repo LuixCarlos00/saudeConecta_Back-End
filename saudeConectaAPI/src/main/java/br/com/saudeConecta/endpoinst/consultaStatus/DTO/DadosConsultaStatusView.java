@@ -1,8 +1,8 @@
 package br.com.saudeConecta.endpoinst.consultaStatus.DTO;
 
-import br.com.saudeConecta.endpoinst.consultaStatus.Entity.ConsultaStatus;
-import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
-import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
+import br.com.saudeConecta.domain.consultastatus.ConsultaStatus;
+import br.com.saudeConecta.domain.medico.Medico;
+import br.com.saudeConecta.domain.paciente.Paciente;
 
 import java.util.List;
 import java.util.stream.Collectors;

@@ -1,26 +1,15 @@
 package br.com.saudeConecta.endpoinst.prontuario.Service;
 
-import br.com.saudeConecta.email.EnviarEmail.EnviarEmail;
-import br.com.saudeConecta.endpoinst.codigoVerificacao.Repository.CodigoVerificacaoRepository;
-import br.com.saudeConecta.endpoinst.consulta.Entity.Consulta;
-import br.com.saudeConecta.endpoinst.consultaStatus.Entity.ConsultaStatus;
-import br.com.saudeConecta.endpoinst.consultaStatus.Repository.ConsultaStatusRepository;
-import br.com.saudeConecta.endpoinst.prontuario.DTO.DadosProntuarioView;
+import br.com.saudeConecta.domain.consultastatus.ConsultaStatus;
+import br.com.saudeConecta.domain.prontuario.Prontuario;
 import br.com.saudeConecta.endpoinst.prontuario.DTO.HistoricoPaciente;
-import br.com.saudeConecta.endpoinst.prontuario.Entity.Prontuario;
-import br.com.saudeConecta.endpoinst.prontuario.Repository.ProntuarioRepository;
-import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
-import br.com.saudeConecta.util.RecuperaSenha;
-import jakarta.mail.MessagingException;
-import jakarta.transaction.Transactional;
+import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaStatusRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.ProntuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 @Service

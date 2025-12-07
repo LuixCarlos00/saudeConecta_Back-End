@@ -1,6 +1,6 @@
 package br.com.saudeConecta.infra.configuracoesseguranca;
 
-import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
+import br.com.saudeConecta.domain.usuario.Usuario;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.TokenExpiredException;
@@ -48,7 +48,7 @@ public class TokenService {
         } catch (TokenExpiredException expiredException) {
             throw expiredException;
         } catch (Exception exception) {
-            throw new RuntimeException("Token inválido", exception);
+            throw new RuntimeException("Token invalido", exception);
         }
     }
 }

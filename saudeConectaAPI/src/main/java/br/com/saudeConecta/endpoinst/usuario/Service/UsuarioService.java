@@ -1,18 +1,14 @@
 package br.com.saudeConecta.endpoinst.usuario.Service;
 
-import br.com.saudeConecta.endpoinst.administrador.Entity.Administrador;
-import br.com.saudeConecta.endpoinst.administrador.Repository.AdministradorRepository;
-import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
-import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
-import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
-import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
-import br.com.saudeConecta.endpoinst.secretaria.Entity.BuscarTodosUsuarios;
-import br.com.saudeConecta.endpoinst.secretaria.Entity.Secretaria;
-import br.com.saudeConecta.endpoinst.secretaria.Repository.SecretariaRepository;
+import br.com.saudeConecta.domain.administrador.Administrador;
+import br.com.saudeConecta.domain.medico.Medico;
+import br.com.saudeConecta.domain.paciente.Paciente;
+import br.com.saudeConecta.domain.secretaria.Secretaria;
+import br.com.saudeConecta.domain.usuario.Usuario;
+import br.com.saudeConecta.endpoinst.usuario.DTO.DadosTodosUsuariosView;
 import br.com.saudeConecta.endpoinst.usuario.DTO.DadosTrocaDeSenha;
-import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
-import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
 import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
+import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -34,7 +30,7 @@ public class UsuarioService {
 
 
     public Optional<Usuario> buscarUsuarioPorId(Long id) {
-        log.debug("Buscando usuário por ID: {}", id);
+        log.debug("Buscando usuario por ID: {}", id);
         return repository.findById(id);
     }
     @Autowired
@@ -53,18 +49,18 @@ public class UsuarioService {
 
     @Transactional
     public void deletarPorId(Long id) throws ResourceNotFoundException {
-        log.info("Iniciando exclusão de usuário ID: {}", id);
+        log.info("Iniciando exclusao de usuario ID: {}", id);
         if (id == null || id <= 0) {
-            log.warn("Tentativa de exclusão com ID inválido: {}", id);
-            throw new IllegalArgumentException("ID inválido");
+            log.warn("Tentativa de exclusao com ID invalido: {}", id);
+            throw new IllegalArgumentException("ID invalido");
         }
 
         Optional<Paciente> paciente = pacienteRepository.findById(id);
         if (paciente.isPresent()) {
             pacienteRepository.deleteById(paciente.orElseThrow().getPaciCodigo());
         } else if (!repository.existsById(id)) {
-            log.warn("Usuário não encontrado para exclusão ID: {}", id);
-            throw new ResourceNotFoundException("Registro não encontrado");
+            log.warn("Usuario nao encontrado para exclusao ID: {}", id);
+            throw new ResourceNotFoundException("Registro nao encontrado");
         }
 
         try {
@@ -84,10 +80,10 @@ public class UsuarioService {
 
 
             repository.deleteById(id);
-            log.info("Usuário ID: {} excluído com sucesso", id);
+            log.info("Usuario ID: {} excluido com sucesso", id);
         } catch (ResourceNotFoundException e) {
-            log.error("Erro ao excluir usuário ID: {} - Violação de integridade", id);
-            throw new ResourceNotFoundException("Violação de Integridade");
+            log.error("Erro ao excluir usuario ID: {} - Violacao de integridade", id);
+            throw new ResourceNotFoundException("Violacao de Integridade");
         }
     }
 
@@ -99,9 +95,9 @@ public class UsuarioService {
 
 
     public void cadastrarUsuario(Usuario dados) throws ResourceNotFoundException {
-        log.info("Cadastrando novo usuário: {}", dados.getLogin());
+        log.info("Cadastrando novo usuario: {}", dados.getLogin());
         repository.save(dados);
-        log.info("Usuário cadastrado com sucesso: {}", dados.getLogin());
+        log.info("Usuario cadastrado com sucesso: {}", dados.getLogin());
     }
 
 
@@ -120,16 +116,16 @@ public class UsuarioService {
 
 
     public ResponseEntity<?> trocarSenha(String senhaNova, DadosTrocaDeSenha dados) {
-        log.info("Iniciando troca de senha para usuário ID: {}", dados.id());
+        log.info("Iniciando troca de senha para usuario ID: {}", dados.id());
         Optional<Usuario> usuario = repository.findById(dados.id());
 
         if (!usuario.isPresent()) {
-            log.warn("Usuário não encontrado para troca de senha ID: {}", dados.id());
+            log.warn("Usuario nao encontrado para troca de senha ID: {}", dados.id());
             return ResponseEntity.notFound().build();
         }
 
         if (!passwordEncoder.matches(dados.senhaAntiga(), usuario.get().getSenha())) {
-            log.warn("Senha antiga incorreta para usuário ID: {}", dados.id());
+            log.warn("Senha antiga incorreta para usuario ID: {}", dados.id());
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Senha antiga incorreta");
         }
 
@@ -140,25 +136,25 @@ public class UsuarioService {
         if (secretaria.isPresent() && secretaria.get().getSecreEmail().equals(dados.email())) {
             usuario.get().setSenha(senhaNova);
             repository.save(usuario.get());
-            log.info("Senha do usuário ID: {} alterada com sucesso", dados.id());
+            log.info("Senha do usuario ID: {} alterada com sucesso", dados.id());
             return ResponseEntity.ok().build();
         }
 
         if (administrador.isPresent() && administrador.get().getAdmEmail().equals(dados.email())) {
             usuario.get().setSenha(senhaNova);
             repository.save(usuario.get());
-            log.info("Senha do usuário ID: {} alterada com sucesso", dados.id());
+            log.info("Senha do usuario ID: {} alterada com sucesso", dados.id());
             return ResponseEntity.ok().build();
         }
 
         if (medico.isPresent() && medico.get().getMedEmail().equals(dados.email())) {
             usuario.get().setSenha(senhaNova);
             repository.save(usuario.get());
-            log.info("Senha do usuário ID: {} alterada com sucesso", dados.id());
+            log.info("Senha do usuario ID: {} alterada com sucesso", dados.id());
             return ResponseEntity.ok().build();
         }
 
-        log.warn("Não foi possível alterar a senha do usuário ID: {}", dados.id());
+        log.warn("Nao foi possivel alterar a senha do usuario ID: {}", dados.id());
         return ResponseEntity.notFound().build();
     }
 
@@ -177,10 +173,10 @@ public class UsuarioService {
         if (usuario != null) {
             usuario.get().setSenha(senhaNova);
             repository.save(usuario.get());
-            log.info("Senha do usuário ID: {} recuperada com sucesso", dados.id());
+            log.info("Senha do usuario ID: {} recuperada com sucesso", dados.id());
             return ResponseEntity.ok().build();
         } else {
-            log.warn("Usuário não encontrado para recuperação de senha ID: {}", dados.id());
+            log.warn("Usuario nao encontrado para recuperacao de senha ID: {}", dados.id());
             return ResponseEntity.notFound().build();
         }
     }
@@ -195,14 +191,14 @@ public class UsuarioService {
 
 
     public Boolean existeLogin(String login) {
-        log.debug("Verificando existência de login: {}", login);
+        log.debug("Verificando existencia de login: {}", login);
         return repository.existsByLogin(login);
     }
 
 
 
     public boolean verificarLoginExistente(String login) {
-        Usuario user = repository.findByLogin(login);
+        Usuario user = repository.findUsuarioByLogin(login);
         if (user == null) {
             return false;
         }
@@ -225,13 +221,13 @@ public class UsuarioService {
 
 
 
-    public BuscarTodosUsuarios listarTodosUsuariosPorTipo() {
+    public DadosTodosUsuariosView listarTodosUsuariosPorTipo() {
         List<Paciente> listaPacientes = pacienteRepository.findAll();
         List<Medico> listaMedicos = medicoRepository.findAll();
         List<Secretaria> listaSecretarias = secretariaRepository.findAll();
         List<Administrador> listaAdministradores = administradorRepository.findAll();
 
-        BuscarTodosUsuarios buscarTodosUsuarios = new BuscarTodosUsuarios();
+        DadosTodosUsuariosView buscarTodosUsuarios = new DadosTodosUsuariosView();
         buscarTodosUsuarios.setPaciente(listaPacientes);
         buscarTodosUsuarios.setMedico(listaMedicos);
         buscarTodosUsuarios.setSecretaria(listaSecretarias);
@@ -242,7 +238,7 @@ public class UsuarioService {
 
 
     public void bloquearUsuario(@NotNull Usuario user, Byte status) {
-        log.info("Alterando status do usuário ID: {} para: {}", user.getId(), status);
+        log.info("Alterando status do usuario ID: {} para: {}", user.getId(), status);
         user.setStatus(status);
         repository.save(user);
     }

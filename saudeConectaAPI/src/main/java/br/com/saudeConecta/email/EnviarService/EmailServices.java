@@ -93,7 +93,7 @@ public class EmailServices {
     }
 
     public void enviarEmailComLoginMedico(String medEmail, String loginDeUsuario, String TemplateName, Map<String, Object> model) throws MessagingException {
-        log.info("Enviando e-mail de login para médico: {}", medEmail);
+        log.info("Enviando e-mail de login para medico: {}", medEmail);
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
         try {
@@ -102,9 +102,9 @@ public class EmailServices {
             String htmlContent = templateEngine.process(TemplateName, new Context(Locale.getDefault(), model));
             helper.setText(htmlContent, true);
             mailSender.send(mimeMessage);
-            log.info("E-mail de login enviado com sucesso para médico: {}", medEmail);
+            log.info("E-mail de login enviado com sucesso para medico: {}", medEmail);
         } catch (MessagingException e) {
-            log.error("Erro ao enviar e-mail de login para médico: {} - Erro: {}", medEmail, e.getMessage());
+            log.error("Erro ao enviar e-mail de login para medico: {} - Erro: {}", medEmail, e.getMessage());
             throw new MessagingException("Erro ao enviar e-mail ");
         }
     }
@@ -127,7 +127,7 @@ public class EmailServices {
     }
 
     public void enviarLembreteDeAlertaParaMedico(String medEmail, String loginDeUsuario, String TemplateName, Map<String, Object> model) throws MessagingException {
-        log.info("Enviando lembrete de alerta para médico: {}", medEmail);
+        log.info("Enviando lembrete de alerta para medico: {}", medEmail);
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
         try {
@@ -136,9 +136,9 @@ public class EmailServices {
             String htmlContent = templateEngine.process(TemplateName, new Context(Locale.getDefault(), model));
             helper.setText(htmlContent, true);
             mailSender.send(mimeMessage);
-            log.info("Lembrete de alerta enviado com sucesso para médico: {}", medEmail);
+            log.info("Lembrete de alerta enviado com sucesso para medico: {}", medEmail);
         } catch (MessagingException e) {
-            log.error("Erro ao enviar lembrete para médico: {} - Erro: {}", medEmail, e.getMessage());
+            log.error("Erro ao enviar lembrete para medico: {} - Erro: {}", medEmail, e.getMessage());
             throw new MessagingException("Erro ao enviar e-mail ");
         }
     }

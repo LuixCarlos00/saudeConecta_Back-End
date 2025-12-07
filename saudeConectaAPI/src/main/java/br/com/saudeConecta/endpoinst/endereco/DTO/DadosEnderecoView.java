@@ -1,6 +1,6 @@
 package br.com.saudeConecta.endpoinst.endereco.DTO;
 
-import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
+import br.com.saudeConecta.domain.endereco.Endereco;
 
 public record DadosEnderecoView(Long EndCodigo, String EndNacionalidade,  String EndUF, String EndMunicipio,
                                 String EndBairro, String EndCep, String EndRua, Long EndNumero, String EndComplemento) {
