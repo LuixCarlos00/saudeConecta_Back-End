@@ -1,8 +1,8 @@
 package br.com.saudeConecta.endpoinst.secretaria.Resource;
 
 import br.com.saudeConecta.endpoinst.endereco.Repository.EnderecoRepository;
-import br.com.saudeConecta.endpoinst.secretaria.DTO.DadosSecretariaView;
 import br.com.saudeConecta.endpoinst.secretaria.DTO.DadosCadastraSecretaria;
+import br.com.saudeConecta.endpoinst.secretaria.DTO.DadosSecretariaView;
 import br.com.saudeConecta.endpoinst.secretaria.Entity.Secretaria;
 import br.com.saudeConecta.endpoinst.secretaria.Service.SecretariaService;
 import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
@@ -27,7 +27,7 @@ import java.util.Optional;
 
 @RequestMapping(value = "/secretaria")
 @RestController
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class SecretariaResource {
 
     @Autowired
@@ -43,7 +43,6 @@ public class SecretariaResource {
     private PasswordEncoder passwordEncoder;
 
     @GetMapping(value = "/buscarId/{id}")
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @Transactional
     public ResponseEntity<DadosSecretariaView> buscarPorId(@NotNull @Valid @PathVariable("id") Long Id) {
         Optional<Secretaria> medico = service.buscarPacientePorId(Id);
@@ -54,7 +53,6 @@ public class SecretariaResource {
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PostMapping("/post")
     @Transactional
     public ResponseEntity<DadosSecretariaView> cadastrarSecretaria(@RequestBody @Valid DadosCadastraSecretaria dados,
@@ -86,7 +84,6 @@ public class SecretariaResource {
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePacienteById(@PathVariable("id") Long id) throws Exception {
         service.deletarPorId(id);
@@ -97,7 +94,6 @@ public class SecretariaResource {
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping("/pacientepagina")
     public Page<DadosSecretariaView> BuscarPorPaginas(@PageableDefault(size = 12, sort = {"CIDCódigo"}) Pageable paginacao) {
         return service.BuscarPorPaginas(paginacao);
@@ -106,7 +102,6 @@ public class SecretariaResource {
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/listatodospaciente")
     public List<Secretaria> buscarTodos() {
         return service.buscarTodosPaciente();

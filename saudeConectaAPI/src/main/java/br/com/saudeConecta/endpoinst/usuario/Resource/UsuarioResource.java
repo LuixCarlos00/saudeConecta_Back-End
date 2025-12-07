@@ -2,30 +2,26 @@ package br.com.saudeConecta.endpoinst.usuario.Resource;
 
 
 import br.com.saudeConecta.email.EnviarEmail.EnviarEmail;
-import br.com.saudeConecta.endpoinst.usuario.DTO.DadosTrocaDeSenha;
 import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
 import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
 import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
 import br.com.saudeConecta.endpoinst.secretaria.Entity.BuscarTodosUsuarios;
-import br.com.saudeConecta.endpoinst.usuario.DTO.*;
+import br.com.saudeConecta.endpoinst.usuario.DTO.DadosLoginUsuario;
+import br.com.saudeConecta.endpoinst.usuario.DTO.DadosTokenJWT;
+import br.com.saudeConecta.endpoinst.usuario.DTO.DadosTrocaDeSenha;
+import br.com.saudeConecta.endpoinst.usuario.DTO.DadosUsuarioView;
 import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
 import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
 import br.com.saudeConecta.endpoinst.usuario.Service.UsuarioService;
-
-
 import br.com.saudeConecta.infra.configuracoesseguranca.TokenService;
 import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-
 import org.springframework.beans.factory.annotation.Autowired;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-
-
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -76,9 +72,8 @@ public class UsuarioResource {
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PostMapping("/login")
-    public ResponseEntity<DadosTokenJWT> login(@RequestBody @NotNull DadosLoginUsuario dados) {
+    public ResponseEntity<DadosTokenJWT> autenticar(@RequestBody @NotNull DadosLoginUsuario dados) {
         var authenticatetoken = new UsernamePasswordAuthenticationToken(dados.login(), dados.senha());
         var authentication = authenticationManager.authenticate(authenticatetoken);
 
@@ -93,9 +88,8 @@ public class UsuarioResource {
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PostMapping("/cadastralogin")
-    public ResponseEntity<CadastroResponse> cadastraUser(@RequestBody @NotNull DadosLoginUsuario dados) {
+    public ResponseEntity<CadastroResponse> cadastrarUsuario(@RequestBody @NotNull DadosLoginUsuario dados) {
 
         if (dados.login() == null || dados.senha() == null) {
             return ResponseEntity.badRequest().build();
@@ -111,10 +105,8 @@ public class UsuarioResource {
             return ResponseEntity.badRequest().build();
         }
 
-        // Cadastra o usuário
-        userService.CadastraUsuario(usuario);
+        userService.cadastrarUsuario(usuario);
 
-        // Autentica o usuário recém-cadastrado para gerar o token JWT
         var authenticateToken = new UsernamePasswordAuthenticationToken(dados.login(), dados.senha());
         var authentication = authenticationManager.authenticate(authenticateToken);
         var tokenJWT = tokenService.gerarToken((Usuario) authentication.getPrincipal());
@@ -133,9 +125,8 @@ public class UsuarioResource {
 
     @GetMapping(value = "/buscarId/{id}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public ResponseEntity<DadosUsuarioView> buscarPorId(@NotNull @Valid @PathVariable("id") Long Id) {
-        Optional<Usuario> usuario = userService.buscarUserPorId(Id);
+        Optional<Usuario> usuario = userService.buscarUsuarioPorId(Id);
 
         return ResponseEntity.status(HttpStatus.OK).body(new DadosUsuarioView((usuario.get())));
     }
@@ -149,9 +140,8 @@ public class UsuarioResource {
 
     @GetMapping(value = "/buscarUsuarioExistente/{login}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    public ResponseEntity<Boolean> buscarPorloginSeExiste(@NotNull @Valid @PathVariable("login") String login) {
-        Boolean usuarioExiste = userService.buscarPorloginSeExiste(login);
+    public ResponseEntity<Boolean> verificarUsuarioExistente(@NotNull @Valid @PathVariable("login") String login) {
+        Boolean usuarioExiste = userService.verificarLoginExistente(login);
         return ResponseEntity.ok(usuarioExiste);
     }
 
@@ -164,8 +154,7 @@ public class UsuarioResource {
 
     @PutMapping(value = "/trocaDeSenha/{Id}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    public ResponseEntity<ResponseEntity<Object>> updatedeSenha(@NotNull @Valid @PathVariable("Id") Long Id,
+    public ResponseEntity<ResponseEntity<Object>> atualizarSenha(@NotNull @Valid @PathVariable("Id") Long Id,
                                                                 @RequestBody DadosLoginUsuario dados,
                                                                 @NotNull BindingResult result) {
 
@@ -176,7 +165,7 @@ public class UsuarioResource {
         String senhaCriptografada = passwordEncoder.encode(dados.senha());
         Usuario usuario = new Usuario(dados, senhaCriptografada);
 
-        userService.UpdateDeSenha(usuario, Id);
+        userService.atualizarSenha(usuario, Id);
         return ResponseEntity.ok().build();
     }
 
@@ -188,13 +177,12 @@ public class UsuarioResource {
 
     @GetMapping(value = "/recuperaLogin={Id}&dados={tipoUsuario}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    public ResponseEntity<ResponseEntity<Object>> RecuperaLogin(@NotNull @Valid @PathVariable("Id") Long Id,
+    public ResponseEntity<ResponseEntity<Object>> recuperarLogin(@NotNull @Valid @PathVariable("Id") Long Id,
                                                                 @NotNull @Valid @PathVariable("tipoUsuario") String dados
     ) throws MessagingException {
 
 
-        Usuario usuario = userService.RecuperaLogin(Id);
+        Usuario usuario = userService.recuperarLogin(Id);
 
         String login = usuario.getLogin();
         Long IdUsuario = usuario.getId();
@@ -225,9 +213,8 @@ public class UsuarioResource {
 
     @GetMapping(value = "/BuscarTodosUsuarios")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    public BuscarTodosUsuarios BuscarTodosUsuarios() {
-        return userService.BuscarTodosUsuarios();
+    public BuscarTodosUsuarios listarTodosUsuarios() {
+        return userService.listarTodosUsuariosPorTipo();
     }
 
 
@@ -239,7 +226,6 @@ public class UsuarioResource {
 
     @DeleteMapping(value = "/deletarPorId/{Id}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public ResponseEntity<Void> deletarPorId(@NotNull @Valid @PathVariable("Id") Long Id) {
         userService.deletarPorId(Id);
         return ResponseEntity.noContent().build();
@@ -255,7 +241,6 @@ public class UsuarioResource {
 
     @PutMapping(value = "/esqueciMinhaSenha")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public ResponseEntity<?> esqueciMinhaSenha(@RequestBody @Valid DadosTrocaDeSenha dados, @NotNull BindingResult result) {
         if (result.hasErrors()) {
             return ResponseEntity.badRequest().body(result.getAllErrors());
@@ -267,7 +252,7 @@ public class UsuarioResource {
             return ResponseEntity.notFound().build();
         } else {
             String senhaNova = passwordEncoder.encode(dados.senhaNova());
-            userService.EsqueciMinhaSenha(senhaNova, dados);
+            userService.recuperarSenha(senhaNova, dados);
             return ResponseEntity.ok().build();
         }
     }
@@ -283,8 +268,7 @@ public class UsuarioResource {
 
     @PutMapping(value = "/TrocaSenhaADM")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    public ResponseEntity<?> TrocaSenha(@RequestBody @Valid DadosTrocaDeSenha dados,
+    public ResponseEntity<?> trocarSenhaAdministrador(@RequestBody @Valid DadosTrocaDeSenha dados,
                                         @NotNull BindingResult result) {
         if (result.hasErrors()) {
             return ResponseEntity.badRequest().body(result.getAllErrors());
@@ -297,7 +281,7 @@ public class UsuarioResource {
             return ResponseEntity.notFound().build();
         } else {
             String senhaNova = passwordEncoder.encode(dados.senhaNova());
-            userService.TrocaSenha(senhaNova, dados);
+            userService.trocarSenha(senhaNova, dados);
             return ResponseEntity.ok().build();
         }
     }
@@ -311,8 +295,7 @@ public class UsuarioResource {
 
     @PutMapping(value = "/TrocaSenhaDoUsuario/{Id}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    public ResponseEntity<?> TrocaSenhaDoUsuario(@RequestBody @Valid DadosTrocaDeSenha dados,
+    public ResponseEntity<?> trocarSenhaUsuario(@RequestBody @Valid DadosTrocaDeSenha dados,
                                         @NotNull @Valid @PathVariable("Id") Long Id,
                                         @NotNull BindingResult result) {
         if (result.hasErrors()) {
@@ -326,7 +309,7 @@ public class UsuarioResource {
             return ResponseEntity.notFound().build();
         } else {
             String senhaNova = passwordEncoder.encode(dados.senhaNova());
-            userService.TrocaSenhaDoUsuario(senhaNova, user);
+            userService.trocarSenhaDoUsuario(senhaNova, user);
             return ResponseEntity.ok().build();
         }
     }
@@ -338,7 +321,6 @@ public class UsuarioResource {
 
     @PutMapping(value = "/bloquearUsuario/usuario/{codigo}/status/{status}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public ResponseEntity<?> bloquearUsuario(@PathVariable("codigo") Long codigo,
                                              @PathVariable("status") Byte status) {
         Usuario user = repository.findById(codigo).orElse(null);
@@ -361,7 +343,6 @@ public class UsuarioResource {
 
     @PutMapping(value = "/bloquearPaciente/usuario/{codigo}/status/{status}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     public ResponseEntity<?> bloquearPaciente(@PathVariable("codigo") Long codigo,
                                               @PathVariable("status") String status) {
         Paciente paciente = pacienteRepository.findById(codigo).orElse(null);

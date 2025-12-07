@@ -26,11 +26,11 @@ public class SecurityConfigurations {
     @Autowired
     private FiltroAcesso filtroAcesso;
 
-    @Value("${url_Front_End}")
-    private String url_Front_End;
+    @Value("${app.url.frontend}")
+    private String urlFrontEnd;
 
-    @Value("${url_Back_End}")
-    private String url_Back_End;
+    @Value("${app.url.backend}")
+    private String urlBackEnd;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -66,10 +66,8 @@ public class SecurityConfigurations {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(@NotNull CorsRegistry registry) {
-                String url_Ngrok_Bac = url_Back_End ;
-                String url_Ngrok_Fron = url_Front_End;
                 registry.addMapping("/**")
-                        .allowedOrigins(url_Ngrok_Bac, url_Ngrok_Fron)
+                        .allowedOrigins(urlBackEnd, urlFrontEnd)
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true);

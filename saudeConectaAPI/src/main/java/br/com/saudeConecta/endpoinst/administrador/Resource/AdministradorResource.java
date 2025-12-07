@@ -1,8 +1,7 @@
 package br.com.saudeConecta.endpoinst.administrador.Resource;
 
-import br.com.saudeConecta.endpoinst.administrador.DTO.DadosCadastraAdministrador;
 import br.com.saudeConecta.endpoinst.administrador.DTO.DadosAdiministradorView;
-import br.com.saudeConecta.endpoinst.usuario.DTO.DadosTrocaDeSenha;
+import br.com.saudeConecta.endpoinst.administrador.DTO.DadosCadastraAdministrador;
 import br.com.saudeConecta.endpoinst.administrador.Entity.Administrador;
 import br.com.saudeConecta.endpoinst.administrador.Service.AdministradorService;
 import br.com.saudeConecta.endpoinst.endereco.Repository.EnderecoRepository;
@@ -28,7 +27,7 @@ import java.util.Optional;
 
 @RequestMapping(value = "/administrador")
 @RestController
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class AdministradorResource {
 
     @Autowired
@@ -44,31 +43,28 @@ public class AdministradorResource {
     private PasswordEncoder passwordEncoder;
 
     @GetMapping(value = "/buscarId/{id}")
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @Transactional
     public ResponseEntity<DadosAdiministradorView> buscarPorId(@NotNull @Valid @PathVariable("id") Long Id) {
-        Optional<Administrador> medico = service.buscarPacientePorId(Id);
+        Optional<Administrador> administrador = service.buscarAdministradorPorId(Id);
 
-        return ResponseEntity.status(HttpStatus.OK).body(new DadosAdiministradorView((medico.get())));
+        return ResponseEntity.status(HttpStatus.OK).body(new DadosAdiministradorView((administrador.get())));
     }
 
 
     @GetMapping(value = "/buscarIdDeUsusario/{id}")
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @Transactional
-    public ResponseEntity<DadosAdiministradorView> buscarPorIdDeUsusario(@NotNull @Valid @PathVariable("id") Long Id) {
-        Optional<Administrador> medico = service.buscarPacientePorIdDeUsusario(Id);
+    public ResponseEntity<DadosAdiministradorView> buscarPorIdUsuario(@NotNull @Valid @PathVariable("id") Long Id) {
+        Optional<Administrador> administrador = service.buscarAdministradorPorIdUsuario(Id);
 
-        return ResponseEntity.status(HttpStatus.OK).body(new DadosAdiministradorView((medico.get())));
+        return ResponseEntity.status(HttpStatus.OK).body(new DadosAdiministradorView((administrador.get())));
     }
 
 
     @GetMapping(value = "/buscarPorEmail/{email}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    public ResponseEntity<Object> ObeterCodigoParaRecuperacaoDeSenhaPassandoOEmail(@NotNull @Valid @PathVariable("email") String email) throws Exception {
+    public ResponseEntity<Object> buscarPorEmailEnviarCodigo(@NotNull @Valid @PathVariable("email") String email) throws Exception {
 
-            Optional<Object> obj = service.buscarPacsientePorEmail(email);
+            Optional<Object> obj = service.buscarPorEmailEnviarCodigo(email);
 
 
         return ResponseEntity.ok().body(obj);
@@ -83,16 +79,13 @@ public class AdministradorResource {
 
     @GetMapping(value = "/InserirCodigo/{codigo}")
     @Transactional
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-    public ResponseEntity<ResponseEntity<Object>> InserirCodigoDeRecuperacaoDeSenhaValido(@NotNull @Valid @PathVariable("codigo") String codigo) throws Exception {
+    public ResponseEntity<ResponseEntity<Object>> verificarCodigoRecuperacao(@NotNull @Valid @PathVariable("codigo") String codigo) throws Exception {
 
-        Boolean paciente = service.VerificarCodigoValido(codigo);
-        service.deletraCodigoVerificacao(codigo);
-        if (paciente) {
-
+        Boolean valido = service.verificarCodigoValido(codigo);
+        service.deletarCodigoVerificacao(codigo);
+        if (valido) {
             return ResponseEntity.ok().build();
         }
-
         return ResponseEntity.notFound().build();
     }
 
@@ -102,7 +95,6 @@ public class AdministradorResource {
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @PostMapping("/post")
     @Transactional
     public ResponseEntity<DadosAdiministradorView> cadastrarAdministrador(@RequestBody @Valid DadosCadastraAdministrador dados,
@@ -123,7 +115,7 @@ public class AdministradorResource {
         Usuario usuario = usuarioOptional.get();
         Administrador administrador = new Administrador(dados, usuario);
 
-        service.CadastraRegistroPaciente(administrador);
+        service.cadastrarAdministrador(administrador);
 
         URI uri = uriBuilder.path("/administrador/administrador/{id}")
                 .buildAndExpand(administrador.getAdmCodigo())
@@ -138,10 +130,9 @@ public class AdministradorResource {
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping("/pacientepagina")
-    public Page<DadosAdiministradorView> BuscarPorPaginas(@PageableDefault(size = 12, sort = {"CIDCódigo"}) Pageable paginacao) {
-        return service.BuscarPorPaginas(paginacao);
+    public Page<DadosAdiministradorView> buscarPorPaginas(@PageableDefault(size = 12, sort = {"CIDCódigo"}) Pageable paginacao) {
+        return service.buscarPorPaginas(paginacao);
     }
 
 
@@ -151,10 +142,9 @@ public class AdministradorResource {
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @GetMapping(value = "/listatodospaciente")
     public List<Administrador> buscarTodos() {
-        return service.buscarTodosPaciente();
+        return service.buscarTodosAdministradores();
     }
 
 
@@ -164,7 +154,6 @@ public class AdministradorResource {
 
 
 
-    @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePacienteById(@PathVariable("id") Long id) throws Exception {
         service.deletarPorId(id);

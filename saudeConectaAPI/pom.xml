@@ -96,6 +96,12 @@
 			<version>8.17.0</version>
 		</dependency>
 
+		<!-- Liquibase para gerenciamento de migrações de banco de dados -->
+		<dependency>
+			<groupId>org.liquibase</groupId>
+			<artifactId>liquibase-core</artifactId>
+		</dependency>
+
 	</dependencies>
 
 	<build>

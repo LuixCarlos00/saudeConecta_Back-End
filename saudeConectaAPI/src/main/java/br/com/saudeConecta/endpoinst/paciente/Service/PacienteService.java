@@ -40,7 +40,7 @@ public class PacienteService {
 
 
 
-    public Page<DadosPacienteView> BuscarPorPaginas(Pageable paginacao) {
+    public Page<DadosPacienteView> buscarPorPaginas(Pageable paginacao) {
         return repository.findAll(paginacao).map(DadosPacienteView::new);
     }
 
@@ -69,12 +69,12 @@ public class PacienteService {
     }
 
 
-    public void CadastraRegistroPaciente(Paciente paciente) throws ResourceNotFoundException {
+    public void cadastrarPaciente(Paciente paciente) throws ResourceNotFoundException {
         repository.save(paciente);
     }
 
 
-    public Optional<Paciente> buscarPacsientePorEmail(String email) throws MessagingException {
+    public Optional<Paciente> buscarPacientePorEmail(String email) throws MessagingException {
 
         Optional<Paciente> paciente = repository.findByPaciEmail(email);
 
@@ -85,13 +85,13 @@ public class PacienteService {
 
 
 
-    public boolean VerificarCodigoValido(String codigo) {
+    public boolean verificarCodigoValido(String codigo) {
         return codigoVerificacaoRepository.existsByCodVerificacaoCodigo(codigo);
 
     }
 
 
-    public void deletraCodigoVerificacao(String codigo) {
+    public void deletarCodigoVerificacao(String codigo) {
 
           codigoVerificacaoRepository.deleteByCodVerificacaoCodigo(codigo);
     }

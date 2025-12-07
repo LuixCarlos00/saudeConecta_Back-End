@@ -11,7 +11,7 @@ public record AlteraDadosEnderecoMedico(
         Long EndNumero,
         String EndRua,
         String EndUF,
-        Long endCodigo // Alterado para Long
+        Long endCodigo
 ) {
 }
 
