@@ -1,16 +1,16 @@
 package br.com.saudeConecta.endpoinst.consulta.Service;
 
+import br.com.saudeConecta.domain.consulta.Consulta;
+import br.com.saudeConecta.domain.medico.Medico;
+import br.com.saudeConecta.domain.paciente.Paciente;
+import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.email.EnviarEmail.EnviarEmail;
 import br.com.saudeConecta.endpoinst.consulta.DTO.DadosConsultaView;
-import br.com.saudeConecta.endpoinst.consulta.Entity.Consulta;
-import br.com.saudeConecta.endpoinst.consulta.Repository.ConsultaRepository;
-import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
-import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
-import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
-import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
-import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
-import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
 import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
+import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.MedicoRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
 import jakarta.mail.MessagingException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -65,17 +65,17 @@ public class ConsultaService {
     @Transactional
     public void deletarPorId(Long id) throws ResourceNotFoundException {
         if (id == null || id <= 0) {
-            throw new IllegalArgumentException("ID inválido");
+            throw new IllegalArgumentException("ID invalido");
         }
 
         if (!repository.existsById(id)) {
-            throw new ResourceNotFoundException("Registro não encontrado");
+            throw new ResourceNotFoundException("Registro nao encontrado");
         }
 
         try {
             repository.deleteById(id);
         } catch (ResourceNotFoundException e) {
-            throw new ResourceNotFoundException("Violação de Integridade");
+            throw new ResourceNotFoundException("Violacao de Integridade");
         }
     }
 
@@ -88,26 +88,26 @@ public class ConsultaService {
 
 
     public List<Consulta> buscarConsultasPorIntervalo(String dataInicial, String dataFinal) {
-        return repository.BuscandoTodasConsultasEmIntervaloDeDatas(dataInicial, dataFinal);
+        return repository.buscarConsultasEmIntervaloDeDatas(dataInicial, dataFinal);
     }
 
 
     public List<Consulta> buscarConsultasPorIntervaloEEspecialidade(String dataInicial, String dataFinal, String especialidade) {
-        return repository.BuscandoTodasConsultasEmIntervaloDeDatasComEspecialidade(dataInicial, dataFinal, especialidade);
+        return repository.buscarConsultasEmIntervaloComEspecialidade(dataInicial, dataFinal, especialidade);
     }
 
 
     public List<Consulta> buscarConsultasPorMedico(Long medicoID) {
-        return repository.BuscandoTodasConsultasPorMedico(medicoID);
+        return repository.buscarConsultasPorMedico(medicoID);
     }
 
     public List<Consulta> buscarConsultasPorMedicoEIntervalo(Long medicoID, String dataInicio, String dataFim) {
-        return repository.BuscandoTodasConsultasPorMedicoEmIntervaloDeDatas(dataInicio, dataFim, medicoID);
+        return repository.buscarConsultasPorMedicoEmIntervalo(dataInicio, dataFim, medicoID);
     }
 
 
     public List<Consulta> buscarConsultasPorEspecialidade(String especialidades) {
-    return  repository.BuscandoTodasConsultasPorEspecialidade(especialidades);
+    return repository.buscarConsultasPorEspecialidade(especialidades);
     }
 
     public void cadastrarConsulta(Consulta consulta) throws ResourceNotFoundException {
@@ -152,7 +152,7 @@ public class ConsultaService {
             repository.save(consulta);
             return new DadosConsultaView(consulta);
         } else {
-            throw new EntityNotFoundException("Consulta não encontrada com o id: " + id);
+            throw new EntityNotFoundException("Consulta nao encontrada com o id: " + id);
         }
     }
 
@@ -176,7 +176,7 @@ public class ConsultaService {
 
 
     public Optional<Object> enviarNotificacaoPorEmail(String email, String mensagem) throws MessagingException {
-        log.info("Enviando notificação por e-mail para: {}", email);
+        log.info("Enviando notificacao por e-mail para: {}", email);
         Optional<Paciente> paciente = pacienteRepository.findByPaciEmail(email);
         Optional<Medico> medico = medicoRepository.findByMedEmail(email);
 

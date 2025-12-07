@@ -1,13 +1,13 @@
 package br.com.saudeConecta.endpoinst.medico.Service;
 
-import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
-import br.com.saudeConecta.endpoinst.endereco.Repository.EnderecoRepository;
+import br.com.saudeConecta.domain.endereco.Endereco;
+import br.com.saudeConecta.domain.medico.Medico;
 import br.com.saudeConecta.endpoinst.medico.DTO.AlteraDadosEnderecoMedico;
 import br.com.saudeConecta.endpoinst.medico.DTO.AlterarDadosMedicos;
 import br.com.saudeConecta.endpoinst.medico.DTO.DadosMedicoView;
-import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
-import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
-import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.MedicoRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
@@ -56,17 +56,17 @@ public class MedicoService {
     @Transactional
     public void deletarPorId(Long id) throws Exception {
         if (id == null || id <= 0) {
-            throw new IllegalArgumentException("ID inválido");
+            throw new IllegalArgumentException("ID invalido");
         }
 
         if (!repository.existsById(id)) {
-            throw new Exception("Registro não encontrado");
+            throw new Exception("Registro nao encontrado");
         }
 
         try {
             repository.deleteById(id);
         } catch (Exception e) {
-            throw new Exception("Violação de Integridade", e);
+            throw new Exception("Violacao de Integridade", e);
         }
     }
 
@@ -112,10 +112,10 @@ public class MedicoService {
 
     public void atualizarDadosMedico(Long id, AlterarDadosMedicos dados) {
         if (id == null) {
-            throw new IllegalArgumentException("O ID não pode ser nulo");
+            throw new IllegalArgumentException("O ID nao pode ser nulo");
         }
 
-        Medico medico = repository.findById(id).orElseThrow(() -> new EntityNotFoundException("Médico não encontrado"));
+        Medico medico = repository.findById(id).orElseThrow(() -> new EntityNotFoundException("Medico nao encontrado"));
 
         medico.setMedCpf(dados.MedCpf());
         medico.setMedCrm(dados.MedCrm());
@@ -136,10 +136,10 @@ public class MedicoService {
 
     public void atualizarEnderecoMedico(Long id, AlteraDadosEnderecoMedico dados) {
         if (id == null) {
-            throw new IllegalArgumentException("O ID não pode ser nulo");
+            throw new IllegalArgumentException("O ID nao pode ser nulo");
         }
 
-        Endereco endereco = enderecoRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Endereço não encontrado"));
+        Endereco endereco = enderecoRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Endereco nao encontrado"));
 
         endereco.setEndBairro(dados.EndBairro());
         endereco.setEndCep(dados.EndCep());

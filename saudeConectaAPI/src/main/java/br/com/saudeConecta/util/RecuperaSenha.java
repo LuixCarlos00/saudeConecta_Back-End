@@ -1,7 +1,7 @@
 package br.com.saudeConecta.util;
 
-import br.com.saudeConecta.endpoinst.codigoVerificacao.Entity.CodigoVerificacao;
-import br.com.saudeConecta.endpoinst.codigoVerificacao.Repository.CodigoVerificacaoRepository;
+import br.com.saudeConecta.domain.codigoverificacao.CodigoVerificacao;
+import br.com.saudeConecta.infrastructure.persistence.repository.CodigoVerificacaoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;

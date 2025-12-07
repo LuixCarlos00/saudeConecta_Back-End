@@ -47,7 +47,7 @@ public class TratadorDeErros {
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.NOT_FOUND.value(),
                 HttpStatus.NOT_FOUND.getReasonPhrase(),
-                "Recurso não encontrado",
+                "Recurso nao encontrado",
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
@@ -58,7 +58,7 @@ public class TratadorDeErros {
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.NOT_FOUND.value(),
                 HttpStatus.NOT_FOUND.getReasonPhrase(),
-                "Recurso não encontrado no banco de dados",
+                "Recurso nao encontrado no banco de dados",
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
@@ -74,7 +74,7 @@ public class TratadorDeErros {
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                "Erro de validação nos campos",
+                "Erro de validacao nos campos",
                 request.getRequestURI(),
                 fieldErrors
         );
@@ -86,7 +86,7 @@ public class TratadorDeErros {
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                "Valor inválido para o parâmetro: " + ex.getName(),
+                "Valor invalido para o parametro: " + ex.getName(),
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
@@ -97,7 +97,7 @@ public class TratadorDeErros {
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                "Erro ao processar JSON da requisição",
+                "Erro ao processar JSON da requisicao",
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
@@ -119,7 +119,7 @@ public class TratadorDeErros {
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.UNAUTHORIZED.value(),
                 HttpStatus.UNAUTHORIZED.getReasonPhrase(),
-                "Credenciais inválidas",
+                "Credenciais invalidas",
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
@@ -130,7 +130,7 @@ public class TratadorDeErros {
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.UNAUTHORIZED.value(),
                 HttpStatus.UNAUTHORIZED.getReasonPhrase(),
-                "Token expirado. Faça login novamente.",
+                "Token expirado. Faca login novamente.",
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);

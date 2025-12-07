@@ -1,11 +1,10 @@
 package br.com.saudeConecta.endpoinst.endereco.Service;
 
+import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.endpoinst.endereco.DTO.DadosEnderecoView;
-import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
-import br.com.saudeConecta.endpoinst.endereco.Repository.EnderecoRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -49,17 +48,17 @@ public class EnderecoService {
     @Transactional
     public void deletarPorId(Long id)  throws  Exception {
         if (id == null || id <= 0) {
-            throw new IllegalArgumentException("ID inválido");
+            throw new IllegalArgumentException("ID invalido");
         }
 
         if (!repository.existsById(id)) {
-            throw new Exception("Registro não encontrado");
+            throw new Exception("Registro nao encontrado");
         }
 
         try {
             repository.deleteById(id);
         } catch (Exception e) {
-            throw new Exception("Violação de Integridade",e);
+            throw new Exception("Violacao de Integridade", e);
         }
     }
 

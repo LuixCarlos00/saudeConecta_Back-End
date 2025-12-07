@@ -1,8 +1,8 @@
 package br.com.saudeConecta.infra.configuracoesseguranca.filtroSeguranca;
 
 
-import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
 import br.com.saudeConecta.infra.configuracoesseguranca.TokenService;
+import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,7 +35,7 @@ public class FiltroAcesso extends OncePerRequestFilter {
 
         if (tokenJwt != null) {
             var subject = tokenService.getSubject(tokenJwt);
-            var usuario = usuarioRepository.findBylogin(subject);
+            var usuario = usuarioRepository.findByLogin(subject);
             var authentication = new UsernamePasswordAuthenticationToken(usuario, null, usuario.getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }

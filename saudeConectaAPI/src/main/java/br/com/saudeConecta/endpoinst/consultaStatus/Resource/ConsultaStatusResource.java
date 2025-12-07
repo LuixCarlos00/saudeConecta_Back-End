@@ -1,10 +1,10 @@
 package br.com.saudeConecta.endpoinst.consultaStatus.Resource;
 
+import br.com.saudeConecta.domain.consultastatus.ConsultaStatus;
 import br.com.saudeConecta.endpoinst.consultaStatus.DTO.DadosConsultaStatusView;
-import br.com.saudeConecta.endpoinst.consultaStatus.Entity.ConsultaStatus;
 import br.com.saudeConecta.endpoinst.consultaStatus.Service.ConsultaStatusService;
-import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
-import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.MedicoRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;

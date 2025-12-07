@@ -1,17 +1,17 @@
 package br.com.saudeConecta.endpoinst.consulta.Resource;
 
-import br.com.saudeConecta.endpoinst.administrador.Entity.Administrador;
-import br.com.saudeConecta.endpoinst.administrador.Repository.AdministradorRepository;
+import br.com.saudeConecta.domain.administrador.Administrador;
+import br.com.saudeConecta.domain.consulta.Consulta;
+import br.com.saudeConecta.domain.medico.Medico;
+import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.endpoinst.consulta.DTO.DadosCadastraConsulta;
 import br.com.saudeConecta.endpoinst.consulta.DTO.DadosConsultaView;
 import br.com.saudeConecta.endpoinst.consulta.DTO.DadosSeendToNewMenssage;
-import br.com.saudeConecta.endpoinst.consulta.Entity.Consulta;
 import br.com.saudeConecta.endpoinst.consulta.Service.ConsultaService;
-import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
-import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
-import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
-import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
-import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.AdministradorRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.MedicoRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
 import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;

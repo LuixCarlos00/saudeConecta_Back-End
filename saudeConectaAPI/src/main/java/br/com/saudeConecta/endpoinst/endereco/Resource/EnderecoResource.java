@@ -1,8 +1,8 @@
 package br.com.saudeConecta.endpoinst.endereco.Resource;
 
+import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.endpoinst.endereco.DTO.DadosCadastroEndereco;
 import br.com.saudeConecta.endpoinst.endereco.DTO.DadosEnderecoView;
-import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
 import br.com.saudeConecta.endpoinst.endereco.Service.EnderecoService;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -63,7 +63,7 @@ public class EnderecoResource {
 
 
     @GetMapping("/medicopagina")
-    public Page<DadosEnderecoView> BuscarPorPaginas(@PageableDefault(size = 12, sort = { "CIDCódigo" }) Pageable paginacao) {
+    public Page<DadosEnderecoView> BuscarPorPaginas(@PageableDefault(size = 12, sort = { "endCodigo" }) Pageable paginacao) {
         return service.BuscarPorPaginas(paginacao);
     }
 

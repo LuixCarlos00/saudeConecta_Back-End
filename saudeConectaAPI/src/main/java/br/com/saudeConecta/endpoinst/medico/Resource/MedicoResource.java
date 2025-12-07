@@ -1,15 +1,15 @@
 package br.com.saudeConecta.endpoinst.medico.Resource;
 
-import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
-import br.com.saudeConecta.endpoinst.endereco.Repository.EnderecoRepository;
+import br.com.saudeConecta.domain.endereco.Endereco;
+import br.com.saudeConecta.domain.medico.Medico;
+import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.endpoinst.medico.DTO.AlteraDadosEnderecoMedico;
 import br.com.saudeConecta.endpoinst.medico.DTO.AlterarDadosMedicos;
 import br.com.saudeConecta.endpoinst.medico.DTO.DadosCadastraMedico;
 import br.com.saudeConecta.endpoinst.medico.DTO.DadosMedicoView;
-import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
 import br.com.saudeConecta.endpoinst.medico.Service.MedicoService;
-import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
-import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;

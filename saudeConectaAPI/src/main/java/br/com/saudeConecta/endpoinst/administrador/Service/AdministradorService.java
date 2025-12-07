@@ -1,16 +1,12 @@
 package br.com.saudeConecta.endpoinst.administrador.Service;
 
+import br.com.saudeConecta.domain.administrador.Administrador;
+import br.com.saudeConecta.domain.medico.Medico;
+import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.email.EnviarEmail.EnviarEmail;
 import br.com.saudeConecta.endpoinst.administrador.DTO.DadosAdiministradorView;
-import br.com.saudeConecta.endpoinst.administrador.Entity.Administrador;
-import br.com.saudeConecta.endpoinst.administrador.Repository.AdministradorRepository;
-import br.com.saudeConecta.endpoinst.codigoVerificacao.Repository.CodigoVerificacaoRepository;
-import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
-import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
-import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
-import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
-import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
 import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
+import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.util.RecuperaSenha;
 import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
@@ -74,17 +70,17 @@ public class AdministradorService {
     @Transactional
     public void deletarPorId(Long id) throws ResourceNotFoundException {
         if (id == null || id <= 0) {
-            throw new IllegalArgumentException("ID inválido");
+            throw new IllegalArgumentException("ID invalido");
         }
 
         if (!repository.existsById(id)) {
-            throw new ResourceNotFoundException("Registro não encontrado");
+            throw new ResourceNotFoundException("Registro nao encontrado");
         }
 
         try {
             repository.deleteById(id);
         } catch (ResourceNotFoundException e) {
-            throw new ResourceNotFoundException("Violação de Integridade");
+            throw new ResourceNotFoundException("Violacao de Integridade");
         }
     }
 

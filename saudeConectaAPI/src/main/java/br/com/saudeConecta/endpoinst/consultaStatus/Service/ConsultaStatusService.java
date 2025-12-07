@@ -1,23 +1,14 @@
 package br.com.saudeConecta.endpoinst.consultaStatus.Service;
 
-import br.com.saudeConecta.endpoinst.consultaStatus.DTO.DadosConsultaStatusView;
-import br.com.saudeConecta.endpoinst.consultaStatus.Entity.ConsultaStatus;
-import br.com.saudeConecta.endpoinst.consultaStatus.Repository.ConsultaStatusRepository;
-import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
-import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
-import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
-import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
+import br.com.saudeConecta.domain.consultastatus.ConsultaStatus;
+import br.com.saudeConecta.domain.medico.Medico;
 import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
-import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
+import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaStatusRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.MedicoRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.sql.Date;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -68,7 +59,7 @@ public class ConsultaStatusService {
 
 
     public List<ConsultaStatus> BuscarHistoricoDeAgendaDoMedico(Long idMedico) {
-        Medico medico = medicoRepository.findByUsuario_Id(idMedico).orElseThrow(() -> new ResourceNotFoundException("Médico não encontrado"));
+        Medico medico = medicoRepository.findByUsuario_Id(idMedico).orElseThrow(() -> new ResourceNotFoundException("Medico nao encontrado"));
         return repository.findByConSttMedico_MedCodigo(medico.getMedCodigo());
     }
 

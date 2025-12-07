@@ -1,12 +1,11 @@
 package br.com.saudeConecta.endpoinst.paciente.Resource;
 
-import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
-import br.com.saudeConecta.endpoinst.endereco.Repository.EnderecoRepository;
+import br.com.saudeConecta.domain.endereco.Endereco;
+import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.endpoinst.paciente.DTO.DadosCadastraPaciente;
 import br.com.saudeConecta.endpoinst.paciente.DTO.DadosPacienteView;
-import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
 import br.com.saudeConecta.endpoinst.paciente.Service.PacienteService;
-import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -33,8 +32,7 @@ public class PacienteResource {
     private PacienteService service;
 
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+
 
     @Autowired
     private EnderecoRepository enderecoRepository;
@@ -128,7 +126,7 @@ public class PacienteResource {
 
 
     @GetMapping("/pacientepagina")
-    public Page<DadosPacienteView> buscarPorPaginas(@PageableDefault(size = 12, sort = {"CIDCódigo"}) Pageable paginacao) {
+    public Page<DadosPacienteView> buscarPorPaginas(@PageableDefault(size = 12, sort = {"paciCodigo"}) Pageable paginacao) {
         return service.buscarPorPaginas(paginacao);
     }
 

@@ -1,11 +1,9 @@
 package br.com.saudeConecta.endpoinst.consulta.DTO;
 
-import br.com.saudeConecta.endpoinst.administrador.Entity.Administrador;
-import br.com.saudeConecta.endpoinst.consulta.Entity.Consulta;
-import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
-import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
-
-import java.util.Date;
+import br.com.saudeConecta.domain.administrador.Administrador;
+import br.com.saudeConecta.domain.consulta.Consulta;
+import br.com.saudeConecta.domain.medico.Medico;
+import br.com.saudeConecta.domain.paciente.Paciente;
 
 public record DadosConsultaView(
         Long conCodigoConsulta,
@@ -22,7 +20,7 @@ public record DadosConsultaView(
 
 ) {
     public DadosConsultaView(Consulta registro) {
-        this(registro.getConCodigoConsulta(), registro.getConMedico(), registro.getConPaciente(), registro.getConDia_semana(), registro.getConHorario(),
+        this(registro.getConCodigoConsulta(), registro.getConMedico(), registro.getConPaciente(), registro.getConDiaSemana(), registro.getConHorario(),
                 registro.getConData(), registro.getConObservacoes() , registro.getConDataCriacao(), registro.getConFormaPagamento(),registro.getConStatus(),registro.getConAdm());
     }
 

@@ -1,6 +1,6 @@
 package br.com.saudeConecta.endpoinst.endereco.DTO;
 
-import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
+import br.com.saudeConecta.domain.endereco.Endereco;
 
 public record DadosCadastroEndereco(
 
@@ -24,6 +24,6 @@ public record DadosCadastroEndereco(
         String EndComplemento
 ) {
     public Endereco toEntity() {
-        return new Endereco(EndNacionalidade,EndUF,EndMunicipio,EndBairro,EndCep,EndRua,EndNumero,EndComplemento);
+        return new Endereco();
     }
 }

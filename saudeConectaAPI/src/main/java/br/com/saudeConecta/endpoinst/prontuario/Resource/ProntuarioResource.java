@@ -1,14 +1,14 @@
 package br.com.saudeConecta.endpoinst.prontuario.Resource;
 
-import br.com.saudeConecta.endpoinst.consultaStatus.Entity.ConsultaStatus;
-import br.com.saudeConecta.endpoinst.consultaStatus.Repository.ConsultaStatusRepository;
-import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
-import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
+import br.com.saudeConecta.domain.consultastatus.ConsultaStatus;
+import br.com.saudeConecta.domain.medico.Medico;
+import br.com.saudeConecta.domain.prontuario.Prontuario;
 import br.com.saudeConecta.endpoinst.prontuario.DTO.DadosCadastraProntuario;
 import br.com.saudeConecta.endpoinst.prontuario.DTO.DadosProntuarioView;
 import br.com.saudeConecta.endpoinst.prontuario.DTO.HistoricoPaciente;
-import br.com.saudeConecta.endpoinst.prontuario.Entity.Prontuario;
 import br.com.saudeConecta.endpoinst.prontuario.Service.ProntuarioService;
+import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaStatusRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.MedicoRepository;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;

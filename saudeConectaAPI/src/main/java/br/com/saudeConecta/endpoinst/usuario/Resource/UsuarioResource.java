@@ -1,20 +1,16 @@
 package br.com.saudeConecta.endpoinst.usuario.Resource;
 
 
+import br.com.saudeConecta.domain.medico.Medico;
+import br.com.saudeConecta.domain.paciente.Paciente;
+import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.email.EnviarEmail.EnviarEmail;
-import br.com.saudeConecta.endpoinst.medico.Entity.Medico;
-import br.com.saudeConecta.endpoinst.medico.Repository.MedicoRepository;
-import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
-import br.com.saudeConecta.endpoinst.paciente.Repository.PacienteRepository;
-import br.com.saudeConecta.endpoinst.secretaria.Entity.BuscarTodosUsuarios;
-import br.com.saudeConecta.endpoinst.usuario.DTO.DadosLoginUsuario;
-import br.com.saudeConecta.endpoinst.usuario.DTO.DadosTokenJWT;
-import br.com.saudeConecta.endpoinst.usuario.DTO.DadosTrocaDeSenha;
-import br.com.saudeConecta.endpoinst.usuario.DTO.DadosUsuarioView;
-import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
-import br.com.saudeConecta.endpoinst.usuario.Repository.UsuarioRepository;
+import br.com.saudeConecta.endpoinst.usuario.DTO.*;
 import br.com.saudeConecta.endpoinst.usuario.Service.UsuarioService;
 import br.com.saudeConecta.infra.configuracoesseguranca.TokenService;
+import br.com.saudeConecta.infrastructure.persistence.repository.MedicoRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
 import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -89,7 +85,7 @@ public class UsuarioResource {
 
 
     @PostMapping("/cadastralogin")
-    public ResponseEntity<CadastroResponse> cadastrarUsuario(@RequestBody @NotNull DadosLoginUsuario dados) {
+    public ResponseEntity<CadastroResponse> cadastrarUs0uario(@RequestBody @NotNull DadosLoginUsuario dados) {
 
         if (dados.login() == null || dados.senha() == null) {
             return ResponseEntity.badRequest().build();
@@ -211,9 +207,9 @@ public class UsuarioResource {
 
 
 
-    @GetMapping(value = "/BuscarTodosUsuarios")
+    @GetMapping(value = "/DadosTodosUsuariosView")
     @Transactional
-    public BuscarTodosUsuarios listarTodosUsuarios() {
+    public DadosTodosUsuariosView listarTodosUsuarios() {
         return userService.listarTodosUsuariosPorTipo();
     }
 

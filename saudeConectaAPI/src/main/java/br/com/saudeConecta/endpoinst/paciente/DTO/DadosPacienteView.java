@@ -1,8 +1,7 @@
 package br.com.saudeConecta.endpoinst.paciente.DTO;
 
-import br.com.saudeConecta.endpoinst.endereco.Entity.Endereco;
-import br.com.saudeConecta.endpoinst.paciente.Entity.Paciente;
-import br.com.saudeConecta.endpoinst.usuario.Entity.Usuario;
+import br.com.saudeConecta.domain.endereco.Endereco;
+import br.com.saudeConecta.domain.paciente.Paciente;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.Date;
