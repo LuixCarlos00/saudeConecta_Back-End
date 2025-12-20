@@ -1,6 +1,6 @@
 package br.com.saudeConecta.endpoinst.prontuario.DTO;
 
-import br.com.saudeConecta.domain.consultastatus.ConsultaStatus;
+import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.medico.Medico;
 import br.com.saudeConecta.domain.prontuario.Prontuario;
 import org.jetbrains.annotations.NotNull;
@@ -32,7 +32,7 @@ public record DadosProntuarioView(
         String prontPrescricao,
         Date prontDataFinalizado,
         Medico prontCodigoMedico,
-        ConsultaStatus prontCodigoConsulta,
+        Consulta prontCodigoConsulta,
         String prontTituloExame,
         String prontExame,
         String prontDataExame,
@@ -45,7 +45,7 @@ public record DadosProntuarioView(
                 registro.getProntSexo(),registro.getProntSaturacao(),   registro.getProntHemoglobina(), registro.getProntPressao(),registro.getProntFrequenciaRespiratoria(),
                 registro.getProntFrequenciaArterialSistolica(), registro.getProntFrequenciaArterialDiastolica(), registro.getProntObservacao(), registro.getProntCondulta(),
                 registro.getProntAnamnese(),registro.getProntQueixaPricipal() , registro.getProntDiagnostico(), registro.getProntModeloPrescricao(), registro.getProntTituloPrescricao(), registro.getProntDataPrescricao(),
-                registro.getProntPrescricao(), registro.getProntDataFinalizado(), registro.getProntCodigoMedico(), registro.getProntCodigoConsulta(),registro.getProntTituloExame(), registro.getProntExame(), registro.getProntDataExame(),
+                registro.getProntPrescricao(), registro.getProntDataFinalizado(), registro.getProntCodigoMedico(), registro.getConsulta(),registro.getProntTituloExame(), registro.getProntExame(), registro.getProntDataExame(),
                 registro.getProntModeloExame());
     }
 

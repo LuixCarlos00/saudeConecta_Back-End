@@ -2,6 +2,8 @@ package br.com.saudeConecta.domain.paciente;
 
 import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.endpoinst.paciente.DTO.DadosCadastraPaciente;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -15,6 +17,7 @@ import java.sql.Date;
 @AllArgsConstructor
 @Table(name = "paciente")
 @EqualsAndHashCode(of = "paciCodigo")
+@JsonIgnoreProperties({"hibernateLazyInitializer"})
 public class Paciente implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -46,6 +49,7 @@ public class Paciente implements Serializable {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "Endereco")
+    @JsonIgnore
     private Endereco endereco;
 
     @Column(name = "PaciStatus", nullable = false)

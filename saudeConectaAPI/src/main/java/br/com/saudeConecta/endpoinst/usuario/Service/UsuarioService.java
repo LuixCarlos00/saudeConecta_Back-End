@@ -197,30 +197,36 @@ public class UsuarioService {
 
 
 
+    /**
+     * Verifica se o login está disponível para uso.
+     * @param login Login a ser verificado
+     * @return true se o login está DISPONÍVEL (pode usar), false se já existe
+     */
     public boolean verificarLoginExistente(String login) {
         Usuario user = repository.findUsuarioByLogin(login);
+        
+        // Se não encontrou usuário, login está disponível
         if (user == null) {
+            return true;
+        }
+        
+        // Verifica se existe em alguma entidade
+        boolean existeMedico = medicoRepository.existsByUsuario_Id(user.getId());
+        boolean existeAdministrador = administradorRepository.existsByAdmUsuario_Id(user.getId());
+        boolean existeSecretaria = secretariaRepository.existsBySecreUsuario_Login(user.getLogin());
+       
+        // Se existe em qualquer entidade, login NÃO está disponível
+        if (existeSecretaria || existeMedico || existeAdministrador) {
             return false;
         }
-         boolean extisteMedico = medicoRepository.existsByUsuario_Id(user.getId());
-        boolean extisteAdministrador = administradorRepository.existsByAdmUsuario_Id(user.getId());
-        boolean extisteSecretaria = secretariaRepository.existsBySecreUsuario_Login(user.getLogin());
-       
-        if (extisteSecretaria) {
-            return true;
-        }
-        if (extisteMedico) {
-            return true;
-        }
-        if (extisteAdministrador) {
-            return true;
-        }
 
+        // Login existe mas não está vinculado a nenhuma entidade - não disponível
         return false;
     }
 
 
 
+    @Transactional
     public DadosTodosUsuariosView listarTodosUsuariosPorTipo() {
         List<Paciente> listaPacientes = pacienteRepository.findAll();
         List<Medico> listaMedicos = medicoRepository.findAll();

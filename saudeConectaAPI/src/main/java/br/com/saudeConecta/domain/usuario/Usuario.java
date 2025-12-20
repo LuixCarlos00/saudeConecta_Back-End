@@ -1,6 +1,7 @@
 package br.com.saudeConecta.domain.usuario;
 
 import br.com.saudeConecta.endpoinst.usuario.DTO.DadosLoginUsuario;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -20,6 +21,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "usuarios")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "senha", "password", "authorities"})
 public class Usuario implements Serializable, UserDetails {
 
     private static final long serialVersionUID = 1L;

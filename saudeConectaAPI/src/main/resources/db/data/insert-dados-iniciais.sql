@@ -3,28 +3,25 @@
 -- Execute no MySQL: source insert-dados-iniciais.sql
 -- Senha dos usuarios: 123456 (BCrypt hash)
 -- ==========================================
+-- REGRAS:
+-- - 5 usuarios (para medicos, administradores, secretarias)
+-- - 5 medicos, 5 administradores, 5 secretarias
+-- - 15 pacientes
+-- - 15 consultas (medicos e pacientes podem repetir)
+-- - 15 prontuarios
+-- ==========================================
 
 USE office;
 
 -- ==========================================
--- 15 USUARIOS
+-- 5 USUARIOS (TipoUsuario: 1=Admin, 2=Medico, 3=Secretaria)
 -- ==========================================
 INSERT INTO usuarios (login, senha, TipoUsuario, status) VALUES
 ('admin@saudeconecta.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqBuBjZxJmGHV0F7.VlQJvJGJzHGO', 1, 1),
 ('medico1@saudeconecta.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqBuBjZxJmGHV0F7.VlQJvJGJzHGO', 2, 1),
 ('medico2@saudeconecta.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqBuBjZxJmGHV0F7.VlQJvJGJzHGO', 2, 1),
 ('medico3@saudeconecta.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqBuBjZxJmGHV0F7.VlQJvJGJzHGO', 2, 1),
-('medico4@saudeconecta.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqBuBjZxJmGHV0F7.VlQJvJGJzHGO', 2, 1),
-('medico5@saudeconecta.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqBuBjZxJmGHV0F7.VlQJvJGJzHGO', 2, 1),
-('medico6@saudeconecta.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqBuBjZxJmGHV0F7.VlQJvJGJzHGO', 2, 1),
-('medico7@saudeconecta.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqBuBjZxJmGHV0F7.VlQJvJGJzHGO', 2, 1),
-('medico8@saudeconecta.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqBuBjZxJmGHV0F7.VlQJvJGJzHGO', 2, 1),
-('medico9@saudeconecta.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqBuBjZxJmGHV0F7.VlQJvJGJzHGO', 2, 1),
-('medico10@saudeconecta.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqBuBjZxJmGHV0F7.VlQJvJGJzHGO', 2, 1),
-('medico11@saudeconecta.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqBuBjZxJmGHV0F7.VlQJvJGJzHGO', 2, 1),
-('medico12@saudeconecta.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqBuBjZxJmGHV0F7.VlQJvJGJzHGO', 2, 1),
-('medico13@saudeconecta.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqBuBjZxJmGHV0F7.VlQJvJGJzHGO', 2, 1),
-('medico14@saudeconecta.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqBuBjZxJmGHV0F7.VlQJvJGJzHGO', 2, 1);
+('secretaria1@saudeconecta.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqBuBjZxJmGHV0F7.VlQJvJGJzHGO', 3, 1);
 
 -- ==========================================
 -- 15 ENDERECOS
@@ -47,24 +44,14 @@ INSERT INTO endereco (EndNacionalidade, EndUF, EndMunicipio, EndBairro, EndCep, 
 ('Brasileira', 'ES', 'Vitória', 'Praia do Canto', '29055-500', 'Rua Aleixo Netto', 1500, '');
 
 -- ==========================================
--- 15 MEDICOS
+-- 5 MEDICOS
 -- ==========================================
 INSERT INTO medico (MedNome, MedSexo, MedDataNacimento, MedCrm, MedCpf, MedRg, MedEmail, MedTelefone, MedEspecialidade, MedFormacoes, MedEmpresa, MedGraduacao, Usuario, Endereco, MedTempoDeConsulta) VALUES
-('Dr. Carlos Alberto Silva', 'Masculino', '1975-03-15', 'SP-123456', '111.222.333-44', '12.345.678-9', 'medico1@saudeconecta.com', '(11) 99999-0001', 'Cardiologia', 'USP', 'Hospital São Paulo', 'Medicina', 2, 1, '30'),
-('Dra. Maria Fernanda Costa', 'Feminino', '1980-07-22', 'SP-234567', '222.333.444-55', '23.456.789-0', 'medico2@saudeconecta.com', '(11) 99999-0002', 'Dermatologia', 'UNICAMP', 'Clínica Derma', 'Medicina', 3, 2, '20'),
-('Dr. João Pedro Santos', 'Masculino', '1978-11-08', 'RJ-345678', '333.444.555-66', '34.567.890-1', 'medico3@saudeconecta.com', '(21) 99999-0003', 'Ortopedia', 'UFRJ', 'Hospital Ortoped', 'Medicina', 4, 3, '40'),
-('Dra. Ana Paula Oliveira', 'Feminino', '1982-05-30', 'MG-456789', '444.555.666-77', '45.678.901-2', 'medico4@saudeconecta.com', '(31) 99999-0004', 'Pediatria', 'UFMG', 'Hospital Infantil', 'Medicina', 5, 4, '25'),
-('Dr. Roberto Mendes', 'Masculino', '1970-09-12', 'RS-567890', '555.666.777-88', '56.789.012-3', 'medico5@saudeconecta.com', '(51) 99999-0005', 'Neurologia', 'UFRGS', 'Clínica Neuro', 'Medicina', 6, 5, '45'),
-('Dra. Juliana Ferreira', 'Feminino', '1985-01-25', 'PR-678901', '666.777.888-99', '67.890.123-4', 'medico6@saudeconecta.com', '(41) 99999-0006', 'Ginecologia', 'UFPR', 'Clínica da Mulher', 'Medicina', 7, 6, '30'),
-('Dr. Fernando Lima', 'Masculino', '1973-06-18', 'SC-789012', '777.888.999-00', '78.901.234-5', 'medico7@saudeconecta.com', '(48) 99999-0007', 'Urologia', 'UFSC', 'Hospital Urológico', 'Medicina', 8, 7, '35'),
-('Dra. Patrícia Rocha', 'Feminino', '1988-12-03', 'BA-890123', '888.999.000-11', '89.012.345-6', 'medico8@saudeconecta.com', '(71) 99999-0008', 'Oftalmologia', 'UFBA', 'Clínica Visão', 'Medicina', 9, 8, '20'),
-('Dr. Marcos Almeida', 'Masculino', '1976-04-27', 'PE-901234', '999.000.111-22', '90.123.456-7', 'medico9@saudeconecta.com', '(81) 99999-0009', 'Psiquiatria', 'UFPE', 'Centro Saúde Mental', 'Medicina', 10, 9, '50'),
-('Dra. Camila Souza', 'Feminino', '1990-08-14', 'CE-012345', '000.111.222-33', '01.234.567-8', 'medico10@saudeconecta.com', '(85) 99999-0010', 'Endocrinologia', 'UFC', 'Hospital Endócrino', 'Medicina', 11, 10, '30'),
-('Dr. Ricardo Pereira', 'Masculino', '1979-02-19', 'GO-112233', '112.233.445-56', '11.223.344-5', 'medico11@saudeconecta.com', '(62) 99999-0011', 'Gastroenterologia', 'UFG', 'Clínica Gastro', 'Medicina', 12, 11, '35'),
-('Dra. Beatriz Martins', 'Feminino', '1983-10-05', 'DF-223344', '223.344.556-67', '22.334.455-6', 'medico12@saudeconecta.com', '(61) 99999-0012', 'Pneumologia', 'UnB', 'Hospital Pulmonar', 'Medicina', 13, 12, '40'),
-('Dr. André Barbosa', 'Masculino', '1977-07-11', 'AM-334455', '334.455.667-78', '33.445.566-7', 'medico13@saudeconecta.com', '(92) 99999-0013', 'Reumatologia', 'UFAM', 'Clínica Reuma', 'Medicina', 14, 13, '30'),
-('Dra. Luciana Dias', 'Feminino', '1986-03-28', 'PA-445566', '445.566.778-89', '44.556.677-8', 'medico14@saudeconecta.com', '(91) 99999-0014', 'Oncologia', 'UFPA', 'Hospital Oncológico', 'Medicina', 15, 14, '45'),
-('Dr. Paulo Henrique', 'Masculino', '1971-12-09', 'ES-556677', '556.677.889-90', '55.667.788-9', 'medico15@email.com', '(27) 99999-0015', 'Infectologia', 'UFES', 'Hospital Tropical', 'Medicina', NULL, 15, '35');
+('Dr. Carlos Alberto Silva', 'Masculino', '1975-03-15', 'SP-123456', '111.222.333-44', '12.345.678-9', 'medico1@saudeconecta.com', '(11) 99999-0001', 'Cardiologia', 'USP', 'Hospital Sao Paulo', 'Medicina', 2, 1, '30'),
+('Dra. Maria Fernanda Costa', 'Feminino', '1980-07-22', 'SP-234567', '222.333.444-55', '23.456.789-0', 'medico2@saudeconecta.com', '(11) 99999-0002', 'Dermatologia', 'UNICAMP', 'Clinica Derma', 'Medicina', 3, 2, '20'),
+('Dr. Joao Pedro Santos', 'Masculino', '1978-11-08', 'RJ-345678', '333.444.555-66', '34.567.890-1', 'medico3@saudeconecta.com', '(21) 99999-0003', 'Ortopedia', 'UFRJ', 'Hospital Ortoped', 'Medicina', 4, 3, '40'),
+('Dra. Ana Paula Oliveira', 'Feminino', '1982-05-30', 'MG-456789', '444.555.666-77', '45.678.901-2', 'medico4@saudeconecta.com', '(31) 99999-0004', 'Pediatria', 'UFMG', 'Hospital Infantil', 'Medicina', NULL, 4, '25'),
+('Dr. Roberto Mendes', 'Masculino', '1970-09-12', 'RS-567890', '555.666.777-88', '56.789.012-3', 'medico5@saudeconecta.com', '(51) 99999-0005', 'Neurologia', 'UFRGS', 'Clinica Neuro', 'Medicina', NULL, 5, '45');
 
 -- ==========================================
 -- 15 PACIENTES
@@ -87,73 +74,74 @@ INSERT INTO paciente (PaciNome, PaciSexo, PaciDataNacimento, PaciCpf, PaciRg, Pa
 ('Paulo Henrique', 'Masculino', '1972-11-22', '555.666.777-44', '55.666.777-4', 'paulo.henrique@email.com', '(27) 98888-0015', 15, 'ATIVO');
 
 -- ==========================================
--- 15 ADMINISTRADORES
+-- 5 ADMINISTRADORES
 -- ==========================================
 INSERT INTO administrador (AdmNome, AdmStatus, AdmDataCriacao, AdmEmail, AdmCodigoAtorizacao, AdmUsuario) VALUES
 ('Administrador Master', 1, '2024-01-01', 'admin@saudeconecta.com', 'ADM001', 1),
-('Ana Secretária', 1, '2024-01-15', 'ana.secretaria@saudeconecta.com', 'ADM002', NULL),
+('Ana Gestora', 1, '2024-01-15', 'ana.gestora@saudeconecta.com', 'ADM002', NULL),
 ('Carlos Gestor', 1, '2024-02-01', 'carlos.gestor@saudeconecta.com', 'ADM003', NULL),
 ('Maria Coordenadora', 1, '2024-02-15', 'maria.coord@saudeconecta.com', 'ADM004', NULL),
-('João Supervisor', 1, '2024-03-01', 'joao.super@saudeconecta.com', 'ADM005', NULL),
-('Fernanda Atendente', 1, '2024-03-15', 'fernanda.atend@saudeconecta.com', 'ADM006', NULL),
-('Roberto Financeiro', 1, '2024-04-01', 'roberto.fin@saudeconecta.com', 'ADM007', NULL),
-('Patrícia RH', 1, '2024-04-15', 'patricia.rh@saudeconecta.com', 'ADM008', NULL),
-('Marcos TI', 1, '2024-05-01', 'marcos.ti@saudeconecta.com', 'ADM009', NULL),
-('Camila Recepção', 1, '2024-05-15', 'camila.recepcao@saudeconecta.com', 'ADM010', NULL),
-('Ricardo Operacional', 1, '2024-06-01', 'ricardo.op@saudeconecta.com', 'ADM011', NULL),
-('Beatriz Qualidade', 1, '2024-06-15', 'beatriz.qual@saudeconecta.com', 'ADM012', NULL),
-('André Logística', 1, '2024-07-01', 'andre.log@saudeconecta.com', 'ADM013', NULL),
-('Luciana Compras', 1, '2024-07-15', 'luciana.compras@saudeconecta.com', 'ADM014', NULL),
-('Paulo Diretor', 1, '2024-08-01', 'paulo.diretor@saudeconecta.com', 'ADM015', NULL);
+('Joao Supervisor', 1, '2024-03-01', 'joao.super@saudeconecta.com', 'ADM005', NULL);
 
 -- ==========================================
--- 15 CONSULTAS
+-- 5 SECRETARIAS
+-- ==========================================
+INSERT INTO secretaria (SecreNome, SecreStatus, SecreDataCriacao, SecreEmail, SecreCodigoAtorizacao, SecreUsuario) VALUES
+('Carla Secretaria', 1, '2024-01-10', 'secretaria1@saudeconecta.com', 'SEC001', 5),
+('Mariana Atendimento', 1, '2024-01-20', 'mariana.atend@saudeconecta.com', 'SEC002', NULL),
+('Priscila Recepcao', 1, '2024-02-05', 'priscila.recepcao@saudeconecta.com', 'SEC003', NULL),
+('Debora Agendamento', 1, '2024-02-18', 'debora.agenda@saudeconecta.com', 'SEC004', NULL),
+('Renata Cadastro', 1, '2024-03-01', 'renata.cadastro@saudeconecta.com', 'SEC005', NULL);
+
+-- ==========================================
+-- 15 CONSULTAS (medicos 1-5 e pacientes 1-15 podem repetir)
 -- ==========================================
 INSERT INTO consulta (ConMedico, ConPaciente, ConDia_semana, ConHorario, ConData, ConObservacoes, ConDataCriacao, ConFormaPagamento, ConStatus, ConAdm) VALUES
-(1, 1, 'Segunda-feira', '08:00', '2025-01-06', 'Consulta de rotina cardiológica', '2024-12-20', 1, 1, 1),
-(2, 2, 'Segunda-feira', '09:00', '2025-01-06', 'Avaliação dermatológica', '2024-12-20', 2, 1, 1),
-(3, 3, 'Terça-feira', '10:00', '2025-01-07', 'Dor no joelho direito', '2024-12-21', 1, 1, 2),
-(4, 4, 'Terça-feira', '11:00', '2025-01-07', 'Consulta pediátrica de acompanhamento', '2024-12-21', 3, 1, 2),
-(5, 5, 'Quarta-feira', '08:30', '2025-01-08', 'Avaliação neurológica', '2024-12-22', 1, 1, 3),
-(6, 6, 'Quarta-feira', '09:30', '2025-01-08', 'Exame ginecológico de rotina', '2024-12-22', 2, 1, 3),
-(7, 7, 'Quinta-feira', '10:30', '2025-01-09', 'Consulta urológica', '2024-12-23', 1, 1, 4),
-(8, 8, 'Quinta-feira', '11:30', '2025-01-09', 'Exame oftalmológico', '2024-12-23', 3, 1, 4),
-(9, 9, 'Sexta-feira', '08:00', '2025-01-10', 'Acompanhamento psiquiátrico', '2024-12-24', 1, 1, 5),
-(10, 10, 'Sexta-feira', '09:00', '2025-01-10', 'Avaliação endocrinológica', '2024-12-24', 2, 1, 5),
-(11, 11, 'Segunda-feira', '10:00', '2025-01-13', 'Consulta gastroenterológica', '2024-12-25', 1, 2, 6),
-(12, 12, 'Segunda-feira', '11:00', '2025-01-13', 'Avaliação pulmonar', '2024-12-25', 3, 2, 6),
-(13, 13, 'Terça-feira', '08:30', '2025-01-14', 'Consulta reumatológica', '2024-12-26', 1, 2, 7),
-(14, 14, 'Terça-feira', '09:30', '2025-01-14', 'Acompanhamento oncológico', '2024-12-26', 2, 2, 7),
-(15, 15, 'Quarta-feira', '10:30', '2025-01-15', 'Avaliação infectológica', '2024-12-27', 1, 2, 8);
+(1, 1, 'Segunda-feira', '08:00', '2024-12-02', 'Consulta de rotina cardiologica', '2024-11-20', 1, 'REALIZADA', 1),
+(2, 2, 'Segunda-feira', '09:00', '2024-12-02', 'Avaliacao dermatologica', '2024-11-20', 2, 'REALIZADA', 1),
+(3, 3, 'Terca-feira', '10:00', '2024-12-03', 'Dor no joelho', '2024-11-21', 1, 'REALIZADA', 2),
+(4, 4, 'Terca-feira', '11:00', '2024-12-03', 'Consulta pediatrica', '2024-11-21', 3, 'REALIZADA', 2),
+(5, 5, 'Quarta-feira', '08:30', '2024-12-04', 'Avaliacao neurologica', '2024-11-22', 1, 'CANCELADA', 3),
+(1, 6, 'Quarta-feira', '09:30', '2024-12-04', 'Retorno cardiologia', '2024-11-22', 2, 'REALIZADA', 3),
+(2, 7, 'Quinta-feira', '10:30', '2024-12-05', 'Manchas na pele', '2024-11-23', 1, 'REALIZADA', 4),
+(3, 8, 'Quinta-feira', '11:30', '2024-12-05', 'Fratura no braco', '2024-11-23', 3, 'REALIZADA', 4),
+(4, 9, 'Sexta-feira', '08:00', '2024-12-06', 'Vacinacao infantil', '2024-11-24', 1, 'AGENDADA', 5),
+(5, 10, 'Sexta-feira', '09:00', '2024-12-06', 'Cefaleia cronica', '2024-11-24', 2, 'REALIZADA', 5),
+(1, 11, 'Segunda-feira', '10:00', '2024-12-09', 'Check-up cardiaco', '2024-11-25', 1, 'REALIZADA', 1),
+(2, 12, 'Segunda-feira', '11:00', '2024-12-09', 'Alergia cutanea', '2024-11-25', 3, 'REALIZADA', 1),
+(3, 13, 'Terca-feira', '08:30', '2024-12-10', 'Lesao esportiva', '2024-11-26', 1, 'FALTOU', 2),
+(4, 14, 'Terca-feira', '09:30', '2024-12-10', 'Febre persistente', '2024-11-26', 2, 'REALIZADA', 2),
+(5, 15, 'Quarta-feira', '10:30', '2024-12-11', 'Enxaqueca', '2024-11-26', 1, 'REALIZADA', 3);
 
 -- ==========================================
--- 15 CONSULTA STATUS (Histórico)
+-- 15 PRONTUARIOS
 -- ==========================================
-INSERT INTO consultastatus (ConSttMedico, ConSttPaciente, ConSttDia_semana, ConSttHorario, ConSttData, ConSttObservacao, ConSttDataCriacao, ConSttFormaPagamento, ConSttStatus, ConSttAdm) VALUES
-(1, 1, 'Segunda-feira', '08:00', '2024-12-02', 'Consulta realizada com sucesso', '2024-11-20', 1, 3, 1),
-(2, 2, 'Segunda-feira', '09:00', '2024-12-02', 'Paciente não compareceu', '2024-11-20', 2, 4, 1),
-(3, 3, 'Terça-feira', '10:00', '2024-12-03', 'Consulta realizada', '2024-11-21', 1, 3, 2),
-(4, 4, 'Terça-feira', '11:00', '2024-12-03', 'Consulta realizada', '2024-11-21', 3, 3, 2),
-(5, 5, 'Quarta-feira', '08:30', '2024-12-04', 'Consulta cancelada pelo paciente', '2024-11-22', 1, 5, 3),
-(6, 6, 'Quarta-feira', '09:30', '2024-12-04', 'Consulta realizada', '2024-11-22', 2, 3, 3),
-(7, 7, 'Quinta-feira', '10:30', '2024-12-05', 'Consulta realizada', '2024-11-23', 1, 3, 4),
-(8, 8, 'Quinta-feira', '11:30', '2024-12-05', 'Consulta realizada', '2024-11-23', 3, 3, 4),
-(9, 9, 'Sexta-feira', '08:00', '2024-12-06', 'Consulta remarcada', '2024-11-24', 1, 2, 5),
-(10, 10, 'Sexta-feira', '09:00', '2024-12-06', 'Consulta realizada', '2024-11-24', 2, 3, 5),
-(11, 11, 'Segunda-feira', '10:00', '2024-12-09', 'Consulta realizada', '2024-11-25', 1, 3, 6),
-(12, 12, 'Segunda-feira', '11:00', '2024-12-09', 'Consulta realizada', '2024-11-25', 3, 3, 6),
-(13, 13, 'Terça-feira', '08:30', '2024-12-10', 'Paciente não compareceu', '2024-11-26', 1, 4, 7),
-(14, 14, 'Terça-feira', '09:30', '2024-12-10', 'Consulta realizada', '2024-11-26', 2, 3, 7),
-(15, 15, 'Quarta-feira', '10:30', '2024-12-11', 'Consulta realizada', '2024-11-26', 1, 3, 8);
+INSERT INTO prontuario (prontPeso, prontAltura, prontTemperatura, prontDataNacimento, prontSexo, prontSaturacao, prontHemoglobina, prontPressao, prontFrequenciaRespiratoria, prontFrequenciaArterialSistolica, prontFrequenciaArterialDiastolica, prontObservacao, prontCondulta, prontAnamnese, prontQueixaPricipal, prontDiagnostico, prontModeloPrescricao, prontTituloPrescricao, prontDataPrescricao, prontPrescricao, prontDataFinalizado, prontCodigoMedico, consulta, prontModeloExame, prontTituloExame, prontDataExame, prontExame, prontTempoDuracao) VALUES
+('75.5', '1.75', '36.5', '1985-05-10', 'Masculino', '98%', '14.5', '120/80', '18', '120', '80', 'Paciente em bom estado geral', 'Retorno em 30 dias', 'Dores no peito ha 2 semanas', 'Dor toracica', 'Angina estavel', 'Modelo cardiologia', 'Prescricao Cardiologica', '2024-12-02', 'Losartana 50mg - 1x ao dia', '2024-12-02', 1, 1, 'Modelo exame cardiaco', 'Eletrocardiograma', '2024-12-02', 'ECG normal', '30'),
+('62.0', '1.65', '36.8', '1990-08-15', 'Feminino', '99%', '13.2', '110/70', '16', '110', '70', 'Manchas na pele', 'Retorno em 15 dias', 'Manchas nos bracos ha 1 mes', 'Lesoes cutaneas', 'Dermatite de contato', 'Modelo dermatologico', 'Prescricao Dermatologica', '2024-12-02', 'Hidrocortisona creme 1%', '2024-12-02', 2, 2, 'Modelo exame pele', 'Exame Dermatologico', '2024-12-02', 'Lesoes eritematosas', '20'),
+('85.0', '1.80', '36.6', '1978-03-22', 'Masculino', '97%', '15.0', '130/85', '17', '130', '85', 'Dor no joelho direito', 'Retorno em 45 dias', 'Dor no joelho ha 3 meses', 'Dor articular', 'Lesao meniscal', 'Modelo ortopedico', 'Prescricao Ortopedica', '2024-12-03', 'Ibuprofeno 600mg - 8/8h', '2024-12-03', 3, 3, 'Modelo ortopedico', 'Ressonancia Joelho', '2024-12-03', 'Lesao parcial menisco', '40'),
+('28.0', '1.20', '37.2', '2018-11-30', 'Feminino', '98%', '12.0', '90/60', '22', '90', '60', 'Crianca com febre', 'Retorno se febre persistir', 'Febre e coriza ha 2 dias', 'Febre e sintomas gripais', 'IVAS - Infeccao viral', 'Modelo pediatrico', 'Prescricao Pediatrica', '2024-12-03', 'Paracetamol gotas', '2024-12-03', 4, 4, 'Modelo pediatrico', 'Hemograma Completo', '2024-12-03', 'Leucocitose leve', '25'),
+('78.0', '1.72', '36.4', '1982-07-18', 'Masculino', '96%', '14.8', '140/90', '19', '140', '90', 'Cefaleia frequente', 'Retorno em 30 dias', 'Dores de cabeca ha 6 meses', 'Cefaleia cronica', 'Enxaqueca sem aura', 'Modelo neurologico', 'Prescricao Neurologica', '2024-12-04', 'Sumatriptano 50mg', '2024-12-04', 5, 5, 'Modelo neurologico', 'Tomografia Cranio', '2024-12-04', 'TC cranio sem alteracoes', '45'),
+('58.0', '1.62', '36.7', '1988-01-25', 'Feminino', '99%', '12.8', '115/75', '16', '115', '75', 'Consulta de rotina', 'Retorno anual', 'Exame preventivo anual', 'Consulta preventiva', 'Sem alteracoes', 'Modelo cardiologia', 'Prescricao Cardiologica', '2024-12-04', 'Acido folico 5mg', '2024-12-04', 1, 6, 'Modelo cardiaco', 'Check-up', '2024-12-04', 'Exames normais', '30'),
+('82.0', '1.78', '36.5', '1970-09-12', 'Masculino', '97%', '15.2', '135/88', '18', '135', '88', 'Queixas urinarias', 'Retorno em 30 dias', 'Dificuldade para urinar', 'Disuria e polaciuria', 'Hiperplasia prostatica', 'Modelo dermatologico', 'Prescricao Dermatologica', '2024-12-05', 'Tansulosina 0.4mg', '2024-12-05', 2, 7, 'Modelo dermatologico', 'Exame pele', '2024-12-05', 'Sem alteracoes', '35'),
+('55.0', '1.60', '36.6', '1992-04-08', 'Feminino', '99%', '13.0', '110/70', '15', '110', '70', 'Queixa visual', 'Retorno em 6 meses', 'Dificuldade para enxergar', 'Baixa acuidade visual', 'Miopia leve', 'Modelo ortopedico', 'Prescricao Ortopedica', '2024-12-05', 'Fisioterapia', '2024-12-05', 3, 8, 'Modelo ortopedico', 'Raio-X', '2024-12-05', 'Sem fraturas', '20'),
+('88.0', '1.75', '36.5', '1975-12-03', 'Masculino', '98%', '14.5', '125/82', '17', '125', '82', 'Paciente com ansiedade', 'Retorno em 30 dias', 'Ansiedade e insonia', 'Ansiedade e disturbio sono', 'TAG', 'Modelo pediatrico', 'Prescricao Pediatrica', '2024-12-06', 'Vitaminas', '2024-12-06', 4, 9, 'Modelo pediatrico', 'Hemograma', '2024-12-06', 'Normal', '50'),
+('65.0', '1.68', '36.8', '1998-06-20', 'Feminino', '98%', '12.5', '108/68', '16', '108', '68', 'Ganho de peso', 'Retorno em 60 dias', 'Ganho de peso e cansaco', 'Fadiga e ganho ponderal', 'Hipotireoidismo', 'Modelo neurologico', 'Prescricao Neurologica', '2024-12-06', 'Levotiroxina 50mcg', '2024-12-06', 5, 10, 'Modelo neurologico', 'Eletroencefalograma', '2024-12-06', 'Normal', '30'),
+('72.0', '1.70', '36.6', '1980-02-14', 'Masculino', '97%', '14.0', '122/78', '17', '122', '78', 'Dor abdominal', 'Retorno em 15 dias', 'Dor epigastrica ha 1 mes', 'Dor epigastrica', 'Gastrite', 'Modelo cardiologia', 'Prescricao Cardiologica', '2024-12-09', 'Omeprazol 20mg', '2024-12-09', 1, 11, 'Modelo cardiaco', 'ECG', '2024-12-09', 'Normal', '35'),
+('60.0', '1.58', '36.7', '1993-10-28', 'Feminino', '98%', '13.5', '118/72', '16', '118', '72', 'Tosse persistente', 'Retorno em 30 dias', 'Tosse ha 3 semanas', 'Tosse cronica', 'Bronquite', 'Modelo dermatologico', 'Prescricao Dermatologica', '2024-12-09', 'Ambroxol xarope', '2024-12-09', 2, 12, 'Modelo dermatologico', 'Exame pele', '2024-12-09', 'Normal', '40'),
+('80.0', '1.76', '36.5', '1977-05-05', 'Masculino', '96%', '14.2', '128/82', '18', '128', '82', 'Dor nas articulacoes', 'Retorno em 45 dias', 'Dores articulares ha 2 meses', 'Poliartralgia', 'Artrite reumatoide', 'Modelo ortopedico', 'Prescricao Ortopedica', '2024-12-10', 'Metotrexato 15mg', '2024-12-10', 3, 13, 'Modelo ortopedico', 'Raio-X', '2024-12-10', 'Desgaste articular', '30'),
+('68.0', '1.64', '36.8', '1986-08-17', 'Feminino', '97%', '11.8', '115/70', '17', '115', '70', 'Fadiga intensa', 'Retorno em 30 dias', 'Cansaco e fraqueza', 'Fadiga cronica', 'Anemia ferropriva', 'Modelo pediatrico', 'Prescricao Pediatrica', '2024-12-10', 'Sulfato ferroso 300mg', '2024-12-10', 4, 14, 'Modelo pediatrico', 'Hemograma', '2024-12-10', 'Hb 10.5 Ferritina baixa', '45'),
+('76.0', '1.74', '37.0', '1972-11-22', 'Masculino', '95%', '13.8', '130/85', '19', '130', '85', 'Febre recorrente', 'Retorno em 7 dias', 'Febre ha 5 dias', 'Febre de origem indeterminada', 'Infeccao bacteriana', 'Modelo neurologico', 'Prescricao Neurologica', '2024-12-11', 'Amoxicilina 500mg', '2024-12-11', 5, 15, 'Modelo neurologico', 'Hemograma e PCR', '2024-12-11', 'Leucocitose e PCR elevado', '35');
 
 -- ==========================================
 -- FIM DO SCRIPT
 -- ==========================================
 SELECT 'Dados inseridos com sucesso!' AS Resultado;
-SELECT 'Usuarios: 15' AS Tabela;
+SELECT 'Usuarios: 5' AS Tabela;
 SELECT 'Enderecos: 15' AS Tabela;
-SELECT 'Medicos: 15' AS Tabela;
+SELECT 'Medicos: 5' AS Tabela;
 SELECT 'Pacientes: 15' AS Tabela;
-SELECT 'Administradores: 15' AS Tabela;
+SELECT 'Administradores: 5' AS Tabela;
+SELECT 'Secretarias: 5' AS Tabela;
 SELECT 'Consultas: 15' AS Tabela;
-SELECT 'ConsultaStatus: 15' AS Tabela;
+SELECT 'Prontuarios: 15' AS Tabela;

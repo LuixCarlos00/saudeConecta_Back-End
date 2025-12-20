@@ -1,258 +1,287 @@
 package br.com.saudeConecta.endpoinst.consulta.Resource;
 
-import br.com.saudeConecta.domain.administrador.Administrador;
 import br.com.saudeConecta.domain.consulta.Consulta;
-import br.com.saudeConecta.domain.medico.Medico;
-import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.endpoinst.consulta.DTO.DadosCadastraConsulta;
 import br.com.saudeConecta.endpoinst.consulta.DTO.DadosConsultaView;
 import br.com.saudeConecta.endpoinst.consulta.DTO.DadosSeendToNewMenssage;
 import br.com.saudeConecta.endpoinst.consulta.Service.ConsultaService;
-import br.com.saudeConecta.infrastructure.persistence.repository.AdministradorRepository;
-import br.com.saudeConecta.infrastructure.persistence.repository.MedicoRepository;
-import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
-import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
 import jakarta.mail.MessagingException;
-import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.util.UriComponentsBuilder;
 
-import java.net.URI;
 import java.util.List;
-import java.util.Optional;
 
-@RequestMapping(value = "/consulta")
 @RestController
+@RequestMapping("/consulta")
 @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+@RequiredArgsConstructor
 public class ConsultaResource {
 
-    @Autowired
-    private ConsultaService service;
+    private final ConsultaService service;
 
-    @Autowired
-    private MedicoRepository medicoRepository;
-
-    @Autowired
-    private PacienteRepository pacienteRepository;
-
-    @Autowired
-    private AdministradorRepository administradorRepository;
-
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-
-    @GetMapping(value = "/buscarId/{id}")
-    @Transactional
-    public ResponseEntity<DadosConsultaView> buscarPorId(@NotNull @Valid @PathVariable("id") Long Id) {
-        Optional<Consulta> consulta = service.buscarConsultaPorId(Id);
-
-        return ResponseEntity.status(HttpStatus.OK).body(new DadosConsultaView((consulta.get())));
+    @GetMapping("/{id}")
+    public ResponseEntity<DadosConsultaView> buscarPorId(@PathVariable Long id) {
+        return service.buscarConsultaPorId(id)
+                .map(consulta -> ResponseEntity.ok(new DadosConsultaView(consulta)))
+                .orElse(ResponseEntity.notFound().build());
     }
 
-
-    @GetMapping(value = "/consultaData={data}&horario={horario}&medico={medico}")
-    @Transactional
-    public Boolean verificarSeExistemConsultasMarcadas(@NotNull @Valid @PathVariable("data") String data,
-                                                       @PathVariable("horario") String horario,
-                                                       @PathVariable("medico") Long medico) {
-        return service.verificarDisponibilidadeHorario(data, horario, medico);
+    @GetMapping("/verificar-disponibilidade/data={data}&horario={horario}&medico={medicoId}")
+    public ResponseEntity<Boolean> verificarDisponibilidadeHorario(
+            @PathVariable String data,
+            @PathVariable String horario,
+            @PathVariable Long medicoId) {
+        Boolean disponivel = service.verificarDisponibilidadeHorario(data, horario, medicoId);
+        return ResponseEntity.ok(disponivel);
     }
 
-
-    @PostMapping("/post")
-    @Transactional
-    public ResponseEntity<DadosConsultaView> cadastrar(@NotNull @RequestBody @Valid DadosCadastraConsulta dados, @NotNull BindingResult result,
-                                                       UriComponentsBuilder uriBuilder) {
-        if (result.hasErrors()) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        Long idMedicos = dados.conMedico();
-        Long idPaciente = dados.conPaciente();
-        Long idAdm = dados.conAdm();
-
-
-        Optional<Medico> medicoOptional = medicoRepository.findById(idMedicos);
-        Optional<Paciente> pacienteOptional = pacienteRepository.findById(idPaciente);
-        Optional<Administrador> admOptional = administradorRepository.findByAdmUsuario_Id(idAdm);
-
-
-        if (medicoOptional.isEmpty() || pacienteOptional.isEmpty() || admOptional.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-
-        Administrador adm = admOptional.get();
-        Medico medico = medicoOptional.get();
-        Paciente paciente = pacienteOptional.get();
-
-        Consulta consulta = new Consulta(medico, paciente, adm, dados);
-
-        service.cadastrarConsulta(consulta);
-
-        URI uri = uriBuilder.path("/plano/{id}").buildAndExpand(consulta.getConCodigoConsulta()).toUri();
-
-        return ResponseEntity.created(uri).body(new DadosConsultaView(consulta));
-
+    @PostMapping
+    public ResponseEntity<DadosConsultaView> criarConsulta(@RequestBody @Valid DadosCadastraConsulta dados) {
+        DadosConsultaView consultaCriada = service.cadastrarConsulta(dados);
+        return ResponseEntity.status(HttpStatus.CREATED).body(consultaCriada);
     }
 
-
-    @GetMapping(value = "/Consultapagina")
-    public ResponseEntity<List<DadosConsultaView>> listarConsultas() {
-        List<Consulta> list = service.listarTodasConsultas();
-        List <DadosConsultaView> Dados = list.stream().map(DadosConsultaView::new).toList();
-        return ResponseEntity.ok().body(Dados);
-     }
-
- 
-
-    @GetMapping(value = "/listatodasConsulta")
-    public List<Consulta> listarTodasConsultas() {
-        return service.buscarTodasConsultas();
+    @GetMapping
+    public ResponseEntity<List<DadosConsultaView>> listarTodasConsultas() {
+        List<Consulta> consultas = service.listarTodasConsultas();
+        List<DadosConsultaView> resultado = consultas.stream().map(DadosConsultaView::new).toList();
+        return ResponseEntity.ok(resultado);
     }
 
-
- 
-
-
-
-    @GetMapping(value = "/BuscandoTodasConsultasEmIntervaloDeDatas/dataInicial={dataInicial}&dataFinal={dataFinal}")
-    public List<Consulta> buscarConsultasPorIntervalo(@NotNull @PathVariable("dataInicial") String dataInicial,
-                                                                   @NotNull @PathVariable("dataFinal") String dataFinal) {
-        return service.buscarConsultasPorIntervalo(dataInicial, dataFinal);
+    @GetMapping("/BuscandoTodasConsultasEmIntervaloDeDatas/dataInicial={dataInicial}&dataFinal={dataFinal}")
+    public ResponseEntity<List<Consulta>> buscarConsultasPorIntervalo(
+            @PathVariable String dataInicial,
+            @PathVariable String dataFinal) {
+        return ResponseEntity.ok(service.buscarConsultasPorIntervalo(dataInicial, dataFinal));
     }
 
-
-    @GetMapping(value = "/BuscandoTodasConsultasEmIntervaloDeDatasComEspecialidade/dataInicial={dataInicial}&dataFinal={dataFinal}&especialidades={especialidade}")
-    public List<Consulta> buscarConsultasPorIntervaloEEspecialidade(@NotNull @PathVariable("dataInicial") String dataInicial,
-                                                                                   @NotNull @PathVariable("dataFinal") String dataFinal,
-                                                                                   @NotNull @PathVariable("especialidade") String especialidade) {
-        return service.buscarConsultasPorIntervaloEEspecialidade(dataInicial, dataFinal, especialidade);
+    @GetMapping("/BuscandoTodasConsultasEmIntervaloDeDatasComEspecialidade/dataInicial={dataInicial}&dataFinal={dataFinal}&especialidades={especialidade}")
+    public ResponseEntity<List<Consulta>> buscarConsultasPorIntervaloEEspecialidade(
+            @PathVariable String dataInicial,
+            @PathVariable String dataFinal,
+            @PathVariable String especialidade) {
+        return ResponseEntity.ok(service.buscarConsultasPorIntervaloEEspecialidade(dataInicial, dataFinal, especialidade));
     }
 
-
-    @GetMapping(value = "/BuscandoTodasConsultasPorMedico/{medicoID}")
-    public List<Consulta> buscarConsultasPorMedico(@NotNull @PathVariable("medicoID") Long medicoID) {
-        return service.buscarConsultasPorMedico(medicoID);
+    @GetMapping("/BuscandoTodasConsultasPorMedico/{medicoId}")
+    public ResponseEntity<List<Consulta>> buscarConsultasPorMedico(@PathVariable Long medicoId) {
+        return ResponseEntity.ok(service.buscarConsultasPorMedico(medicoId));
     }
 
-
-    @GetMapping(value = "/BuscandoTodasConsultasPorMedicoEmIntervaloDeDatas/medico={medCodigo}&dataInicial={DataInicioFormatada}&dataFinal={DataFimFormatada}")
-    public List<Consulta> buscarConsultasPorMedicoEIntervalo(@NotNull @PathVariable("medCodigo") Long medicoID,
-                                                                            @NotNull @PathVariable("DataInicioFormatada") String dataInicio,
-                                                                            @NotNull @PathVariable("DataFimFormatada") String dataFim) {
-        return service.buscarConsultasPorMedicoEIntervalo(medicoID, dataInicio, dataFim);
+    @GetMapping("/BuscandoTodasConsultasPorMedicoEmIntervaloDeDatas/medico={medCodigo}&dataInicial={DataInicioFormatada}&dataFinal={DataFimFormatada}")
+    public ResponseEntity<List<Consulta>> buscarConsultasPorMedicoEIntervalo(
+            @PathVariable Long medCodigo,
+            @PathVariable String DataInicioFormatada,
+            @PathVariable String DataFimFormatada) {
+        return ResponseEntity.ok(service.buscarConsultasPorMedicoEIntervalo(medCodigo, DataInicioFormatada, DataFimFormatada));
     }
 
-    @GetMapping(value = "/BuscandoTodasConsultasPorEspecialidade/especialidades={especialidades}")
-    public List<Consulta> buscarConsultasPorEspecialidade(@NotNull @PathVariable("especialidades") String especialidades) {
-        return service.buscarConsultasPorEspecialidade(especialidades);
+    @GetMapping("/BuscandoTodasConsultasPorEspecialidade/especialidades={especialidades}")
+    public ResponseEntity<List<Consulta>> buscarConsultasPorEspecialidade(@PathVariable String especialidades) {
+        return ResponseEntity.ok(service.buscarConsultasPorEspecialidade(especialidades));
     }
 
+    @GetMapping("/dia-atual")
+    public ResponseEntity<List<DadosConsultaView>> buscarConsultasDoDiaAtual() {
+        List<Consulta> consultas = service.buscarConsultasDoDiaAtual();
+        List<DadosConsultaView> resultado = consultas.stream().map(DadosConsultaView::new).toList();
+        return ResponseEntity.ok(resultado);
+    }
+
+    @GetMapping("/semana-atual")
+    public ResponseEntity<List<DadosConsultaView>> buscarConsultasDaSemanaAtual() {
+        List<Consulta> consultas = service.buscarConsultasDaSemanaAtual();
+        List<DadosConsultaView> resultado = consultas.stream().map(DadosConsultaView::new).toList();
+        return ResponseEntity.ok(resultado);
+    }
+
+    @GetMapping("/mes-atual")
+    public ResponseEntity<List<DadosConsultaView>> buscarConsultasDoMesAtual() {
+        List<Consulta> consultas = service.buscarConsultasDoMesAtual();
+        List<DadosConsultaView> resultado = consultas.stream().map(DadosConsultaView::new).toList();
+        return ResponseEntity.ok(resultado);
+    }
+
+    @GetMapping("/ano-atual")
+    public ResponseEntity<List<DadosConsultaView>> buscarConsultasDoAnoAtual() {
+        List<Consulta> consultas = service.buscarConsultasDoAnoAtual();
+        List<DadosConsultaView> resultado = consultas.stream().map(DadosConsultaView::new).toList();
+        return ResponseEntity.ok(resultado);
+    }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteConsultaById(@PathVariable("id") Long id) throws Exception {
+    public ResponseEntity<Void> excluirConsulta(@PathVariable Long id) {
         service.deletarPorId(id);
         return ResponseEntity.noContent().build();
     }
 
-
-    @PutMapping(value = "/editar/{id}")
-    @Transactional
-    public ResponseEntity<DadosConsultaView> editarConsulta(@NotNull @RequestBody @Valid DadosCadastraConsulta dados,
-                                                            @NotNull @PathVariable("id") Long id,
-                                                            @NotNull BindingResult result,
-                                                            UriComponentsBuilder uriBuilder) {
-
-        if (result.hasErrors()) {
-            return ResponseEntity.badRequest().build();
-        }
-
-
-        Long idMedicos = dados.conMedico();
-        Long idPaciente = dados.conPaciente();
-        Long idUsusario = dados.conAdm();
-
-
-        Optional<Medico> medicoOptional = medicoRepository.findById(idMedicos);
-        Optional<Paciente> pacienteOptional = pacienteRepository.findById(idPaciente);
-        Optional<Administrador> administradorOptional = administradorRepository.findByAdmUsuario_Id(idUsusario);
-
-        if (medicoOptional.isEmpty() || pacienteOptional.isEmpty() || administradorOptional.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-
-        Administrador ususario = administradorOptional.get();
-        Medico medico = medicoOptional.get();
-        Paciente paciente = pacienteOptional.get();
-
-        Consulta consulta = new Consulta(medico, paciente, ususario, dados);
-
-        service.editarConsulta(consulta, id);
-
-        URI uri = uriBuilder.path("/plano/{id}").buildAndExpand(consulta.getConCodigoConsulta()).toUri();
-
-        return ResponseEntity.created(uri).body(new DadosConsultaView(consulta));
-
+    @PutMapping("/{id}")
+    public ResponseEntity<DadosConsultaView> atualizarConsulta(
+            @PathVariable Long id,
+            @RequestBody @Valid DadosCadastraConsulta dados) {
+        DadosConsultaView consultaAtualizada = service.atualizarConsulta(id, dados);
+        return ResponseEntity.ok(consultaAtualizada);
     }
 
-
-    @PutMapping(value = "/concluido/{id}")
-    @Transactional
-    public ResponseEntity<DadosConsultaView> concluirConsulta(@NotNull @PathVariable("id") Long id) {
+    @PutMapping("/{id}/concluir")
+    public ResponseEntity<DadosConsultaView> concluirConsulta(@PathVariable Long id) {
         DadosConsultaView consulta = service.concluirConsulta(id);
-        return ResponseEntity.ok().body(new DadosConsultaView(consulta));
+        return ResponseEntity.ok(consulta);
     }
 
-
-    @GetMapping(value = "/VerificarHorariosDisponiveisReferentesAoMedicoEData/medico={medico}&data={data}")
-    public List<String> buscarHorariosOcupados(@Valid @NotNull @PathVariable("medico") Long medico,
-                                                                            @Valid @NotNull @PathVariable("data") String data) {
-
-        List<String> list = service.buscarHorariosOcupados(medico, data);
-        return list;
+    @GetMapping("/horarios-ocupados/medico={medicoId}&data={data}")
+    public ResponseEntity<List<String>> buscarHorariosOcupados(
+            @PathVariable Long medicoId,
+            @PathVariable String data) {
+        List<String> horarios = service.buscarHorariosOcupados(medicoId, data);
+        return ResponseEntity.ok(horarios);
     }
 
-
-    @PostMapping("/EnviarMensagem")
-    @Transactional
-    public ResponseEntity<Object> enviarMensagem(@NotNull @RequestBody @Valid DadosSeendToNewMenssage dados, @NotNull BindingResult result,
-                                                 UriComponentsBuilder uriBuilder) throws MessagingException {
-
-        if (result.hasErrors()) {
+    @PostMapping("/enviar-mensagem")
+    public ResponseEntity<Object> enviarMensagem(@RequestBody @Valid DadosSeendToNewMenssage dados) throws MessagingException {
+        String emailDestino = !dados.medEmail().isEmpty() ? dados.medEmail() : dados.paciEmail();
+        
+        if (emailDestino.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
-
-        Optional<Object> obj = Optional.empty();
-
-        String medicoEmail = dados.medEmail();
-        String medicoTelefone = dados.medTelefone();
-        String pacienteEmail = dados.paciEmail();
-        String pacienteTelefone = dados.paciTelefone();
-
-        if (medicoEmail.isEmpty() && medicoTelefone.isEmpty() && pacienteEmail.isEmpty() && pacienteTelefone.isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        } else if (!medicoEmail.isEmpty()) {
-            obj = service.enviarNotificacaoPorEmail(medicoEmail, dados.mensagem());
-        } else if (!pacienteEmail.isEmpty()) {
-            obj = service.enviarNotificacaoPorEmail(pacienteEmail, dados.mensagem());
-        }
-        return ResponseEntity.ok().body(obj);
-
+        
+        return service.enviarNotificacaoPorEmail(emailDestino, dados.mensagem())
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.badRequest().build());
     }
 
-    @GetMapping(value = "/BuscarTodaAgendaDeMedico/{IdMedico}")
-    public List<Consulta> buscarAgendaMedico(@NotNull @PathVariable("IdMedico") Long idUsuarioMedico) {
-        return service.buscarAgendaMedico(idUsuarioMedico);
-
+    @GetMapping("/agenda-medico/{idUsuarioMedico}")
+    public ResponseEntity<List<Consulta>> buscarAgendaMedico(@PathVariable Long idUsuarioMedico) {
+        List<Consulta> agenda = service.buscarAgendaMedico(idUsuarioMedico);
+        return ResponseEntity.ok(agenda);
     }
 
+    @GetMapping("/estatisticas/medico={medicoId}&dataInicial={dataInicial}&dataFinal={dataFinal}")
+    public ResponseEntity<List<Object[]>> contarConsultasPorStatusEMedico(
+            @PathVariable Long medicoId,
+            @PathVariable String dataInicial,
+            @PathVariable String dataFinal) {
+        List<Object[]> estatisticas = service.contarConsultasPorStatusEMedico(medicoId, dataInicial, dataFinal);
+        return ResponseEntity.ok(estatisticas);
+    }
+
+    @GetMapping("/agenda-todos-medicos")
+    public ResponseEntity<List<DadosConsultaView>> buscarAgendaTodosMedicos() {
+        List<Consulta> consultas = service.listarTodasConsultas();
+        List<DadosConsultaView> resultado = consultas.stream().map(DadosConsultaView::new).toList();
+        return ResponseEntity.ok(resultado);
+    }
+
+    @GetMapping("/historico-medico/{idUsuarioMedico}")
+    public ResponseEntity<List<DadosConsultaView>> buscarHistoricoAgendaMedico(@PathVariable Long idUsuarioMedico) {
+        List<Consulta> consultas = service.buscarHistoricoAgendaMedico(idUsuarioMedico);
+        List<DadosConsultaView> resultado = consultas.stream().map(DadosConsultaView::new).toList();
+        return ResponseEntity.ok(resultado);
+    }
+
+    // ==========================================
+    // CONSULTAS CONCLUÍDAS (FINALIZADAS)
+    // ==========================================
+
+    @GetMapping("/BuscandoTodasConsultasConcluidasEmIntervaloDeDatas/dataInicial={dataInicial}&dataFinal={dataFinal}")
+    public ResponseEntity<List<Consulta>> buscarConsultasConcluidasPorIntervalo(
+            @PathVariable String dataInicial,
+            @PathVariable String dataFinal) {
+        return ResponseEntity.ok(service.buscarConsultasConcluidasPorIntervalo(dataInicial, dataFinal));
+    }
+
+    @GetMapping("/BuscandoTodasConsultasConcluidasEmIntervaloDeDatasComEspecialidade/dataInicial={dataInicial}&dataFinal={dataFinal}&especialidades={especialidade}")
+    public ResponseEntity<List<Consulta>> buscarConsultasConcluidasPorIntervaloEEspecialidade(
+            @PathVariable String dataInicial,
+            @PathVariable String dataFinal,
+            @PathVariable String especialidade) {
+        return ResponseEntity.ok(service.buscarConsultasConcluidasPorIntervaloEEspecialidade(dataInicial, dataFinal, especialidade));
+    }
+
+    @GetMapping("/BuscandoTodasConsultasConcluidasPorMedico/{medicoId}")
+    public ResponseEntity<List<Consulta>> buscarConsultasConcluidasPorMedico(@PathVariable Long medicoId) {
+        return ResponseEntity.ok(service.buscarConsultasConcluidasPorMedico(medicoId));
+    }
+
+    @GetMapping("/BuscandoTodasConsultasConcluidasPorMedicoEmIntervaloDeDatas/medico={medCodigo}&dataInicial={DataInicioFormatada}&dataFinal={DataFimFormatada}")
+    public ResponseEntity<List<Consulta>> buscarConsultasConcluidasPorMedicoEIntervalo(
+            @PathVariable Long medCodigo,
+            @PathVariable String DataInicioFormatada,
+            @PathVariable String DataFimFormatada) {
+        return ResponseEntity.ok(service.buscarConsultasConcluidasPorMedicoEIntervalo(medCodigo, DataInicioFormatada, DataFimFormatada));
+    }
+
+    @GetMapping("/BuscandoTodasConsultasConcluidasPorEspecialidade/especialidades={especialidades}")
+    public ResponseEntity<List<Consulta>> buscarConsultasConcluidasPorEspecialidade(@PathVariable String especialidades) {
+        return ResponseEntity.ok(service.buscarConsultasConcluidasPorEspecialidade(especialidades));
+    }
+
+    @GetMapping("/BuscandoTodasConsultasConcluidasPorMedicoEEspecialidade/medico={medCodigo}&especialidades={especialidades}")
+    public ResponseEntity<List<Consulta>> buscarConsultasConcluidasPorMedicoEEspecialidade(
+            @PathVariable Long medCodigo,
+            @PathVariable String especialidades) {
+        return ResponseEntity.ok(service.buscarConsultasConcluidasPorMedicoEEspecialidade(medCodigo, especialidades));
+    }
+
+    @GetMapping("/BuscandoTodasConsultasConcluidasPorMedicoEspecialidadeEmIntervaloDeDatas/medico={medCodigo}&especialidades={especialidades}&dataInicial={dataInicial}&dataFinal={dataFinal}")
+    public ResponseEntity<List<Consulta>> buscarConsultasConcluidasPorMedicoEspecialidadeEmIntervalo(
+            @PathVariable Long medCodigo,
+            @PathVariable String especialidades,
+            @PathVariable String dataInicial,
+            @PathVariable String dataFinal) {
+        return ResponseEntity.ok(service.buscarConsultasConcluidasPorMedicoEspecialidadeEmIntervalo(medCodigo, especialidades, dataInicial, dataFinal));
+    }
+
+    // ==========================================
+    // ESTATÍSTICAS DO DASHBOARD
+    // ==========================================
+
+    @GetMapping("/estatisticas/consultas-hoje")
+    public ResponseEntity<Long> contarConsultasHoje() {
+        return ResponseEntity.ok(service.contarConsultasHoje());
+    }
+
+    @GetMapping("/estatisticas/consultas-hoje/usuario={usuarioId}")
+    public ResponseEntity<Long> contarConsultasHojePorUsuario(@PathVariable Long usuarioId) {
+        return ResponseEntity.ok(service.contarConsultasHojePorUsuario(usuarioId));
+    }
+
+    @GetMapping("/estatisticas/consultas-realizadas-hoje")
+    public ResponseEntity<Long> contarConsultasRealizadasHoje() {
+        return ResponseEntity.ok(service.contarConsultasRealizadasHoje());
+    }
+
+    @GetMapping("/estatisticas/consultas-realizadas-hoje/usuario={usuarioId}")
+    public ResponseEntity<Long> contarConsultasRealizadasHojePorUsuario(@PathVariable Long usuarioId) {
+        return ResponseEntity.ok(service.contarConsultasRealizadasHojePorUsuario(usuarioId));
+    }
+
+    @GetMapping("/estatisticas/consultas-agendadas-hoje")
+    public ResponseEntity<Long> contarConsultasAgendadasHoje() {
+        return ResponseEntity.ok(service.contarConsultasAgendadasHoje());
+    }
+
+    @GetMapping("/estatisticas/consultas-agendadas-hoje/usuario={usuarioId}")
+    public ResponseEntity<Long> contarConsultasAgendadasHojePorUsuario(@PathVariable Long usuarioId) {
+        return ResponseEntity.ok(service.contarConsultasAgendadasHojePorUsuario(usuarioId));
+    }
+
+    @GetMapping("/estatisticas/consultas-semana")
+    public ResponseEntity<Long> contarConsultasDaSemanaAtual() {
+        return ResponseEntity.ok(service.contarConsultasDaSemanaAtual());
+    }
+
+    @GetMapping("/estatisticas/consultas-semana/usuario={usuarioId}")
+    public ResponseEntity<Long> contarConsultasDaSemanaAtualPorUsuario(@PathVariable Long usuarioId) {
+        return ResponseEntity.ok(service.contarConsultasDaSemanaAtualPorUsuario(usuarioId));
+    }
+
+    @GetMapping("/estatisticas/medicos-ativos")
+    public ResponseEntity<Long> contarMedicosAtivos() {
+        return ResponseEntity.ok(service.contarMedicosAtivos());
+    }
 
 }

@@ -1,13 +1,13 @@
 package br.com.saudeConecta.endpoinst.prontuario.Resource;
 
-import br.com.saudeConecta.domain.consultastatus.ConsultaStatus;
+import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.medico.Medico;
 import br.com.saudeConecta.domain.prontuario.Prontuario;
 import br.com.saudeConecta.endpoinst.prontuario.DTO.DadosCadastraProntuario;
 import br.com.saudeConecta.endpoinst.prontuario.DTO.DadosProntuarioView;
 import br.com.saudeConecta.endpoinst.prontuario.DTO.HistoricoPaciente;
 import br.com.saudeConecta.endpoinst.prontuario.Service.ProntuarioService;
-import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaStatusRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.MedicoRepository;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -29,13 +29,13 @@ public class ProntuarioResource {
 
     private final ProntuarioService service;
     private final MedicoRepository medicoRepository;
-    private final ConsultaStatusRepository consultaStatusRepository;
+    private final ConsultaRepository ConsultaRepository;
 
     @Autowired
-    public ProntuarioResource(ProntuarioService service, MedicoRepository medicoRepository, ConsultaStatusRepository consultaStatusRepository) {
+    public ProntuarioResource(ProntuarioService service, MedicoRepository medicoRepository, ConsultaRepository ConsultaRepository) {
         this.service = service;
         this.medicoRepository = medicoRepository;
-        this.consultaStatusRepository = consultaStatusRepository;
+        this.ConsultaRepository = ConsultaRepository;
     }
 
 
@@ -54,7 +54,7 @@ public class ProntuarioResource {
 
 
         Optional<Medico> medicoOptional = medicoRepository.findById(Medico);
-        Optional<ConsultaStatus> consultaOptional = consultaStatusRepository.findById(Consulta);
+        Optional<Consulta> consultaOptional = ConsultaRepository.findById(Consulta);
 
         if (medicoOptional.isEmpty() || consultaOptional.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -93,6 +93,5 @@ public class ProntuarioResource {
         HistoricoPaciente historicoPaciente = service.BuscandoHistoricoDoPaciente(id);
         return ResponseEntity.ok(historicoPaciente);
     }
-
 
 }

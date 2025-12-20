@@ -11,7 +11,8 @@
     <include file="db/changelog/changes/004-create-table-paciente.xml"/>
     <include file="db/changelog/changes/005-create-table-administrador.xml"/>
     <include file="db/changelog/changes/006-create-table-consulta.xml"/>
-    <include file="db/changelog/changes/007-create-table-consultastatus.xml"/>
-    <include file="db/changelog/changes/008-create-table-codigoverificacao.xml"/>
+    <include file="db/changelog/changes/007-create-table-codigoverificacao.xml"/>
+    <include file="db/changelog/changes/008-create-table-secretaria.xml"/>
+    <include file="db/changelog/changes/09-create-table-prontuario.xml"/>
 
 </databaseChangeLog>

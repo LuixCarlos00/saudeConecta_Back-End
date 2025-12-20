@@ -15,7 +15,7 @@ public record DadosConsultaView(
         String conObservacoes,
         String conDataCriacao,
         Byte conFormaPagamento,
-        Byte conStatus,
+        String conStatus,
         Administrador conAdm
 
 ) {

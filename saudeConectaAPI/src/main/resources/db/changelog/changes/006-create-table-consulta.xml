@@ -34,7 +34,7 @@
             <column name="ConFormaPagamento" type="TINYINT">
                 <constraints nullable="true"/>
             </column>
-            <column name="ConStatus" type="TINYINT">
+            <column name="ConStatus" type="VARCHAR(20)">
                 <constraints nullable="true"/>
             </column>
             <column name="ConAdm" type="BIGINT">

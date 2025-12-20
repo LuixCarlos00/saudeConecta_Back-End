@@ -11,7 +11,7 @@ public record DadosCadastraConsulta(
         String conObservacoes,
         String conDadaCriacao,
         Byte conFormaPagamento,
-        Byte conStatus,
+        String conStatus,
         Long conAdm
 
 ) {

@@ -3,6 +3,7 @@ package br.com.saudeConecta.domain.medico;
 import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.endpoinst.medico.DTO.DadosCadastraMedico;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -64,10 +65,12 @@ public class Medico implements Serializable {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "Usuario")
+    @JsonIgnore
     private Usuario usuario;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "Endereco")
+    @JsonIgnore
     private Endereco endereco;
 
     @Column(name = "MedTempoDeConsulta", nullable = true)

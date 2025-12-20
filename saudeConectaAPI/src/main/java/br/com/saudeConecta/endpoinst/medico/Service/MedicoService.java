@@ -31,27 +31,22 @@ public class MedicoService {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    @Transactional
     public Optional<Medico> buscarMedicoPorId(Long id) {
         return repository.findByUsuario_Id(id);
     }
 
-
     public void cadastrar(@NotNull Medico medico) {
-
-
         repository.save(medico);
-
     }
 
     public Optional<Medico> buscarPorId(Long id) {
         return repository.findById(id);
     }
 
-
     public Page<DadosMedicoView> buscarPorPaginas(Pageable paginacao) {
         return repository.findAll(paginacao).map(DadosMedicoView::new);
     }
-
 
     @Transactional
     public void deletarPorId(Long id) throws Exception {
@@ -70,23 +65,17 @@ public class MedicoService {
         }
     }
 
-
     public List<Medico> buscarTodosMedicos() {
         return repository.findAll();
-
     }
-
 
     public void cadastrarMedico(Medico medico) {
-
         repository.save(medico);
     }
-
 
     public Optional<Medico> buscarMedicoPorEmail(String email) {
         return repository.findByMedEmail(email);
     }
-
 
     public List<Medico> buscarMedicoPorCRM(String crm) {
         return repository.findByMedCrmContainingIgnoreCase(crm);
@@ -100,14 +89,13 @@ public class MedicoService {
         return repository.findByMedEspecialidadeContainingIgnoreCase(especialidade);
     }
 
-
     public List<Medico> buscarMedicoPorNome(String nome) {
         return repository.findByMedNomeContainingIgnoreCase(nome);
     }
 
+    @Transactional
     public Optional<Medico> buscarMedicoPorIdUsuario(Long id) {
-
-        return repository.findByUsuario_Id(id);
+        return repository.buscarMedicoPorIdUsuario(id);
     }
 
     public void atualizarDadosMedico(Long id, AlterarDadosMedicos dados) {
@@ -152,7 +140,4 @@ public class MedicoService {
 
         enderecoRepository.save(endereco);
     }
-
-
-
 }

@@ -45,7 +45,6 @@ public class MedicoResource {
     @Transactional
     public ResponseEntity<DadosMedicoView> buscarMedicoPorId(@NotNull @Valid @PathVariable("id") Long Id) {
         Optional<Medico> medico = service.buscarMedicoPorId(Id);
-
         return ResponseEntity.status(HttpStatus.OK).body(new DadosMedicoView((medico.get())));
     }
 
@@ -147,7 +146,6 @@ public class MedicoResource {
     public List<Medico>buscarMedicoPorMedEspecialidade(@NotNull @Valid @PathVariable("especialidade") String especialidade) {
         return   service.buscarMedicoPorEspecialidade(especialidade);
     }
-
 
 
 

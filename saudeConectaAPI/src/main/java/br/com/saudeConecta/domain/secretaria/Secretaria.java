@@ -2,6 +2,7 @@ package br.com.saudeConecta.domain.secretaria;
 
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.endpoinst.secretaria.DTO.DadosCadastraSecretaria;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -15,7 +16,7 @@ import java.sql.Date;
 @AllArgsConstructor
 @Table(name = "secretaria")
 @EqualsAndHashCode(of = "SecreCodigo")
-
+@JsonIgnoreProperties({"hibernateLazyInitializer"})
 public class Secretaria implements Serializable {
     private static final long serialVersionUID = 1L;
 
