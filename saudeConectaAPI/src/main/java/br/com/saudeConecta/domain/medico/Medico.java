@@ -2,7 +2,7 @@ package br.com.saudeConecta.domain.medico;
 
 import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.endpoinst.medico.DTO.DadosCadastraMedico;
+import br.com.saudeConecta.presentation.dto.medico.CadastrarMedicoRequest;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
@@ -76,19 +76,20 @@ public class Medico implements Serializable {
     @Column(name = "MedTempoDeConsulta", nullable = true)
     private String medTempoDeConsulta;
 
-    public Medico(DadosCadastraMedico dados, Usuario usuario, Endereco endereco) {
-        this.medNome = dados.MedNome();
-        this.medSexo = dados.MedSexo();
-        this.medDataNacimento = dados.MedDataNacimento();
-        this.medCrm = dados.MedCrm();
-        this.medCpf = dados.MedCpf();
-        this.medRg = dados.MedRg();
-        this.medEmail = dados.MedEmail();
-        this.medTelefone = dados.MedTelefone();
-        this.medEspecialidade = dados.MedEspecialidade();
-        this.medFormacoes = dados.MedFormacoes();
-        this.medEmpresa = dados.MedEmpresa();
-        this.medGraduacao = dados.MedGraduacao();
+    public Medico(CadastrarMedicoRequest dados, Usuario usuario, Endereco endereco) {
+        this.medNome = dados.medNome();
+        this.medSexo = dados.medSexo();
+        this.medDataNacimento = dados.medDataNacimento() != null ? 
+            Date.valueOf(dados.medDataNacimento()) : null;
+        this.medCrm = dados.medCrm();
+        this.medCpf = dados.medCpf();
+        this.medRg = dados.medRg();
+        this.medEmail = dados.medEmail();
+        this.medTelefone = dados.medTelefone();
+        this.medEspecialidade = dados.medEspecialidade();
+        this.medFormacoes = dados.medFormacoes();
+        this.medEmpresa = dados.medEmpresa();
+        this.medGraduacao = dados.medGraduacao();
         this.usuario = usuario;
         this.endereco = endereco;
     }

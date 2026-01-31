@@ -2,7 +2,7 @@ package br.com.saudeConecta.domain.prontuario;
 
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.medico.Medico;
-import br.com.saudeConecta.endpoinst.prontuario.DTO.DadosCadastraProntuario;
+import br.com.saudeConecta.presentation.dto.prontuario.CadastrarProntuarioRequest;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -122,7 +122,7 @@ public class Prontuario implements Serializable {
 
 
 
-    public Prontuario(@NotNull DadosCadastraProntuario dados, Medico medico, Consulta consulta) {
+    public Prontuario(@NotNull CadastrarProntuarioRequest dados, Medico medico, Consulta consulta) {
         this.prontAltura = dados.prontAltura();
         this.prontPeso = dados.prontPeso();
         this.prontTemperatura = dados.prontTemperatura();

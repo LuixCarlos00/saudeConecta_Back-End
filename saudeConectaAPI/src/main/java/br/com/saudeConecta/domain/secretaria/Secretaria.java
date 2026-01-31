@@ -1,7 +1,8 @@
 package br.com.saudeConecta.domain.secretaria;
 
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.endpoinst.secretaria.DTO.DadosCadastraSecretaria;
+import br.com.saudeConecta.presentation.dto.secretaria.CadastrarSecretariaRequest;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -42,10 +43,11 @@ public class Secretaria implements Serializable {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "SecreUsuario")
+    @JsonIgnore
     private Usuario secreUsuario;
 
 
-    public Secretaria(DadosCadastraSecretaria dados, Usuario usuario) {
+    public Secretaria(CadastrarSecretariaRequest dados, Usuario usuario) {
         this.SecreNome = dados.SecreNome();
         this.SecreStatus = dados.SecreStatus();
         this.SecreDataCriacao = dados.SecreDataCriacao();

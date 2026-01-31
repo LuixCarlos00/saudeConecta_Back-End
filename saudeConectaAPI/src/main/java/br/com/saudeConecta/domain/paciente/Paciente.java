@@ -1,7 +1,7 @@
 package br.com.saudeConecta.domain.paciente;
 
 import br.com.saudeConecta.domain.endereco.Endereco;
-import br.com.saudeConecta.endpoinst.paciente.DTO.DadosCadastraPaciente;
+import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteRequest;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
@@ -55,15 +55,16 @@ public class Paciente implements Serializable {
     @Column(name = "PaciStatus", nullable = false)
     private String paciStatus;
 
-    public Paciente(DadosCadastraPaciente dados, Endereco endereco) {
-        this.paciNome = dados.PaciNome();
-        this.paciSexo = dados.PaciSexo();
-        this.paciDataNacimento = dados.PaciDataNacimento();
-        this.paciCpf = dados.PaciCpf();
-        this.paciRg = dados.PaciRg();
-        this.paciEmail = dados.PaciEmail();
-        this.paciTelefone = dados.PaciTelefone();
+    public Paciente(CadastrarPacienteRequest dados, Endereco endereco) {
+        this.paciNome = dados.paciNome();
+        this.paciSexo = dados.paciSexo();
+        this.paciDataNacimento = dados.paciDataNacimento() != null ? 
+            Date.valueOf(dados.paciDataNacimento()) : null;
+        this.paciCpf = dados.paciCpf();
+        this.paciRg = dados.paciRg();
+        this.paciEmail = dados.paciEmail();
+        this.paciTelefone = dados.paciTelefone();
         this.endereco = endereco;
-        this.paciStatus = dados.PaciStatus();
+        this.paciStatus = dados.paciStatus();
     }
 }

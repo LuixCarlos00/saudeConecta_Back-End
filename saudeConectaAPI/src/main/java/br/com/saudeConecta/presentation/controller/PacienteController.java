@@ -1,0 +1,148 @@
+package br.com.saudeConecta.presentation.controller;
+
+import br.com.saudeConecta.application.service.PacienteService;
+import br.com.saudeConecta.domain.endereco.Endereco;
+import br.com.saudeConecta.domain.paciente.Paciente;
+import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
+import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteRequest;
+import br.com.saudeConecta.presentation.dto.paciente.PacienteResponse;
+import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import java.net.URI;
+import java.util.List;
+
+@RestController
+@RequestMapping("/paciente")
+@RequiredArgsConstructor
+@Slf4j
+@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+public class PacienteController {
+
+    private final PacienteService pacienteService;
+    private final EnderecoRepository enderecoRepository;
+
+    @GetMapping("/buscarId/{id}")
+    @Transactional
+    public ResponseEntity<PacienteResponse> buscarPorId(@PathVariable Long id) {
+        log.debug("Buscando paciente por ID: {}", id);
+        return pacienteService.buscarPorId(id)
+                .map(paciente -> ResponseEntity.ok(new PacienteResponse(paciente)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/buscarEmail/{email}")
+    @Transactional
+    public ResponseEntity<PacienteResponse> buscarPorEmail(@PathVariable String email) {
+        log.debug("Buscando paciente por email: {}", email);
+        return pacienteService.buscarPorEmail(email)
+                .map(paciente -> ResponseEntity.ok(new PacienteResponse(paciente)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/buscarCpf/{cpf}")
+    @Transactional
+    public ResponseEntity<List<PacienteResponse>> buscarPorCpf(@PathVariable String cpf) {
+        log.debug("Buscando pacientes por CPF: {}", cpf);
+        List<PacienteResponse> pacientes = pacienteService.buscarPorCpf(cpf).stream()
+                .map(PacienteResponse::new)
+                .toList();
+        return ResponseEntity.ok(pacientes);
+    }
+
+    @GetMapping("/buscarRg/{rg}")
+    @Transactional
+    public ResponseEntity<List<PacienteResponse>> buscarPorRg(@PathVariable String rg) {
+        log.debug("Buscando pacientes por RG: {}", rg);
+        List<PacienteResponse> pacientes = pacienteService.buscarPorRg(rg).stream()
+                .map(PacienteResponse::new)
+                .toList();
+        return ResponseEntity.ok(pacientes);
+    }
+
+    @GetMapping("/buscarTelefone/{telefone}")
+    @Transactional
+    public ResponseEntity<List<PacienteResponse>> buscarPorTelefone(@PathVariable String telefone) {
+        log.debug("Buscando pacientes por telefone: {}", telefone);
+        List<PacienteResponse> pacientes = pacienteService.buscarPorTelefone(telefone).stream()
+                .map(PacienteResponse::new)
+                .toList();
+        return ResponseEntity.ok(pacientes);
+    }
+
+    @GetMapping("/buscarNome/{nome}")
+    @Transactional
+    public ResponseEntity<List<PacienteResponse>> buscarPorNome(@PathVariable String nome) {
+        log.debug("Buscando pacientes por nome: {}", nome);
+        List<PacienteResponse> pacientes = pacienteService.buscarPorNome(nome).stream()
+                .map(PacienteResponse::new)
+                .toList();
+        return ResponseEntity.ok(pacientes);
+    }
+
+    @GetMapping("/listarTodos")
+    @Transactional
+    public ResponseEntity<List<PacienteResponse>> buscarTodos() {
+        log.debug("Buscando todos os pacientes");
+        List<PacienteResponse> pacientes = pacienteService.buscarTodos().stream()
+                .map(PacienteResponse::new)
+                .toList();
+        return ResponseEntity.ok(pacientes);
+    }
+
+    @GetMapping("/pagina")
+    @Transactional
+    public ResponseEntity<Page<PacienteResponse>> buscarPorPaginas(
+            @PageableDefault(size = 12, sort = {"paciNome"}) Pageable paginacao) {
+        log.debug("Buscando pacientes com paginação");
+        Page<PacienteResponse> pacientes = pacienteService.buscarTodos(paginacao)
+                .map(PacienteResponse::new);
+        return ResponseEntity.ok(pacientes);
+    }
+
+    @PostMapping("/cadastrar")
+    @Transactional
+    public ResponseEntity<PacienteResponse> cadastrarPaciente(
+            @RequestBody @Valid CadastrarPacienteRequest dados,
+            UriComponentsBuilder uriBuilder) {
+        
+        log.debug("Cadastrando paciente: {}", dados.paciNome());
+        
+        var enderecoOptional = enderecoRepository.findById(dados.endereco());
+        if (enderecoOptional.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Endereco endereco = enderecoOptional.get();
+        Paciente paciente = new Paciente(dados, endereco);
+        
+        Paciente pacienteSalvo = pacienteService.cadastrar(paciente);
+
+        URI uri = uriBuilder.path("/paciente/buscarId/{id}")
+                .buildAndExpand(pacienteSalvo.getPaciCodigo())
+                .toUri();
+
+        return ResponseEntity.created(uri).body(new PacienteResponse(pacienteSalvo));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletePacienteById(@PathVariable Long id) {
+        log.debug("Deletando paciente por ID: {}", id);
+        try {
+            pacienteService.deletar(id);
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            log.error("Erro ao deletar paciente ID: {}", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+}

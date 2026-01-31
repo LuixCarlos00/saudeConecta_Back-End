@@ -3,7 +3,7 @@ package br.com.saudeConecta.domain.consulta;
 import br.com.saudeConecta.domain.administrador.Administrador;
 import br.com.saudeConecta.domain.medico.Medico;
 import br.com.saudeConecta.domain.paciente.Paciente;
-import br.com.saudeConecta.endpoinst.consulta.DTO.DadosCadastraConsulta;
+import br.com.saudeConecta.presentation.dto.consulta.CadastrarConsultaRequest;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
@@ -63,7 +63,7 @@ public class Consulta implements Serializable {
     @JsonIgnore
     private Administrador conAdm;
 
-    public Consulta(Medico medico, Paciente paciente, Administrador adm, DadosCadastraConsulta dados) {
+    public Consulta(Medico medico, Paciente paciente, Administrador adm, CadastrarConsultaRequest dados) {
         this.conMedico = medico;
         this.conPaciente = paciente;
         this.conAdm = adm;

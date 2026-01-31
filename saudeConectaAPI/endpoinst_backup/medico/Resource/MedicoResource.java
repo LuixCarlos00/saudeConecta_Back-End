@@ -147,6 +147,7 @@ public class MedicoResource {
         return   service.buscarMedicoPorEspecialidade(especialidade);
     }
 
+//  fazer comit , busca de usuarios para o admim nao aparece
 
 
     @GetMapping(value = "/buscarIdDeUsusario/{id}")
