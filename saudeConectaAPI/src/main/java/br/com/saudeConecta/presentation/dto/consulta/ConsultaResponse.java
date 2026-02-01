@@ -1,13 +1,12 @@
 package br.com.saudeConecta.presentation.dto.consulta;
 
+import br.com.saudeConecta.domain.administrador.Administrador;
 import br.com.saudeConecta.domain.consulta.Consulta;
+import br.com.saudeConecta.domain.medico.Medico;
+import br.com.saudeConecta.domain.paciente.Paciente;
 
 public record ConsultaResponse(
         Long conCodigoConsulta,
-        Long conMedicoId,
-        String conMedicoNome,
-        Long conPacienteId,
-        String conPacienteNome,
         String conDiaSemana,
         String conHorario,
         String conData,
@@ -15,15 +14,13 @@ public record ConsultaResponse(
         String conDataCriacao,
         Byte conFormaPagamento,
         String conStatus,
-        Long conAdmId
+        Medico medico,
+        Paciente paciente,
+        Administrador adm
 ) {
     public ConsultaResponse(Consulta consulta) {
         this(
                 consulta.getConCodigoConsulta(),
-                consulta.getConMedico() != null ? consulta.getConMedico().getMedCodigo() : null,
-                consulta.getConMedico() != null ? consulta.getConMedico().getMedNome() : null,
-                consulta.getConPaciente() != null ? consulta.getConPaciente().getPaciCodigo() : null,
-                consulta.getConPaciente() != null ? consulta.getConPaciente().getPaciNome() : null,
                 consulta.getConDiaSemana(),
                 consulta.getConHorario(),
                 consulta.getConData(),
@@ -31,7 +28,9 @@ public record ConsultaResponse(
                 consulta.getConDataCriacao(),
                 consulta.getConFormaPagamento(),
                 consulta.getConStatus(),
-                consulta.getConAdm() != null ? consulta.getConAdm().getAdmCodigo() : null
+                consulta.getConMedico(),
+                consulta.getConPaciente(),
+                consulta.getConAdm()
         );
     }
 }

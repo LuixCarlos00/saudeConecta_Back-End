@@ -149,7 +149,7 @@ public class ConsultaController {
     public ResponseEntity<ConsultaResponse> cadastrarConsulta(
             @RequestBody @Valid CadastrarConsultaRequest dados,
             UriComponentsBuilder uriBuilder) {
-        
+        //todo arruar a regra de negonio para nao cadastra aqui
         log.debug("Cadastrando consulta: {}", dados.conData());
         
         // Verificar se já existe consulta no mesmo horário
@@ -197,5 +197,199 @@ public class ConsultaController {
             log.error("Erro ao deletar consulta ID: {}", id, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    // ==========================================
+    // ENDPOINTS DE ESTATÍSTICAS
+    // ==========================================
+
+    @GetMapping("/estatisticas/consultas-agendadas-hoje")
+    public ResponseEntity<Long> contarConsultasAgendadasHoje() {
+        return ResponseEntity.ok(consultaService.contarConsultasAgendadasHoje());
+    }
+
+    @GetMapping("/estatisticas/consultas-hoje")
+    public ResponseEntity<Long> contarConsultasHoje() {
+        return ResponseEntity.ok(consultaService.contarConsultasHoje());
+    }
+
+    @GetMapping("/estatisticas/consultas-realizadas-hoje")
+    public ResponseEntity<Long> contarConsultasRealizadasHoje() {
+        return ResponseEntity.ok(consultaService.contarConsultasRealizadasHoje());
+    }
+
+    @GetMapping("/estatisticas/consultas-semana")
+    public ResponseEntity<Long> contarConsultasDaSemanaAtual() {
+        return ResponseEntity.ok(consultaService.contarConsultasDaSemanaAtual());
+    }
+
+    @GetMapping("/estatisticas/medicos-ativos")
+    public ResponseEntity<Long> contarMedicosAtivos() {
+        return ResponseEntity.ok(consultaService.contarMedicosAtivos());
+    }
+
+    // ==========================================
+    // ENDPOINTS DE BUSCA POR DATAS
+    // ==========================================
+
+    @GetMapping("/BuscandoTodasConsultasEmIntervaloDeDatas/dataInicial={dataInicial}&dataFinal={dataFinal}")
+    public ResponseEntity<List<Consulta>> buscarConsultasPorIntervalo(
+            @PathVariable String dataInicial,
+            @PathVariable String dataFinal) {
+        return ResponseEntity.ok(consultaService.buscarConsultasPorIntervalo(dataInicial, dataFinal));
+    }
+
+    @GetMapping("/BuscandoTodasConsultasConcluidasEmIntervaloDeDatas/dataInicial={dataInicial}&dataFinal={dataFinal}")
+    public ResponseEntity<List<Consulta>> buscarConsultasConcluidasPorIntervalo(
+            @PathVariable String dataInicial,
+            @PathVariable String dataFinal) {
+        return ResponseEntity.ok(consultaService.buscarConsultasConcluidasPorIntervalo(dataInicial, dataFinal));
+    }
+
+    // ==========================================
+    // ENDPOINTS ADICIONAIS (DO BACKUP)
+    // ==========================================
+
+    @GetMapping("/verificar-disponibilidade/data={data}&horario={horario}&medico={medicoId}")
+    public ResponseEntity<Boolean> verificarDisponibilidadeHorario(
+            @PathVariable String data,
+            @PathVariable String horario,
+            @PathVariable Long medicoId) {
+        Boolean disponivel = consultaService.verificarDisponibilidadeHorario(data, horario, medicoId);
+        return ResponseEntity.ok(disponivel);
+    }
+
+    @GetMapping("/dia-atual")
+    public ResponseEntity<List<ConsultaResponse>> buscarConsultasDoDiaAtual() {
+        List<Consulta> consultas = consultaService.buscarConsultasDoDiaAtual();
+        List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
+        return ResponseEntity.ok(resultado);
+    }
+
+    @GetMapping("/semana-atual")
+    public ResponseEntity<List<ConsultaResponse>> buscarConsultasDaSemanaAtual() {
+        List<Consulta> consultas = consultaService.buscarConsultasDaSemanaAtual();
+        List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
+        return ResponseEntity.ok(resultado);
+    }
+
+    @GetMapping("/mes-atual")
+    public ResponseEntity<List<ConsultaResponse>> buscarConsultasDoMesAtual() {
+        List<Consulta> consultas = consultaService.buscarConsultasDoMesAtual();
+        List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
+        return ResponseEntity.ok(resultado);
+    }
+
+    @GetMapping("/ano-atual")
+    public ResponseEntity<List<ConsultaResponse>> buscarConsultasDoAnoAtual() {
+        List<Consulta> consultas = consultaService.buscarConsultasDoAnoAtual();
+        List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
+        return ResponseEntity.ok(resultado);
+    }
+
+    @PutMapping("/{id}/concluir")
+    public ResponseEntity<ConsultaResponse> concluirConsulta(@PathVariable Long id) {
+        Consulta consulta = consultaService.concluirConsulta(id);
+        return ResponseEntity.ok(new ConsultaResponse(consulta));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ConsultaResponse> atualizarConsulta(
+            @PathVariable Long id,
+            @RequestBody @Valid CadastrarConsultaRequest dados) {
+        
+        // Criar objeto Consulta com os dados atualizados
+        Consulta consultaAtualizada = new Consulta();
+        consultaAtualizada.setConData(dados.conData());
+        consultaAtualizada.setConHorario(dados.conHorario());
+        consultaAtualizada.setConStatus(dados.conStatus());
+        
+        Consulta consulta = consultaService.atualizarConsulta(id, consultaAtualizada);
+        return ResponseEntity.ok(new ConsultaResponse(consulta));
+    }
+
+    @GetMapping("/horarios-ocupados/medico={medicoId}&data={data}")
+    public ResponseEntity<List<String>> buscarHorariosOcupados(
+            @PathVariable Long medicoId,
+            @PathVariable String data) {
+        List<String> horarios = consultaService.buscarHorariosOcupados(medicoId, data);
+        return ResponseEntity.ok(horarios);
+    }
+
+    @GetMapping("/agenda-medico/{idUsuarioMedico}")
+    public ResponseEntity<List<ConsultaResponse>> buscarAgendaMedico(@PathVariable Long idUsuarioMedico) {
+        List<Consulta> agenda = consultaService.buscarAgendaMedico(idUsuarioMedico);
+        List<ConsultaResponse> resultado = agenda.stream().map(ConsultaResponse::new).toList();
+        return ResponseEntity.ok(resultado);
+    }
+
+    @GetMapping("/agenda-todos-medicos")
+    public ResponseEntity<List<ConsultaResponse>> buscarAgendaTodosMedicos() {
+        List<Consulta> consultas = consultaService.buscarTodos();
+        List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
+        return ResponseEntity.ok(resultado);
+    }
+
+    @GetMapping("/historico-medico/{idUsuarioMedico}")
+    public ResponseEntity<List<ConsultaResponse>> buscarHistoricoAgendaMedico(@PathVariable Long idUsuarioMedico) {
+        List<Consulta> consultas = consultaService.buscarHistoricoAgendaMedico(idUsuarioMedico);
+        List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
+        return ResponseEntity.ok(resultado);
+    }
+
+    @GetMapping("/BuscandoTodasConsultasEmIntervaloDeDatasComEspecialidade/dataInicial={dataInicial}&dataFinal={dataFinal}&especialidades={especialidade}")
+    public ResponseEntity<List<ConsultaResponse>> buscarConsultasPorIntervaloEEspecialidade(
+            @PathVariable String dataInicial,
+            @PathVariable String dataFinal,
+            @PathVariable String especialidade) {
+        List<Consulta> consultas = consultaService.buscarEmIntervaloComEspecialidade(dataInicial, dataFinal, especialidade);
+        List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
+        return ResponseEntity.ok(resultado);
+    }
+
+    @GetMapping("/BuscandoTodasConsultasPorMedicoEmIntervaloDeDatas/medico={medCodigo}&dataInicial={DataInicioFormatada}&dataFinal={DataFimFormatada}")
+    public ResponseEntity<List<ConsultaResponse>> buscarConsultasPorMedicoEIntervalo(
+            @PathVariable Long medCodigo,
+            @PathVariable String DataInicioFormatada,
+            @PathVariable String DataFimFormatada) {
+        List<Consulta> consultas = consultaService.buscarPorMedicoEmIntervalo(medCodigo, DataInicioFormatada, DataFimFormatada);
+        List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
+        return ResponseEntity.ok(resultado);
+    }
+
+    @GetMapping("/BuscandoTodasConsultasConcluidasEmIntervaloDeDatasComEspecialidade/dataInicial={dataInicial}&dataFinal={dataFinal}&especialidades={especialidade}")
+    public ResponseEntity<List<ConsultaResponse>> buscarConsultasConcluidasPorIntervaloEEspecialidade(
+            @PathVariable String dataInicial,
+            @PathVariable String dataFinal,
+            @PathVariable String especialidade) {
+        List<Consulta> consultas = consultaService.buscarConcluidasEmIntervaloComEspecialidade(dataInicial, dataFinal, especialidade);
+        List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
+        return ResponseEntity.ok(resultado);
+    }
+
+    @GetMapping("/BuscandoTodasConsultasConcluidasPorMedicoEmIntervaloDeDatas/medico={medCodigo}&dataInicial={DataInicioFormatada}&dataFinal={DataFimFormatada}")
+    public ResponseEntity<List<ConsultaResponse>> buscarConsultasConcluidasPorMedicoEIntervalo(
+            @PathVariable Long medCodigo,
+            @PathVariable String DataInicioFormatada,
+            @PathVariable String DataFimFormatada) {
+        List<Consulta> consultas = consultaService.buscarConcluidasPorMedicoEmIntervalo(medCodigo, DataInicioFormatada, DataFimFormatada);
+        List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
+        return ResponseEntity.ok(resultado);
+    }
+
+    @GetMapping("/BuscandoTodasConsultasConcluidasPorEspecialidade/especialidades={especialidades}")
+    public ResponseEntity<List<ConsultaResponse>> buscarConsultasConcluidasPorEspecialidade(@PathVariable String especialidades) {
+        List<Consulta> consultas = consultaService.buscarConcluidasPorEspecialidade(especialidades);
+        List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
+        return ResponseEntity.ok(resultado);
+    }
+
+    @GetMapping("/estatisticas/medico={medicoId}&dataInicial={dataInicial}&dataFinal={dataFinal}")
+    public ResponseEntity<List<Object[]>> contarConsultasPorStatusEMedico(
+            @PathVariable Long medicoId,
+            @PathVariable String dataInicial,
+            @PathVariable String dataFinal) {
+        List<Object[]> estatisticas = consultaService.contarPorStatusEMedico(medicoId, dataInicial, dataFinal);
+        return ResponseEntity.ok(estatisticas);
     }
 }

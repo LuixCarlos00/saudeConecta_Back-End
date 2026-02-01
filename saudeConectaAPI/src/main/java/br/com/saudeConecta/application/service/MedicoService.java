@@ -2,7 +2,12 @@ package br.com.saudeConecta.application.service;
 
 import br.com.saudeConecta.application.port.in.medico.MedicoInputPort;
 import br.com.saudeConecta.application.port.out.medico.MedicoOutputPort;
+import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.medico.Medico;
+import br.com.saudeConecta.domain.usuario.Usuario;
+import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
+import br.com.saudeConecta.presentation.dto.medico.CadastrarMedicoRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -18,6 +23,8 @@ import java.util.Optional;
 public class MedicoService implements MedicoInputPort {
 
     private final MedicoOutputPort medicoOutputPort;
+    private final UsuarioRepository usuarioRepository;
+    private final EnderecoRepository enderecoRepository;
 
     @Override
     public Optional<Medico> buscarPorId(Long id) {
@@ -108,5 +115,27 @@ public class MedicoService implements MedicoInputPort {
             log.error("Erro ao excluir médico ID: {}", id, e);
             throw new Exception("Violação de Integridade", e);
         }
+    }
+
+    public List<Medico> buscarTodosMedicos() {
+        return medicoOutputPort.findAll();
+    }
+
+    public Medico cadastrarComDados(CadastrarMedicoRequest dados, Long usuarioId, Long enderecoId) {
+        var usuarioOptional = usuarioRepository.findById(usuarioId);
+        if (usuarioOptional.isEmpty()) {
+            throw new IllegalArgumentException("Usuário não encontrado");
+        }
+
+        var enderecoOptional = enderecoRepository.findById(enderecoId);
+        if (enderecoOptional.isEmpty()) {
+            throw new IllegalArgumentException("Endereço não encontrado");
+        }
+
+        Usuario usuario = usuarioOptional.get();
+        Endereco endereco = enderecoOptional.get();
+        Medico medico = new Medico(dados, usuario, endereco);
+        
+        return medicoOutputPort.save(medico);
     }
 }

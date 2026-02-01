@@ -1,11 +1,7 @@
 package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.application.service.MedicoService;
-import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.medico.Medico;
-import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
-import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
 import br.com.saudeConecta.presentation.dto.medico.CadastrarMedicoRequest;
 import br.com.saudeConecta.presentation.dto.medico.MedicoResponse;
 import jakarta.transaction.Transactional;
@@ -31,8 +27,6 @@ import java.util.List;
 public class MedicoController {
 
     private final MedicoService medicoService;
-    private final UsuarioRepository usuarioRepository;
-    private final EnderecoRepository enderecoRepository;
 
     @GetMapping("/buscarId/{id}")
     @Transactional
@@ -137,27 +131,17 @@ public class MedicoController {
         
         log.debug("Cadastrando médico: {}", dados.medNome());
         
-        var usuarioOptional = usuarioRepository.findById(dados.usuario());
-        if (usuarioOptional.isEmpty()) {
+        try {
+            Medico medicoSalvo = medicoService.cadastrarComDados(dados, dados.usuario(), dados.endereco());
+
+            URI uri = uriBuilder.path("/medico/buscarId/{id}")
+                    .buildAndExpand(medicoSalvo.getMedCodigo())
+                    .toUri();
+
+            return ResponseEntity.created(uri).body(new MedicoResponse(medicoSalvo));
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
-
-        var enderecoOptional = enderecoRepository.findById(dados.endereco());
-        if (enderecoOptional.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        Usuario usuario = usuarioOptional.get();
-        Endereco endereco = enderecoOptional.get();
-        Medico medico = new Medico(dados, usuario, endereco);
-        
-        Medico medicoSalvo = medicoService.cadastrar(medico);
-
-        URI uri = uriBuilder.path("/medico/buscarId/{id}")
-                .buildAndExpand(medicoSalvo.getMedCodigo())
-                .toUri();
-
-        return ResponseEntity.created(uri).body(new MedicoResponse(medicoSalvo));
     }
 
     @DeleteMapping("/{id}")
@@ -170,5 +154,10 @@ public class MedicoController {
             log.error("Erro ao deletar médico ID: {}", id, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    @GetMapping("/listatodosmedicos")
+    public List<Medico> buscarTodosMedicos() {
+        return medicoService.buscarTodosMedicos();
     }
 }

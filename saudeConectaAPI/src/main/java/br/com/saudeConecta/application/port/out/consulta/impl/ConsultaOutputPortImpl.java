@@ -169,6 +169,16 @@ public class ConsultaOutputPortImpl implements ConsultaOutputPort {
     }
 
     @Override
+    public Long contarConsultasPorIntervalo(String dataInicial, String dataFinal) {
+        return consultaRepository.contarConsultasPorIntervalo(dataInicial, dataFinal);
+    }
+
+    @Override
+    public Long contarMedicosAtivos() {
+        return consultaRepository.contarMedicosAtivos();
+    }
+
+    @Override
     public Consulta save(Consulta consulta) {
         return consultaRepository.save(consulta);
     }

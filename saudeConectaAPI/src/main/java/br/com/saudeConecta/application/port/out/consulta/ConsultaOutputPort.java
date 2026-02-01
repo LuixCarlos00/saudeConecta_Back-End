@@ -72,6 +72,11 @@ public interface ConsultaOutputPort {
     
     Long contarConsultasDaSemanaPorUsuario(String dataInicial, String dataFinal, Long usuarioId);
     
+    Long contarConsultasPorIntervalo(String dataInicial, String dataFinal);
+    
+    Long contarMedicosAtivos();
+
+
     Consulta save(Consulta consulta);
     
     void deleteById(Long id);

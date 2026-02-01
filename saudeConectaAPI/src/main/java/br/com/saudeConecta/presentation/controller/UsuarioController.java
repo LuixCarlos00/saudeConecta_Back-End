@@ -2,10 +2,14 @@ package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.application.service.UsuarioService;
 import br.com.saudeConecta.domain.usuario.Usuario;
+import br.com.saudeConecta.infra.configuracoesseguranca.TokenService;
 import br.com.saudeConecta.presentation.dto.usuario.CadastrarUsuarioRequest;
+import br.com.saudeConecta.presentation.dto.usuario.DadosLoginUsuario;
+import br.com.saudeConecta.presentation.dto.usuario.DadosTokenJWT;
 import br.com.saudeConecta.presentation.dto.usuario.UsuarioResponse;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -13,6 +17,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -29,6 +35,19 @@ public class UsuarioController {
 
     private final UsuarioService usuarioService;
     private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
+    private final TokenService tokenService;
+
+    @PostMapping("/login")
+    public ResponseEntity<DadosTokenJWT> autenticar(@RequestBody @NotNull DadosLoginUsuario dados) {
+        var authenticatetoken = new UsernamePasswordAuthenticationToken(dados.login(), dados.senha());
+        var authentication = authenticationManager.authenticate(authenticatetoken);
+
+        var TokenJWT = tokenService.gerarToken((Usuario) authentication.getPrincipal());
+
+        return ResponseEntity.ok(new DadosTokenJWT(TokenJWT));
+    }
+
 
     @GetMapping("/buscarId/{id}")
     @Transactional

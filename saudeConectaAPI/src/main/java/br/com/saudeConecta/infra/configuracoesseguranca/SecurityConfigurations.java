@@ -37,7 +37,7 @@ public class SecurityConfigurations {
         return http.cors().and().csrf().disable()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and().authorizeHttpRequests()
-                .requestMatchers(HttpMethod.POST, "/Home/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/usuario/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/Home/cadastralogin").permitAll()
                 .requestMatchers(HttpMethod.GET,"/Home/buscarUsuarioExistente/{login}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/paciente/buscarPorEmail/{email}").permitAll()

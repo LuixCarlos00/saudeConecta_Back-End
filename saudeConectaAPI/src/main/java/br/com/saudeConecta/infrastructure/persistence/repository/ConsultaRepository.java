@@ -124,6 +124,11 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long> {
     @Query("SELECT COUNT(c) FROM Consulta c WHERE c.conData BETWEEN :dataInicial AND :dataFinal AND c.conMedico.usuario.id = :usuarioId AND c.conStatus IN ('AGENDADA', 'REALIZADA')")
     Long contarConsultasDaSemanaPorUsuario(@Param("dataInicial") String dataInicial, @Param("dataFinal") String dataFinal, @Param("usuarioId") Long usuarioId);
 
+    @Query("SELECT COUNT(c) FROM Consulta c WHERE c.conData BETWEEN :dataInicial AND :dataFinal AND c.conStatus IN ('AGENDADA', 'REALIZADA')")
+    Long contarConsultasPorIntervalo(@Param("dataInicial") String dataInicial, @Param("dataFinal") String dataFinal);
+
+    @Query("SELECT COUNT(m) FROM Medico m WHERE m.usuario.status = 1")
+    Long contarMedicosAtivos();
 }
 
 //dasbosrde e tabela de medico trazedno dados errados

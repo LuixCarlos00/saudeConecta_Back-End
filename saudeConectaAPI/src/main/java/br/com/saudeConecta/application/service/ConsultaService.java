@@ -220,4 +220,145 @@ public class ConsultaService implements ConsultaInputPort {
             throw new Exception("Violação de Integridade", e);
         }
     }
+
+    // ==========================================
+    // MÉTODOS DE ESTATÍSTICAS
+    // ==========================================
+
+    public Long contarConsultasAgendadasHoje() {
+        String dataHoje = java.time.LocalDate.now().toString();
+        return consultaOutputPort.contarConsultasAgendadasPorData(dataHoje);
+    }
+
+    public Long contarConsultasHoje() {
+        String dataHoje = java.time.LocalDate.now().toString();
+        return consultaOutputPort.contarConsultasPorData(dataHoje);
+    }
+
+    public Long contarConsultasRealizadasHoje() {
+        String dataHoje = java.time.LocalDate.now().toString();
+        return consultaOutputPort.contarConsultasRealizadasPorData(dataHoje);
+    }
+
+    public Long contarConsultasDaSemanaAtual() {
+        java.time.LocalDate hoje = java.time.LocalDate.now();
+        java.time.LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
+        String dataInicial = inicioSemana.toString();
+        String dataFinal = hoje.toString();
+        return consultaOutputPort.contarConsultasPorIntervalo(dataInicial, dataFinal);
+    }
+
+    public Long contarMedicosAtivos() {
+        return consultaOutputPort.contarMedicosAtivos();
+    }
+
+    // ==========================================
+    // MÉTODOS DE BUSCA POR DATAS
+    // ==========================================
+
+    public List<Consulta> buscarConsultasPorIntervalo(String dataInicial, String dataFinal) {
+        return consultaOutputPort.buscarConsultasEmIntervaloDeDatas(dataInicial, dataFinal);
+    }
+
+    public List<Consulta> buscarConsultasConcluidasPorIntervalo(String dataInicial, String dataFinal) {
+        return consultaOutputPort.buscarConsultasConcluidasEmIntervaloDeDatas(dataInicial, dataFinal);
+    }
+
+    // ==========================================
+    // MÉTODOS ADICIONAIS PARA ENDPOINTS FALTANTES
+    // ==========================================
+
+    @Override
+    public Boolean verificarDisponibilidadeHorario(String data, String horario, Long medicoId) {
+        return !consultaOutputPort.existsByConHorarioAndConDataAndConMedico_MedCodigo(horario, data, medicoId);
+    }
+
+    @Override
+    public List<Consulta> buscarConsultasDoDiaAtual() {
+        String dataHoje = java.time.LocalDate.now().toString();
+        return consultaOutputPort.buscarConsultasEmIntervaloDeDatas(dataHoje, dataHoje);
+    }
+
+    @Override
+    public List<Consulta> buscarConsultasDaSemanaAtual() {
+        java.time.LocalDate hoje = java.time.LocalDate.now();
+        java.time.LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
+        String dataInicial = inicioSemana.toString();
+        String dataFinal = hoje.toString();
+        return consultaOutputPort.buscarConsultasEmIntervaloDeDatas(dataInicial, dataFinal);
+    }
+
+
+
+    @Override
+    public List<Consulta> buscarConsultasDoMesAtual() {
+        java.time.LocalDate hoje = java.time.LocalDate.now();
+        java.time.LocalDate inicioMes = hoje.withDayOfMonth(1);
+        java.time.LocalDate fimMes = hoje.withDayOfMonth(hoje.lengthOfMonth());
+
+        String dataInicialMes = inicioMes.toString();
+        String dataFinalMes = fimMes.toString();
+
+        return consultaOutputPort.buscarConsultasPorIntervaloDeDatas(dataInicialMes, dataFinalMes);
+    }
+
+    @Override
+    public List<Consulta> buscarConsultasDoAnoAtual() {
+        java.time.LocalDate hoje = java.time.LocalDate.now();
+        java.time.LocalDate inicioAno = hoje.withDayOfYear(1);
+        String dataInicial = inicioAno.toString();
+        String dataFinal = hoje.toString();
+        return consultaOutputPort.buscarConsultasEmIntervaloDeDatas(dataInicial, dataFinal);
+    }
+
+    @Override
+    public Consulta concluirConsulta(Long id) {
+        Optional<Consulta> consultaOptional = consultaOutputPort.findById(id);
+        if (consultaOptional.isEmpty()) {
+            throw new RuntimeException("Consulta não encontrada com ID: " + id);
+        }
+        
+        Consulta consulta = consultaOptional.get();
+        consulta.setConStatus("REALIZADA");
+        return consultaOutputPort.save(consulta);
+    }
+
+    @Override
+    public Consulta atualizarConsulta(Long id, Consulta consulta) {
+        Optional<Consulta> consultaExistente = consultaOutputPort.findById(id);
+        if (consultaExistente.isEmpty()) {
+            throw new RuntimeException("Consulta não encontrada com ID: " + id);
+        }
+        
+        Consulta consultaAtualizada = consultaExistente.get();
+        // Atualizar campos necessários
+        consultaAtualizada.setConData(consulta.getConData());
+        consultaAtualizada.setConHorario(consulta.getConHorario());
+        consultaAtualizada.setConStatus(consulta.getConStatus());
+        
+        return consultaOutputPort.save(consultaAtualizada);
+    }
+
+    @Override
+    public List<String> buscarHorariosOcupados(Long medicoId, String data) {
+        List<Consulta> consultas = consultaOutputPort.findByConMedico_MedCodigoAndConData(medicoId, data);
+        return consultas.stream()
+                .map(Consulta::getConHorario)
+                .toList();
+    }
+
+    @Override
+    public List<Consulta> buscarAgendaMedico(Long idUsuarioMedico) {
+        // Buscar consultas futuras do médico
+        String dataHoje = java.time.LocalDate.now().toString();
+        return consultaOutputPort.findByConMedico_MedCodigo(idUsuarioMedico).stream()
+                .filter(consulta -> consulta.getConData().compareTo(dataHoje) >= 0)
+                .toList();
+    }
+
+    @Override
+    public List<Consulta> buscarHistoricoAgendaMedico(Long idUsuarioMedico) {
+        // Buscar todas as consultas do médico (histórico completo)
+        return consultaOutputPort.findByConMedico_MedCodigo(idUsuarioMedico);
+    }
 }

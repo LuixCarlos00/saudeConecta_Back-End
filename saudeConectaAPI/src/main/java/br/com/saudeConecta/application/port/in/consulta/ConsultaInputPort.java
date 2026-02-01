@@ -68,6 +68,27 @@ public interface ConsultaInputPort {
     
     Long contarDaSemanaPorUsuario(String dataInicial, String dataFinal, Long usuarioId);
     
+    // Métodos adicionais para endpoints faltantes
+    Boolean verificarDisponibilidadeHorario(String data, String horario, Long medicoId);
+    
+    List<Consulta> buscarConsultasDoDiaAtual();
+    
+    List<Consulta> buscarConsultasDaSemanaAtual();
+    
+    List<Consulta> buscarConsultasDoMesAtual();
+    
+    List<Consulta> buscarConsultasDoAnoAtual();
+    
+    Consulta concluirConsulta(Long id);
+    
+    Consulta atualizarConsulta(Long id, Consulta consulta);
+    
+    List<String> buscarHorariosOcupados(Long medicoId, String data);
+    
+    List<Consulta> buscarAgendaMedico(Long idUsuarioMedico);
+    
+    List<Consulta> buscarHistoricoAgendaMedico(Long idUsuarioMedico);
+    
     Consulta cadastrar(Consulta consulta);
     
     void deletar(Long id) throws Exception;
