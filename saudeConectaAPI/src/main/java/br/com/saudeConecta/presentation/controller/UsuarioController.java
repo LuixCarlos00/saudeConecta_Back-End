@@ -2,14 +2,11 @@ package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.application.service.UsuarioService;
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.infra.configuracoesseguranca.TokenService;
 import br.com.saudeConecta.presentation.dto.usuario.CadastrarUsuarioRequest;
-import br.com.saudeConecta.presentation.dto.usuario.DadosLoginUsuario;
-import br.com.saudeConecta.presentation.dto.usuario.DadosTokenJWT;
 import br.com.saudeConecta.presentation.dto.usuario.UsuarioResponse;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
+import jdk.jfr.Description;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -17,8 +14,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -31,26 +26,18 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+@Description(  "Endpoints para gerenciamento de usuários")
 public class UsuarioController {
 
     private final UsuarioService usuarioService;
     private final PasswordEncoder passwordEncoder;
-    private final AuthenticationManager authenticationManager;
-    private final TokenService tokenService;
 
-    @PostMapping("/login")
-    public ResponseEntity<DadosTokenJWT> autenticar(@RequestBody @NotNull DadosLoginUsuario dados) {
-        var authenticatetoken = new UsernamePasswordAuthenticationToken(dados.login(), dados.senha());
-        var authentication = authenticationManager.authenticate(authenticatetoken);
-
-        var TokenJWT = tokenService.gerarToken((Usuario) authentication.getPrincipal());
-
-        return ResponseEntity.ok(new DadosTokenJWT(TokenJWT));
-    }
+// Login removido - usar /Home/login
 
 
     @GetMapping("/buscarId/{id}")
     @Transactional
+    @Description( "Busca usuário por ID. Utilizado em: UserProfileComponent, UserService")
     public ResponseEntity<UsuarioResponse> buscarPorId(@PathVariable Long id) {
         log.debug("Buscando usuário por ID: {}", id);
         return usuarioService.buscarPorId(id)
@@ -60,6 +47,7 @@ public class UsuarioController {
 
     @GetMapping("/buscarLogin/{login}")
     @Transactional
+    @Description( "Busca usuário por login. Utilizado em: LoginValidationComponent, UserService")
     public ResponseEntity<UsuarioResponse> buscarPorLogin(@PathVariable String login) {
         log.debug("Buscando usuário por login: {}", login);
         return usuarioService.buscarPorLogin(login)
@@ -69,6 +57,7 @@ public class UsuarioController {
 
     @GetMapping("/existeLogin/{login}")
     @Transactional
+    @Description( "Verifica se login já existe. Utilizado em: RegisterComponent, ValidationService")
     public ResponseEntity<Boolean> existePorLogin(@PathVariable String login) {
         log.debug("Verificando existência de usuário por login: {}", login);
         boolean existe = usuarioService.existePorLogin(login);
@@ -77,6 +66,7 @@ public class UsuarioController {
 
     @GetMapping("/listarTodos")
     @Transactional
+    @Description( "Lista todos os usuários. Utilizado em: UserListComponent, UserService")
     public ResponseEntity<List<UsuarioResponse>> buscarTodos() {
         log.debug("Buscando todos os usuários");
         List<UsuarioResponse> usuarios = usuarioService.buscarTodos().stream()
@@ -87,6 +77,7 @@ public class UsuarioController {
 
     @GetMapping("/pagina")
     @Transactional
+    @Description( "Busca usuários com paginação. Utilizado em: UserTableComponent, UserService")
     public ResponseEntity<Page<UsuarioResponse>> buscarPorPaginas(
             @PageableDefault(size = 12, sort = {"login"}) Pageable paginacao) {
         log.debug("Buscando usuários com paginação");
@@ -97,6 +88,7 @@ public class UsuarioController {
 
     @PostMapping("/cadastrar")
     @Transactional
+    @Description( "Cadastra novo usuário. Utilizado em: RegisterComponent, UserService")
     public ResponseEntity<UsuarioResponse> cadastrarUsuario(
             @RequestBody @Valid CadastrarUsuarioRequest dados,
             UriComponentsBuilder uriBuilder) {
@@ -120,6 +112,7 @@ public class UsuarioController {
     }
 
     @DeleteMapping("/{id}")
+    @Description( "Exclui usuário por ID. Utilizado em: UserListComponent, UserService")
     public ResponseEntity<Void> deleteUsuarioById(@PathVariable Long id) {
         log.debug("Deletando usuário por ID: {}", id);
         try {

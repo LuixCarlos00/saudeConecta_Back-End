@@ -8,6 +8,7 @@ import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteRequest;
 import br.com.saudeConecta.presentation.dto.paciente.PacienteResponse;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
+import jdk.jfr.Description;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -26,6 +27,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+@Description( "Endpoints para gerenciamento de pacientes")
 public class PacienteController {
 
     private final PacienteService pacienteService;
@@ -33,6 +35,7 @@ public class PacienteController {
 
     @GetMapping("/buscarId/{id}")
     @Transactional
+    @Description( "Busca paciente por ID. Utilizado em: PatientDetailComponent, PatientService")
     public ResponseEntity<PacienteResponse> buscarPorId(@PathVariable Long id) {
         log.debug("Buscando paciente por ID: {}", id);
         return pacienteService.buscarPorId(id)
@@ -42,6 +45,7 @@ public class PacienteController {
 
     @GetMapping("/buscarEmail/{email}")
     @Transactional
+    @Description( "Busca paciente por email. Utilizado em: PatientSearchComponent, PatientService")
     public ResponseEntity<PacienteResponse> buscarPorEmail(@PathVariable String email) {
         log.debug("Buscando paciente por email: {}", email);
         return pacienteService.buscarPorEmail(email)
@@ -51,6 +55,7 @@ public class PacienteController {
 
     @GetMapping("/buscarCpf/{cpf}")
     @Transactional
+    @Description( "Busca pacientes por CPF. Utilizado em: PatientSearchComponent, PatientService")
     public ResponseEntity<List<PacienteResponse>> buscarPorCpf(@PathVariable String cpf) {
         log.debug("Buscando pacientes por CPF: {}", cpf);
         List<PacienteResponse> pacientes = pacienteService.buscarPorCpf(cpf).stream()
@@ -61,6 +66,7 @@ public class PacienteController {
 
     @GetMapping("/buscarRg/{rg}")
     @Transactional
+    @Description( "Busca pacientes por RG. Utilizado em: PatientSearchComponent, PatientService")
     public ResponseEntity<List<PacienteResponse>> buscarPorRg(@PathVariable String rg) {
         log.debug("Buscando pacientes por RG: {}", rg);
         List<PacienteResponse> pacientes = pacienteService.buscarPorRg(rg).stream()
@@ -71,6 +77,7 @@ public class PacienteController {
 
     @GetMapping("/buscarTelefone/{telefone}")
     @Transactional
+    @Description( "Busca pacientes por telefone. Utilizado em: PatientSearchComponent, PatientService")
     public ResponseEntity<List<PacienteResponse>> buscarPorTelefone(@PathVariable String telefone) {
         log.debug("Buscando pacientes por telefone: {}", telefone);
         List<PacienteResponse> pacientes = pacienteService.buscarPorTelefone(telefone).stream()
@@ -81,6 +88,7 @@ public class PacienteController {
 
     @GetMapping("/buscarNome/{nome}")
     @Transactional
+    @Description( "Busca pacientes por nome. Utilizado em: PatientSearchComponent, PatientService")
     public ResponseEntity<List<PacienteResponse>> buscarPorNome(@PathVariable String nome) {
         log.debug("Buscando pacientes por nome: {}", nome);
         List<PacienteResponse> pacientes = pacienteService.buscarPorNome(nome).stream()
@@ -91,6 +99,7 @@ public class PacienteController {
 
     @GetMapping("/listarTodos")
     @Transactional
+    @Description( "Lista todos os pacientes. Utilizado em: PatientListComponent, PatientService")
     public ResponseEntity<List<PacienteResponse>> buscarTodos() {
         log.debug("Buscando todos os pacientes");
         List<PacienteResponse> pacientes = pacienteService.buscarTodos().stream()
@@ -101,6 +110,7 @@ public class PacienteController {
 
     @GetMapping("/pagina")
     @Transactional
+    @Description( "Busca pacientes com paginação. Utilizado em: PatientTableComponent, PatientService")
     public ResponseEntity<Page<PacienteResponse>> buscarPorPaginas(
             @PageableDefault(size = 12, sort = {"paciNome"}) Pageable paginacao) {
         log.debug("Buscando pacientes com paginação");
@@ -111,6 +121,7 @@ public class PacienteController {
 
     @PostMapping("/cadastrar")
     @Transactional
+    @Description( "Cadastra novo paciente. Utilizado em: RegisterPatientComponent, PatientService")
     public ResponseEntity<PacienteResponse> cadastrarPaciente(
             @RequestBody @Valid CadastrarPacienteRequest dados,
             UriComponentsBuilder uriBuilder) {
@@ -135,6 +146,7 @@ public class PacienteController {
     }
 
     @DeleteMapping("/{id}")
+    @Description( "Exclui paciente por ID. Utilizado em: PatientListComponent, PatientService")
     public ResponseEntity<Void> deletePacienteById(@PathVariable Long id) {
         log.debug("Deletando paciente por ID: {}", id);
         try {

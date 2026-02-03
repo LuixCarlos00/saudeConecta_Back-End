@@ -6,6 +6,7 @@ import br.com.saudeConecta.presentation.dto.medico.CadastrarMedicoRequest;
 import br.com.saudeConecta.presentation.dto.medico.MedicoResponse;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
+import jdk.jfr.Description;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -24,12 +25,14 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+@Description ("Endpoints para gerenciamento de médicos")
 public class MedicoController {
 
     private final MedicoService medicoService;
 
     @GetMapping("/buscarId/{id}")
     @Transactional
+    @Description("Busca médico por ID. Utilizado em: DoctorDetailComponent, DoctorService")
     public ResponseEntity<MedicoResponse> buscarPorId(@PathVariable Long id) {
         log.debug("Buscando médico por ID: {}", id);
         return medicoService.buscarPorId(id)
@@ -39,6 +42,7 @@ public class MedicoController {
 
     @GetMapping("/buscarIdUsuario/{id}")
     @Transactional
+    @Description("Busca médico por ID do usuário. Utilizado em: DoctorProfileComponent, DoctorService")
     public ResponseEntity<MedicoResponse> buscarPorIdUsuario(@PathVariable Long id) {
         log.debug("Buscando médico por ID de usuário: {}", id);
         return medicoService.buscarPorIdUsuario(id)
@@ -48,6 +52,7 @@ public class MedicoController {
 
     @GetMapping("/buscarEmail/{email}")
     @Transactional
+    @Description("Busca médico por email. Utilizado em: DoctorSearchComponent, DoctorService")
     public ResponseEntity<MedicoResponse> buscarPorEmail(@PathVariable String email) {
         log.debug("Buscando médico por email: {}", email);
         return medicoService.buscarPorEmail(email)
@@ -57,6 +62,7 @@ public class MedicoController {
 
     @GetMapping("/buscarCrm/{crm}")
     @Transactional
+    @Description("Busca médicos por CRM. Utilizado em: DoctorSearchComponent, DoctorService")
     public ResponseEntity<List<MedicoResponse>> buscarPorCrm(@PathVariable String crm) {
         log.debug("Buscando médicos por CRM: {}", crm);
         List<MedicoResponse> medicos = medicoService.buscarPorCrm(crm).stream()
@@ -67,6 +73,7 @@ public class MedicoController {
 
     @GetMapping("/buscarNome/{nome}")
     @Transactional
+    @Description("Busca médicos por nome. Utilizado em: DoctorSearchComponent, DoctorService")
     public ResponseEntity<List<MedicoResponse>> buscarPorNome(@PathVariable String nome) {
         log.debug("Buscando médicos por nome: {}", nome);
         List<MedicoResponse> medicos = medicoService.buscarPorNome(nome).stream()
@@ -77,6 +84,7 @@ public class MedicoController {
 
     @GetMapping("/buscarEspecialidade/{especialidade}")
     @Transactional
+    @Description("Busca médicos por especialidade. Utilizado em: SpecialtyFilterComponent, DoctorService")
     public ResponseEntity<List<MedicoResponse>> buscarPorEspecialidade(@PathVariable String especialidade) {
         log.debug("Buscando médicos por especialidade: {}", especialidade);
         List<MedicoResponse> medicos = medicoService.buscarPorEspecialidade(especialidade).stream()
@@ -87,6 +95,7 @@ public class MedicoController {
 
     @GetMapping("/buscarMunicipio/{municipio}")
     @Transactional
+    @Description("Busca médicos por município. Utilizado em: LocationFilterComponent, DoctorService")
     public ResponseEntity<List<MedicoResponse>> buscarPorMunicipio(@PathVariable String municipio) {
         log.debug("Buscando médicos por município: {}", municipio);
         List<MedicoResponse> medicos = medicoService.buscarPorMunicipio(municipio).stream()
@@ -97,6 +106,7 @@ public class MedicoController {
 
     @GetMapping("/contarAtivos")
     @Transactional
+    @Description("Conta médicos ativos. Utilizado em: DashboardComponent, StatisticsService")
     public ResponseEntity<Long> contarMedicosAtivos() {
         log.debug("Contando médicos ativos");
         Long count = medicoService.contarMedicosAtivos();
@@ -105,6 +115,7 @@ public class MedicoController {
 
     @GetMapping("/listarTodos")
     @Transactional
+    @Description("Lista todos os médicos. Utilizado em: DoctorListComponent, DoctorService")
     public ResponseEntity<List<MedicoResponse>> buscarTodos() {
         log.debug("Buscando todos os médicos");
         List<MedicoResponse> medicos = medicoService.buscarTodos().stream()
@@ -115,6 +126,7 @@ public class MedicoController {
 
     @GetMapping("/pagina")
     @Transactional
+    @Description("Busca médicos com paginação. Utilizado em: DoctorTableComponent, DoctorService")
     public ResponseEntity<Page<MedicoResponse>> buscarPorPaginas(
             @PageableDefault(size = 12, sort = {"medNome"}) Pageable paginacao) {
         log.debug("Buscando médicos com paginação");
@@ -125,6 +137,7 @@ public class MedicoController {
 
     @PostMapping("/cadastrar")
     @Transactional
+    @Description("Cadastra novo médico. Utilizado em: RegisterDoctorComponent, DoctorService")
     public ResponseEntity<MedicoResponse> cadastrarMedico(
             @RequestBody @Valid CadastrarMedicoRequest dados,
             UriComponentsBuilder uriBuilder) {
@@ -145,6 +158,7 @@ public class MedicoController {
     }
 
     @DeleteMapping("/{id}")
+    @Description("Exclui médico por ID. Utilizado em: DoctorListComponent, DoctorService")
     public ResponseEntity<Void> deleteMedicoById(@PathVariable Long id) {
         log.debug("Deletando médico por ID: {}", id);
         try {
@@ -156,8 +170,5 @@ public class MedicoController {
         }
     }
 
-    @GetMapping("/listatodosmedicos")
-    public List<Medico> buscarTodosMedicos() {
-        return medicoService.buscarTodosMedicos();
-    }
+    // Endpoint removido - duplicação de /listarTodos
 }

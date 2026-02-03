@@ -12,6 +12,7 @@ import br.com.saudeConecta.presentation.dto.consulta.CadastrarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.ConsultaResponse;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
+import jdk.jfr.Description;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -30,6 +31,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+@Description("Endpoints para gerenciamento de consultas")
 public class ConsultaController {
 
     private final ConsultaService consultaService;
@@ -39,6 +41,7 @@ public class ConsultaController {
 
     @GetMapping("/buscarId/{id}")
     @Transactional
+    @Description( "Busca consulta por ID. Utilizado em: AppointmentDetailComponent, AppointmentService")
     public ResponseEntity<ConsultaResponse> buscarPorId(@PathVariable Long id) {
         log.debug("Buscando consulta por ID: {}", id);
         return consultaService.buscarPorId(id)
@@ -48,6 +51,7 @@ public class ConsultaController {
 
     @GetMapping("/listarTodos")
     @Transactional
+    @Description( "Lista todas as consultas. Utilizado em: AppointmentListComponent, AppointmentService")
     public ResponseEntity<List<ConsultaResponse>> buscarTodos() {
         log.debug("Buscando todas as consultas");
         List<ConsultaResponse> consultas = consultaService.buscarTodos().stream()
@@ -58,6 +62,7 @@ public class ConsultaController {
 
     @GetMapping("/pagina")
     @Transactional
+    @Description( "Busca consultas com paginação. Utilizado em: AppointmentTableComponent, AppointmentService")
     public ResponseEntity<Page<ConsultaResponse>> buscarPorPaginas(
             @PageableDefault(size = 12, sort = {"conData"}) Pageable paginacao) {
         log.debug("Buscando consultas com paginação");
@@ -68,6 +73,7 @@ public class ConsultaController {
 
     @GetMapping("/buscarPorMedico/{medicoId}")
     @Transactional
+    @Description( "Busca consultas por médico. Utilizado em: DoctorAppointmentsComponent, AppointmentService")
     public ResponseEntity<List<ConsultaResponse>> buscarPorMedico(@PathVariable Long medicoId) {
         log.debug("Buscando consultas por médico: {}", medicoId);
         List<ConsultaResponse> consultas = consultaService.buscarPorMedico(medicoId).stream()
@@ -78,6 +84,7 @@ public class ConsultaController {
 
     @GetMapping("/buscarPorPaciente/{pacienteId}")
     @Transactional
+    @Description( "Busca consultas por paciente. Utilizado em: PatientAppointmentsComponent, AppointmentService")
     public ResponseEntity<List<ConsultaResponse>> buscarPorPaciente(@PathVariable Long pacienteId) {
         log.debug("Buscando consultas por paciente: {}", pacienteId);
         List<ConsultaResponse> consultas = consultaService.buscarPorPaciente(pacienteId).stream()
@@ -88,6 +95,7 @@ public class ConsultaController {
 
     @GetMapping("/buscarPorEspecialidade/{especialidade}")
     @Transactional
+    @Description( "Busca consultas por especialidade. Utilizado em: SpecialtyFilterComponent, AppointmentService")
     public ResponseEntity<List<ConsultaResponse>> buscarPorEspecialidade(@PathVariable String especialidade) {
         log.debug("Buscando consultas por especialidade: {}", especialidade);
         List<ConsultaResponse> consultas = consultaService.buscarPorEspecialidade(especialidade).stream()
@@ -98,6 +106,7 @@ public class ConsultaController {
 
     @GetMapping("/buscarEmIntervalo")
     @Transactional
+    @Description( "Busca consultas em intervalo de datas. Utilizado em: DateRangeFilterComponent, AppointmentService")
     public ResponseEntity<List<ConsultaResponse>> buscarEmIntervalo(
             @RequestParam String dataInicial,
             @RequestParam String dataFinal) {
@@ -110,6 +119,7 @@ public class ConsultaController {
 
     @GetMapping("/verificarDisponibilidade")
     @Transactional
+    @Description( "Verifica disponibilidade de hor\u00e1rio para consulta. Utilizado em: AppointmentSchedulerComponent, SchedulingService")
     public ResponseEntity<Boolean> verificarDisponibilidade(
             @RequestParam String horario,
             @RequestParam String data,
@@ -146,6 +156,7 @@ public class ConsultaController {
 
     @PostMapping("/cadastrar")
     @Transactional
+    @Description( "Cadastra nova consulta. Utilizado em: ScheduleAppointmentComponent, AppointmentService")
     public ResponseEntity<ConsultaResponse> cadastrarConsulta(
             @RequestBody @Valid CadastrarConsultaRequest dados,
             UriComponentsBuilder uriBuilder) {
@@ -188,6 +199,7 @@ public class ConsultaController {
     }
 
     @DeleteMapping("/{id}")
+    @Description( "Exclui consulta por ID. Utilizado em: AppointmentListComponent, AppointmentService")
     public ResponseEntity<Void> deleteConsultaById(@PathVariable Long id) {
         log.debug("Deletando consulta por ID: {}", id);
         try {
@@ -200,66 +212,47 @@ public class ConsultaController {
     }
 
     // ==========================================
-    // ENDPOINTS DE ESTATÍSTICAS
+    // ENDPOINTS DE ESTATÍSTICAS  
     // ==========================================
 
     @GetMapping("/estatisticas/consultas-agendadas-hoje")
+    @Description( "Conta consultas agendadas para hoje. Utilizado em: DashboardComponent, StatisticsService")
     public ResponseEntity<Long> contarConsultasAgendadasHoje() {
         return ResponseEntity.ok(consultaService.contarConsultasAgendadasHoje());
     }
 
     @GetMapping("/estatisticas/consultas-hoje")
+    @Description( "Conta todas as consultas de hoje. Utilizado em: DashboardComponent, StatisticsService")
     public ResponseEntity<Long> contarConsultasHoje() {
         return ResponseEntity.ok(consultaService.contarConsultasHoje());
     }
 
     @GetMapping("/estatisticas/consultas-realizadas-hoje")
+    @Description( "Conta consultas realizadas hoje. Utilizado em: DashboardComponent, StatisticsService")
     public ResponseEntity<Long> contarConsultasRealizadasHoje() {
         return ResponseEntity.ok(consultaService.contarConsultasRealizadasHoje());
     }
 
     @GetMapping("/estatisticas/consultas-semana")
+    @Description( "Conta consultas da semana atual. Utilizado em: WeeklyReportComponent, StatisticsService")
     public ResponseEntity<Long> contarConsultasDaSemanaAtual() {
         return ResponseEntity.ok(consultaService.contarConsultasDaSemanaAtual());
     }
 
     @GetMapping("/estatisticas/medicos-ativos")
+    @Description( "Conta m\u00e9dicos ativos. Utilizado em: DashboardComponent, StatisticsService")
     public ResponseEntity<Long> contarMedicosAtivos() {
         return ResponseEntity.ok(consultaService.contarMedicosAtivos());
     }
 
-    // ==========================================
-    // ENDPOINTS DE BUSCA POR DATAS
-    // ==========================================
+    // URLs simplificadas substituem as anteriores:
+    // Usar /buscarEmIntervalo para busca geral por intervalo
+    // ENDPOINTS LONGOS REMOVIDOS POR DUPLICA\u00c7\u00c3O
 
-    @GetMapping("/BuscandoTodasConsultasEmIntervaloDeDatas/dataInicial={dataInicial}&dataFinal={dataFinal}")
-    public ResponseEntity<List<Consulta>> buscarConsultasPorIntervalo(
-            @PathVariable String dataInicial,
-            @PathVariable String dataFinal) {
-        return ResponseEntity.ok(consultaService.buscarConsultasPorIntervalo(dataInicial, dataFinal));
-    }
-
-    @GetMapping("/BuscandoTodasConsultasConcluidasEmIntervaloDeDatas/dataInicial={dataInicial}&dataFinal={dataFinal}")
-    public ResponseEntity<List<Consulta>> buscarConsultasConcluidasPorIntervalo(
-            @PathVariable String dataInicial,
-            @PathVariable String dataFinal) {
-        return ResponseEntity.ok(consultaService.buscarConsultasConcluidasPorIntervalo(dataInicial, dataFinal));
-    }
-
-    // ==========================================
-    // ENDPOINTS ADICIONAIS (DO BACKUP)
-    // ==========================================
-
-    @GetMapping("/verificar-disponibilidade/data={data}&horario={horario}&medico={medicoId}")
-    public ResponseEntity<Boolean> verificarDisponibilidadeHorario(
-            @PathVariable String data,
-            @PathVariable String horario,
-            @PathVariable Long medicoId) {
-        Boolean disponivel = consultaService.verificarDisponibilidadeHorario(data, horario, medicoId);
-        return ResponseEntity.ok(disponivel);
-    }
+    // ENDPOINT REMOVIDO - DUPLICA\u00c7\u00c3O DE /verificarDisponibilidade
 
     @GetMapping("/dia-atual")
+    @Description( "Busca consultas do dia atual. Utilizado em: TodayAppointmentsComponent, AppointmentService")
     public ResponseEntity<List<ConsultaResponse>> buscarConsultasDoDiaAtual() {
         List<Consulta> consultas = consultaService.buscarConsultasDoDiaAtual();
         List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
@@ -267,6 +260,7 @@ public class ConsultaController {
     }
 
     @GetMapping("/semana-atual")
+    @Description( "Busca consultas da semana atual. Utilizado em: WeeklyAppointmentsComponent, AppointmentService")
     public ResponseEntity<List<ConsultaResponse>> buscarConsultasDaSemanaAtual() {
         List<Consulta> consultas = consultaService.buscarConsultasDaSemanaAtual();
         List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
@@ -274,6 +268,7 @@ public class ConsultaController {
     }
 
     @GetMapping("/mes-atual")
+    @Description( "Busca consultas do m\u00eas atual. Utilizado em: MonthlyAppointmentsComponent, AppointmentService")
     public ResponseEntity<List<ConsultaResponse>> buscarConsultasDoMesAtual() {
         List<Consulta> consultas = consultaService.buscarConsultasDoMesAtual();
         List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
@@ -281,6 +276,7 @@ public class ConsultaController {
     }
 
     @GetMapping("/ano-atual")
+    @Description( "Busca consultas do ano atual. Utilizado em: YearlyAppointmentsComponent, AppointmentService")
     public ResponseEntity<List<ConsultaResponse>> buscarConsultasDoAnoAtual() {
         List<Consulta> consultas = consultaService.buscarConsultasDoAnoAtual();
         List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
@@ -288,12 +284,14 @@ public class ConsultaController {
     }
 
     @PutMapping("/{id}/concluir")
+    @Description( "Marca consulta como conclu\u00edda. Utilizado em: AppointmentDetailComponent, AppointmentService")
     public ResponseEntity<ConsultaResponse> concluirConsulta(@PathVariable Long id) {
         Consulta consulta = consultaService.concluirConsulta(id);
         return ResponseEntity.ok(new ConsultaResponse(consulta));
     }
 
     @PutMapping("/{id}")
+    @Description( "Atualiza dados da consulta. Utilizado em: EditAppointmentComponent, AppointmentService")
     public ResponseEntity<ConsultaResponse> atualizarConsulta(
             @PathVariable Long id,
             @RequestBody @Valid CadastrarConsultaRequest dados) {
@@ -308,87 +306,46 @@ public class ConsultaController {
         return ResponseEntity.ok(new ConsultaResponse(consulta));
     }
 
-    @GetMapping("/horarios-ocupados/medico={medicoId}&data={data}")
+    @GetMapping("/horarios-ocupados")
+    @Description( "Busca hor\u00e1rios ocupados de um m\u00e9dico em determinada data. Utilizado em: AppointmentSchedulerComponent, SchedulingService")
     public ResponseEntity<List<String>> buscarHorariosOcupados(
-            @PathVariable Long medicoId,
-            @PathVariable String data) {
+            @RequestParam Long medicoId,
+            @RequestParam String data) {
         List<String> horarios = consultaService.buscarHorariosOcupados(medicoId, data);
         return ResponseEntity.ok(horarios);
     }
 
     @GetMapping("/agenda-medico/{idUsuarioMedico}")
+    @Description( "Busca agenda de um m\u00e9dico espec\u00edfico. Utilizado em: DoctorAgendaComponent, AppointmentService")
     public ResponseEntity<List<ConsultaResponse>> buscarAgendaMedico(@PathVariable Long idUsuarioMedico) {
         List<Consulta> agenda = consultaService.buscarAgendaMedico(idUsuarioMedico);
         List<ConsultaResponse> resultado = agenda.stream().map(ConsultaResponse::new).toList();
         return ResponseEntity.ok(resultado);
     }
 
-    @GetMapping("/agenda-todos-medicos")
-    public ResponseEntity<List<ConsultaResponse>> buscarAgendaTodosMedicos() {
-        List<Consulta> consultas = consultaService.buscarTodos();
-        List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
-        return ResponseEntity.ok(resultado);
-    }
+    // ENDPOINT REMOVIDO - DUPLICA\u00c7\u00c3O DE /listarTodos
 
     @GetMapping("/historico-medico/{idUsuarioMedico}")
+    @Description( "Busca hist\u00f3rico de consultas de um m\u00e9dico. Utilizado em: DoctorHistoryComponent, AppointmentService")
     public ResponseEntity<List<ConsultaResponse>> buscarHistoricoAgendaMedico(@PathVariable Long idUsuarioMedico) {
         List<Consulta> consultas = consultaService.buscarHistoricoAgendaMedico(idUsuarioMedico);
         List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
         return ResponseEntity.ok(resultado);
     }
 
-    @GetMapping("/BuscandoTodasConsultasEmIntervaloDeDatasComEspecialidade/dataInicial={dataInicial}&dataFinal={dataFinal}&especialidades={especialidade}")
-    public ResponseEntity<List<ConsultaResponse>> buscarConsultasPorIntervaloEEspecialidade(
-            @PathVariable String dataInicial,
-            @PathVariable String dataFinal,
-            @PathVariable String especialidade) {
-        List<Consulta> consultas = consultaService.buscarEmIntervaloComEspecialidade(dataInicial, dataFinal, especialidade);
-        List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
-        return ResponseEntity.ok(resultado);
-    }
+    // ENDPOINT REMOVIDO - URL excessivamente longa. Use /buscarEmIntervalo + /buscarPorEspecialidade
 
-    @GetMapping("/BuscandoTodasConsultasPorMedicoEmIntervaloDeDatas/medico={medCodigo}&dataInicial={DataInicioFormatada}&dataFinal={DataFimFormatada}")
-    public ResponseEntity<List<ConsultaResponse>> buscarConsultasPorMedicoEIntervalo(
-            @PathVariable Long medCodigo,
-            @PathVariable String DataInicioFormatada,
-            @PathVariable String DataFimFormatada) {
-        List<Consulta> consultas = consultaService.buscarPorMedicoEmIntervalo(medCodigo, DataInicioFormatada, DataFimFormatada);
-        List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
-        return ResponseEntity.ok(resultado);
-    }
+    // ENDPOINT REMOVIDO - URL excessivamente longa. Use /buscarPorMedico/{medicoId} combinado com filtros
 
-    @GetMapping("/BuscandoTodasConsultasConcluidasEmIntervaloDeDatasComEspecialidade/dataInicial={dataInicial}&dataFinal={dataFinal}&especialidades={especialidade}")
-    public ResponseEntity<List<ConsultaResponse>> buscarConsultasConcluidasPorIntervaloEEspecialidade(
-            @PathVariable String dataInicial,
-            @PathVariable String dataFinal,
-            @PathVariable String especialidade) {
-        List<Consulta> consultas = consultaService.buscarConcluidasEmIntervaloComEspecialidade(dataInicial, dataFinal, especialidade);
-        List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
-        return ResponseEntity.ok(resultado);
-    }
+    // ENDPOINTS REMOVIDOS - URLs excessivamente longas
+    // Use endpoints simplificados existentes com parâmetros de query quando necessário
 
-    @GetMapping("/BuscandoTodasConsultasConcluidasPorMedicoEmIntervaloDeDatas/medico={medCodigo}&dataInicial={DataInicioFormatada}&dataFinal={DataFimFormatada}")
-    public ResponseEntity<List<ConsultaResponse>> buscarConsultasConcluidasPorMedicoEIntervalo(
-            @PathVariable Long medCodigo,
-            @PathVariable String DataInicioFormatada,
-            @PathVariable String DataFimFormatada) {
-        List<Consulta> consultas = consultaService.buscarConcluidasPorMedicoEmIntervalo(medCodigo, DataInicioFormatada, DataFimFormatada);
-        List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
-        return ResponseEntity.ok(resultado);
-    }
-
-    @GetMapping("/BuscandoTodasConsultasConcluidasPorEspecialidade/especialidades={especialidades}")
-    public ResponseEntity<List<ConsultaResponse>> buscarConsultasConcluidasPorEspecialidade(@PathVariable String especialidades) {
-        List<Consulta> consultas = consultaService.buscarConcluidasPorEspecialidade(especialidades);
-        List<ConsultaResponse> resultado = consultas.stream().map(ConsultaResponse::new).toList();
-        return ResponseEntity.ok(resultado);
-    }
-
-    @GetMapping("/estatisticas/medico={medicoId}&dataInicial={dataInicial}&dataFinal={dataFinal}")
+    @GetMapping("/estatisticas/medico/{medicoId}")
+    @Description( "Estatísticas de consultas por médico e período. Utilizado em: DoctorStatisticsComponent, StatisticsService")
     public ResponseEntity<List<Object[]>> contarConsultasPorStatusEMedico(
             @PathVariable Long medicoId,
-            @PathVariable String dataInicial,
-            @PathVariable String dataFinal) {
+            @RequestParam String dataInicial,
+            @RequestParam String dataFinal) {
         List<Object[]> estatisticas = consultaService.contarPorStatusEMedico(medicoId, dataInicial, dataFinal);
         return ResponseEntity.ok(estatisticas);
     }
