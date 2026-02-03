@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Template de Email</title>
+    <style>
+        .formata {
+            color: red;
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+<form>
+    <h1>Mais Saude Card</h1>
+    <p>
+
+    </p>
+    <p>
+        <span class="formata" th:text="${message}">Mensagem padrão</span>
+    </p>
+    <!-- Esta classe <span> acima é responsável por exibir o código para o usuário -->
+
+
+
+    <p>
+        Atenciosamente,<br>
+        Equipe Mais Saude Card
+    </p>
+</form>
+</body>
+</html>

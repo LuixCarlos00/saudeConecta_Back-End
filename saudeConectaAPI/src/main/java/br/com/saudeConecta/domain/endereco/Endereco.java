@@ -1,5 +1,6 @@
 package br.com.saudeConecta.domain.endereco;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -12,6 +13,7 @@ import java.io.Serializable;
 @AllArgsConstructor
 @Table(name = "endereco")
 @EqualsAndHashCode(of = "endCodigo")
+@JsonIgnoreProperties({"hibernateLazyInitializer"})
 public class Endereco implements Serializable {
 
     private static final long serialVersionUID = 1L;

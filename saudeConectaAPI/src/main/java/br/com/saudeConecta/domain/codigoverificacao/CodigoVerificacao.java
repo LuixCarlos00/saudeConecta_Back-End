@@ -1,6 +1,7 @@
 package br.com.saudeConecta.domain.codigoverificacao;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "codigoverificacao")
+@JsonIgnoreProperties({"hibernateLazyInitializer"})
 @EqualsAndHashCode(of = "codVerificacaoCodigoID")
 public class CodigoVerificacao implements Serializable {
     private static final long serialVersionUID = 1L;

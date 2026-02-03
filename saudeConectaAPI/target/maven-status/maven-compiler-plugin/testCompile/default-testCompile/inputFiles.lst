@@ -1,0 +1,7 @@
+/home/luiz.carlos/Saas/saudeConecta_Back-End-SCV-06/saudeConectaAPI/src/test/java/com/saudeConecta/demo/DemoApplicationTests.java
+/home/luiz.carlos/Saas/saudeConecta_Back-End-SCV-06/saudeConectaAPI/src/test/java/br/com/saudeConecta/application/service/AdministradorServiceTest.java
+/home/luiz.carlos/Saas/saudeConecta_Back-End-SCV-06/saudeConectaAPI/src/test/java/br/com/saudeConecta/application/service/UsuarioServiceTest.java
+/home/luiz.carlos/Saas/saudeConecta_Back-End-SCV-06/saudeConectaAPI/src/test/java/br/com/saudeConecta/application/service/MedicoServiceTest.java
+/home/luiz.carlos/Saas/saudeConecta_Back-End-SCV-06/saudeConectaAPI/src/test/java/br/com/saudeConecta/presentation/controller/AdministradorControllerTest.java
+/home/luiz.carlos/Saas/saudeConecta_Back-End-SCV-06/saudeConectaAPI/src/test/java/br/com/saudeConecta/application/service/PacienteServiceTest.java
+/home/luiz.carlos/Saas/saudeConecta_Back-End-SCV-06/saudeConectaAPI/src/test/java/br/com/saudeConecta/application/service/ConsultaServiceTest.java

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="004-create-table-paciente" author="saudeConecta">
+        <createTable tableName="paciente">
+            <column name="PaciCodigo" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="PaciNome" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PaciSexo" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PaciDataNacimento" type="DATE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="PaciCpf" type="VARCHAR(14)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="PaciRg" type="VARCHAR(20)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="PaciEmail" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PaciTelefone" type="VARCHAR(20)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="Endereco" type="BIGINT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="PaciStatus" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="paciente"
+            baseColumnNames="Endereco"
+            referencedTableName="endereco"
+            referencedColumnNames="EndCodigo"
+            constraintName="fk_paciente_endereco"/>
+    </changeSet>
+
+</databaseChangeLog>
