@@ -1,91 +1,134 @@
 package br.com.saudeConecta.domain.consulta;
 
-import br.com.saudeConecta.domain.administrador.Administrador;
-import br.com.saudeConecta.domain.medico.Medico;
+import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.paciente.Paciente;
-import br.com.saudeConecta.presentation.dto.consulta.CadastrarConsultaRequest;
+import br.com.saudeConecta.domain.pagamento.FormaPagamento;
+import br.com.saudeConecta.domain.profissional.Especialidade;
+import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.domain.usuario.Usuario;
+import br.com.saudeConecta.infra.tenant.TenantAware;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "consulta")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "consulta")
-@EqualsAndHashCode(of = "conCodigoConsulta")
+@Builder
+@EqualsAndHashCode(of = "id")
 @JsonIgnoreProperties({"hibernateLazyInitializer"})
-public class Consulta implements Serializable {
-
+public class Consulta implements Serializable, TenantAware {
+    
     private static final long serialVersionUID = 1L;
-
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ConCodigoConsulta")
-    private Long conCodigoConsulta;
-
-    @ManyToOne
-    @JoinColumn(name = "ConMedico")
-    private Medico conMedico;
-
-    @ManyToOne
-    @JoinColumn(name = "ConPaciente")
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "endereco"})
-    private Paciente conPaciente;
-
-    @Column(name = "ConDia_semana")
-    private String conDiaSemana;
-
-    @Column(name = "ConHorario")
-    private String conHorario;
-
-    @Column(name = "ConData")
-    private String conData;
-
-    @Column(name = "ConObservacoes")
-    private String conObservacoes;
-
-    @Column(name = "ConDataCriacao")
-    private String conDataCriacao;
-
-    @Column(name = "ConFormaPagamento")
-    private Byte conFormaPagamento;
-
-    @Column(name = "ConStatus")
-    private String conStatus;
-
-    @ManyToOne
-    @JoinColumn(name = "ConAdm")
+    private Long id;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organizacao_id", nullable = false)
     @JsonIgnore
-    private Administrador conAdm;
-
-    public Consulta(Medico medico, Paciente paciente, Administrador adm, CadastrarConsultaRequest dados) {
-        this.conMedico = medico;
-        this.conPaciente = paciente;
-        this.conAdm = adm;
-        this.conDiaSemana = dados.conDia_semana();
-        this.conHorario = dados.conHorario();
-        this.conData = dados.conData();
-        this.conObservacoes = dados.conObservacoes();
-        this.conDataCriacao = dados.conDadaCriacao();
-        this.conFormaPagamento = dados.conFormaPagamento();
-        this.conStatus = dados.conStatus();
+    private Organizacao organizacao;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "profissional_id", nullable = false)
+    private Profissional profissional;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "paciente_id", nullable = false)
+    private Paciente paciente;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "especialidade_id")
+    private Especialidade especialidade;
+    
+    @Column(name = "data_hora", nullable = false)
+    private LocalDateTime dataHora;
+    
+    @Column(name = "duracao_minutos")
+    private Integer duracaoMinutos = 30;
+    
+    @Column(columnDefinition = "TEXT")
+    private String observacoes;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "forma_pagamento_id")
+    private FormaPagamento formaPagamento;
+    
+    @Column(precision = 10, scale = 2)
+    private BigDecimal valor;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private StatusConsulta status = StatusConsulta.AGENDADA;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cancelado_por", length = 20)
+    private CanceladoPor canceladoPor;
+    
+    @Column(name = "motivo_cancelamento", columnDefinition = "TEXT")
+    private String motivoCancelamento;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "criado_por")
+    @JsonIgnore
+    private Usuario criadoPor;
+    
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+    
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+    
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
-
-    public void update(Consulta dados) {
-        this.conMedico = dados.getConMedico();
-        this.conPaciente = dados.getConPaciente();
-        this.conDiaSemana = dados.getConDiaSemana();
-        this.conHorario = dados.getConHorario();
-        this.conData = dados.getConData();
-        this.conObservacoes = dados.getConObservacoes();
-        this.conDataCriacao = dados.getConDataCriacao();
-        this.conFormaPagamento = dados.getConFormaPagamento();
-        this.conStatus = dados.getConStatus();
-        this.conAdm = dados.getConAdm();
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+    
+    @Override
+    public Long getOrganizacaoId() {
+        return this.organizacao != null ? this.organizacao.getId() : null;
+    }
+    
+    @Override
+    public void setOrganizacaoId(Long organizacaoId) {
+    }
+    
+    public boolean isAgendada() {
+        return StatusConsulta.AGENDADA.equals(this.status);
+    }
+    
+    public boolean isConfirmada() {
+        return StatusConsulta.CONFIRMADA.equals(this.status);
+    }
+    
+    public boolean isCancelada() {
+        return StatusConsulta.CANCELADA.equals(this.status);
+    }
+    
+    public boolean isRealizada() {
+        return StatusConsulta.REALIZADA.equals(this.status);
+    }
+    
+    public boolean podeSerCancelada() {
+        return isAgendada() || isConfirmada();
+    }
+    
+    public LocalDateTime getDataHoraFim() {
+        return this.dataHora.plusMinutes(this.duracaoMinutos != null ? this.duracaoMinutos : 30);
     }
 }

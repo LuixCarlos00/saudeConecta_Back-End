@@ -20,62 +20,28 @@ public class CredenciaisEmailService {
     private final EmailServices emailServices;
 
     /**
-     * Envia email com credenciais de acesso para o médico.
-     * 
-     * @param email Email do destinatário
-     * @param nome Nome do médico
-     * @param login Login gerado (CPF)
-     * @param senha Senha gerada
+     * Envia email com credenciais de acesso para profissional.
      */
-    public void enviarCredenciaisMedico(String email, String nome, String login, String senha) {
-        enviarCredenciais(email, nome, login, senha, "email-credenciais-medico", "Médico");
+    public void enviarCredenciaisProfissional(String email, String nome, String login, String senha) {
+        enviarCredenciais(email, nome, login, senha, "email-credenciais-template", "Profissional");
     }
 
     /**
      * Envia email com credenciais de acesso para o paciente.
-     * 
-     * @param email Email do destinatário
-     * @param nome Nome do paciente
-     * @param login Login gerado (CPF)
-     * @param senha Senha gerada
      */
     public void enviarCredenciaisPaciente(String email, String nome, String login, String senha) {
-        enviarCredenciais(email, nome, login, senha, "email-credenciais-paciente", "Paciente");
+        enviarCredenciais(email, nome, login, senha, "email-credenciais-template", "Paciente");
     }
 
     /**
-     * Envia email com credenciais de acesso para a secretária.
-     * 
-     * @param email Email do destinatário
-     * @param nome Nome da secretária
-     * @param login Login gerado (CPF)
-     * @param senha Senha gerada
+     * Envia email com credenciais de acesso para usuário genérico.
      */
-    public void enviarCredenciaisSecretaria(String email, String nome, String login, String senha) {
-        enviarCredenciais(email, nome, login, senha, "email-credenciais-secretaria", "Secretária");
-    }
-
-    /**
-     * Envia email com credenciais de acesso para o administrador.
-     * 
-     * @param email Email do destinatário
-     * @param nome Nome do administrador
-     * @param login Login gerado (CPF)
-     * @param senha Senha gerada
-     */
-    public void enviarCredenciaisAdministrador(String email, String nome, String login, String senha) {
-        enviarCredenciais(email, nome, login, senha, "email-credenciais-administrador", "Administrador");
+    public void enviarCredenciaisUsuario(String email, String nome, String login, String senha, String tipoUsuario) {
+        enviarCredenciais(email, nome, login, senha, "email-credenciais-template", tipoUsuario);
     }
 
     /**
      * Método genérico para envio de credenciais.
-     * 
-     * @param email Email do destinatário
-     * @param nome Nome do usuário
-     * @param login Login gerado
-     * @param senha Senha gerada
-     * @param template Nome do template de email
-     * @param tipoUsuario Tipo do usuário para log
      */
     private void enviarCredenciais(String email, String nome, String login, String senha, 
                                     String template, String tipoUsuario) {
@@ -84,11 +50,12 @@ public class CredenciaisEmailService {
             model.put("nome", nome);
             model.put("login", login);
             model.put("senha", senha);
+            model.put("tipoUsuario", tipoUsuario);
             
-            emailServices.enviarEmailComLoginMedico(
+            emailServices.enviarEmailComPaginaHTML(
                 email, 
                 "Bem-vindo ao Saúde Conecta - Suas credenciais de acesso", 
-                template,
+                template + ".html",
                 model
             );
             log.info("Email com credenciais de {} enviado para: {}", tipoUsuario, email);

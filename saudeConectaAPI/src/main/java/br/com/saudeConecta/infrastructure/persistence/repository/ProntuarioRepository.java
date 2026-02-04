@@ -7,9 +7,11 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface ProntuarioRepository extends JpaRepository<Prontuario,Long> {
+public interface ProntuarioRepository extends JpaRepository<Prontuario, Long> {
 
-    Prontuario findByConsulta_ConCodigoConsulta(Long conCodigoConsulta);
+    Prontuario findByConsulta_Id(Long consultaId);
     
-    List<Prontuario> findByConsulta_ConPaciente_PaciCodigo(Long paciCodigo);
+    List<Prontuario> findByConsulta_Paciente_PaciCodigo(Long paciCodigo);
+    
+    List<Prontuario> findByProfissional_Id(Long profissionalId);
 }

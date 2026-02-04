@@ -3,8 +3,13 @@ package br.com.saudeConecta.application.service;
 import br.com.saudeConecta.application.port.in.paciente.PacienteInputPort;
 import br.com.saudeConecta.application.port.out.paciente.PacienteOutputPort;
 import br.com.saudeConecta.domain.endereco.Endereco;
+import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.paciente.Paciente;
+import br.com.saudeConecta.infra.tenant.RequiresTenant;
+import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
 import br.com.saudeConecta.presentation.dto.paciente.AtualizarPacienteRequest;
 import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteCompletoRequest;
 import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteRequest;
@@ -24,7 +29,54 @@ import java.util.Optional;
 public class PacienteService implements PacienteInputPort {
 
     private final PacienteOutputPort pacienteOutputPort;
+    private final PacienteRepository pacienteRepository;
     private final EnderecoRepository enderecoRepository;
+    private final OrganizacaoRepository organizacaoRepository;
+    private final TenantHelper tenantHelper;
+
+    // ========== MÉTODOS COM TENANT ==========
+    
+    @RequiresTenant
+    public List<Paciente> buscarTodosPorTenant() {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.debug("Buscando pacientes da organização: {}", orgId);
+        return pacienteRepository.findByOrganizacao_Id(orgId);
+    }
+    
+    @RequiresTenant
+    public Page<Paciente> buscarTodosPorTenant(Pageable pageable) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.debug("Buscando pacientes paginados da organização: {}", orgId);
+        return pacienteRepository.findByOrganizacao_Id(orgId, pageable);
+    }
+    
+    @RequiresTenant
+    public Optional<Paciente> buscarPorIdTenant(Long id) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.debug("Buscando paciente ID: {} da organização: {}", id, orgId);
+        return pacienteRepository.findByPaciCodigoAndOrganizacao_Id(id, orgId);
+    }
+    
+    @RequiresTenant
+    public List<Paciente> buscarPorNomeTenant(String nome) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.debug("Buscando pacientes por nome '{}' na organização: {}", nome, orgId);
+        return pacienteRepository.findByOrganizacaoIdAndNomeContaining(orgId, nome);
+    }
+    
+    @RequiresTenant
+    public Long contarAtivosTenant() {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return pacienteRepository.countByOrganizacaoIdAndStatus(orgId, "ATIVO");
+    }
+    
+    @RequiresTenant
+    public boolean existeCpfNoTenant(String cpf) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return pacienteRepository.existsByPaciCpfAndOrganizacao_Id(cpf, orgId);
+    }
+
+    // ========== MÉTODOS LEGADOS (sem tenant) ==========
 
     @Override
     public Optional<Paciente> buscarPorId(Long id) {
@@ -41,12 +93,19 @@ public class PacienteService implements PacienteInputPort {
     @Override
     public List<Paciente> buscarTodos() {
         log.debug("Buscando todos os pacientes");
+        // Se houver tenant, filtra por tenant
+        if (tenantHelper.hasTenant()) {
+            return buscarTodosPorTenant();
+        }
         return pacienteOutputPort.findAll();
     }
 
     @Override
     public Page<Paciente> buscarTodos(Pageable pageable) {
         log.debug("Buscando todos os pacientes com paginação");
+        if (tenantHelper.hasTenant()) {
+            return buscarTodosPorTenant(pageable);
+        }
         return pacienteOutputPort.findAll(pageable);
     }
 
@@ -71,12 +130,24 @@ public class PacienteService implements PacienteInputPort {
     @Override
     public List<Paciente> buscarPorNome(String nome) {
         log.debug("Buscando pacientes por nome: {}", nome);
+        if (tenantHelper.hasTenant()) {
+            return buscarPorNomeTenant(nome);
+        }
         return pacienteOutputPort.findByPaciNomeContainingIgnoreCase(nome);
     }
 
     @Override
     public Paciente cadastrar(Paciente paciente) {
         log.info("Cadastrando novo paciente: {}", paciente.getPaciNome());
+        
+        // Se houver tenant e paciente não tem organização, define automaticamente
+        if (tenantHelper.hasTenant() && paciente.getOrganizacao() == null) {
+            Long orgId = tenantHelper.getCurrentTenantId();
+            Organizacao org = organizacaoRepository.findById(orgId)
+                .orElseThrow(() -> new IllegalStateException("Organização não encontrada"));
+            paciente.setOrganizacao(org);
+        }
+        
         Paciente pacienteSalvo = pacienteOutputPort.save(paciente);
         log.info("Paciente cadastrado com sucesso. ID: {}", pacienteSalvo.getPaciCodigo());
         return pacienteSalvo;

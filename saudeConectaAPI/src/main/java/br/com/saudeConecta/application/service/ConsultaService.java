@@ -1,364 +1,275 @@
 package br.com.saudeConecta.application.service;
 
-import br.com.saudeConecta.application.port.in.consulta.ConsultaInputPort;
-import br.com.saudeConecta.application.port.out.consulta.ConsultaOutputPort;
-import br.com.saudeConecta.domain.consulta.Consulta;
+import br.com.saudeConecta.domain.consulta.*;
+import br.com.saudeConecta.domain.organizacao.Organizacao;
+import br.com.saudeConecta.domain.paciente.Paciente;
+import br.com.saudeConecta.domain.pagamento.FormaPagamento;
+import br.com.saudeConecta.domain.profissional.Especialidade;
+import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.domain.usuario.Usuario;
+import br.com.saudeConecta.infra.tenant.RequiresTenant;
+import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.infra.tenant.TenantHelper;
+import br.com.saudeConecta.infrastructure.persistence.repository.*;
+import br.com.saudeConecta.presentation.dto.consulta.AgendarConsultaRequest;
+import br.com.saudeConecta.presentation.dto.consulta.CancelarConsultaRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.Date;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class ConsultaService implements ConsultaInputPort {
-
-    private final ConsultaOutputPort consultaOutputPort;
-
-    @Override
+public class ConsultaService {
+    
+    private final ConsultaRepository consultaRepository;
+    private final ConsultaHistoricoRepository historicoRepository;
+    private final ProfissionalRepository profissionalRepository;
+    private final PacienteRepository pacienteRepository;
+    private final EspecialidadeRepository especialidadeRepository;
+    private final FormaPagamentoRepository formaPagamentoRepository;
+    private final OrganizacaoRepository organizacaoRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final TenantHelper tenantHelper;
+    
+    @RequiresTenant
+    public List<Consulta> buscarTodas() {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return consultaRepository.findByOrganizacao_Id(orgId);
+    }
+    
+    @RequiresTenant
+    public Page<Consulta> buscarTodas(Pageable pageable) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return consultaRepository.findByOrganizacao_Id(orgId, pageable);
+    }
+    
+    @RequiresTenant
     public Optional<Consulta> buscarPorId(Long id) {
-        log.debug("Buscando consulta por ID: {}", id);
-        return consultaOutputPort.findById(id);
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return consultaRepository.findByIdAndOrganizacao_Id(id, orgId);
     }
-
-    @Override
-    public List<Consulta> buscarTodos() {
-        log.debug("Buscando todas as consultas");
-        return consultaOutputPort.findAll();
+    
+    @RequiresTenant
+    public List<Consulta> buscarConsultasHoje() {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return consultaRepository.findConsultasHoje(orgId);
     }
-
-    @Override
-    public Page<Consulta> buscarTodos(Pageable pageable) {
-        log.debug("Buscando todas as consultas com paginação");
-        return consultaOutputPort.findAll(pageable);
+    
+    @RequiresTenant
+    public List<Consulta> buscarPorProfissional(Long profissionalId) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return consultaRepository.findByOrganizacao_IdAndProfissional_Id(orgId, profissionalId);
     }
-
-    @Override
-    public Optional<Consulta> buscarPorHorarioDataEMedico(String horario, Date data, Long medicoId) {
-        log.debug("Buscando consulta por horário, data e médico: {} {} {}", horario, data, medicoId);
-        return consultaOutputPort.findByConHorarioAndConDataAndConMedico_MedCodigo(horario, data, medicoId);
+    
+    @RequiresTenant
+    public List<Consulta> buscarAgendaDia(Long profissionalId, LocalDate data) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return consultaRepository.findAgendaDia(orgId, profissionalId, data);
     }
-
-    @Override
-    public boolean existePorHorarioDataEMedico(String horario, String data, Long medicoId) {
-        log.debug("Verificando existência de consulta por horário, data e médico: {} {} {}", horario, data, medicoId);
-        return consultaOutputPort.existsByConHorarioAndConDataAndConMedico_MedCodigo(horario, data, medicoId);
+    
+    @RequiresTenant
+    public List<Consulta> buscarPorPeriodo(LocalDateTime inicio, LocalDateTime fim) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return consultaRepository.findByOrganizacaoIdAndPeriodo(orgId, inicio, fim);
     }
-
-    @Override
-    public List<Consulta> buscarPorMedicoEData(Long medicoId, String data) {
-        log.debug("Buscando consultas por médico e data: {} {}", medicoId, data);
-        return consultaOutputPort.findByConMedico_MedCodigoAndConData(medicoId, data);
-    }
-
-    @Override
-    public List<Consulta> buscarPorMedico(Long medicoId) {
-        log.debug("Buscando consultas por médico: {}", medicoId);
-        return consultaOutputPort.findByConMedico_MedCodigo(medicoId);
-    }
-
-    @Override
-    public List<Consulta> buscarEmIntervaloDatas(String dataInicial, String dataFinal) {
-        log.debug("Buscando consultas em intervalo de datas: {} a {}", dataInicial, dataFinal);
-        return consultaOutputPort.buscarConsultasEmIntervaloDeDatas(dataInicial, dataFinal);
-    }
-
-    @Override
-    public List<Consulta> buscarEmIntervaloComEspecialidade(String dataInicial, String dataFinal, String especialidade) {
-        log.debug("Buscando consultas em intervalo com especialidade: {} a {} - {}", dataInicial, dataFinal, especialidade);
-        return consultaOutputPort.buscarConsultasEmIntervaloComEspecialidade(dataInicial, dataFinal, especialidade);
-    }
-
-    @Override
-    public List<Consulta> buscarPorMedicoEmIntervalo(Long medicoId, String dataInicial, String dataFinal) {
-        log.debug("Buscando consultas por médico em intervalo: {} {} a {}", medicoId, dataInicial, dataFinal);
-        return consultaOutputPort.buscarConsultasPorMedicoEmIntervalo(dataInicial, dataFinal, medicoId);
-    }
-
-    @Override
-    public List<Consulta> buscarPorEspecialidade(String especialidade) {
-        log.debug("Buscando consultas por especialidade: {}", especialidade);
-        return consultaOutputPort.buscarConsultasPorEspecialidade(especialidade);
-    }
-
-    @Override
-    public List<Object[]> contarPorStatusEMedico(Long medicoId, String dataInicial, String dataFinal) {
-        log.debug("Contando consultas por status e médico: {} {} a {}", medicoId, dataInicial, dataFinal);
-        return consultaOutputPort.contarConsultasPorStatusEMedico(medicoId, dataInicial, dataFinal);
-    }
-
-    @Override
+    
+    @RequiresTenant
     public List<Consulta> buscarPorPaciente(Long pacienteId) {
-        log.debug("Buscando consultas por paciente: {}", pacienteId);
-        return consultaOutputPort.findByConPaciente_PaciCodigo(pacienteId);
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return consultaRepository.findByOrganizacao_IdAndPaciente_PaciCodigo(orgId, pacienteId);
     }
-
-    // Consultas concluídas
-    @Override
-    public List<Consulta> buscarConcluidasEmIntervalo(String dataInicial, String dataFinal) {
-        log.debug("Buscando consultas concluídas em intervalo: {} a {}", dataInicial, dataFinal);
-        return consultaOutputPort.buscarConsultasConcluidasEmIntervaloDeDatas(dataInicial, dataFinal);
-    }
-
-    @Override
-    public List<Consulta> buscarConcluidasEmIntervaloComEspecialidade(String dataInicial, String dataFinal, String especialidade) {
-        log.debug("Buscando consultas concluídas em intervalo com especialidade: {} a {} - {}", dataInicial, dataFinal, especialidade);
-        return consultaOutputPort.buscarConsultasConcluidasEmIntervaloComEspecialidade(dataInicial, dataFinal, especialidade);
-    }
-
-    @Override
-    public List<Consulta> buscarConcluidasPorMedico(Long medicoId) {
-        log.debug("Buscando consultas concluídas por médico: {}", medicoId);
-        return consultaOutputPort.buscarConsultasConcluidasPorMedico(medicoId);
-    }
-
-    @Override
-    public List<Consulta> buscarConcluidasPorMedicoEmIntervalo(Long medicoId, String dataInicial, String dataFinal) {
-        log.debug("Buscando consultas concluídas por médico em intervalo: {} {} a {}", medicoId, dataInicial, dataFinal);
-        return consultaOutputPort.buscarConsultasConcluidasPorMedicoEmIntervalo(dataInicial, dataFinal, medicoId);
-    }
-
-    @Override
-    public List<Consulta> buscarConcluidasPorEspecialidade(String especialidade) {
-        log.debug("Buscando consultas concluídas por especialidade: {}", especialidade);
-        return consultaOutputPort.buscarConsultasConcluidasPorEspecialidade(especialidade);
-    }
-
-    @Override
-    public List<Consulta> buscarConcluidasPorMedicoEEspecialidade(Long medicoId, String especialidade) {
-        log.debug("Buscando consultas concluídas por médico e especialidade: {} - {}", medicoId, especialidade);
-        return consultaOutputPort.buscarConsultasConcluidasPorMedicoEEspecialidade(medicoId, especialidade);
-    }
-
-    @Override
-    public List<Consulta> buscarConcluidasPorMedicoEspecialidadeEmIntervalo(Long medicoId, String especialidade, String dataInicial, String dataFinal) {
-        log.debug("Buscando consultas concluídas por médico e especialidade em intervalo: {} - {} {} a {}", medicoId, especialidade, dataInicial, dataFinal);
-        return consultaOutputPort.buscarConsultasConcluidasPorMedicoEspecialidadeEmIntervalo(medicoId, especialidade, dataInicial, dataFinal);
-    }
-
-    // Estatísticas
-    @Override
-    public Long contarPorData(String data) {
-        log.debug("Contando consultas por data: {}", data);
-        return consultaOutputPort.contarConsultasPorData(data);
-    }
-
-    @Override
-    public Long contarPorDataEUsuario(String data, Long usuarioId) {
-        log.debug("Contando consultas por data e usuário: {} {}", data, usuarioId);
-        return consultaOutputPort.contarConsultasPorDataEUsuario(data, usuarioId);
-    }
-
-    @Override
-    public Long contarRealizadasPorData(String data) {
-        log.debug("Contando consultas realizadas por data: {}", data);
-        return consultaOutputPort.contarConsultasRealizadasPorData(data);
-    }
-
-    @Override
-    public Long contarRealizadasPorDataEUsuario(String data, Long usuarioId) {
-        log.debug("Contando consultas realizadas por data e usuário: {} {}", data, usuarioId);
-        return consultaOutputPort.contarConsultasRealizadasPorDataEUsuario(data, usuarioId);
-    }
-
-    @Override
-    public Long contarAgendadasPorData(String data) {
-        log.debug("Contando consultas agendadas por data: {}", data);
-        return consultaOutputPort.contarConsultasAgendadasPorData(data);
-    }
-
-    @Override
-    public Long contarAgendadasPorDataEUsuario(String data, Long usuarioId) {
-        log.debug("Contando consultas agendadas por data e usuário: {} {}", data, usuarioId);
-        return consultaOutputPort.contarConsultasAgendadasPorDataEUsuario(data, usuarioId);
-    }
-
-    @Override
-    public Long contarDaSemana(String dataInicial, String dataFinal) {
-        log.debug("Contando consultas da semana: {} a {}", dataInicial, dataFinal);
-        return consultaOutputPort.contarConsultasDaSemana(dataInicial, dataFinal);
-    }
-
-    @Override
-    public Long contarDaSemanaPorUsuario(String dataInicial, String dataFinal, Long usuarioId) {
-        log.debug("Contando consultas da semana por usuário: {} a {} - {}", dataInicial, dataFinal, usuarioId);
-        return consultaOutputPort.contarConsultasDaSemanaPorUsuario(dataInicial, dataFinal, usuarioId);
-    }
-
-    @Override
-    public Consulta cadastrar(Consulta consulta) {
-        log.info("Cadastrando nova consulta: {}", consulta.getConCodigoConsulta());
-        Consulta consultaSalva = consultaOutputPort.save(consulta);
-        log.info("Consulta cadastrada com sucesso. ID: {}", consultaSalva.getConCodigoConsulta());
-        return consultaSalva;
-    }
-
-    @Override
-    public void deletar(Long id) throws Exception {
-        log.info("Iniciando exclusão da consulta ID: {}", id);
-
-        if (id == null || id <= 0) {
-            log.warn("Tentativa de exclusão com ID inválido: {}", id);
-            throw new IllegalArgumentException("ID inválido");
-        }
-
-        if (!consultaOutputPort.existsById(id)) {
-            log.warn("Consulta não encontrada para exclusão ID: {}", id);
-            throw new Exception("Registro não encontrado");
-        }
-
-        try {
-            consultaOutputPort.deleteById(id);
-            log.info("Consulta ID: {} excluída com sucesso", id);
-        } catch (Exception e) {
-            log.error("Erro ao excluir consulta ID: {}", id, e);
-            throw new Exception("Violação de Integridade", e);
-        }
-    }
-
-    // ==========================================
-    // MÉTODOS DE ESTATÍSTICAS
-    // ==========================================
-
-    public Long contarConsultasAgendadasHoje() {
-        String dataHoje = java.time.LocalDate.now().toString();
-        return consultaOutputPort.contarConsultasAgendadasPorData(dataHoje);
-    }
-
-    public Long contarConsultasHoje() {
-        String dataHoje = java.time.LocalDate.now().toString();
-        return consultaOutputPort.contarConsultasPorData(dataHoje);
-    }
-
-    public Long contarConsultasRealizadasHoje() {
-        String dataHoje = java.time.LocalDate.now().toString();
-        return consultaOutputPort.contarConsultasRealizadasPorData(dataHoje);
-    }
-
-    public Long contarConsultasDaSemanaAtual() {
-        java.time.LocalDate hoje = java.time.LocalDate.now();
-        java.time.LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
-        String dataInicial = inicioSemana.toString();
-        String dataFinal = hoje.toString();
-        return consultaOutputPort.contarConsultasPorIntervalo(dataInicial, dataFinal);
-    }
-
-    public Long contarMedicosAtivos() {
-        return consultaOutputPort.contarMedicosAtivos();
-    }
-
-    // ==========================================
-    // MÉTODOS DE BUSCA POR DATAS
-    // ==========================================
-
-    public List<Consulta> buscarConsultasPorIntervalo(String dataInicial, String dataFinal) {
-        return consultaOutputPort.buscarConsultasEmIntervaloDeDatas(dataInicial, dataFinal);
-    }
-
-    public List<Consulta> buscarConsultasConcluidasPorIntervalo(String dataInicial, String dataFinal) {
-        return consultaOutputPort.buscarConsultasConcluidasEmIntervaloDeDatas(dataInicial, dataFinal);
-    }
-
-    // ==========================================
-    // MÉTODOS ADICIONAIS PARA ENDPOINTS FALTANTES
-    // ==========================================
-
-    @Override
-    public Boolean verificarDisponibilidadeHorario(String data, String horario, Long medicoId) {
-        return !consultaOutputPort.existsByConHorarioAndConDataAndConMedico_MedCodigo(horario, data, medicoId);
-    }
-
-    @Override
-    public List<Consulta> buscarConsultasDoDiaAtual() {
-        String dataHoje = java.time.LocalDate.now().toString();
-        return consultaOutputPort.buscarConsultasEmIntervaloDeDatas(dataHoje, dataHoje);
-    }
-
-    @Override
-    public List<Consulta> buscarConsultasDaSemanaAtual() {
-        java.time.LocalDate hoje = java.time.LocalDate.now();
-        java.time.LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
-        String dataInicial = inicioSemana.toString();
-        String dataFinal = hoje.toString();
-        return consultaOutputPort.buscarConsultasEmIntervaloDeDatas(dataInicial, dataFinal);
-    }
-
-
-
-    @Override
-    public List<Consulta> buscarConsultasDoMesAtual() {
-        java.time.LocalDate hoje = java.time.LocalDate.now();
-        java.time.LocalDate inicioMes = hoje.withDayOfMonth(1);
-        java.time.LocalDate fimMes = hoje.withDayOfMonth(hoje.lengthOfMonth());
-
-        String dataInicialMes = inicioMes.toString();
-        String dataFinalMes = fimMes.toString();
-
-        return consultaOutputPort.buscarConsultasPorIntervaloDeDatas(dataInicialMes, dataFinalMes);
-    }
-
-    @Override
-    public List<Consulta> buscarConsultasDoAnoAtual() {
-        java.time.LocalDate hoje = java.time.LocalDate.now();
-        java.time.LocalDate inicioAno = hoje.withDayOfYear(1);
-        String dataInicial = inicioAno.toString();
-        String dataFinal = hoje.toString();
-        return consultaOutputPort.buscarConsultasEmIntervaloDeDatas(dataInicial, dataFinal);
-    }
-
-    @Override
-    public Consulta concluirConsulta(Long id) {
-        Optional<Consulta> consultaOptional = consultaOutputPort.findById(id);
-        if (consultaOptional.isEmpty()) {
-            throw new RuntimeException("Consulta não encontrada com ID: " + id);
+    
+    @RequiresTenant
+    @Transactional
+    public Consulta agendar(AgendarConsultaRequest request) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.info("Agendando consulta na organização: {}", orgId);
+        
+        Organizacao organizacao = organizacaoRepository.findById(orgId)
+            .orElseThrow(() -> new IllegalStateException("Organização não encontrada"));
+        
+        Profissional profissional = profissionalRepository.findByIdAndOrganizacao_Id(request.profissionalId(), orgId)
+            .orElseThrow(() -> new IllegalArgumentException("Profissional não encontrado"));
+        
+        Paciente paciente = pacienteRepository.findById(request.pacienteId())
+            .orElseThrow(() -> new IllegalArgumentException("Paciente não encontrado"));
+        
+        if (consultaRepository.existsByProfissional_IdAndDataHoraAndStatusNot(
+                request.profissionalId(), request.dataHora(), StatusConsulta.CANCELADA)) {
+            throw new IllegalStateException("Já existe consulta agendada para este horário");
         }
         
-        Consulta consulta = consultaOptional.get();
-        consulta.setConStatus("REALIZADA");
-        return consultaOutputPort.save(consulta);
-    }
-
-    @Override
-    public Consulta atualizarConsulta(Long id, Consulta consulta) {
-        Optional<Consulta> consultaExistente = consultaOutputPort.findById(id);
-        if (consultaExistente.isEmpty()) {
-            throw new RuntimeException("Consulta não encontrada com ID: " + id);
+        Especialidade especialidade = null;
+        if (request.especialidadeId() != null) {
+            especialidade = especialidadeRepository.findById(request.especialidadeId()).orElse(null);
         }
         
-        Consulta consultaAtualizada = consultaExistente.get();
-        // Atualizar campos necessários
-        consultaAtualizada.setConData(consulta.getConData());
-        consultaAtualizada.setConHorario(consulta.getConHorario());
-        consultaAtualizada.setConStatus(consulta.getConStatus());
+        FormaPagamento formaPagamento = null;
+        if (request.formaPagamentoId() != null) {
+            formaPagamento = formaPagamentoRepository.findById(request.formaPagamentoId()).orElse(null);
+        }
         
-        return consultaOutputPort.save(consultaAtualizada);
+        Usuario criadoPor = null;
+        Long userId = TenantContext.getCurrentUser();
+        if (userId != null) {
+            criadoPor = usuarioRepository.findById(userId).orElse(null);
+        }
+        
+        Consulta consulta = Consulta.builder()
+            .organizacao(organizacao)
+            .profissional(profissional)
+            .paciente(paciente)
+            .especialidade(especialidade)
+            .dataHora(request.dataHora())
+            .duracaoMinutos(request.duracaoMinutos() != null ? request.duracaoMinutos() : profissional.getTempoConsultaMinutos())
+            .observacoes(request.observacoes())
+            .formaPagamento(formaPagamento)
+            .valor(request.valor())
+            .status(StatusConsulta.AGENDADA)
+            .criadoPor(criadoPor)
+            .build();
+        
+        Consulta salva = consultaRepository.save(consulta);
+        registrarHistorico(salva, null, StatusConsulta.AGENDADA, "Consulta agendada", criadoPor);
+        
+        log.info("Consulta agendada com sucesso. ID: {}", salva.getId());
+        return salva;
     }
-
-    @Override
-    public List<String> buscarHorariosOcupados(Long medicoId, String data) {
-        List<Consulta> consultas = consultaOutputPort.findByConMedico_MedCodigoAndConData(medicoId, data);
-        return consultas.stream()
-                .map(Consulta::getConHorario)
-                .toList();
+    
+    @RequiresTenant
+    @Transactional
+    public Consulta confirmar(Long id) {
+        Consulta consulta = buscarPorId(id)
+            .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada"));
+        
+        if (!consulta.isAgendada()) {
+            throw new IllegalStateException("Apenas consultas agendadas podem ser confirmadas");
+        }
+        
+        StatusConsulta statusAnterior = consulta.getStatus();
+        consulta.setStatus(StatusConsulta.CONFIRMADA);
+        consultaRepository.save(consulta);
+        
+        registrarHistorico(consulta, statusAnterior, StatusConsulta.CONFIRMADA, "Consulta confirmada", getUsuarioAtual());
+        
+        log.info("Consulta ID: {} confirmada", id);
+        return consulta;
     }
-
-    @Override
-    public List<Consulta> buscarAgendaMedico(Long idUsuarioMedico) {
-        // Buscar consultas futuras do médico
-        String dataHoje = java.time.LocalDate.now().toString();
-        return consultaOutputPort.findByConMedico_MedCodigo(idUsuarioMedico).stream()
-                .filter(consulta -> consulta.getConData().compareTo(dataHoje) >= 0)
-                .toList();
+    
+    @RequiresTenant
+    @Transactional
+    public Consulta iniciar(Long id) {
+        Consulta consulta = buscarPorId(id)
+            .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada"));
+        
+        if (!consulta.isConfirmada() && !consulta.isAgendada()) {
+            throw new IllegalStateException("Consulta não pode ser iniciada");
+        }
+        
+        StatusConsulta statusAnterior = consulta.getStatus();
+        consulta.setStatus(StatusConsulta.EM_ANDAMENTO);
+        consultaRepository.save(consulta);
+        
+        registrarHistorico(consulta, statusAnterior, StatusConsulta.EM_ANDAMENTO, "Consulta iniciada", getUsuarioAtual());
+        
+        log.info("Consulta ID: {} iniciada", id);
+        return consulta;
     }
-
-    @Override
-    public List<Consulta> buscarHistoricoAgendaMedico(Long idUsuarioMedico) {
-        // Buscar todas as consultas do médico (histórico completo)
-        return consultaOutputPort.findByConMedico_MedCodigo(idUsuarioMedico);
+    
+    @RequiresTenant
+    @Transactional
+    public Consulta realizar(Long id, String observacoes) {
+        Consulta consulta = buscarPorId(id)
+            .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada"));
+        
+        StatusConsulta statusAnterior = consulta.getStatus();
+        consulta.setStatus(StatusConsulta.REALIZADA);
+        if (observacoes != null) {
+            consulta.setObservacoes(observacoes);
+        }
+        consultaRepository.save(consulta);
+        
+        registrarHistorico(consulta, statusAnterior, StatusConsulta.REALIZADA, "Consulta realizada", getUsuarioAtual());
+        
+        log.info("Consulta ID: {} realizada", id);
+        return consulta;
+    }
+    
+    @RequiresTenant
+    @Transactional
+    public Consulta cancelar(Long id, CancelarConsultaRequest request) {
+        Consulta consulta = buscarPorId(id)
+            .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada"));
+        
+        if (!consulta.podeSerCancelada()) {
+            throw new IllegalStateException("Esta consulta não pode ser cancelada");
+        }
+        
+        StatusConsulta statusAnterior = consulta.getStatus();
+        consulta.setStatus(StatusConsulta.CANCELADA);
+        consulta.setCanceladoPor(CanceladoPor.valueOf(request.canceladoPor().toUpperCase()));
+        consulta.setMotivoCancelamento(request.motivo());
+        consultaRepository.save(consulta);
+        
+        registrarHistorico(consulta, statusAnterior, StatusConsulta.CANCELADA, 
+            "Cancelado por " + request.canceladoPor() + ": " + request.motivo(), getUsuarioAtual());
+        
+        log.info("Consulta ID: {} cancelada", id);
+        return consulta;
+    }
+    
+    @RequiresTenant
+    @Transactional
+    public Consulta marcarNaoCompareceu(Long id) {
+        Consulta consulta = buscarPorId(id)
+            .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada"));
+        
+        StatusConsulta statusAnterior = consulta.getStatus();
+        consulta.setStatus(StatusConsulta.NAO_COMPARECEU);
+        consultaRepository.save(consulta);
+        
+        registrarHistorico(consulta, statusAnterior, StatusConsulta.NAO_COMPARECEU, "Paciente não compareceu", getUsuarioAtual());
+        
+        log.info("Consulta ID: {} marcada como não compareceu", id);
+        return consulta;
+    }
+    
+    @RequiresTenant
+    public Long contarAgendadasHoje() {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return consultaRepository.countAgendadasHoje(orgId);
+    }
+    
+    public List<ConsultaHistorico> buscarHistorico(Long consultaId) {
+        return historicoRepository.findByConsulta_IdOrderByCreatedAtDesc(consultaId);
+    }
+    
+    private void registrarHistorico(Consulta consulta, StatusConsulta statusAnterior, 
+                                     StatusConsulta statusNovo, String observacao, Usuario alteradoPor) {
+        ConsultaHistorico historico = ConsultaHistorico.builder()
+            .consulta(consulta)
+            .statusAnterior(statusAnterior)
+            .statusNovo(statusNovo)
+            .observacao(observacao)
+            .alteradoPor(alteradoPor)
+            .build();
+        historicoRepository.save(historico);
+    }
+    
+    private Usuario getUsuarioAtual() {
+        Long userId = TenantContext.getCurrentUser();
+        if (userId != null) {
+            return usuarioRepository.findById(userId).orElse(null);
+        }
+        return null;
     }
 }

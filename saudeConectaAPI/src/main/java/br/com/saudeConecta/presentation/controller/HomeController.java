@@ -33,10 +33,14 @@ public class HomeController {
     public ResponseEntity<DadosTokenJWT> autenticar(@RequestBody @NotNull DadosLoginUsuario dados) {
         var authenticatetoken = new UsernamePasswordAuthenticationToken(dados.login(), dados.senha());
         var authentication = authenticationManager.authenticate(authenticatetoken);
+        
+        Usuario usuario = (Usuario) authentication.getPrincipal();
+        Long organizacaoId = usuario.getOrganizacaoId();
+        
+        String tokenJWT = tokenService.gerarToken(usuario, organizacaoId);
+        log.info("Login realizado: {} | Org: {}", usuario.getLogin(), organizacaoId);
 
-        var TokenJWT = tokenService.gerarToken((Usuario) authentication.getPrincipal());
-
-        return ResponseEntity.ok(new DadosTokenJWT(TokenJWT));
+        return ResponseEntity.ok(new DadosTokenJWT(tokenJWT));
     }
 
     @PostMapping("/esqueciMinhaSenha")

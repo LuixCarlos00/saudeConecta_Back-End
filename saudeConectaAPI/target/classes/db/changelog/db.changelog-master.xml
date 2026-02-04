@@ -5,14 +5,22 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
+    <!-- Tabelas Base -->
     <include file="db/changelog/changes/001-create-table-usuarios.xml"/>
     <include file="db/changelog/changes/002-create-table-endereco.xml"/>
-    <include file="db/changelog/changes/003-create-table-medico.xml"/>
     <include file="db/changelog/changes/004-create-table-paciente.xml"/>
-    <include file="db/changelog/changes/005-create-table-administrador.xml"/>
-    <include file="db/changelog/changes/006-create-table-consulta.xml"/>
-    <include file="db/changelog/changes/007-create-table-codigoverificacao.xml"/>
-    <include file="db/changelog/changes/008-create-table-secretaria.xml"/>
+
+    <!-- Multi-Tenant -->
+    <include file="db/changelog/changes/011-criar-tabelas-multi-tenant.xml"/>
+    <include file="db/changelog/changes/012-dados-iniciais-multi-tenant.xml"/>
+    <include file="db/changelog/changes/013-atualizar-tabela-usuarios.xml"/>
+    <include file="db/changelog/changes/014-criar-tabela-profissional.xml"/>
+    <include file="db/changelog/changes/015-criar-consulta-v2.xml"/>
+    
+    <!-- Prontuario (depende de profissional e consulta) -->
     <include file="db/changelog/changes/09-create-table-prontuario.xml"/>
+    
+    <!-- Atualizar Paciente com tenant -->
+    <include file="db/changelog/changes/016-adicionar-organizacao-paciente.xml"/>
 
 </databaseChangeLog>

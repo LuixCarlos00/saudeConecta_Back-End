@@ -1,134 +1,73 @@
 package br.com.saudeConecta.infrastructure.persistence.repository;
 
 import br.com.saudeConecta.domain.consulta.Consulta;
+import br.com.saudeConecta.domain.consulta.StatusConsulta;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.sql.Date;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface ConsultaRepository extends JpaRepository<Consulta, Long> {
-
-    Optional<Consulta> findByConHorarioAndConDataAndConMedico_MedCodigo(String conHorario, Date conData, Long medCodigo);
-
-    boolean existsByConHorarioAndConDataAndConMedico_MedCodigo(String conHorario, String conData, Long medCodigo);
-
-    List<Consulta> findByConMedico_MedCodigoAndConData(Long medCodigo, String conData);
-
-    List<Consulta> findByConMedico_MedCodigo(Long medCodigo);
-
-    @Query("SELECT c FROM Consulta c WHERE c.conData BETWEEN :dataInicial AND :dataFinal")
-    List<Consulta> buscarConsultasEmIntervaloDeDatas(
-            @Param("dataInicial") String dataInicial,
-            @Param("dataFinal") String dataFinal);
-
-    @Query("SELECT c FROM Consulta c WHERE c.conData BETWEEN :dataInicial AND :dataFinal AND c.conMedico.medEspecialidade = :especialidade")
-    List<Consulta> buscarConsultasEmIntervaloComEspecialidade(
-            @Param("dataInicial") String dataInicial,
-            @Param("dataFinal") String dataFinal,
-            @Param("especialidade") String especialidade);
-
-    @Query("SELECT c FROM Consulta c WHERE c.conMedico.medCodigo = :medicoId")
-    List<Consulta> buscarConsultasPorMedico(@Param("medicoId") Long medicoId);
-
-    @Query("SELECT c FROM Consulta c WHERE c.conData BETWEEN :dataInicial AND :dataFinal AND c.conMedico.medCodigo = :medicoId")
-    List<Consulta> buscarConsultasPorMedicoEmIntervalo(
-            @Param("dataInicial") String dataInicial,
-            @Param("dataFinal") String dataFinal,
-            @Param("medicoId") Long medicoId);
-
-    @Query("SELECT c FROM Consulta c WHERE c.conMedico.medEspecialidade = :especialidade")
-    List<Consulta> buscarConsultasPorEspecialidade(@Param("especialidade") String especialidade);
-
-    @Query("SELECT c.conStatus, COUNT(c) FROM Consulta c WHERE c.conMedico.medCodigo = :medicoId AND c.conData BETWEEN :dataInicial AND :dataFinal GROUP BY c.conStatus")
-    List<Object[]> contarConsultasPorStatusEMedico(
-            @Param("medicoId") Long medicoId,
-            @Param("dataInicial") String dataInicial,
-            @Param("dataFinal") String dataFinal);
-
-    List<Consulta> findByConPaciente_PaciCodigo(Long paciCodigo);
-
-    @Query("SELECT c FROM Consulta c WHERE c.conData BETWEEN :dataInicial AND :dataFinal")
-    List<Consulta>  buscarConsultasPorIntervaloDeDatas(
-            @Param("dataInicial") String dataInicial,
-            @Param("dataFinal") String dataFinal);
-
-    // ==========================================
-    // CONSULTAS CONCLUÍDAS (REALIZADA)
-    // ==========================================
-
-    @Query("SELECT c FROM Consulta c WHERE c.conData BETWEEN :dataInicial AND :dataFinal AND c.conStatus = 'REALIZADA'")
-    List<Consulta> buscarConsultasConcluidasEmIntervaloDeDatas(
-            @Param("dataInicial") String dataInicial,
-            @Param("dataFinal") String dataFinal);
-
-    @Query("SELECT c FROM Consulta c WHERE c.conData BETWEEN :dataInicial AND :dataFinal AND c.conMedico.medEspecialidade = :especialidade AND c.conStatus = 'REALIZADA'")
-    List<Consulta> buscarConsultasConcluidasEmIntervaloComEspecialidade(
-            @Param("dataInicial") String dataInicial,
-            @Param("dataFinal") String dataFinal,
-            @Param("especialidade") String especialidade);
-
-    @Query("SELECT c FROM Consulta c WHERE c.conMedico.medCodigo = :medicoId AND c.conStatus = 'REALIZADA'")
-    List<Consulta> buscarConsultasConcluidasPorMedico(@Param("medicoId") Long medicoId);
-
-    @Query("SELECT c FROM Consulta c WHERE c.conData BETWEEN :dataInicial AND :dataFinal AND c.conMedico.medCodigo = :medicoId AND c.conStatus = 'REALIZADA'")
-    List<Consulta> buscarConsultasConcluidasPorMedicoEmIntervalo(
-            @Param("dataInicial") String dataInicial,
-            @Param("dataFinal") String dataFinal,
-            @Param("medicoId") Long medicoId);
-
-    @Query("SELECT c FROM Consulta c WHERE c.conMedico.medEspecialidade = :especialidade AND c.conStatus = 'REALIZADA'")
-    List<Consulta> buscarConsultasConcluidasPorEspecialidade(@Param("especialidade") String especialidade);
-
-    @Query("SELECT c FROM Consulta c WHERE c.conMedico.medCodigo = :medicoId AND c.conMedico.medEspecialidade = :especialidade AND c.conStatus = 'REALIZADA'")
-    List<Consulta> buscarConsultasConcluidasPorMedicoEEspecialidade(
-            @Param("medicoId") Long medicoId,
-            @Param("especialidade") String especialidade);
-
-    @Query("SELECT c FROM Consulta c WHERE c.conMedico.medCodigo = :medicoId AND c.conMedico.medEspecialidade = :especialidade AND c.conData BETWEEN :dataInicial AND :dataFinal AND c.conStatus = 'REALIZADA'")
-    List<Consulta> buscarConsultasConcluidasPorMedicoEspecialidadeEmIntervalo(
-            @Param("medicoId") Long medicoId,
-            @Param("especialidade") String especialidade,
-            @Param("dataInicial") String dataInicial,
-            @Param("dataFinal") String dataFinal);
-
-    // ==========================================
-    // ESTATÍSTICAS DO DASHBOARD
-    // ==========================================
-
-    @Query("SELECT COUNT(c) FROM Consulta c WHERE c.conData = :data")
-    Long contarConsultasPorData(@Param("data") String data);
-
-    @Query("SELECT COUNT(c) FROM Consulta c WHERE c.conData = :data AND c.conMedico.usuario.id = :usuarioId")
-    Long contarConsultasPorDataEUsuario(@Param("data") String data, @Param("usuarioId") Long usuarioId);
-
-    @Query("SELECT COUNT(c) FROM Consulta c WHERE c.conData = :data AND c.conStatus = 'REALIZADA'")
-    Long contarConsultasRealizadasPorData(@Param("data") String data);
-
-    @Query("SELECT COUNT(c) FROM Consulta c WHERE c.conData = :data AND c.conMedico.usuario.id = :usuarioId AND c.conStatus = 'REALIZADA'")
-    Long contarConsultasRealizadasPorDataEUsuario(@Param("data") String data, @Param("usuarioId") Long usuarioId);
-
-    @Query("SELECT COUNT(c) FROM Consulta c WHERE c.conData = :data AND c.conStatus = 'AGENDADA'")
-    Long contarConsultasAgendadasPorData(@Param("data") String data);
-
-    @Query("SELECT COUNT(c) FROM Consulta c WHERE c.conData = :data AND c.conMedico.usuario.id = :usuarioId AND c.conStatus = 'AGENDADA'")
-    Long contarConsultasAgendadasPorDataEUsuario(@Param("data") String data, @Param("usuarioId") Long usuarioId);
-
-    @Query("SELECT COUNT(c) FROM Consulta c WHERE c.conData BETWEEN :dataInicial AND :dataFinal AND c.conStatus IN ('AGENDADA', 'REALIZADA')")
-    Long contarConsultasDaSemana(@Param("dataInicial") String dataInicial, @Param("dataFinal") String dataFinal);
-
-    @Query("SELECT COUNT(c) FROM Consulta c WHERE c.conData BETWEEN :dataInicial AND :dataFinal AND c.conMedico.usuario.id = :usuarioId AND c.conStatus IN ('AGENDADA', 'REALIZADA')")
-    Long contarConsultasDaSemanaPorUsuario(@Param("dataInicial") String dataInicial, @Param("dataFinal") String dataFinal, @Param("usuarioId") Long usuarioId);
-
-    @Query("SELECT COUNT(c) FROM Consulta c WHERE c.conData BETWEEN :dataInicial AND :dataFinal AND c.conStatus IN ('AGENDADA', 'REALIZADA')")
-    Long contarConsultasPorIntervalo(@Param("dataInicial") String dataInicial, @Param("dataFinal") String dataFinal);
-
-    @Query("SELECT COUNT(m) FROM Medico m WHERE m.usuario.status = 1")
-    Long contarMedicosAtivos();
+    
+    List<Consulta> findByOrganizacao_Id(Long organizacaoId);
+    
+    Page<Consulta> findByOrganizacao_Id(Long organizacaoId, Pageable pageable);
+    
+    Optional<Consulta> findByIdAndOrganizacao_Id(Long id, Long organizacaoId);
+    
+    List<Consulta> findByOrganizacao_IdAndProfissional_Id(Long organizacaoId, Long profissionalId);
+    
+    List<Consulta> findByOrganizacao_IdAndPaciente_PaciCodigo(Long organizacaoId, Long pacienteId);
+    
+    List<Consulta> findByOrganizacao_IdAndStatus(Long organizacaoId, StatusConsulta status);
+    
+    @Query("SELECT c FROM Consulta c WHERE c.organizacao.id = :orgId " +
+           "AND c.dataHora BETWEEN :inicio AND :fim ORDER BY c.dataHora")
+    List<Consulta> findByOrganizacaoIdAndPeriodo(
+        @Param("orgId") Long organizacaoId,
+        @Param("inicio") LocalDateTime inicio,
+        @Param("fim") LocalDateTime fim);
+    
+    @Query("SELECT c FROM Consulta c WHERE c.organizacao.id = :orgId " +
+           "AND c.profissional.id = :profId AND DATE(c.dataHora) = :data ORDER BY c.dataHora")
+    List<Consulta> findAgendaDia(
+        @Param("orgId") Long organizacaoId,
+        @Param("profId") Long profissionalId,
+        @Param("data") LocalDate data);
+    
+    @Query("SELECT c FROM Consulta c WHERE c.organizacao.id = :orgId " +
+           "AND DATE(c.dataHora) = CURRENT_DATE ORDER BY c.dataHora")
+    List<Consulta> findConsultasHoje(@Param("orgId") Long organizacaoId);
+    
+    @Query("SELECT c FROM Consulta c WHERE c.organizacao.id = :orgId " +
+           "AND c.profissional.id = :profId " +
+           "AND c.dataHora BETWEEN :inicio AND :fim " +
+           "AND c.status NOT IN ('CANCELADA', 'NAO_COMPARECEU')")
+    List<Consulta> findConsultasAtivasProfissionalPeriodo(
+        @Param("orgId") Long organizacaoId,
+        @Param("profId") Long profissionalId,
+        @Param("inicio") LocalDateTime inicio,
+        @Param("fim") LocalDateTime fim);
+    
+    boolean existsByProfissional_IdAndDataHoraAndStatusNot(
+        Long profissionalId, LocalDateTime dataHora, StatusConsulta status);
+    
+    @Query("SELECT COUNT(c) FROM Consulta c WHERE c.organizacao.id = :orgId " +
+           "AND DATE(c.dataHora) = CURRENT_DATE AND c.status = 'AGENDADA'")
+    Long countAgendadasHoje(@Param("orgId") Long organizacaoId);
+    
+    @Query("SELECT COUNT(c) FROM Consulta c WHERE c.organizacao.id = :orgId " +
+           "AND c.dataHora BETWEEN :inicio AND :fim")
+    Long countByOrganizacaoIdAndPeriodo(
+        @Param("orgId") Long organizacaoId,
+        @Param("inicio") LocalDateTime inicio,
+        @Param("fim") LocalDateTime fim);
 }
-
-//dasbosrde e tabela de medico trazedno dados errados

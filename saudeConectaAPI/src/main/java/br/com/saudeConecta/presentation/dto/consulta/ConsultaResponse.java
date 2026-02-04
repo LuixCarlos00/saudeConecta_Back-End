@@ -1,36 +1,52 @@
 package br.com.saudeConecta.presentation.dto.consulta;
 
-import br.com.saudeConecta.domain.administrador.Administrador;
 import br.com.saudeConecta.domain.consulta.Consulta;
-import br.com.saudeConecta.domain.medico.Medico;
-import br.com.saudeConecta.domain.paciente.Paciente;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 public record ConsultaResponse(
-        Long conCodigoConsulta,
-        String conDiaSemana,
-        String conHorario,
-        String conData,
-        String conObservacoes,
-        String conDataCriacao,
-        Byte conFormaPagamento,
-        String conStatus,
-        Medico medico,
-        Paciente paciente,
-        Administrador adm
+    Long id,
+    Long profissionalId,
+    String profissionalNome,
+    String profissionalConselho,
+    Long pacienteId,
+    String pacienteNome,
+    Long especialidadeId,
+    String especialidadeNome,
+    LocalDateTime dataHora,
+    LocalDateTime dataHoraFim,
+    Integer duracaoMinutos,
+    String observacoes,
+    Long formaPagamentoId,
+    String formaPagamentoNome,
+    BigDecimal valor,
+    String status,
+    String canceladoPor,
+    String motivoCancelamento,
+    LocalDateTime createdAt
 ) {
-    public ConsultaResponse(Consulta consulta) {
-        this(
-                consulta.getConCodigoConsulta(),
-                consulta.getConDiaSemana(),
-                consulta.getConHorario(),
-                consulta.getConData(),
-                consulta.getConObservacoes(),
-                consulta.getConDataCriacao(),
-                consulta.getConFormaPagamento(),
-                consulta.getConStatus(),
-                consulta.getConMedico(),
-                consulta.getConPaciente(),
-                consulta.getConAdm()
+    public static ConsultaResponse fromEntity(Consulta c) {
+        return new ConsultaResponse(
+            c.getId(),
+            c.getProfissional() != null ? c.getProfissional().getId() : null,
+            c.getProfissional() != null ? c.getProfissional().getNome() : null,
+            c.getProfissional() != null ? c.getProfissional().getConselhoFormatado() : null,
+            c.getPaciente() != null ? c.getPaciente().getPaciCodigo() : null,
+            c.getPaciente() != null ? c.getPaciente().getPaciNome() : null,
+            c.getEspecialidade() != null ? c.getEspecialidade().getId() : null,
+            c.getEspecialidade() != null ? c.getEspecialidade().getNome() : null,
+            c.getDataHora(),
+            c.getDataHoraFim(),
+            c.getDuracaoMinutos(),
+            c.getObservacoes(),
+            c.getFormaPagamento() != null ? c.getFormaPagamento().getId() : null,
+            c.getFormaPagamento() != null ? c.getFormaPagamento().getNome() : null,
+            c.getValor(),
+            c.getStatus() != null ? c.getStatus().name() : null,
+            c.getCanceladoPor() != null ? c.getCanceladoPor().name() : null,
+            c.getMotivoCancelamento(),
+            c.getCreatedAt()
         );
     }
 }

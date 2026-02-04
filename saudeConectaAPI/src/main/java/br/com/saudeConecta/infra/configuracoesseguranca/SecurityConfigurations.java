@@ -1,6 +1,7 @@
 package br.com.saudeConecta.infra.configuracoesseguranca;
 
 import br.com.saudeConecta.infra.configuracoesseguranca.filtroSeguranca.FiltroAcesso;
+import br.com.saudeConecta.infra.tenant.TenantFilter;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +26,9 @@ public class SecurityConfigurations {
 
     @Autowired
     private FiltroAcesso filtroAcesso;
+
+    @Autowired
+    private TenantFilter tenantFilter;
 
     @Value("${app.url.frontend}")
     private String urlFrontEnd;
@@ -57,6 +61,7 @@ public class SecurityConfigurations {
                 .requestMatchers(HttpMethod.GET, "/Home/recuperaLogin={Id}&dados={tipoUsuario}").permitAll()
                 .anyRequest().authenticated()
                 .and()
+                .addFilterBefore(tenantFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(filtroAcesso, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
