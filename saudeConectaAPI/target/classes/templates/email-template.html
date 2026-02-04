@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Email Template</title>
+    <style>
+        .formata{
+          color: red;
+          font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+<form>
+    <h1>Prezado(a) Usuario(a) </h1>
+    <p>
+
+        Este é um lembrete importante sobre a sua conta. Foi enviado um código de verificação de duas etapas para
+        garantir a segurança do seu acesso.
+
+
+    <p><strong><br>Seu código de Verificação é : <p class="formata" th:text="${message}">Mensagem padrão</p></strong>
+    </p>
+    <!-- essa classe <p> acima é a responsavel por fazer mostra o codigo para o usuário -->
+
+    Você tem apenas 5 minutos para validar este código. Caso o tempo estipulado tenha passado, será necessário fazer
+    login novamente para obter um
+
+    novo código de verificação. <br><br>
+
+    Por favor, certifique-se de concluir a validação dentro do prazo para evitar qualquer interrupção no acesso à sua
+    conta.<br><br>
+
+    Atenciosamente SAUDE-CONECTA.</p>
+
+</form>
+
+
+</body>
+</html>

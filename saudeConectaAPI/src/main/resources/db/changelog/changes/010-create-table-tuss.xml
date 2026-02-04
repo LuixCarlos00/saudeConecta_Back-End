@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="011-create-table-tuss" author="sistema">
+        <createTable tableName="tuss">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="codigo" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="descricao" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tabela" type="VARCHAR(50)"/>
+            <column name="grupo" type="VARCHAR(100)"/>
+        </createTable>
+
+        <createIndex tableName="tuss" indexName="idx_tuss_codigo">
+            <column name="codigo"/>
+        </createIndex>
+
+        <createIndex tableName="tuss" indexName="idx_tuss_descricao">
+            <column name="descricao"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Inserir alguns TUSS de exemplo -->
+    <changeSet id="011-insert-tuss-sample" author="sistema">
+        <insert tableName="tuss">
+            <column name="codigo" value="10101012"/>
+            <column name="descricao" value="Consulta em consultório (no horário normal ou preestabelecido)"/>
+            <column name="tabela" value="22"/>
+            <column name="grupo" value="Consultas"/>
+        </insert>
+        <insert tableName="tuss">
+            <column name="codigo" value="10101020"/>
+            <column name="descricao" value="Consulta em domicílio"/>
+            <column name="tabela" value="22"/>
+            <column name="grupo" value="Consultas"/>
+        </insert>
+        <insert tableName="tuss">
+            <column name="codigo" value="10101039"/>
+            <column name="descricao" value="Consulta em pronto socorro"/>
+            <column name="tabela" value="22"/>
+            <column name="grupo" value="Consultas"/>
+        </insert>
+        <insert tableName="tuss">
+            <column name="codigo" value="40301630"/>
+            <column name="descricao" value="Hemograma com contagem de plaquetas ou frações"/>
+            <column name="tabela" value="22"/>
+            <column name="grupo" value="Exames laboratoriais"/>
+        </insert>
+        <insert tableName="tuss">
+            <column name="codigo" value="40302040"/>
+            <column name="descricao" value="Glicose"/>
+            <column name="tabela" value="22"/>
+            <column name="grupo" value="Exames laboratoriais"/>
+        </insert>
+        <insert tableName="tuss">
+            <column name="codigo" value="40302059"/>
+            <column name="descricao" value="Hemoglobina glicada"/>
+            <column name="tabela" value="22"/>
+            <column name="grupo" value="Exames laboratoriais"/>
+        </insert>
+        <insert tableName="tuss">
+            <column name="codigo" value="40302067"/>
+            <column name="descricao" value="Colesterol total"/>
+            <column name="tabela" value="22"/>
+            <column name="grupo" value="Exames laboratoriais"/>
+        </insert>
+        <insert tableName="tuss">
+            <column name="codigo" value="40302075"/>
+            <column name="descricao" value="Colesterol HDL"/>
+            <column name="tabela" value="22"/>
+            <column name="grupo" value="Exames laboratoriais"/>
+        </insert>
+        <insert tableName="tuss">
+            <column name="codigo" value="40302083"/>
+            <column name="descricao" value="Triglicerídeos"/>
+            <column name="tabela" value="22"/>
+            <column name="grupo" value="Exames laboratoriais"/>
+        </insert>
+        <insert tableName="tuss">
+            <column name="codigo" value="40808050"/>
+            <column name="descricao" value="Ultrassonografia de abdome total"/>
+            <column name="tabela" value="22"/>
+            <column name="grupo" value="Exames de imagem"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

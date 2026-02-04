@@ -1,7 +1,8 @@
 package br.com.saudeConecta.domain.administrador;
 
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.endpoinst.administrador.DTO.DadosCadastraAdministrador;
+import br.com.saudeConecta.presentation.dto.administrador.CadastrarAdministradorRequest;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -43,13 +44,15 @@ public class Administrador implements Serializable {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "AdmUsuario")
+    @JsonIgnore
     private Usuario admUsuario;
 
-    public Administrador(DadosCadastraAdministrador dados, Usuario usuario) {
-        this.admNome = dados.AdmNome();
-        this.admStatus = dados.AdmStatus();
-        this.admDataCriacao = dados.AdmDataCriacao();
-        this.admEmail = dados.AdmEmail();
+    public Administrador(CadastrarAdministradorRequest dados, Usuario usuario) {
+        this.admNome = dados.admNome();
+        this.admStatus = dados.admStatus();
+        this.admDataCriacao = dados.admDataCriacao() != null ? 
+            Date.valueOf(dados.admDataCriacao()) : null;
+        this.admEmail = dados.admEmail();
         this.admUsuario = usuario;
     }
 }

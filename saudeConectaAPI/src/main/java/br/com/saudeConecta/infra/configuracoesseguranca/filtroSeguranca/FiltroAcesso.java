@@ -51,9 +51,11 @@ public class FiltroAcesso extends OncePerRequestFilter {
 
         var authorizationHeader = request.getHeader("Authorization");
 
-        if (authorizationHeader != null) {
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             return authorizationHeader.replace("Bearer ", "");
         }
+
+       // a requisisao ta vindo so o bearer  validar se tem token e nao o bearer sozinho   fazer isso no metodo de login front tbm  se e necessario colocar o bearer
         return null;
     }
 

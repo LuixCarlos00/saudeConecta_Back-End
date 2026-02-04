@@ -1,8 +1,9 @@
 package br.com.saudeConecta.domain.prontuario;
 
-import br.com.saudeConecta.domain.consultastatus.ConsultaStatus;
+import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.medico.Medico;
-import br.com.saudeConecta.endpoinst.prontuario.DTO.DadosCadastraProntuario;
+import br.com.saudeConecta.presentation.dto.prontuario.CadastrarProntuarioRequest;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.jetbrains.annotations.NotNull;
@@ -17,7 +18,7 @@ import java.sql.Date;
 @AllArgsConstructor
 @Table(name = "prontuario")
 @EqualsAndHashCode(of = "prontCodigoProntuario")
-
+@JsonIgnoreProperties({"hibernateLazyInitializer"})
 public class Prontuario implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -96,8 +97,8 @@ public class Prontuario implements Serializable {
 
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "prontCodigoConsulta" )
-    private ConsultaStatus prontCodigoConsulta;
+    @JoinColumn(name = "consulta" )
+    private Consulta consulta;
 
     @Column(name = "prontModeloExame")
     private String prontModeloExame;
@@ -121,7 +122,7 @@ public class Prontuario implements Serializable {
 
 
 
-    public Prontuario(@NotNull DadosCadastraProntuario dados, Medico medico, ConsultaStatus consulta) {
+    public Prontuario(@NotNull CadastrarProntuarioRequest dados, Medico medico, Consulta consulta) {
         this.prontAltura = dados.prontAltura();
         this.prontPeso = dados.prontPeso();
         this.prontTemperatura = dados.prontTemperatura();
@@ -144,7 +145,7 @@ public class Prontuario implements Serializable {
         this.prontPrescricao = dados.prontPrescricao();
         this.prontDataFinalizado = dados.prontDataFinalizado();
         this.prontCodigoMedico = medico;
-        this.prontCodigoConsulta =consulta;
+        this.consulta = consulta;
         this.prontTituloExame = dados.prontTituloExame();
         this.prontDataExame = dados.prontDataExame();
         this.prontExame = dados.prontExame();

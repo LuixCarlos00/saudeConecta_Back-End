@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Template de Email</title>
+    <style>
+        .formata {
+            color: red;
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+<form>
+    <h1>Prezado(a) Usuário(a),</h1>
+    <p>
+        Recebemos uma solicitação para recuperar o login do seu cadastro.
+    </p>
+    <p>
+        <strong>Seu login: <span class="formata" th:text="${message}">Mensagem padrão</span></strong>
+    </p>
+    <!-- Esta classe <span> acima é responsável por exibir o código para o usuário -->
+
+    <p>
+        Se você não fez essa solicitação, recomendamos que altere sua senha para evitar invasões.
+    </p>
+
+    <p>
+        Atenciosamente,<br>
+        Equipe Saúde-Conecta
+    </p>
+</form>
+</body>
+</html>

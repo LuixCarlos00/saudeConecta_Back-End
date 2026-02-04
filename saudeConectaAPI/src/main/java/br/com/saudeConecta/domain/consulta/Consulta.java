@@ -3,7 +3,8 @@ package br.com.saudeConecta.domain.consulta;
 import br.com.saudeConecta.domain.administrador.Administrador;
 import br.com.saudeConecta.domain.medico.Medico;
 import br.com.saudeConecta.domain.paciente.Paciente;
-import br.com.saudeConecta.endpoinst.consulta.DTO.DadosCadastraConsulta;
+import br.com.saudeConecta.presentation.dto.consulta.CadastrarConsultaRequest;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -33,6 +34,7 @@ public class Consulta implements Serializable {
 
     @ManyToOne
     @JoinColumn(name = "ConPaciente")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "endereco"})
     private Paciente conPaciente;
 
     @Column(name = "ConDia_semana")
@@ -54,13 +56,14 @@ public class Consulta implements Serializable {
     private Byte conFormaPagamento;
 
     @Column(name = "ConStatus")
-    private Byte conStatus;
+    private String conStatus;
 
     @ManyToOne
     @JoinColumn(name = "ConAdm")
+    @JsonIgnore
     private Administrador conAdm;
 
-    public Consulta(Medico medico, Paciente paciente, Administrador adm, DadosCadastraConsulta dados) {
+    public Consulta(Medico medico, Paciente paciente, Administrador adm, CadastrarConsultaRequest dados) {
         this.conMedico = medico;
         this.conPaciente = paciente;
         this.conAdm = adm;
