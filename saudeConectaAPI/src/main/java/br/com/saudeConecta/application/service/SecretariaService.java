@@ -5,6 +5,7 @@ import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.email.EnviarService.CredenciaisEmailService;
 import br.com.saudeConecta.infrastructure.persistence.repository.SecretariaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
+import br.com.saudeConecta.presentation.dto.secretaria.AtualizarSecretariaRequest;
 import br.com.saudeConecta.presentation.dto.secretaria.CadastrarSecretariaCompletoRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,9 +54,37 @@ public class SecretariaService {
         return secretariaRepository.save(secretaria);
     }
 
-    public void deletar(Long id) {
-        log.info("Deletando secretária ID: {}", id);
-        secretariaRepository.deleteById(id);
+    public void deletar(Long id) throws Exception {
+        log.info("Iniciando exclusão da secretária ID: {}", id);
+
+        if (id == null || id <= 0) {
+            log.warn("Tentativa de exclusão com ID inválido: {}", id);
+            throw new IllegalArgumentException("ID inválido");
+        }
+
+        var secretariaOpt = secretariaRepository.findById(id);
+        if (secretariaOpt.isEmpty()) {
+            log.warn("Secretária não encontrada para exclusão ID: {}", id);
+            throw new Exception("Registro não encontrado");
+        }
+
+        Secretaria secretaria = secretariaOpt.get();
+        Usuario usuario = secretaria.getSecreUsuario();
+
+        try {
+            // 1. Deletar a secretária primeiro (remove a FK)
+            secretariaRepository.deleteById(id);
+            log.info("Secretária ID: {} excluída com sucesso", id);
+
+            // 2. Deletar o usuário associado
+            if (usuario != null) {
+                usuarioRepository.deleteById(usuario.getId());
+                log.info("Usuário ID: {} associado à secretária excluído com sucesso", usuario.getId());
+            }
+        } catch (Exception e) {
+            log.error("Erro ao excluir secretária ID: {}", id, e);
+            throw new Exception("Violação de Integridade", e);
+        }
     }
 
     /**
@@ -125,5 +154,34 @@ public class SecretariaService {
     
     private String limparCpf(String cpf) {
         return cpf.replaceAll("[^0-9]", "");
+    }
+
+    /**
+     * Atualiza os dados de uma secretária existente.
+     * @param id ID da secretária
+     * @param dados DTO com dados atualizados
+     * @return Secretaria atualizada
+     * @throws IllegalArgumentException se secretária não for encontrada
+     */
+    public Secretaria atualizar(Long id, AtualizarSecretariaRequest dados) {
+        log.info("Atualizando secretária ID: {}", id);
+        
+        var secretariaOpt = buscarPorId(id);
+        if (secretariaOpt.isEmpty()) {
+            log.warn("Secretária não encontrada para atualização: {}", id);
+            throw new IllegalArgumentException("Secretária não encontrada");
+        }
+        
+        Secretaria secretaria = secretariaOpt.get();
+        
+        // Atualiza dados da secretária
+        if (dados.secreNome() != null) secretaria.setSecreNome(dados.secreNome());
+        if (dados.secreEmail() != null) secretaria.setSecreEmail(dados.secreEmail());
+        if (dados.secreCodigoAutorizacao() != null) secretaria.setSecreCodigoAtorizacao(dados.secreCodigoAutorizacao());
+        
+        Secretaria secretariaAtualizada = secretariaRepository.save(secretaria);
+        log.info("Secretária ID: {} atualizada com sucesso", id);
+        
+        return secretariaAtualizada;
     }
 }

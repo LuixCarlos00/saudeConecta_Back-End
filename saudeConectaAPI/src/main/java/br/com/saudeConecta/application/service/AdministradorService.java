@@ -6,6 +6,7 @@ import br.com.saudeConecta.domain.administrador.Administrador;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.email.EnviarService.CredenciaisEmailService;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
+import br.com.saudeConecta.presentation.dto.administrador.AtualizarAdministradorRequest;
 import br.com.saudeConecta.presentation.dto.administrador.CadastrarAdministradorCompletoRequest;
 import br.com.saudeConecta.presentation.dto.administrador.CadastrarAdministradorRequest;
 import lombok.RequiredArgsConstructor;
@@ -83,14 +84,25 @@ public class AdministradorService implements AdministradorInputPort {
             throw new IllegalArgumentException("ID inválido");
         }
 
-        if (!administradorOutputPort.existsById(id)) {
+        var administradorOpt = administradorOutputPort.findById(id);
+        if (administradorOpt.isEmpty()) {
             log.warn("Administrador não encontrado para exclusão ID: {}", id);
             throw new Exception("Registro não encontrado");
         }
 
+        Administrador administrador = administradorOpt.get();
+        Usuario usuario = administrador.getAdmUsuario();
+
         try {
+            // 1. Deletar o administrador primeiro (remove a FK)
             administradorOutputPort.deleteById(id);
             log.info("Administrador ID: {} excluído com sucesso", id);
+
+            // 2. Deletar o usuário associado
+            if (usuario != null) {
+                usuarioRepository.deleteById(usuario.getId());
+                log.info("Usuário ID: {} associado ao administrador excluído com sucesso", usuario.getId());
+            }
         } catch (Exception e) {
             log.error("Erro ao excluir administrador ID: {}", id, e);
             throw new Exception("Violação de Integridade", e);
@@ -103,20 +115,20 @@ public class AdministradorService implements AdministradorInputPort {
      * @return Administrador cadastrado
      * @throws IllegalArgumentException se usuário não for encontrado
      */
-    public Administrador cadastrarComUsuario(CadastrarAdministradorRequest dados) {
-        log.info("Cadastrando administrador com usuário: {}", dados.admNome());
-        
-        var usuarioOptional = usuarioRepository.findById(dados.admUsuario());
-        if (usuarioOptional.isEmpty()) {
-            log.warn("Usuário não encontrado para cadastro de administrador: {}", dados.admUsuario());
-            throw new IllegalArgumentException("Usuário não encontrado");
-        }
-
-        Usuario usuario = usuarioOptional.get();
-        Administrador administrador = new Administrador(dados, usuario);
-        
-        return cadastrar(administrador);
-    }
+//    public Administrador cadastrarComUsuario(CadastrarAdministradorRequest dados) {
+//        log.info("Cadastrando administrador com usuário: {}", dados.admNome());
+//
+//        var usuarioOptional = usuarioRepository.findById(dados.admUsuario());
+//        if (usuarioOptional.isEmpty()) {
+//            log.warn("Usuário não encontrado para cadastro de administrador: {}", dados.admUsuario());
+//            throw new IllegalArgumentException("Usuário não encontrado");
+//        }
+//
+//        Usuario usuario = usuarioOptional.get();
+//        Administrador administrador = new Administrador(dados, usuario);
+//
+//        return cadastrar(administrador);
+//    }
 
     /**
      * Cadastra administrador completo: cria usuário com CPF como login, gera senha com BCrypt e envia por email.
@@ -182,5 +194,34 @@ public class AdministradorService implements AdministradorInputPort {
     
     private String limparCpf(String cpf) {
         return cpf.replaceAll("[^0-9]", "");
+    }
+
+    /**
+     * Atualiza os dados de um administrador existente.
+     * @param id ID do administrador
+     * @param dados DTO com dados atualizados
+     * @return Administrador atualizado
+     * @throws IllegalArgumentException se administrador não for encontrado
+     */
+    public Administrador atualizar(Long id, AtualizarAdministradorRequest dados) {
+        log.info("Atualizando administrador ID: {}", id);
+        
+        var administradorOpt = buscarPorId(id);
+        if (administradorOpt.isEmpty()) {
+            log.warn("Administrador não encontrado para atualização: {}", id);
+            throw new IllegalArgumentException("Administrador não encontrado");
+        }
+        
+        Administrador administrador = administradorOpt.get();
+        
+        // Atualiza dados do administrador
+        if (dados.admNome() != null) administrador.setAdmNome(dados.admNome());
+        if (dados.admEmail() != null) administrador.setAdmEmail(dados.admEmail());
+        if (dados.admCodigoAutorizacao() != null) administrador.setAdmCodigoAtorizacao(dados.admCodigoAutorizacao());
+        
+        Administrador administradorAtualizado = administradorOutputPort.save(administrador);
+        log.info("Administrador ID: {} atualizado com sucesso", id);
+        
+        return administradorAtualizado;
     }
 }

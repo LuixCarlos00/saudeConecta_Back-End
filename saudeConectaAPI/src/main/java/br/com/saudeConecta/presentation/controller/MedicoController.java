@@ -2,6 +2,7 @@ package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.application.service.MedicoService;
 import br.com.saudeConecta.domain.medico.Medico;
+import br.com.saudeConecta.presentation.dto.medico.AtualizarMedicoRequest;
 import br.com.saudeConecta.presentation.dto.medico.CadastrarMedicoCompletoRequest;
 import br.com.saudeConecta.presentation.dto.medico.MedicoResponse;
 import jakarta.transaction.Transactional;
@@ -177,5 +178,22 @@ public class MedicoController {
         }
     }
 
-    // Endpoint removido - duplicação de /listarTodos
+    @PutMapping("/atualizar/{id}")
+    @Transactional
+    @Description("Atualiza dados do médico por ID. Utilizado em: VisualizarEditarUsuarioComponent")
+    public ResponseEntity<?> atualizarMedico(
+            @PathVariable Long id,
+            @RequestBody @Valid AtualizarMedicoRequest dados) {
+        log.debug("Atualizando médico ID: {}", id);
+        try {
+            Medico medicoAtualizado = medicoService.atualizar(id, dados);
+            return ResponseEntity.ok(new MedicoResponse(medicoAtualizado));
+        } catch (IllegalArgumentException e) {
+            log.warn("Médico não encontrado para atualização ID: {}", id);
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            log.error("Erro ao atualizar médico ID: {}", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao atualizar médico");
+        }
+    }
 }

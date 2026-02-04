@@ -1,6 +1,7 @@
 package br.com.saudeConecta.presentation.dto.paciente;
 
 import br.com.saudeConecta.domain.paciente.Paciente;
+import br.com.saudeConecta.presentation.dto.endereco.EnderecoResponse;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.LocalDate;
@@ -16,7 +17,8 @@ public record PacienteResponse(
         String paciEmail,
         String paciTelefone,
         String paciStatus,
-        Long enderecoId
+        Long enderecoId,
+        EnderecoResponse endereco
 ) {
     public PacienteResponse(Paciente paciente) {
         this(
@@ -31,7 +33,9 @@ public record PacienteResponse(
                 paciente.getPaciTelefone(),
                 paciente.getPaciStatus(),
                 paciente.getEndereco() != null ? 
-                    paciente.getEndereco().getEndCodigo() : null
+                    paciente.getEndereco().getEndCodigo() : null,
+                paciente.getEndereco() != null ? 
+                    new EnderecoResponse(paciente.getEndereco()) : null
         );
     }
 }

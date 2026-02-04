@@ -44,7 +44,7 @@ public class SecurityConfigurations {
                 })).csrf().disable()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and().authorizeHttpRequests()
-                .requestMatchers(HttpMethod.POST, "/usuario/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/Home/esqueciMinhaSenha").permitAll()
                 .requestMatchers(HttpMethod.POST, "/Home/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/Home/cadastralogin").permitAll()
                 .requestMatchers(HttpMethod.GET, "/cep/{cep}").permitAll()

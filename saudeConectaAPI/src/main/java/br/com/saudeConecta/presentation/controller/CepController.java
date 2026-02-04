@@ -12,7 +12,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/cep")
+@RequestMapping("/cep")
 @RequiredArgsConstructor
 @Slf4j
 public class CepController {

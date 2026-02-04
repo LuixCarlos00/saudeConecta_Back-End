@@ -9,6 +9,6 @@ import java.util.List;
 public record TodosUsuariosAgrupadosResponse(
     List<PacienteResponse> paciente,
     List<MedicoComUsuarioResponse> medico,
-    List<Object> secretaria,
+    List<SecretariaComUsuarioResponse> secretaria,
     List<AdministradorComUsuarioResponse> administrador
 ) {}
