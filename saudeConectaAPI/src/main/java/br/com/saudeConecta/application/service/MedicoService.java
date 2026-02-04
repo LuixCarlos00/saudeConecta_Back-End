@@ -8,6 +8,7 @@ import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.email.EnviarService.CredenciaisEmailService;
 import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
+import br.com.saudeConecta.presentation.dto.medico.AtualizarMedicoRequest;
 import br.com.saudeConecta.presentation.dto.medico.CadastrarMedicoCompletoRequest;
 import br.com.saudeConecta.presentation.dto.medico.CadastrarMedicoRequest;
 import lombok.RequiredArgsConstructor;
@@ -120,14 +121,32 @@ public class MedicoService implements MedicoInputPort {
             throw new IllegalArgumentException("ID inválido");
         }
 
-        if (!medicoOutputPort.existsById(id)) {
+        var medicoOpt = medicoOutputPort.findById(id);
+        if (medicoOpt.isEmpty()) {
             log.warn("Médico não encontrado para exclusão ID: {}", id);
             throw new Exception("Registro não encontrado");
         }
 
+        Medico medico = medicoOpt.get();
+        Usuario usuario = medico.getUsuario();
+        Endereco endereco = medico.getEndereco();
+
         try {
+            // 1. Deletar o médico primeiro (remove as FKs)
             medicoOutputPort.deleteById(id);
             log.info("Médico ID: {} excluído com sucesso", id);
+
+            // 2. Deletar o usuário associado
+            if (usuario != null) {
+                usuarioRepository.deleteById(usuario.getId());
+                log.info("Usuário ID: {} associado ao médico excluído com sucesso", usuario.getId());
+            }
+
+            // 3. Deletar o endereço associado (opcional)
+            if (endereco != null) {
+                enderecoRepository.deleteById(endereco.getEndCodigo());
+                log.info("Endereço ID: {} associado ao médico excluído com sucesso", endereco.getEndCodigo());
+            }
         } catch (Exception e) {
             log.error("Erro ao excluir médico ID: {}", id, e);
             throw new Exception("Violação de Integridade", e);
@@ -138,7 +157,7 @@ public class MedicoService implements MedicoInputPort {
         return medicoOutputPort.findAll();
     }
 
-    public Medico cadastrarComDados(CadastrarMedicoRequest dados, Long usuarioId, Long enderecoId) {
+/*    public Medico cadastrarComDados(CadastrarMedicoRequest dados, Long usuarioId, Long enderecoId) {
         var usuarioOptional = usuarioRepository.findById(usuarioId);
         if (usuarioOptional.isEmpty()) {
             throw new IllegalArgumentException("Usuário não encontrado");
@@ -154,7 +173,7 @@ public class MedicoService implements MedicoInputPort {
         Medico medico = new Medico(dados, usuario, endereco);
         
         return medicoOutputPort.save(medico);
-    }
+    }*/
 
     /**
      * Cadastra médico completo: cria usuário com CPF como login, gera senha com BCrypt e envia por email.
@@ -244,5 +263,58 @@ public class MedicoService implements MedicoInputPort {
     
     private String limparCpf(String cpf) {
         return cpf.replaceAll("[^0-9]", "");
+    }
+
+    /**
+     * Atualiza os dados de um médico existente.
+     * @param id ID do médico
+     * @param dados DTO com dados atualizados
+     * @return Medico atualizado
+     * @throws IllegalArgumentException se médico não for encontrado
+     */
+    public Medico atualizar(Long id, AtualizarMedicoRequest dados) {
+        log.info("Atualizando médico ID: {}", id);
+        
+        var medicoOpt = buscarPorId(id);
+        if (medicoOpt.isEmpty()) {
+            log.warn("Médico não encontrado para atualização: {}", id);
+            throw new IllegalArgumentException("Médico não encontrado");
+        }
+        
+        Medico medico = medicoOpt.get();
+        
+        // Atualiza dados do médico
+        if (dados.medNome() != null) medico.setMedNome(dados.medNome());
+        if (dados.medSexo() != null) medico.setMedSexo(dados.medSexo());
+        if (dados.medDataNacimento() != null) medico.setMedDataNacimento(java.sql.Date.valueOf(dados.medDataNacimento()));
+        if (dados.medCrm() != null) medico.setMedCrm(dados.medCrm());
+        if (dados.medCpf() != null) medico.setMedCpf(dados.medCpf());
+        if (dados.medRg() != null) medico.setMedRg(dados.medRg());
+        if (dados.medEmail() != null) medico.setMedEmail(dados.medEmail());
+        if (dados.medTelefone() != null) medico.setMedTelefone(dados.medTelefone());
+        if (dados.medEspecialidade() != null) medico.setMedEspecialidade(dados.medEspecialidade());
+        if (dados.medFormacoes() != null) medico.setMedFormacoes(dados.medFormacoes());
+        if (dados.medEmpresa() != null) medico.setMedEmpresa(dados.medEmpresa());
+        if (dados.medGraduacao() != null) medico.setMedGraduacao(dados.medGraduacao());
+        if (dados.medTempoDeConsulta() != null) medico.setMedTempoDeConsulta(dados.medTempoDeConsulta());
+        
+        // Atualiza endereço se existir
+        if (medico.getEndereco() != null) {
+            Endereco endereco = medico.getEndereco();
+            if (dados.endNacionalidade() != null) endereco.setEndNacionalidade(dados.endNacionalidade());
+            if (dados.endUF() != null) endereco.setEndUF(dados.endUF());
+            if (dados.endMunicipio() != null) endereco.setEndMunicipio(dados.endMunicipio());
+            if (dados.endBairro() != null) endereco.setEndBairro(dados.endBairro());
+            if (dados.endCep() != null) endereco.setEndCep(dados.endCep());
+            if (dados.endRua() != null) endereco.setEndRua(dados.endRua());
+            if (dados.endNumero() != null) endereco.setEndNumero(dados.endNumero().longValue());
+            if (dados.endComplemento() != null) endereco.setEndComplemento(dados.endComplemento());
+            enderecoRepository.save(endereco);
+        }
+        
+        Medico medicoAtualizado = medicoOutputPort.save(medico);
+        log.info("Médico ID: {} atualizado com sucesso", id);
+        
+        return medicoAtualizado;
     }
 }

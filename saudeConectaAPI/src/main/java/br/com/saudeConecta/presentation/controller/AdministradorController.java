@@ -3,6 +3,7 @@ package br.com.saudeConecta.presentation.controller;
 import br.com.saudeConecta.application.service.AdministradorService;
 import br.com.saudeConecta.domain.administrador.Administrador;
 import br.com.saudeConecta.presentation.dto.administrador.AdministradorResponse;
+import br.com.saudeConecta.presentation.dto.administrador.AtualizarAdministradorRequest;
 import br.com.saudeConecta.presentation.dto.administrador.CadastrarAdministradorCompletoRequest;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -125,6 +126,25 @@ public class AdministradorController {
         } catch (Exception e) {
             log.error("Erro ao deletar administrador ID: {}", id, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PutMapping("/atualizar/{id}")
+    @Transactional
+    @Description("Atualiza dados do administrador por ID. Utilizado em: VisualizarEditarUsuarioComponent")
+    public ResponseEntity<?> atualizarAdministrador(
+            @PathVariable Long id,
+            @RequestBody @Valid AtualizarAdministradorRequest dados) {
+        log.debug("Atualizando administrador ID: {}", id);
+        try {
+            Administrador administradorAtualizado = administradorService.atualizar(id, dados);
+            return ResponseEntity.ok(new AdministradorResponse(administradorAtualizado));
+        } catch (IllegalArgumentException e) {
+            log.warn("Administrador não encontrado para atualização ID: {}", id);
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            log.error("Erro ao atualizar administrador ID: {}", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao atualizar administrador");
         }
     }
 }

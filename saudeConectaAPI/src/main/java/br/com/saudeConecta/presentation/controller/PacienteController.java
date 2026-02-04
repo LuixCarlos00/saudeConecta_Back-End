@@ -2,6 +2,7 @@ package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.application.service.PacienteService;
 import br.com.saudeConecta.domain.paciente.Paciente;
+import br.com.saudeConecta.presentation.dto.paciente.AtualizarPacienteRequest;
 import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteCompletoRequest;
 import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteRequest;
 import br.com.saudeConecta.presentation.dto.paciente.PacienteResponse;
@@ -166,6 +167,25 @@ public class PacienteController {
         } catch (Exception e) {
             log.error("Erro ao alterar status do paciente ID: {}", id, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PutMapping("/atualizar/{id}")
+    @Transactional
+    @Description("Atualiza dados do paciente por ID. Utilizado em: VisualizarEditarUsuarioComponent")
+    public ResponseEntity<?> atualizarPaciente(
+            @PathVariable Long id,
+            @RequestBody @Valid AtualizarPacienteRequest dados) {
+        log.debug("Atualizando paciente ID: {}", id);
+        try {
+            Paciente pacienteAtualizado = pacienteService.atualizar(id, dados);
+            return ResponseEntity.ok(new PacienteResponse(pacienteAtualizado));
+        } catch (IllegalArgumentException e) {
+            log.warn("Paciente não encontrado para atualização ID: {}", id);
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            log.error("Erro ao atualizar paciente ID: {}", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao atualizar paciente");
         }
     }
 }

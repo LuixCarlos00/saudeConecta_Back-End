@@ -1,6 +1,7 @@
 package br.com.saudeConecta.presentation.dto.medico;
 
 import br.com.saudeConecta.domain.medico.Medico;
+import br.com.saudeConecta.presentation.dto.endereco.EnderecoResponse;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.LocalDate;
@@ -22,7 +23,8 @@ public record MedicoResponse(
         String medGraduacao,
         String medTempoDeConsulta,
         Long usuarioId,
-        Long enderecoId
+        Long enderecoId,
+        EnderecoResponse endereco
 ) {
     public MedicoResponse(Medico medico) {
         this(
@@ -44,7 +46,9 @@ public record MedicoResponse(
                 medico.getUsuario() != null ? 
                     medico.getUsuario().getId() : null,
                 medico.getEndereco() != null ? 
-                    medico.getEndereco().getEndCodigo() : null
+                    medico.getEndereco().getEndCodigo() : null,
+                medico.getEndereco() != null ? 
+                    new EnderecoResponse(medico.getEndereco()) : null
         );
     }
 }

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Recuperação de Senha - Saúde Conecta</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #00d9ff 0%, #00a8cc 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .header h1 {
+            margin: 0;
+        }
+        .content {
+            background-color: #f9f9f9;
+            padding: 30px;
+            border: 1px solid #ddd;
+        }
+        .credentials-box {
+            background-color: #fff;
+            border: 2px solid #00d9ff;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .credential-item {
+            margin: 10px 0;
+        }
+        .credential-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .credential-value {
+            color: #00a8cc;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .info-box {
+            background-color: #e7f5ff;
+            border: 1px solid #00d9ff;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .footer {
+            background-color: #1a1a2e;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 0 0 8px 8px;
+            font-size: 12px;
+        }
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #00d9ff 0%, #00a8cc 100%);
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔐 Saúde Conecta</h1>
+        <p>Recuperação de Senha</p>
+    </div>
+    
+    <div class="content">
+        <h2>Olá, <span th:text="${nome}">Usuário</span>!</h2>
+        
+        <p>Recebemos uma solicitação de recuperação de senha para sua conta. Abaixo estão suas novas credenciais de acesso:</p>
+        
+        <div class="credentials-box">
+            <div class="credential-item">
+                <span class="credential-label">Login:</span><br>
+                <span class="credential-value" th:text="${login}">usuario</span>
+            </div>
+            <div class="credential-item">
+                <span class="credential-label">Nova Senha:</span><br>
+                <span class="credential-value" th:text="${senha}">********</span>
+            </div>
+        </div>
+        
+        <div class="warning">
+            <strong>⚠️ Importante:</strong>
+            <ul>
+                <li>Recomendamos que você altere esta senha após o primeiro acesso.</li>
+                <li>Não compartilhe suas credenciais com terceiros.</li>
+                <li>Se você não solicitou esta recuperação, entre em contato com o suporte imediatamente.</li>
+            </ul>
+        </div>
+        
+        <div class="info-box">
+            <strong>ℹ️ Dica de Segurança:</strong>
+            <p>Crie uma senha forte com pelo menos 8 caracteres, incluindo letras maiúsculas, minúsculas, números e símbolos.</p>
+        </div>
+        
+        <p style="text-align: center;">
+            <a href="http://localhost:4200/login" class="btn">Acessar o Sistema</a>
+        </p>
+    </div>
+    
+    <div class="footer">
+        <p>Este é um email automático. Por favor, não responda.</p>
+        <p>© 2024 Saúde Conecta - Todos os direitos reservados</p>
+    </div>
+</body>
+</html>

@@ -2,7 +2,9 @@ package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.application.service.SecretariaService;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
+import br.com.saudeConecta.presentation.dto.secretaria.AtualizarSecretariaRequest;
 import br.com.saudeConecta.presentation.dto.secretaria.CadastrarSecretariaCompletoRequest;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jdk.jfr.Description;
 import lombok.RequiredArgsConstructor;
@@ -89,6 +91,25 @@ public class SecretariaController {
         } catch (Exception e) {
             log.error("Erro ao deletar secretária: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PutMapping("/atualizar/{id}")
+    @Transactional
+    @Description("Atualiza dados da secretária por ID. Utilizado em: VisualizarEditarUsuarioComponent")
+    public ResponseEntity<?> atualizarSecretaria(
+            @PathVariable Long id,
+            @RequestBody @Valid AtualizarSecretariaRequest dados) {
+        log.debug("Atualizando secretária ID: {}", id);
+        try {
+            Secretaria secretariaAtualizada = secretariaService.atualizar(id, dados);
+            return ResponseEntity.ok(secretariaAtualizada);
+        } catch (IllegalArgumentException e) {
+            log.warn("Secretária não encontrada para atualização ID: {}", id);
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            log.error("Erro ao atualizar secretária ID: {}", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao atualizar secretária");
         }
     }
 }

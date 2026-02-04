@@ -5,6 +5,7 @@ import br.com.saudeConecta.application.port.out.paciente.PacienteOutputPort;
 import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
+import br.com.saudeConecta.presentation.dto.paciente.AtualizarPacienteRequest;
 import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteCompletoRequest;
 import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteRequest;
 import lombok.RequiredArgsConstructor;
@@ -90,14 +91,25 @@ public class PacienteService implements PacienteInputPort {
             throw new IllegalArgumentException("ID inválido");
         }
 
-        if (!pacienteOutputPort.existsById(id)) {
+        var pacienteOpt = pacienteOutputPort.findById(id);
+        if (pacienteOpt.isEmpty()) {
             log.warn("Paciente não encontrado para exclusão ID: {}", id);
             throw new Exception("Registro não encontrado");
         }
 
+        Paciente paciente = pacienteOpt.get();
+        Endereco endereco = paciente.getEndereco();
+
         try {
+            // 1. Deletar o paciente primeiro (remove a FK)
             pacienteOutputPort.deleteById(id);
             log.info("Paciente ID: {} excluído com sucesso", id);
+
+            // 2. Deletar o endereço associado
+            if (endereco != null) {
+                enderecoRepository.deleteById(endereco.getEndCodigo());
+                log.info("Endereço ID: {} associado ao paciente excluído com sucesso", endereco.getEndCodigo());
+            }
         } catch (Exception e) {
             log.error("Erro ao excluir paciente ID: {}", id, e);
             throw new Exception("Violação de Integridade", e);
@@ -182,5 +194,52 @@ public class PacienteService implements PacienteInputPort {
         log.info("Paciente cadastrado com sucesso. ID: {}", pacienteSalvo.getPaciCodigo());
         
         return pacienteSalvo;
+    }
+
+    /**
+     * Atualiza os dados de um paciente existente.
+     * @param id ID do paciente
+     * @param dados DTO com dados atualizados
+     * @return Paciente atualizado
+     * @throws IllegalArgumentException se paciente não for encontrado
+     */
+    public Paciente atualizar(Long id, AtualizarPacienteRequest dados) {
+        log.info("Atualizando paciente ID: {}", id);
+        
+        var pacienteOpt = buscarPorId(id);
+        if (pacienteOpt.isEmpty()) {
+            log.warn("Paciente não encontrado para atualização: {}", id);
+            throw new IllegalArgumentException("Paciente não encontrado");
+        }
+        
+        Paciente paciente = pacienteOpt.get();
+        
+        // Atualiza dados do paciente
+        if (dados.paciNome() != null) paciente.setPaciNome(dados.paciNome());
+        if (dados.paciSexo() != null) paciente.setPaciSexo(dados.paciSexo());
+        if (dados.paciDataNacimento() != null) paciente.setPaciDataNacimento(Date.valueOf(dados.paciDataNacimento()));
+        if (dados.paciCpf() != null) paciente.setPaciCpf(dados.paciCpf());
+        if (dados.paciRg() != null) paciente.setPaciRg(dados.paciRg());
+        if (dados.paciEmail() != null) paciente.setPaciEmail(dados.paciEmail());
+        if (dados.paciTelefone() != null) paciente.setPaciTelefone(dados.paciTelefone());
+        
+        // Atualiza endereço se existir
+        if (paciente.getEndereco() != null) {
+            Endereco endereco = paciente.getEndereco();
+            if (dados.endNacionalidade() != null) endereco.setEndNacionalidade(dados.endNacionalidade());
+            if (dados.endUF() != null) endereco.setEndUF(dados.endUF());
+            if (dados.endMunicipio() != null) endereco.setEndMunicipio(dados.endMunicipio());
+            if (dados.endBairro() != null) endereco.setEndBairro(dados.endBairro());
+            if (dados.endCep() != null) endereco.setEndCep(dados.endCep());
+            if (dados.endRua() != null) endereco.setEndRua(dados.endRua());
+            if (dados.endNumero() != null) endereco.setEndNumero(dados.endNumero().longValue());
+            if (dados.endComplemento() != null) endereco.setEndComplemento(dados.endComplemento());
+            enderecoRepository.save(endereco);
+        }
+        
+        Paciente pacienteAtualizado = pacienteOutputPort.save(paciente);
+        log.info("Paciente ID: {} atualizado com sucesso", id);
+        
+        return pacienteAtualizado;
     }
 }
