@@ -4,11 +4,7 @@ import br.com.saudeConecta.application.port.in.usuario.UsuarioInputPort;
 import br.com.saudeConecta.application.port.out.usuario.UsuarioOutputPort;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.presentation.dto.usuario.CadastrarUsuarioRequest;
-import br.com.saudeConecta.presentation.dto.usuario.TodosUsuariosAgrupadosResponse;
 import br.com.saudeConecta.presentation.dto.usuario.PacienteResponse;
-import br.com.saudeConecta.presentation.dto.usuario.MedicoComUsuarioResponse;
-import br.com.saudeConecta.presentation.dto.usuario.AdministradorComUsuarioResponse;
-import br.com.saudeConecta.presentation.dto.usuario.SecretariaComUsuarioResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
@@ -17,7 +13,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,23 +23,14 @@ public class UsuarioService implements UsuarioInputPort {
     private final UsuarioOutputPort usuarioOutputPort;
     private final PasswordEncoder passwordEncoder;
     private final PacienteService pacienteService;
-    private final MedicoService medicoService;
-    private final AdministradorService administradorService;
-    private final SecretariaService secretariaService;
 
     public UsuarioService(
             UsuarioOutputPort usuarioOutputPort,
             PasswordEncoder passwordEncoder,
-            @Lazy PacienteService pacienteService,
-            @Lazy MedicoService medicoService,
-            @Lazy AdministradorService administradorService,
-            @Lazy SecretariaService secretariaService) {
+            @Lazy PacienteService pacienteService) {
         this.usuarioOutputPort = usuarioOutputPort;
         this.passwordEncoder = passwordEncoder;
         this.pacienteService = pacienteService;
-        this.medicoService = medicoService;
-        this.administradorService = administradorService;
-        this.secretariaService = secretariaService;
     }
 
     @Override
@@ -156,26 +142,14 @@ public class UsuarioService implements UsuarioInputPort {
     }
 
     /**
-     * Busca todos os usuários agrupados por tipo.
-     * @return TodosUsuariosAgrupadosResponse com listas de cada tipo
+     * Busca todos os pacientes.
+     * @return Lista de PacienteResponse
      */
-    public TodosUsuariosAgrupadosResponse buscarTodosAgrupados() {
-        log.debug("Buscando todos os usuários agrupados por tipo");
-        
-        var pacientes = pacienteService.buscarTodos().stream()
+    public List<PacienteResponse> buscarTodosPacientes() {
+        log.debug("Buscando todos os pacientes");
+        return pacienteService.buscarTodos().stream()
             .map(PacienteResponse::new)
             .toList();
-        var medicos = medicoService.buscarTodosComUsuario().stream()
-            .map(MedicoComUsuarioResponse::new)
-            .toList();
-        var administradores = administradorService.buscarTodosComUsuario().stream()
-            .map(AdministradorComUsuarioResponse::new)
-            .toList();
-        var secretarias = secretariaService.buscarTodos().stream()
-            .map(SecretariaComUsuarioResponse::new)
-            .toList();
-        
-        return new TodosUsuariosAgrupadosResponse(pacientes, medicos, secretarias, administradores);
     }
 
     /**

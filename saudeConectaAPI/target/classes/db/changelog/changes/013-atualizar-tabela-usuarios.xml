@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Adicionar coluna organizacao_id -->
+    <changeSet id="013-001-adicionar-organizacao-id-usuarios" author="equipe-sentinela">
+        <addColumn tableName="usuarios">
+            <column name="organizacao_id" type="BIGINT" afterColumn="id">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        
+        <addForeignKeyConstraint 
+            baseTableName="usuarios" 
+            baseColumnNames="organizacao_id"
+            constraintName="fk_usuarios_organizacao"
+            referencedTableName="organizacao"
+            referencedColumnNames="id"/>
+            
+        <createIndex tableName="usuarios" indexName="idx_usuarios_organizacao">
+            <column name="organizacao_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Adicionar nova coluna de tipo de usuário -->
+    <changeSet id="013-002-adicionar-tipo-usuario-novo" author="equipe-sentinela">
+        <addColumn tableName="usuarios">
+            <column name="tipo_usuario_novo" type="VARCHAR(30)" afterColumn="TipoUsuario">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- Migrar tipos existentes para o novo formato -->
+    <changeSet id="013-003-migrar-tipos-usuario" author="equipe-sentinela">
+        <sql>
+            UPDATE usuarios 
+            SET tipo_usuario_novo = CASE 
+                WHEN TipoUsuario = 1 THEN 'ADMIN_ORG'
+                WHEN TipoUsuario = 2 THEN 'RECEPCIONISTA'
+                WHEN TipoUsuario = 3 THEN 'PROFISSIONAL'
+                ELSE 'PROFISSIONAL'
+            END
+            WHERE tipo_usuario_novo IS NULL;
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

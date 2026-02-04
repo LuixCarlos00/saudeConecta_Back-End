@@ -1,16 +1,15 @@
 package br.com.saudeConecta.email.EnviarEmail;
 
-import br.com.saudeConecta.domain.administrador.Administrador;
-import br.com.saudeConecta.domain.medico.Medico;
 import br.com.saudeConecta.domain.paciente.Paciente;
+import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.email.EnviarService.EmailServices;
-import br.com.saudeConecta.infrastructure.persistence.repository.AdministradorRepository;
-import br.com.saudeConecta.infrastructure.persistence.repository.MedicoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
 import jakarta.mail.MessagingException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -19,78 +18,85 @@ import java.util.Optional;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class EnviarEmail {
 
-    @Autowired
-    private EmailServices emailService;
+    private final EmailServices emailService;
+    private final ProfissionalRepository profissionalRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final PacienteRepository pacienteRepository;
 
-    @Autowired
-    private MedicoRepository medicoRepository;
-
-    @Autowired
-    private AdministradorRepository AdministradorRepository;
-
-    @Autowired
-    private PacienteRepository pacienteRepository;
-
-    public void enviarEmailDestinatarioAdministradorVerificacaoDuasEtapas(@NotNull Optional<Administrador> principal, String codigoVerificacao) throws MessagingException {
-        log.info("Enviando codigo de verificacao para administrador ID: {}", principal.get().getAdmCodigo());
-        long id = principal.get().getAdmCodigo();
-        Optional<Administrador> paciente = AdministradorRepository.findById(id);
+    public void enviarEmailVerificacaoDuasEtapas(String email, String codigoVerificacao) throws MessagingException {
+        log.info("Enviando codigo de verificacao para: {}", email);
         Map<String, Object> model = new HashMap<>();
         model.put("message", codigoVerificacao);
-        emailService.enviarEmailComPaginaHTML(paciente.get().getAdmEmail(), "Verificacao de duas Etapas", "email-template.html", model);
-        log.info("Codigo de verificacao enviado com sucesso para administrador");
+        emailService.enviarEmailComPaginaHTML(email, "Verificacao de duas Etapas", "email-template.html", model);
+        log.info("Codigo de verificacao enviado com sucesso");
     }
 
-    public void enviarEmailDestinatarioPacienteVerificacaoDuasEtapas(@NotNull Optional<Paciente> principal, String codigoVerificacao) throws MessagingException {
-        log.info("Enviando codigo de verificacao para paciente ID: {}", principal.get().getPaciCodigo());
-        long id = principal.get().getPaciCodigo();
-        Optional<Paciente> paciente = pacienteRepository.findById(id);
+    public void enviarEmailDestinatarioUsuarioVerificacaoDuasEtapas(Usuario usuario, String codigoVerificacao) throws MessagingException {
+        log.info("Enviando codigo de verificacao para usuario ID: {}", usuario.getId());
         Map<String, Object> model = new HashMap<>();
         model.put("message", codigoVerificacao);
-        emailService.enviarEmailComPaginaHTML(paciente.get().getPaciEmail(), "Verificacao de duas Etapas", "email-template.html", model);
+        emailService.enviarEmailComPaginaHTML(usuario.getLogin(), "Verificacao de duas Etapas", "email-template.html", model);
+        log.info("Codigo de verificacao enviado com sucesso para usuario");
+    }
+
+    public void enviarEmailDestinatarioPacienteVerificacaoDuasEtapas(Optional<Paciente> principal, String codigoVerificacao) throws MessagingException {
+        if (principal.isEmpty()) {
+            log.warn("Paciente não encontrado para envio de código de verificação");
+            return;
+        }
+        Paciente paciente = principal.get();
+        log.info("Enviando codigo de verificacao para paciente ID: {}", paciente.getPaciCodigo());
+        Map<String, Object> model = new HashMap<>();
+        model.put("message", codigoVerificacao);
+        emailService.enviarEmailComPaginaHTML(paciente.getPaciEmail(), "Verificacao de duas Etapas", "email-template.html", model);
         log.info("Codigo de verificacao enviado com sucesso para paciente");
     }
 
-    public void enviarEmailDestinatarioMedicoVerificacaoDuasEtapas(Optional<Medico> principal, String codigoVerificacao) throws MessagingException {
-        log.info("Enviando codigo de verificacao para medico ID: {}", principal.get().getMedCodigo());
-        long id = principal.get().getMedCodigo();
-        Optional<Medico> medico = medicoRepository.findById(id);
+    public void enviarEmailDestinatarioProfissionalVerificacaoDuasEtapas(Optional<Profissional> principal, String codigoVerificacao) throws MessagingException {
+        if (principal.isEmpty()) {
+            log.warn("Profissional não encontrado para envio de código de verificação");
+            return;
+        }
+        Profissional profissional = principal.get();
+        log.info("Enviando codigo de verificacao para profissional ID: {}", profissional.getId());
         Map<String, Object> model = new HashMap<>();
         model.put("message", codigoVerificacao);
-        emailService.enviarEmailComPaginaHTML(medico.get().getMedEmail(), "Verificacao de duas Etapas", "email-template.html", model);
-        log.info("Codigo de verificacao enviado com sucesso para medico");
+        emailService.enviarEmailComPaginaHTML(profissional.getEmail(), "Verificacao de duas Etapas", "email-template.html", model);
+        log.info("Codigo de verificacao enviado com sucesso para profissional");
     }
 
-
-
-
-    public void enviarLoginDePaciente(Optional<Paciente> Userpaciente, String login) throws MessagingException {
-        log.info("Enviando login para paciente: {}", Userpaciente.get().getPaciEmail());
+    public void enviarLoginDePaciente(Optional<Paciente> userPaciente, String login) throws MessagingException {
+        if (userPaciente.isEmpty()) return;
+        log.info("Enviando login para paciente: {}", userPaciente.get().getPaciEmail());
         Map<String, Object> model = new HashMap<>();
         model.put("message", login);
-        emailService.enviarEmailComLoginPaciente(Userpaciente.get().getPaciEmail(), "Login De Usuario", "emaiLogin-template.html", model);
+        emailService.enviarEmailComPaginaHTML(userPaciente.get().getPaciEmail(), "Login De Usuario", "emaiLogin-template.html", model);
     }
 
-    public void enviarLoginDeMedicoRecuperacaoDeLogin(Optional<Medico> Usermedico, String login) throws MessagingException {
-        log.info("Enviando login para medico: {}", Usermedico.get().getMedEmail());
+    public void enviarLoginDeProfissional(Optional<Profissional> userProfissional, String login) throws MessagingException {
+        if (userProfissional.isEmpty()) return;
+        log.info("Enviando login para profissional: {}", userProfissional.get().getEmail());
         Map<String, Object> model = new HashMap<>();
         model.put("message", login);
-        emailService.enviarEmailComLoginMedico(Usermedico.get().getMedEmail(), "Login De Usuario", "emaiLogin-template.html", model);
+        emailService.enviarEmailComPaginaHTML(userProfissional.get().getEmail(), "Login De Usuario", "emaiLogin-template.html", model);
     }
 
-    public void enviarLembreteDeAlertaParaPaciente(Optional<Paciente> Userpaciente, String messagem) throws MessagingException {
-        log.info("Enviando lembrete de alerta para paciente: {}", Userpaciente.get().getPaciEmail());
+    public void enviarLembreteDeAlertaParaPaciente(Optional<Paciente> userPaciente, String mensagem) throws MessagingException {
+        if (userPaciente.isEmpty()) return;
+        log.info("Enviando lembrete de alerta para paciente: {}", userPaciente.get().getPaciEmail());
         Map<String, Object> model = new HashMap<>();
-        model.put("message", messagem);
-        emailService.enviarLembreteDeAlertaParaPaciente(Userpaciente.get().getPaciEmail(), "Lembrete", "Lembrete-template.html", model);
+        model.put("message", mensagem);
+        emailService.enviarEmailComPaginaHTML(userPaciente.get().getPaciEmail(), "Lembrete", "Lembrete-template.html", model);
     }
 
-    public void enviarLembreteDeAlertaParaMedico(Optional<Medico> Usermedico, String messagem) throws MessagingException {
-        log.info("Enviando lembrete de alerta para medico: {}", Usermedico.get().getMedEmail());
+    public void enviarLembreteDeAlertaParaProfissional(Optional<Profissional> userProfissional, String mensagem) throws MessagingException {
+        if (userProfissional.isEmpty()) return;
+        log.info("Enviando lembrete de alerta para profissional: {}", userProfissional.get().getEmail());
         Map<String, Object> model = new HashMap<>();
-        model.put("message", messagem);
-        emailService.enviarLembreteDeAlertaParaMedico(Usermedico.get().getMedEmail(), "Lembrete", "Lembrete-template.html", model);
+        model.put("message", mensagem);
+        emailService.enviarEmailComPaginaHTML(userProfissional.get().getEmail(), "Lembrete", "Lembrete-template.html", model);
     }
 }

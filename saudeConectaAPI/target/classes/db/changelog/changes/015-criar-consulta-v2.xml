@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- CONSULTA_V2 -->
+    <changeSet id="015-001-criar-consulta-v2" author="equipe-sentinela">
+        <createTable tableName="consulta">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="organizacao_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="profissional_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="paciente_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="especialidade_id" type="BIGINT"/>
+            <column name="data_hora" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="duracao_minutos" type="INT" defaultValue="30"/>
+            <column name="observacoes" type="TEXT"/>
+            <column name="forma_pagamento_id" type="BIGINT"/>
+            <column name="valor" type="DECIMAL(10,2)"/>
+            <column name="status" type="VARCHAR(30)" defaultValue="AGENDADA"/>
+            <column name="cancelado_por" type="VARCHAR(20)"/>
+            <column name="motivo_cancelamento" type="TEXT"/>
+            <column name="criado_por" type="BIGINT"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+        
+        <addForeignKeyConstraint 
+            baseTableName="consulta" 
+            baseColumnNames="organizacao_id"
+            constraintName="fk_consulta_organizacao"
+            referencedTableName="organizacao"
+            referencedColumnNames="id"/>
+            
+        <addForeignKeyConstraint 
+            baseTableName="consulta" 
+            baseColumnNames="profissional_id"
+            constraintName="fk_consulta_profissional"
+            referencedTableName="profissional"
+            referencedColumnNames="id"/>
+            
+        <addForeignKeyConstraint 
+            baseTableName="consulta" 
+            baseColumnNames="paciente_id"
+            constraintName="fk_consulta_paciente"
+            referencedTableName="paciente"
+            referencedColumnNames="PaciCodigo"/>
+            
+        <addForeignKeyConstraint 
+            baseTableName="consulta" 
+            baseColumnNames="especialidade_id"
+            constraintName="fk_consulta_especialidade"
+            referencedTableName="especialidade"
+            referencedColumnNames="id"/>
+            
+        <addForeignKeyConstraint 
+            baseTableName="consulta" 
+            baseColumnNames="forma_pagamento_id"
+            constraintName="fk_consulta_forma_pagamento"
+            referencedTableName="forma_pagamento"
+            referencedColumnNames="id"/>
+            
+        <addForeignKeyConstraint 
+            baseTableName="consulta" 
+            baseColumnNames="criado_por"
+            constraintName="fk_consulta_criado_por"
+            referencedTableName="usuarios"
+            referencedColumnNames="id"/>
+            
+        <createIndex tableName="consulta" indexName="idx_consulta_org_data">
+            <column name="organizacao_id"/>
+            <column name="data_hora"/>
+        </createIndex>
+        
+        <createIndex tableName="consulta" indexName="idx_consulta_profissional">
+            <column name="profissional_id"/>
+            <column name="data_hora"/>
+        </createIndex>
+        
+        <createIndex tableName="consulta" indexName="idx_consulta_paciente">
+            <column name="paciente_id"/>
+        </createIndex>
+        
+        <createIndex tableName="consulta" indexName="idx_consulta_status">
+            <column name="organizacao_id"/>
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- CONSULTA_HISTORICO -->
+    <changeSet id="015-002-criar-consulta-historico" author="equipe-sentinela">
+        <createTable tableName="consulta_historico">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="consulta_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status_anterior" type="VARCHAR(30)"/>
+            <column name="status_novo" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="observacao" type="TEXT"/>
+            <column name="alterado_por" type="BIGINT"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+        
+        <addForeignKeyConstraint 
+            baseTableName="consulta_historico" 
+            baseColumnNames="consulta_id"
+            constraintName="fk_consulta_hist_consulta"
+            referencedTableName="consulta"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+            
+        <addForeignKeyConstraint 
+            baseTableName="consulta_historico" 
+            baseColumnNames="alterado_por"
+            constraintName="fk_consulta_hist_usuario"
+            referencedTableName="usuarios"
+            referencedColumnNames="id"/>
+            
+        <createIndex tableName="consulta_historico" indexName="idx_consulta_hist_consulta">
+            <column name="consulta_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- PROFISSIONAL -->
+    <changeSet id="014-001-criar-tabela-profissional" author="equipe-sentinela">
+        <createTable tableName="profissional">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="organizacao_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tipo_profissional_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="nome" type="VARCHAR(150)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sexo" type="VARCHAR(20)"/>
+            <column name="data_nascimento" type="DATE"/>
+            <column name="registro_conselho" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cpf" type="VARCHAR(14)">
+                <constraints unique="true"/>
+            </column>
+            <column name="rg" type="VARCHAR(20)"/>
+            <column name="email" type="VARCHAR(150)"/>
+            <column name="telefone" type="VARCHAR(20)"/>
+            <column name="formacao" type="VARCHAR(200)"/>
+            <column name="instituicao" type="VARCHAR(200)"/>
+            <column name="tempo_consulta_minutos" type="INT" defaultValue="30"/>
+            <column name="usuario_id" type="BIGINT"/>
+            <column name="endereco_id" type="BIGINT"/>
+            <column name="status" type="VARCHAR(20)" defaultValue="ATIVO"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+        
+        <addForeignKeyConstraint 
+            baseTableName="profissional" 
+            baseColumnNames="organizacao_id"
+            constraintName="fk_profissional_organizacao"
+            referencedTableName="organizacao"
+            referencedColumnNames="id"/>
+            
+        <addForeignKeyConstraint 
+            baseTableName="profissional" 
+            baseColumnNames="tipo_profissional_id"
+            constraintName="fk_profissional_tipo"
+            referencedTableName="tipo_profissional"
+            referencedColumnNames="id"/>
+            
+        <addForeignKeyConstraint 
+            baseTableName="profissional" 
+            baseColumnNames="usuario_id"
+            constraintName="fk_profissional_usuario"
+            referencedTableName="usuarios"
+            referencedColumnNames="id"/>
+            
+        <addForeignKeyConstraint 
+            baseTableName="profissional" 
+            baseColumnNames="endereco_id"
+            constraintName="fk_profissional_endereco"
+            referencedTableName="endereco"
+            referencedColumnNames="EndCodigo"/>
+            
+        <createIndex tableName="profissional" indexName="idx_profissional_organizacao">
+            <column name="organizacao_id"/>
+        </createIndex>
+        
+        <createIndex tableName="profissional" indexName="idx_profissional_tipo">
+            <column name="tipo_profissional_id"/>
+        </createIndex>
+        
+        <createIndex tableName="profissional" indexName="idx_profissional_org_status">
+            <column name="organizacao_id"/>
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- PROFISSIONAL_ESPECIALIDADE -->
+    <changeSet id="014-002-criar-tabela-profissional-especialidade" author="equipe-sentinela">
+        <createTable tableName="profissional_especialidade">
+            <column name="profissional_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="especialidade_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="principal" type="TINYINT" defaultValue="0"/>
+        </createTable>
+        
+        <addPrimaryKey 
+            tableName="profissional_especialidade"
+            columnNames="profissional_id, especialidade_id"
+            constraintName="pk_profissional_especialidade"/>
+            
+        <addForeignKeyConstraint 
+            baseTableName="profissional_especialidade" 
+            baseColumnNames="profissional_id"
+            constraintName="fk_prof_esp_profissional"
+            referencedTableName="profissional"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+            
+        <addForeignKeyConstraint 
+            baseTableName="profissional_especialidade" 
+            baseColumnNames="especialidade_id"
+            constraintName="fk_prof_esp_especialidade"
+            referencedTableName="especialidade"
+            referencedColumnNames="id"/>
+    </changeSet>
+
+</databaseChangeLog>

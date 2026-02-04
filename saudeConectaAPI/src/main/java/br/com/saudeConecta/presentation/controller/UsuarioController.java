@@ -3,7 +3,7 @@ package br.com.saudeConecta.presentation.controller;
 import br.com.saudeConecta.application.service.UsuarioService;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.presentation.dto.usuario.CadastrarUsuarioRequest;
-import br.com.saudeConecta.presentation.dto.usuario.TodosUsuariosAgrupadosResponse;
+import br.com.saudeConecta.presentation.dto.usuario.PacienteResponse;
 import br.com.saudeConecta.presentation.dto.usuario.UsuarioResponse;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -71,12 +71,12 @@ public class UsuarioController {
         return ResponseEntity.ok(!existe);
     }
 
-    @GetMapping("/listarTodos")
+    @GetMapping("/listarPacientes")
     @Transactional
-    @Description( "Lista todos os usuários agrupados por tipo. Utilizado em: GerenciamentoUsuariosComponent")
-    public ResponseEntity<TodosUsuariosAgrupadosResponse> buscarTodosAgrupados() {
-        log.debug("Buscando todos os usuários agrupados por tipo");
-        return ResponseEntity.ok(usuarioService.buscarTodosAgrupados());
+    @Description("Lista todos os pacientes. Utilizado em: GerenciamentoUsuariosComponent")
+    public ResponseEntity<List<PacienteResponse>> buscarTodosPacientes() {
+        log.debug("Buscando todos os pacientes");
+        return ResponseEntity.ok(usuarioService.buscarTodosPacientes());
     }
 
     @GetMapping("/listarTodosSimples")

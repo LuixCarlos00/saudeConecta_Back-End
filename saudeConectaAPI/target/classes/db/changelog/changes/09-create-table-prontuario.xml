@@ -99,15 +99,15 @@
         <addForeignKeyConstraint
             baseTableName="prontuario"
             baseColumnNames="prontCodigoMedico"
-            referencedTableName="medico"
-            referencedColumnNames="MedCodigo"
-            constraintName="fk_prontuario_medico"/>
+            referencedTableName="profissional"
+            referencedColumnNames="id"
+            constraintName="fk_prontuario_profissional"/>
 
         <addForeignKeyConstraint
             baseTableName="prontuario"
             baseColumnNames="consulta"
             referencedTableName="consulta"
-            referencedColumnNames="ConCodigoConsulta"
+            referencedColumnNames="id"
             constraintName="fk_prontuario_consulta"/>
     </changeSet>
 

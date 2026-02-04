@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Adicionar coluna organizacao_id na tabela paciente -->
+    <changeSet id="016-001-adicionar-organizacao-paciente" author="equipe-sentinela">
+        <addColumn tableName="paciente">
+            <column name="organizacao_id" type="BIGINT">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        
+        <addForeignKeyConstraint 
+            baseTableName="paciente" 
+            baseColumnNames="organizacao_id"
+            constraintName="fk_paciente_organizacao"
+            referencedTableName="organizacao"
+            referencedColumnNames="id"/>
+            
+        <createIndex tableName="paciente" indexName="idx_paciente_organizacao">
+            <column name="organizacao_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

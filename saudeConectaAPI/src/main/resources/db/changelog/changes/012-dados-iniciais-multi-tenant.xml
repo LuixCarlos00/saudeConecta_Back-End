@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ========================================== -->
+    <!-- TIPOS DE PROFISSIONAL                      -->
+    <!-- ========================================== -->
+    <changeSet id="012-001-inserir-tipos-profissional" author="equipe-sentinela">
+        <insert tableName="tipo_profissional">
+            <column name="codigo" value="MEDICO"/>
+            <column name="nome" value="Médico"/>
+            <column name="conselho" value="CRM"/>
+        </insert>
+        <insert tableName="tipo_profissional">
+            <column name="codigo" value="DENTISTA"/>
+            <column name="nome" value="Cirurgião-Dentista"/>
+            <column name="conselho" value="CRO"/>
+        </insert>
+        <insert tableName="tipo_profissional">
+            <column name="codigo" value="FISIOTERAPEUTA"/>
+            <column name="nome" value="Fisioterapeuta"/>
+            <column name="conselho" value="CREFITO"/>
+        </insert>
+        <insert tableName="tipo_profissional">
+            <column name="codigo" value="PSICOLOGO"/>
+            <column name="nome" value="Psicólogo"/>
+            <column name="conselho" value="CRP"/>
+        </insert>
+        <insert tableName="tipo_profissional">
+            <column name="codigo" value="NUTRICIONISTA"/>
+            <column name="nome" value="Nutricionista"/>
+            <column name="conselho" value="CRN"/>
+        </insert>
+    </changeSet>
+
+    <!-- ========================================== -->
+    <!-- ESPECIALIDADES MÉDICAS                     -->
+    <!-- ========================================== -->
+    <changeSet id="012-002-inserir-especialidades-medicas" author="equipe-sentinela">
+        <insert tableName="especialidade">
+            <column name="tipo_profissional_id" valueComputed="(SELECT id FROM tipo_profissional WHERE codigo = 'MEDICO')"/>
+            <column name="nome" value="Cardiologia"/>
+            <column name="codigo" value="CARDIO"/>
+        </insert>
+        <insert tableName="especialidade">
+            <column name="tipo_profissional_id" valueComputed="(SELECT id FROM tipo_profissional WHERE codigo = 'MEDICO')"/>
+            <column name="nome" value="Dermatologia"/>
+            <column name="codigo" value="DERMA"/>
+        </insert>
+        <insert tableName="especialidade">
+            <column name="tipo_profissional_id" valueComputed="(SELECT id FROM tipo_profissional WHERE codigo = 'MEDICO')"/>
+            <column name="nome" value="Ortopedia"/>
+            <column name="codigo" value="ORTO"/>
+        </insert>
+        <insert tableName="especialidade">
+            <column name="tipo_profissional_id" valueComputed="(SELECT id FROM tipo_profissional WHERE codigo = 'MEDICO')"/>
+            <column name="nome" value="Pediatria"/>
+            <column name="codigo" value="PED"/>
+        </insert>
+        <insert tableName="especialidade">
+            <column name="tipo_profissional_id" valueComputed="(SELECT id FROM tipo_profissional WHERE codigo = 'MEDICO')"/>
+            <column name="nome" value="Ginecologia"/>
+            <column name="codigo" value="GINE"/>
+        </insert>
+        <insert tableName="especialidade">
+            <column name="tipo_profissional_id" valueComputed="(SELECT id FROM tipo_profissional WHERE codigo = 'MEDICO')"/>
+            <column name="nome" value="Neurologia"/>
+            <column name="codigo" value="NEURO"/>
+        </insert>
+        <insert tableName="especialidade">
+            <column name="tipo_profissional_id" valueComputed="(SELECT id FROM tipo_profissional WHERE codigo = 'MEDICO')"/>
+            <column name="nome" value="Psiquiatria"/>
+            <column name="codigo" value="PSIQ"/>
+        </insert>
+        <insert tableName="especialidade">
+            <column name="tipo_profissional_id" valueComputed="(SELECT id FROM tipo_profissional WHERE codigo = 'MEDICO')"/>
+            <column name="nome" value="Oftalmologia"/>
+            <column name="codigo" value="OFTALMO"/>
+        </insert>
+        <insert tableName="especialidade">
+            <column name="tipo_profissional_id" valueComputed="(SELECT id FROM tipo_profissional WHERE codigo = 'MEDICO')"/>
+            <column name="nome" value="Urologia"/>
+            <column name="codigo" value="URO"/>
+        </insert>
+        <insert tableName="especialidade">
+            <column name="tipo_profissional_id" valueComputed="(SELECT id FROM tipo_profissional WHERE codigo = 'MEDICO')"/>
+            <column name="nome" value="Gastroenterologia"/>
+            <column name="codigo" value="GASTRO"/>
+        </insert>
+    </changeSet>
+
+    <!-- ========================================== -->
+    <!-- ESPECIALIDADES ODONTOLÓGICAS               -->
+    <!-- ========================================== -->
+    <changeSet id="012-003-inserir-especialidades-odontologicas" author="equipe-sentinela">
+        <insert tableName="especialidade">
+            <column name="tipo_profissional_id" valueComputed="(SELECT id FROM tipo_profissional WHERE codigo = 'DENTISTA')"/>
+            <column name="nome" value="Ortodontia"/>
+            <column name="codigo" value="ORTODONT"/>
+        </insert>
+        <insert tableName="especialidade">
+            <column name="tipo_profissional_id" valueComputed="(SELECT id FROM tipo_profissional WHERE codigo = 'DENTISTA')"/>
+            <column name="nome" value="Endodontia"/>
+            <column name="codigo" value="ENDO"/>
+        </insert>
+        <insert tableName="especialidade">
+            <column name="tipo_profissional_id" valueComputed="(SELECT id FROM tipo_profissional WHERE codigo = 'DENTISTA')"/>
+            <column name="nome" value="Periodontia"/>
+            <column name="codigo" value="PERIO"/>
+        </insert>
+        <insert tableName="especialidade">
+            <column name="tipo_profissional_id" valueComputed="(SELECT id FROM tipo_profissional WHERE codigo = 'DENTISTA')"/>
+            <column name="nome" value="Implantodontia"/>
+            <column name="codigo" value="IMPL"/>
+        </insert>
+        <insert tableName="especialidade">
+            <column name="tipo_profissional_id" valueComputed="(SELECT id FROM tipo_profissional WHERE codigo = 'DENTISTA')"/>
+            <column name="nome" value="Odontopediatria"/>
+            <column name="codigo" value="ODPED"/>
+        </insert>
+        <insert tableName="especialidade">
+            <column name="tipo_profissional_id" valueComputed="(SELECT id FROM tipo_profissional WHERE codigo = 'DENTISTA')"/>
+            <column name="nome" value="Cirurgia Bucomaxilofacial"/>
+            <column name="codigo" value="BUCO"/>
+        </insert>
+        <insert tableName="especialidade">
+            <column name="tipo_profissional_id" valueComputed="(SELECT id FROM tipo_profissional WHERE codigo = 'DENTISTA')"/>
+            <column name="nome" value="Prótese Dentária"/>
+            <column name="codigo" value="PROT"/>
+        </insert>
+        <insert tableName="especialidade">
+            <column name="tipo_profissional_id" valueComputed="(SELECT id FROM tipo_profissional WHERE codigo = 'DENTISTA')"/>
+            <column name="nome" value="Clínico Geral"/>
+            <column name="codigo" value="GERAL"/>
+        </insert>
+    </changeSet>
+
+    <!-- ========================================== -->
+    <!-- FORMAS DE PAGAMENTO GLOBAIS                -->
+    <!-- ========================================== -->
+    <changeSet id="012-004-inserir-formas-pagamento" author="equipe-sentinela">
+        <insert tableName="forma_pagamento">
+            <column name="nome" value="Particular"/>
+            <column name="codigo" value="PARTICULAR"/>
+        </insert>
+        <insert tableName="forma_pagamento">
+            <column name="nome" value="Convênio"/>
+            <column name="codigo" value="CONVENIO"/>
+        </insert>
+        <insert tableName="forma_pagamento">
+            <column name="nome" value="Cartão de Crédito"/>
+            <column name="codigo" value="CREDITO"/>
+        </insert>
+        <insert tableName="forma_pagamento">
+            <column name="nome" value="Cartão de Débito"/>
+            <column name="codigo" value="DEBITO"/>
+        </insert>
+        <insert tableName="forma_pagamento">
+            <column name="nome" value="PIX"/>
+            <column name="codigo" value="PIX"/>
+        </insert>
+        <insert tableName="forma_pagamento">
+            <column name="nome" value="Dinheiro"/>
+            <column name="codigo" value="DINHEIRO"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

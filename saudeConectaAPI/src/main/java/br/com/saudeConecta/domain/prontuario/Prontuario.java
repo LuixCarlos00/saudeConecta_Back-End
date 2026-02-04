@@ -1,7 +1,7 @@
 package br.com.saudeConecta.domain.prontuario;
 
 import br.com.saudeConecta.domain.consulta.Consulta;
-import br.com.saudeConecta.domain.medico.Medico;
+import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.presentation.dto.prontuario.CadastrarProntuarioRequest;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
@@ -26,7 +26,6 @@ public class Prontuario implements Serializable {
     @Column(name = "prontCodigoProntuario", nullable = false)
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long prontCodigoProntuario;
-
 
     private String prontPeso;
 
@@ -90,14 +89,12 @@ public class Prontuario implements Serializable {
     @Column(name = "prontDataFinalizado", nullable = false)
     private Date prontDataFinalizado;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "prontCodigoMedico")
+    private Profissional profissional;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "prontCodigoMedico" )
-    private Medico prontCodigoMedico;
-
-
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "consulta" )
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "consulta")
     private Consulta consulta;
 
     @Column(name = "prontModeloExame")
@@ -119,10 +116,7 @@ public class Prontuario implements Serializable {
 
 
 
-
-
-
-    public Prontuario(@NotNull CadastrarProntuarioRequest dados, Medico medico, Consulta consulta) {
+    public Prontuario(@NotNull CadastrarProntuarioRequest dados, Profissional profissional, Consulta consulta) {
         this.prontAltura = dados.prontAltura();
         this.prontPeso = dados.prontPeso();
         this.prontTemperatura = dados.prontTemperatura();
@@ -144,17 +138,14 @@ public class Prontuario implements Serializable {
         this.prontDataPrescricao = dados.prontDataPrescricao();
         this.prontPrescricao = dados.prontPrescricao();
         this.prontDataFinalizado = dados.prontDataFinalizado();
-        this.prontCodigoMedico = medico;
+        this.profissional = profissional;
         this.consulta = consulta;
         this.prontTituloExame = dados.prontTituloExame();
         this.prontDataExame = dados.prontDataExame();
         this.prontExame = dados.prontExame();
         this.prontModeloExame = dados.prontModeloExame();
         this.prontTempoDuracao = dados.prontTempoDuracao();
-
-
     }
-
 }
 
 

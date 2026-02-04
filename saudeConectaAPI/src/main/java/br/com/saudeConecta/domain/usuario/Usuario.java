@@ -1,6 +1,9 @@
 package br.com.saudeConecta.domain.usuario;
 
+import br.com.saudeConecta.domain.organizacao.Organizacao;
+import br.com.saudeConecta.infra.tenant.TenantAware;
 import br.com.saudeConecta.presentation.dto.usuario.CadastrarUsuarioRequest;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -22,7 +25,7 @@ import java.util.List;
 @AllArgsConstructor
 @Table(name = "usuarios")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "senha", "password", "authorities"})
-public class Usuario implements Serializable, UserDetails {
+public class Usuario implements Serializable, UserDetails, TenantAware {
 
     private static final long serialVersionUID = 1L;
     
@@ -30,6 +33,11 @@ public class Usuario implements Serializable, UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organizacao_id")
+    @JsonIgnore
+    private Organizacao organizacao;
 
     @Column(nullable = false, name = "login")
     private String login;
@@ -39,6 +47,10 @@ public class Usuario implements Serializable, UserDetails {
 
     @Column(nullable = false, name = "TipoUsuario")
     private Byte tipoUsuario;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_usuario_novo")
+    private TipoUsuarioNovo tipoUsuarioNovo;
 
     @Column(nullable = false, name = "status")
     private Byte status;
@@ -49,14 +61,32 @@ public class Usuario implements Serializable, UserDetails {
         this.tipoUsuario = dados.tipoUsuario();
         this.status = dados.status();
     }
+    
+    public Usuario(CadastrarUsuarioRequest dados, String senhaCriptografada, 
+                   Organizacao organizacao, TipoUsuarioNovo tipoNovo) {
+        this.login = dados.login();
+        this.senha = senhaCriptografada;
+        this.tipoUsuario = dados.tipoUsuario();
+        this.tipoUsuarioNovo = tipoNovo;
+        this.status = dados.status();
+        this.organizacao = organizacao;
+    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        if (this.tipoUsuario == 1 && this.status == 1) {
+        if (this.status != 1) {
+            return List.of();
+        }
+        
+        if (this.tipoUsuarioNovo != null) {
+            return this.tipoUsuarioNovo.getAuthorities();
+        }
+        
+        if (this.tipoUsuario == 1) {
             return List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
-        } else if (this.tipoUsuario == 2 && this.status == 1) {
+        } else if (this.tipoUsuario == 2) {
             return List.of(new SimpleGrantedAuthority("ROLE_Secretaria"));
-        } else if (this.tipoUsuario == 3 && this.status == 1) {
+        } else if (this.tipoUsuario == 3) {
             return List.of(new SimpleGrantedAuthority("ROLE_Medico"));
         } else {
             return List.of(new SimpleGrantedAuthority("ROLE_USER"));
@@ -90,11 +120,36 @@ public class Usuario implements Serializable, UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return this.status != null && this.status == 1;
     }
 
     public void update(Usuario dados) {
         this.login = dados.getLogin();
         this.senha = dados.getSenha();
+    }
+    
+    @Override
+    public Long getOrganizacaoId() {
+        return this.organizacao != null ? this.organizacao.getId() : null;
+    }
+    
+    @Override
+    public void setOrganizacaoId(Long organizacaoId) {
+    }
+    
+    public boolean isSuperAdmin() {
+        return TipoUsuarioNovo.SUPER_ADMIN.equals(this.tipoUsuarioNovo);
+    }
+    
+    public boolean isAdminOrganizacao() {
+        return TipoUsuarioNovo.ADMIN_ORG.equals(this.tipoUsuarioNovo);
+    }
+    
+    public boolean isProfissional() {
+        return TipoUsuarioNovo.PROFISSIONAL.equals(this.tipoUsuarioNovo);
+    }
+    
+    public boolean hasOrganization() {
+        return this.organizacao != null;
     }
 }

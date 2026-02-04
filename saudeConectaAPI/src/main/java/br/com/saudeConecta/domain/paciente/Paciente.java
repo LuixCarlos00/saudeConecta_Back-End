@@ -1,6 +1,8 @@
 package br.com.saudeConecta.domain.paciente;
 
 import br.com.saudeConecta.domain.endereco.Endereco;
+import br.com.saudeConecta.domain.organizacao.Organizacao;
+import br.com.saudeConecta.infra.tenant.TenantAware;
 import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteRequest;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -18,13 +20,18 @@ import java.sql.Date;
 @Table(name = "paciente")
 @EqualsAndHashCode(of = "paciCodigo")
 @JsonIgnoreProperties({"hibernateLazyInitializer"})
-public class Paciente implements Serializable {
+public class Paciente implements Serializable, TenantAware {
     private static final long serialVersionUID = 1L;
 
     @Id
     @Column(name = "PaciCodigo")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long paciCodigo;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organizacao_id")
+    @JsonIgnore
+    private Organizacao organizacao;
 
     @Column(name = "PaciNome", nullable = false)
     private String paciNome;
@@ -66,5 +73,18 @@ public class Paciente implements Serializable {
         this.paciTelefone = dados.paciTelefone();
         this.endereco = endereco;
         this.paciStatus = dados.paciStatus();
+    }
+
+    @Override
+    public Long getOrganizacaoId() {
+        return organizacao != null ? organizacao.getId() : null;
+    }
+
+    @Override
+    public void setOrganizacaoId(Long organizacaoId) {
+        if (this.organizacao == null) {
+            this.organizacao = new Organizacao();
+        }
+        this.organizacao.setId(organizacaoId);
     }
 }
