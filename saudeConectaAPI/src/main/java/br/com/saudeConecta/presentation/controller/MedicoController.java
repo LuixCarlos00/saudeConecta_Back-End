@@ -136,16 +136,19 @@ public class MedicoController {
     }
 
     @PostMapping("/cadastrar")
-    @Transactional
     @Description("Cadastra novo médico com criação automática de usuário (CPF como login, senha gerada e enviada por email)")
     public ResponseEntity<?> cadastrarMedico(
             @RequestBody @Valid CadastrarMedicoCompletoRequest dados,
             UriComponentsBuilder uriBuilder) {
         
-        log.debug("Cadastrando médico: {}", dados.medNome());
+        log.info("Recebida requisição de cadastro para médico: {}", dados.medNome());
         
         try {
+            long startTime = System.currentTimeMillis();
             Medico medicoSalvo = medicoService.cadastrarCompleto(dados);
+            long endTime = System.currentTimeMillis();
+            
+            log.info("Médico cadastrado com sucesso em {}ms. ID: {}", endTime - startTime, medicoSalvo.getMedCodigo());
 
             URI uri = uriBuilder.path("/medico/buscarId/{id}")
                     .buildAndExpand(medicoSalvo.getMedCodigo())

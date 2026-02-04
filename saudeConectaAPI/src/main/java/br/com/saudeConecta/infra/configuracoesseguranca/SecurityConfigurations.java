@@ -34,12 +34,21 @@ public class SecurityConfigurations {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http.cors().and().csrf().disable()
+        return http.cors(cors -> cors.configurationSource(request -> {
+                    org.springframework.web.cors.CorsConfiguration config = new org.springframework.web.cors.CorsConfiguration();
+                    config.setAllowedOrigins(java.util.List.of(urlFrontEnd, "http://localhost:4200"));
+                    config.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                    config.setAllowedHeaders(java.util.List.of("*"));
+                    config.setAllowCredentials(true);
+                    return config;
+                })).csrf().disable()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and().authorizeHttpRequests()
                 .requestMatchers(HttpMethod.POST, "/usuario/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/Home/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/Home/cadastralogin").permitAll()
+                .requestMatchers(HttpMethod.GET, "/cep/{cep}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/cep/**").permitAll()
                 .requestMatchers(HttpMethod.GET,"/Home/buscarUsuarioExistente/{login}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/paciente/buscarPorEmail/{email}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/medico/buscarPorEmail/{email}").permitAll()

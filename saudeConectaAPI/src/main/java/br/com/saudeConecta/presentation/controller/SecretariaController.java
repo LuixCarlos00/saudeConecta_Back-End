@@ -3,7 +3,6 @@ package br.com.saudeConecta.presentation.controller;
 import br.com.saudeConecta.application.service.SecretariaService;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.presentation.dto.secretaria.CadastrarSecretariaCompletoRequest;
-import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jdk.jfr.Description;
 import lombok.RequiredArgsConstructor;
@@ -52,16 +51,19 @@ public class SecretariaController {
     }
 
     @PostMapping("/cadastrar")
-    @Transactional
     @Description("Cadastra nova secretária com criação automática de usuário (CPF como login, senha gerada e enviada por email)")
     public ResponseEntity<?> cadastrarSecretaria(
             @RequestBody @Valid CadastrarSecretariaCompletoRequest dados,
             UriComponentsBuilder uriBuilder) {
         
-        log.debug("Cadastrando secretária: {}", dados.secreNome());
+        log.info("Recebida requisição de cadastro para secretária: {}", dados.secreNome());
         
         try {
+            long startTime = System.currentTimeMillis();
             Secretaria secretariaSalva = secretariaService.cadastrarCompleto(dados);
+            long endTime = System.currentTimeMillis();
+            
+            log.info("Secretária cadastrada com sucesso em {}ms. ID: {}", endTime - startTime, secretariaSalva.getSecreCodigo());
 
             URI uri = uriBuilder.path("/secretaria/buscarId/{id}")
                     .buildAndExpand(secretariaSalva.getSecreCodigo())

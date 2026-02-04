@@ -16,6 +16,8 @@ import java.sql.Date;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +28,7 @@ public class SecretariaService {
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final CredenciaisEmailService credenciaisEmailService;
+    private final Executor emailTaskExecutor;
     
     private static final String CARACTERES_SENHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*";
     private static final int TAMANHO_SENHA = 10;
@@ -59,38 +62,53 @@ public class SecretariaService {
      * Cadastra secretária completa: cria usuário com CPF como login, gera senha com BCrypt e envia por email.
      */
     public Secretaria cadastrarCompleto(CadastrarSecretariaCompletoRequest dados) {
-        log.info("Cadastrando secretária completa: {} com CPF: {}", dados.secreNome(), dados.secreCpf());
+        log.info("Iniciando cadastro de secretária: {}", dados.secreNome());
         
         String cpfLimpo = limparCpf(dados.secreCpf());
         
+        // Verificação rápida de CPF existente
         if (usuarioRepository.existsByLogin(cpfLimpo)) {
-            log.warn("CPF já cadastrado como login: {}", cpfLimpo);
+            log.warn("CPF já cadastrado: {}", cpfLimpo);
             throw new IllegalStateException("CPF já cadastrado no sistema");
         }
         
+        // Geração de senha
         String senhaGerada = gerarSenhaAleatoria();
         String senhaCriptografada = passwordEncoder.encode(senhaGerada);
         
+        // Criação do usuário
         Usuario usuario = new Usuario();
         usuario.setLogin(cpfLimpo);
         usuario.setSenha(senhaCriptografada);
-        usuario.setTipoUsuario((byte) 2); // 2 = Secretária
+        usuario.setTipoUsuario((byte) 2);
         usuario.setStatus((byte) 1);
-        Usuario usuarioSalvo = usuarioRepository.save(usuario);
-        log.info("Usuário criado para secretária. ID: {}", usuarioSalvo.getId());
         
+        // Criação da secretária
         Secretaria secretaria = new Secretaria();
         secretaria.setSecreNome(dados.secreNome());
         secretaria.setSecreEmail(dados.secreEmail());
         secretaria.setSecreCodigoAtorizacao(dados.secreCodigoAutorizacao());
         secretaria.setSecreStatus((byte) 1);
         secretaria.setSecreDataCriacao(Date.valueOf(LocalDate.now()));
+        
+        // Salvar usuário primeiro para obter o ID
+        Usuario usuarioSalvo = usuarioRepository.save(usuario);
         secretaria.setSecreUsuario(usuarioSalvo);
         
+        // Salvar secretária
         Secretaria secretariaSalva = secretariaRepository.save(secretaria);
+        
         log.info("Secretária cadastrada com sucesso. ID: {}", secretariaSalva.getSecreCodigo());
         
-        credenciaisEmailService.enviarCredenciaisSecretaria(dados.secreEmail(), dados.secreNome(), cpfLimpo, senhaGerada);
+        // Envio de email assíncrono otimizado
+        CompletableFuture.runAsync(() -> {
+            try {
+                credenciaisEmailService.enviarCredenciaisSecretaria(dados.secreEmail(), dados.secreNome(), cpfLimpo, senhaGerada);
+                log.info("Email enviado para: {}", dados.secreEmail());
+            } catch (Exception e) {
+                log.error("Erro ao enviar email para: {}", dados.secreEmail(), e);
+            }
+        }, emailTaskExecutor);
         
         return secretariaSalva;
     }

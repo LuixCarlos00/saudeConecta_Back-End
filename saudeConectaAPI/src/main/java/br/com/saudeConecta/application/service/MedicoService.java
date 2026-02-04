@@ -20,6 +20,8 @@ import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +33,7 @@ public class MedicoService implements MedicoInputPort {
     private final EnderecoRepository enderecoRepository;
     private final PasswordEncoder passwordEncoder;
     private final CredenciaisEmailService credenciaisEmailService;
+    private final Executor emailTaskExecutor;
     
     private static final String CARACTERES_SENHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*";
     private static final int TAMANHO_SENHA = 10;
@@ -160,26 +163,29 @@ public class MedicoService implements MedicoInputPort {
      * @throws IllegalStateException se CPF já estiver cadastrado como login
      */
     public Medico cadastrarCompleto(CadastrarMedicoCompletoRequest dados) {
-        log.info("Cadastrando médico completo: {} com CPF: {}", dados.medNome(), dados.medCpf());
+        log.info("Iniciando cadastro de médico: {}", dados.medNome());
         
         String cpfLimpo = limparCpf(dados.medCpf());
         
+        // Verificação rápida de CPF existente
         if (usuarioRepository.existsByLogin(cpfLimpo)) {
-            log.warn("CPF já cadastrado como login: {}", cpfLimpo);
+            log.warn("CPF já cadastrado: {}", cpfLimpo);
             throw new IllegalStateException("CPF já cadastrado no sistema");
         }
         
+        // Geração de senha
         String senhaGerada = gerarSenhaAleatoria();
         String senhaCriptografada = passwordEncoder.encode(senhaGerada);
         
+        // Criação do usuário
         Usuario usuario = new Usuario();
         usuario.setLogin(cpfLimpo);
         usuario.setSenha(senhaCriptografada);
-        usuario.setTipoUsuario((byte) 3); // 3 = Médico
+        usuario.setTipoUsuario((byte) 3);
         usuario.setStatus((byte) 1);
         Usuario usuarioSalvo = usuarioRepository.save(usuario);
-        log.info("Usuário criado para médico. ID: {}", usuarioSalvo.getId());
         
+        // Criação do endereço
         Endereco endereco = new Endereco();
         endereco.setEndNacionalidade(dados.endNacionalidade());
         endereco.setEndUF(dados.endUF());
@@ -190,8 +196,8 @@ public class MedicoService implements MedicoInputPort {
         endereco.setEndNumero(dados.endNumero() != null ? dados.endNumero().longValue() : null);
         endereco.setEndComplemento(dados.endComplemento() != null ? dados.endComplemento() : "");
         Endereco enderecoSalvo = enderecoRepository.save(endereco);
-        log.info("Endereço criado para médico. ID: {}", enderecoSalvo.getEndCodigo());
         
+        // Criação do médico
         Medico medico = new Medico();
         medico.setMedNome(dados.medNome());
         medico.setMedSexo(dados.medSexo());
@@ -210,13 +216,22 @@ public class MedicoService implements MedicoInputPort {
         medico.setEndereco(enderecoSalvo);
         
         Medico medicoSalvo = medicoOutputPort.save(medico);
+        
         log.info("Médico cadastrado com sucesso. ID: {}", medicoSalvo.getMedCodigo());
         
-        credenciaisEmailService.enviarCredenciaisMedico(dados.medEmail(), dados.medNome(), cpfLimpo, senhaGerada);
+        // Envio de email assíncrono otimizado
+        CompletableFuture.runAsync(() -> {
+            try {
+                credenciaisEmailService.enviarCredenciaisMedico(dados.medEmail(), dados.medNome(), cpfLimpo, senhaGerada);
+                log.info("Email enviado para: {}", dados.medEmail());
+            } catch (Exception e) {
+                log.error("Erro ao enviar email para: {}", dados.medEmail(), e);
+            }
+        }, emailTaskExecutor);
         
         return medicoSalvo;
     }
-    
+
     private String gerarSenhaAleatoria() {
         SecureRandom random = new SecureRandom();
         StringBuilder senha = new StringBuilder(TAMANHO_SENHA);

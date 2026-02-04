@@ -20,6 +20,8 @@ import java.sql.Date;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +32,7 @@ public class AdministradorService implements AdministradorInputPort {
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final CredenciaisEmailService credenciaisEmailService;
+    private final Executor emailTaskExecutor;
     
     private static final String CARACTERES_SENHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*";
     private static final int TAMANHO_SENHA = 10;
@@ -119,26 +122,29 @@ public class AdministradorService implements AdministradorInputPort {
      * Cadastra administrador completo: cria usuário com CPF como login, gera senha com BCrypt e envia por email.
      */
     public Administrador cadastrarCompleto(CadastrarAdministradorCompletoRequest dados) {
-        log.info("Cadastrando administrador completo: {} com CPF: {}", dados.admNome(), dados.admCpf());
+        log.info("Iniciando cadastro de administrador: {}", dados.admNome());
         
         String cpfLimpo = limparCpf(dados.admCpf());
         
+        // Verificação rápida de CPF existente
         if (usuarioRepository.existsByLogin(cpfLimpo)) {
-            log.warn("CPF já cadastrado como login: {}", cpfLimpo);
+            log.warn("CPF já cadastrado: {}", cpfLimpo);
             throw new IllegalStateException("CPF já cadastrado no sistema");
         }
         
+        // Geração de senha
         String senhaGerada = gerarSenhaAleatoria();
         String senhaCriptografada = passwordEncoder.encode(senhaGerada);
         
+        // Criação do usuário
         Usuario usuario = new Usuario();
         usuario.setLogin(cpfLimpo);
         usuario.setSenha(senhaCriptografada);
-        usuario.setTipoUsuario((byte) 1); // 1 = Administrador
+        usuario.setTipoUsuario((byte) 1);
         usuario.setStatus((byte) 1);
         Usuario usuarioSalvo = usuarioRepository.save(usuario);
-        log.info("Usuário criado para administrador. ID: {}", usuarioSalvo.getId());
         
+        // Criação do administrador
         Administrador administrador = new Administrador();
         administrador.setAdmNome(dados.admNome());
         administrador.setAdmEmail(dados.admEmail());
@@ -148,9 +154,18 @@ public class AdministradorService implements AdministradorInputPort {
         administrador.setAdmUsuario(usuarioSalvo);
         
         Administrador administradorSalvo = administradorOutputPort.save(administrador);
+        
         log.info("Administrador cadastrado com sucesso. ID: {}", administradorSalvo.getAdmCodigo());
         
-        credenciaisEmailService.enviarCredenciaisAdministrador(dados.admEmail(), dados.admNome(), cpfLimpo, senhaGerada);
+        // Envio de email assíncrono otimizado
+        CompletableFuture.runAsync(() -> {
+            try {
+                credenciaisEmailService.enviarCredenciaisAdministrador(dados.admEmail(), dados.admNome(), cpfLimpo, senhaGerada);
+                log.info("Email enviado para: {}", dados.admEmail());
+            } catch (Exception e) {
+                log.error("Erro ao enviar email para: {}", dados.admEmail(), e);
+            }
+        }, emailTaskExecutor);
         
         return administradorSalvo;
     }

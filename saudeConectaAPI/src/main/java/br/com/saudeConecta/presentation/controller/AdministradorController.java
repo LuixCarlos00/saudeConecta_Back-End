@@ -4,7 +4,6 @@ import br.com.saudeConecta.application.service.AdministradorService;
 import br.com.saudeConecta.domain.administrador.Administrador;
 import br.com.saudeConecta.presentation.dto.administrador.AdministradorResponse;
 import br.com.saudeConecta.presentation.dto.administrador.CadastrarAdministradorCompletoRequest;
-import br.com.saudeConecta.presentation.dto.administrador.CadastrarAdministradorRequest;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jdk.jfr.Description;
@@ -70,16 +69,19 @@ public class AdministradorController {
     }
 
     @PostMapping("/cadastrar")
-    @Transactional
     @Description("Cadastra novo administrador com criação automática de usuário (CPF como login, senha gerada e enviada por email)")
     public ResponseEntity<?> cadastrarAdministrador(
             @RequestBody @Valid CadastrarAdministradorCompletoRequest dados,
             UriComponentsBuilder uriBuilder) {
         
-        log.debug("Cadastrando administrador: {}", dados.admNome());
+        log.info("Recebida requisição de cadastro para administrador: {}", dados.admNome());
         
         try {
+            long startTime = System.currentTimeMillis();
             Administrador administradorSalvo = administradorService.cadastrarCompleto(dados);
+            long endTime = System.currentTimeMillis();
+            
+            log.info("Administrador cadastrado com sucesso em {}ms. ID: {}", endTime - startTime, administradorSalvo.getAdmCodigo());
 
             URI uri = uriBuilder.path("/administrador/buscarId/{id}")
                     .buildAndExpand(administradorSalvo.getAdmCodigo())
