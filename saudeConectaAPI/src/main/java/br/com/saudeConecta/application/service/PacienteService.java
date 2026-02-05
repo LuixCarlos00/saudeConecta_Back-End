@@ -35,7 +35,57 @@ public class PacienteService implements PacienteInputPort {
     private final TenantHelper tenantHelper;
 
     // ========== MÉTODOS COM TENANT ==========
-    
+
+    @RequiresTenant
+    public Paciente cadastrarPacientebyOrg(CadastrarPacienteCompletoRequest request) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.info("Cadastrando paciente: {} na organização: {}", request.paciNome(), orgId);
+
+        String cpfLimpo = limparCpf(request.paciCpf());
+
+        if (cpfLimpo != null && !cpfLimpo.isEmpty() && existeCpfNoTenant(cpfLimpo)) {
+            throw new IllegalStateException("CPF já cadastrado no sistema");
+        }
+
+        Organizacao organizacao = organizacaoRepository.findById(orgId)
+            .orElseThrow(() -> new IllegalStateException("Organização não encontrada"));
+
+        Endereco endereco = new Endereco();
+        endereco.setEndNacionalidade(request.endNacionalidade());
+        endereco.setEndUF(request.endUF());
+        endereco.setEndMunicipio(request.endMunicipio());
+        endereco.setEndBairro(request.endBairro());
+        endereco.setEndCep(request.endCep());
+        endereco.setEndRua(request.endRua());
+        endereco.setEndNumero(request.endNumero() != null ? request.endNumero().longValue() : null);
+        endereco.setEndComplemento(request.endComplemento());
+
+
+
+        Paciente paciente = new Paciente();
+        paciente.setOrganizacao(organizacao);
+        paciente.setPaciNome(request.paciNome());
+        paciente.setPaciSexo(request.paciSexo());
+        paciente.setPaciDataNacimento(request.paciDataNacimento() != null ? 
+            Date.valueOf(request.paciDataNacimento()) : null);
+        paciente.setPaciCpf(cpfLimpo);
+        paciente.setPaciRg(request.paciRg());
+        paciente.setPaciEmail(request.paciEmail());
+        paciente.setPaciTelefone(request.paciTelefone());
+        paciente.setEndereco(endereco);
+        paciente.setPaciStatus("ATIVO");
+
+        enderecoRepository.save(endereco);
+        Paciente salvo = pacienteRepository.save(paciente);
+        log.info("Paciente cadastrado com sucesso. ID: {}", salvo.getPaciCodigo());
+
+        return salvo;
+    }
+
+    private String limparCpf(String cpf) {
+        return cpf != null ? cpf.replaceAll("[^0-9]", "") : null;
+    }
+
     @RequiresTenant
     public List<Paciente> buscarTodosPorTenant() {
         Long orgId = tenantHelper.getCurrentTenantId();

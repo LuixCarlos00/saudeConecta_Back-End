@@ -3,7 +3,8 @@ package br.com.saudeConecta.domain.organizacao;
 public enum TipoOrganizacao {
     CLINICA_MEDICA("Clínica Médica"),
     CLINICA_ODONTOLOGICA("Clínica Odontológica"),
-    MISTA("Clínica Mista");
+    MISTA("Clínica Mista"),
+    CLINICA("CLINICA");
     
     private final String descricao;
     

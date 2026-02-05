@@ -9,12 +9,14 @@ import br.com.saudeConecta.domain.profissional.StatusProfissional;
 import br.com.saudeConecta.domain.profissional.TipoProfissional;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
+import br.com.saudeConecta.email.EnviarService.CredenciaisEmailService;
 import br.com.saudeConecta.infra.tenant.RequiresTenant;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
+import br.com.saudeConecta.presentation.dto.profissional.CadastrarClinicoRequest;
 import br.com.saudeConecta.presentation.dto.profissional.CadastrarProfissionalRequest;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,9 +28,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class ProfissionalService {
     
@@ -40,8 +43,33 @@ public class ProfissionalService {
     private final EnderecoRepository enderecoRepository;
     private final PasswordEncoder passwordEncoder;
     private final TenantHelper tenantHelper;
+    private final CredenciaisEmailService credenciaisEmailService;
+    private final Executor emailTaskExecutor;
     
     private static final String CARACTERES_SENHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*";
+
+    public ProfissionalService(
+            ProfissionalRepository profissionalRepository,
+            TipoProfissionalRepository tipoProfissionalRepository,
+            EspecialidadeRepository especialidadeRepository,
+            OrganizacaoRepository organizacaoRepository,
+            UsuarioRepository usuarioRepository,
+            EnderecoRepository enderecoRepository,
+            PasswordEncoder passwordEncoder,
+            TenantHelper tenantHelper,
+            CredenciaisEmailService credenciaisEmailService,
+            @Qualifier("emailTaskExecutor") Executor emailTaskExecutor) {
+        this.profissionalRepository = profissionalRepository;
+        this.tipoProfissionalRepository = tipoProfissionalRepository;
+        this.especialidadeRepository = especialidadeRepository;
+        this.organizacaoRepository = organizacaoRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.enderecoRepository = enderecoRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.tenantHelper = tenantHelper;
+        this.credenciaisEmailService = credenciaisEmailService;
+        this.emailTaskExecutor = emailTaskExecutor;
+    }
     
     @RequiresTenant
     public List<Profissional> buscarTodos() {
@@ -75,6 +103,87 @@ public class ProfissionalService {
     @RequiresTenant
     public List<Profissional> buscarDentistas() {
         return buscarPorTipo("DENTISTA");
+    }
+
+    @RequiresTenant
+    @Transactional
+    public Profissional cadastraClinicoByOrg(CadastrarClinicoRequest request) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.info("Cadastrando clínico: {} na organização: {}", request.medNome(), orgId);
+
+        String cpfLimpo = limparCpf(request.medCpf());
+
+        if (cpfLimpo != null && profissionalRepository.existsByCpfAndOrganizacao_Id(cpfLimpo, orgId)) {
+            throw new IllegalStateException("CPF já cadastrado no sistema");
+        }
+
+        Organizacao organizacao = organizacaoRepository.findById(orgId)
+            .orElseThrow(() -> new IllegalStateException("Organização não encontrada"));
+
+        TipoProfissional tipoMedico = tipoProfissionalRepository.findByCodigo("MEDICO")
+            .orElseThrow(() -> new IllegalStateException("Tipo MEDICO não encontrado"));
+
+        String senhaGerada = gerarSenhaAleatoria();
+        String senhaCriptografada = passwordEncoder.encode(senhaGerada);
+
+        Usuario usuario = new Usuario();
+        usuario.setLogin(cpfLimpo);
+        usuario.setSenha(senhaCriptografada);
+        usuario.setTipoUsuario((byte) 3);
+        usuario.setTipoUsuarioNovo(TipoUsuarioNovo.PROFISSIONAL);
+        usuario.setOrganizacao(organizacao);
+        usuario.setStatus((byte) 1);
+
+
+        Endereco endereco = new Endereco();
+        endereco.setEndNacionalidade(request.endNacionalidade());
+        endereco.setEndUF(request.endUF());
+        endereco.setEndMunicipio(request.endMunicipio());
+        endereco.setEndBairro(request.endBairro());
+        endereco.setEndCep(request.endCep());
+        endereco.setEndRua(request.endRua());
+        endereco.setEndNumero(request.endNumero() != null ? request.endNumero().longValue() : null);
+        endereco.setEndComplemento(request.endComplemento());
+
+        enderecoRepository.save(endereco);
+        Usuario usuarioSalvo = usuarioRepository.save(usuario);
+
+        Profissional profissional = Profissional.builder()
+            .organizacao(organizacao)
+            .tipoProfissional(tipoMedico)
+            .nome(request.medNome())
+            .sexo(converterSexo(request.medSexo()))
+            .dataNascimento(request.medDataNacimento() != null ? java.time.LocalDate.parse(request.medDataNacimento()) : null)
+            .registroConselho(request.medCrm())
+            .cpf(cpfLimpo)
+            .rg(request.medRg())
+            .email(request.medEmail())
+            .telefone(request.medTelefone())
+            .usuario(usuarioSalvo)
+            .endereco(endereco)
+            .status(StatusProfissional.ATIVO)
+            .tempoConsultaMinutos(30)
+            .build();
+
+        Profissional salvo = profissionalRepository.save(profissional);
+        log.info("Clínico cadastrado com sucesso. ID: {}", salvo.getId());
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                credenciaisEmailService.enviarCredenciaisMedico(
+                    request.medEmail(),
+                    request.medNome(),
+                    cpfLimpo,
+                    senhaGerada,
+                    organizacao.getNome()
+                );
+                log.info("Email de credenciais enviado para: {}", request.medEmail());
+            } catch (Exception e) {
+                log.error("Erro ao enviar email de credenciais: {}", e.getMessage());
+            }
+        }, emailTaskExecutor);
+
+        return salvo;
     }
     
     @RequiresTenant
@@ -217,5 +326,17 @@ public class ProfissionalService {
     
     private String limparCpf(String cpf) {
         return cpf != null ? cpf.replaceAll("[^0-9]", "") : null;
+    }
+
+    private Sexo converterSexo(String sexo) {
+        if (sexo == null || sexo.isEmpty()) {
+            return null;
+        }
+        return switch (sexo) {
+            case "1", "MASCULINO" -> Sexo.MASCULINO;
+            case "2", "FEMININO" -> Sexo.FEMININO;
+            case "3", "OUTRO" -> Sexo.OUTRO;
+            default -> null;
+        };
     }
 }
