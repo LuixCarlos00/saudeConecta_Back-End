@@ -2,10 +2,13 @@ package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.application.service.ProfissionalService;
 import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.presentation.dto.profissional.CadastrarClinicoRequest;
 import br.com.saudeConecta.presentation.dto.profissional.CadastrarProfissionalRequest;
 import br.com.saudeConecta.presentation.dto.profissional.ProfissionalResponse;
 import jakarta.validation.Valid;
+import jdk.jfr.Description;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -17,6 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/profissionais")
 @RequiredArgsConstructor
+@Slf4j
 public class ProfissionalController {
     
     private final ProfissionalService profissionalService;
@@ -88,7 +92,21 @@ public class ProfissionalController {
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ProfissionalResponse.fromEntity(profissional));
     }
-    
+
+    @PostMapping("/cadastraClinicoByOrg")
+    @Description("Cadastra médico/clínico com CPF como login e envia credenciais por email. Utilizado em: CadastroMedicoComponent")
+    public ResponseEntity<?> cadastraClinicoByOrg(@Valid @RequestBody CadastrarClinicoRequest request) {
+        log.info("Cadastrando clínico: {}", request.medNome());
+        try {
+            Profissional profissional = profissionalService.cadastraClinicoByOrg(request);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ProfissionalResponse.fromEntity(profissional));
+        } catch (IllegalStateException e) {
+            log.warn("Erro ao cadastrar clínico: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         profissionalService.deletar(id);

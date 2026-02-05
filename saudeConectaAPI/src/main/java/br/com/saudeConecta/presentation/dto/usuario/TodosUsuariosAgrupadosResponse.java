@@ -1,0 +1,100 @@
+package br.com.saudeConecta.presentation.dto.usuario;
+
+import br.com.saudeConecta.domain.admin.AdminOrganizacao;
+import br.com.saudeConecta.domain.paciente.Paciente;
+import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.domain.secretaria.Secretaria;
+
+import java.util.List;
+
+public record TodosUsuariosAgrupadosResponse(
+    List<PacienteResumo> paciente,
+    List<ProfissionalResumo> medico,
+    List<SecretariaResumo> secretaria,
+    List<AdminResumo> administrador
+) {
+    
+    public record PacienteResumo(
+        Long id,
+        String nome,
+        String cpf,
+        String email,
+        String telefone,
+        String status
+    ) {
+        public static PacienteResumo fromEntity(Paciente p) {
+            return new PacienteResumo(
+                p.getPaciCodigo(),
+                p.getPaciNome(),
+                p.getPaciCpf(),
+                p.getPaciEmail(),
+                p.getPaciTelefone(),
+                p.getPaciStatus()
+            );
+        }
+    }
+    
+    public record ProfissionalResumo(
+        Long id,
+        String nome,
+        String cpf,
+        String email,
+        String telefone,
+        String tipoProfissional,
+        String registroConselho,
+        String status
+    ) {
+        public static ProfissionalResumo fromEntity(Profissional p) {
+            return new ProfissionalResumo(
+                p.getId(),
+                p.getNome(),
+                p.getCpf(),
+                p.getEmail(),
+                p.getTelefone(),
+                p.getTipoProfissional() != null ? p.getTipoProfissional().getNome() : null,
+                p.getRegistroConselho(),
+                p.getStatus() != null ? p.getStatus().name() : null
+            );
+        }
+    }
+    
+    public record SecretariaResumo(
+        Long id,
+        String nome,
+        String cpf,
+        String email,
+        String telefone,
+        String status
+    ) {
+        public static SecretariaResumo fromEntity(Secretaria s) {
+            return new SecretariaResumo(
+                s.getId(),
+                s.getNome(),
+                s.getCpf(),
+                s.getEmail(),
+                s.getTelefone(),
+                s.getStatus() != null ? s.getStatus().name() : null
+            );
+        }
+    }
+    
+    public record AdminResumo(
+        Long id,
+        String nome,
+        String cargo,
+        String email,
+        Boolean isOwner,
+        String status
+    ) {
+        public static AdminResumo fromEntity(AdminOrganizacao a) {
+            return new AdminResumo(
+                a.getId(),
+                a.getNome(),
+                a.getCargo(),
+                a.getEmail(),
+                a.getIsOwner(),
+                a.getStatus() != null ? a.getStatus().name() : null
+            );
+        }
+    }
+}

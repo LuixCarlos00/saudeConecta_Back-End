@@ -2,8 +2,11 @@ package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.application.service.UsuarioService;
 import br.com.saudeConecta.domain.usuario.Usuario;
+import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.presentation.dto.usuario.CadastrarUsuarioRequest;
 import br.com.saudeConecta.presentation.dto.usuario.PacienteResponse;
+import br.com.saudeConecta.presentation.dto.usuario.TodosUsuariosAgrupadosResponse;
+import br.com.saudeConecta.presentation.dto.usuario.UsuarioPerfilCompletoResponse;
 import br.com.saudeConecta.presentation.dto.usuario.UsuarioResponse;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -31,8 +34,15 @@ public class UsuarioController {
 
     private final UsuarioService usuarioService;
 
-// Login removido - usar /Home/login
-
+    @GetMapping("/perfil/{id}")
+    @Transactional
+    @Description("Busca perfil completo do usuário com Profissional, AdminOrganizacao e Endereco. Utilizado em: DadosPessoaisComponent")
+    public ResponseEntity<UsuarioPerfilCompletoResponse> buscarPerfilCompleto(@PathVariable Long id) {
+        log.debug("Buscando perfil completo do usuário ID: {}", id);
+        return usuarioService.buscarPerfilCompleto(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
 
     @GetMapping("/buscarId/{id}")
     @Transactional
@@ -71,23 +81,27 @@ public class UsuarioController {
         return ResponseEntity.ok(!existe);
     }
 
-    @GetMapping("/listarPacientes")
-    @Transactional
-    @Description("Lista todos os pacientes. Utilizado em: GerenciamentoUsuariosComponent")
-    public ResponseEntity<List<PacienteResponse>> buscarTodosPacientes() {
-        log.debug("Buscando todos os pacientes");
-        return ResponseEntity.ok(usuarioService.buscarTodosPacientes());
-    }
+//    @GetMapping("/listarPacientes")
+//    @Transactional
+//    @Description("Lista todos os pacientes. Utilizado em: GerenciamentoUsuariosComponent")
+//    public ResponseEntity<List<PacienteResponse>> buscarTodosPacientes() {
+//        log.debug("Buscando todos os pacientes");
+//        return ResponseEntity.ok(usuarioService.buscarTodosPacientes());
+//    }
 
-    @GetMapping("/listarTodosSimples")
+    @GetMapping("/buscarTodosAgrupados")
     @Transactional
-    @Description( "Lista todos os usuários (lista simples). Utilizado em: UserListComponent, UserService")
-    public ResponseEntity<List<UsuarioResponse>> buscarTodos() {
-        log.debug("Buscando todos os usuários");
-        List<UsuarioResponse> usuarios = usuarioService.buscarTodos().stream()
-                .map(UsuarioResponse::new)
-                .toList();
-        return ResponseEntity.ok(usuarios);
+    @Description("Lista todos os usuários agrupados por tipo (paciente, medico, secretaria, administrador). Utilizado em: TabelaTodosUsuariosComponent")
+    public ResponseEntity<TodosUsuariosAgrupadosResponse> buscarTodosAgrupados() {
+        Long organizacaoId = TenantContext.getCurrentTenant();
+        log.debug("Buscando todos os usuários agrupados para organização ID: {}", organizacaoId);
+        
+        if (organizacaoId == null) {
+            log.warn("Organização não encontrada no contexto");
+            return ResponseEntity.badRequest().build();
+        }
+        
+        return ResponseEntity.ok(usuarioService.buscarTodosAgrupados(organizacaoId));
     }
 
     @GetMapping("/pagina")

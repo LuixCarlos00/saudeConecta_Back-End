@@ -2,9 +2,17 @@ package br.com.saudeConecta.application.service;
 
 import br.com.saudeConecta.application.port.in.usuario.UsuarioInputPort;
 import br.com.saudeConecta.application.port.out.usuario.UsuarioOutputPort;
+import br.com.saudeConecta.domain.admin.AdminOrganizacao;
+import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.usuario.Usuario;
+import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.SecretariaRepository;
 import br.com.saudeConecta.presentation.dto.usuario.CadastrarUsuarioRequest;
 import br.com.saudeConecta.presentation.dto.usuario.PacienteResponse;
+import br.com.saudeConecta.presentation.dto.usuario.TodosUsuariosAgrupadosResponse;
+import br.com.saudeConecta.presentation.dto.usuario.UsuarioPerfilCompletoResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
@@ -12,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,14 +32,26 @@ public class UsuarioService implements UsuarioInputPort {
     private final UsuarioOutputPort usuarioOutputPort;
     private final PasswordEncoder passwordEncoder;
     private final PacienteService pacienteService;
+    private final ProfissionalRepository profissionalRepository;
+    private final AdminOrganizacaoRepository adminOrganizacaoRepository;
+    private final PacienteRepository pacienteRepository;
+    private final SecretariaRepository secretariaRepository;
 
     public UsuarioService(
             UsuarioOutputPort usuarioOutputPort,
             PasswordEncoder passwordEncoder,
-            @Lazy PacienteService pacienteService) {
+            @Lazy PacienteService pacienteService,
+            ProfissionalRepository profissionalRepository,
+            AdminOrganizacaoRepository adminOrganizacaoRepository,
+            PacienteRepository pacienteRepository,
+            SecretariaRepository secretariaRepository) {
         this.usuarioOutputPort = usuarioOutputPort;
         this.passwordEncoder = passwordEncoder;
         this.pacienteService = pacienteService;
+        this.profissionalRepository = profissionalRepository;
+        this.adminOrganizacaoRepository = adminOrganizacaoRepository;
+        this.pacienteRepository = pacienteRepository;
+        this.secretariaRepository = secretariaRepository;
     }
 
     @Override
@@ -172,5 +193,50 @@ public class UsuarioService implements UsuarioInputPort {
         usuario.setSenha(senhaCriptografada);
         usuarioOutputPort.save(usuario);
         log.info("Senha do usuário ID: {} alterada com sucesso", id);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<UsuarioPerfilCompletoResponse> buscarPerfilCompleto(Long usuarioId) {
+        log.debug("Buscando perfil completo do usuário ID: {}", usuarioId);
+        
+        Optional<Usuario> usuarioOpt = buscarPorId(usuarioId);
+        if (usuarioOpt.isEmpty()) {
+            log.warn("Usuário não encontrado: {}", usuarioId);
+            return Optional.empty();
+        }
+        
+        Usuario usuario = usuarioOpt.get();
+        Profissional profissional = profissionalRepository.findByUsuarioIdWithRelations(usuarioId).orElse(null);
+        AdminOrganizacao admin = adminOrganizacaoRepository.findByUsuarioIdWithRelations(usuarioId).orElse(null);
+        
+        return Optional.of(UsuarioPerfilCompletoResponse.fromEntities(usuario, profissional, admin));
+    }
+
+    @Transactional(readOnly = true)
+    public TodosUsuariosAgrupadosResponse buscarTodosAgrupados(Long organizacaoId) {
+        log.debug("Buscando todos os usuários agrupados para organização ID: {}", organizacaoId);
+
+        var pacientes = pacienteRepository.findByOrganizacao_Id(organizacaoId).stream()
+            .map(TodosUsuariosAgrupadosResponse.PacienteResumo::fromEntity)
+            .toList();
+
+        var profissionais = profissionalRepository.findByOrganizacao_Id(organizacaoId);
+        
+        var medicos = profissionais.stream()
+            .filter(p -> p.getTipoProfissional() != null && 
+                        ("MEDICO".equalsIgnoreCase(p.getTipoProfissional().getCodigo()) ||
+                         "DENTISTA".equalsIgnoreCase(p.getTipoProfissional().getCodigo())))
+            .map(TodosUsuariosAgrupadosResponse.ProfissionalResumo::fromEntity)
+            .toList();
+
+        var secretarias = secretariaRepository.findByOrganizacao_Id(organizacaoId).stream()
+            .map(TodosUsuariosAgrupadosResponse.SecretariaResumo::fromEntity)
+            .toList();
+
+        var administradores = adminOrganizacaoRepository.findByOrganizacao_Id(organizacaoId).stream()
+            .map(TodosUsuariosAgrupadosResponse.AdminResumo::fromEntity)
+            .toList();
+
+        return new TodosUsuariosAgrupadosResponse(pacientes, medicos, secretarias, administradores);
     }
 }

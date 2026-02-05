@@ -22,5 +22,8 @@
     
     <!-- Atualizar Paciente com tenant -->
     <include file="db/changelog/changes/016-adicionar-organizacao-paciente.xml"/>
+    
+    <!-- Tabela Secretaria -->
+    <include file="db/changelog/changes/018-criar-tabela-secretaria.xml"/>
 
 </databaseChangeLog>

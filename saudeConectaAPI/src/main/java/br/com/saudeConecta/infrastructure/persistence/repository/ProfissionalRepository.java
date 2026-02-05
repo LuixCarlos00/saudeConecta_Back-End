@@ -58,10 +58,20 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
     Long countAtivosByOrganizacaoId(@Param("orgId") Long organizacaoId);
     
     Optional<Profissional> findByUsuario_Id(Long usuarioId);
+
+    @Query("SELECT p FROM Profissional p " +
+           "LEFT JOIN FETCH p.tipoProfissional " +
+           "LEFT JOIN FETCH p.especialidades " +
+           "LEFT JOIN FETCH p.endereco " +
+           "LEFT JOIN FETCH p.usuario " +
+           "WHERE p.usuario.id = :usuarioId")
+    Optional<Profissional> findByUsuarioIdWithRelations(@Param("usuarioId") Long usuarioId);
     
     Optional<Profissional> findByCpf(String cpf);
     
     boolean existsByCpf(String cpf);
+    
+    boolean existsByCpfAndOrganizacao_Id(String cpf, Long organizacaoId);
     
     boolean existsByEmailAndOrganizacao_Id(String email, Long organizacaoId);
 

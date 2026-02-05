@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v2/pacientes")
+@RequestMapping("/pacientes")
 @RequiredArgsConstructor
 @Slf4j
 public class PacienteApiController {
@@ -33,6 +33,20 @@ public class PacienteApiController {
             .map(PacienteResponse::new)
             .toList();
         return ResponseEntity.ok(pacientes);
+    }
+
+    @PostMapping("/cadastrarPacientebyOrg")
+    public ResponseEntity<?> cadastrarPacientebyOrg(
+            @Valid @RequestBody CadastrarPacienteCompletoRequest request) {
+        log.info("Cadastrando paciente na organização: {}", request.paciNome());
+        try {
+            Paciente paciente = pacienteService.cadastrarPacientebyOrg(request);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new PacienteResponse(paciente));
+        } catch (IllegalStateException e) {
+            log.warn("Erro ao cadastrar paciente: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        }
     }
 
     @GetMapping("/pagina")
