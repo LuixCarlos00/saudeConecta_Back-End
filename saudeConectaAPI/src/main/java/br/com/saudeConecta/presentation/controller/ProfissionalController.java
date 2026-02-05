@@ -10,20 +10,18 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v2/profissionais")
+@RequestMapping("/profissionais")
 @RequiredArgsConstructor
 public class ProfissionalController {
     
     private final ProfissionalService profissionalService;
     
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
     public ResponseEntity<List<ProfissionalResponse>> listarTodos() {
         List<Profissional> profissionais = profissionalService.buscarTodos();
         List<ProfissionalResponse> response = profissionais.stream()
@@ -33,7 +31,6 @@ public class ProfissionalController {
     }
     
     @GetMapping("/paginado")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
     public ResponseEntity<Page<ProfissionalResponse>> listarTodosPaginado(Pageable pageable) {
         Page<Profissional> page = profissionalService.buscarTodos(pageable);
         Page<ProfissionalResponse> response = page.map(ProfissionalResponse::fromEntity);
@@ -41,7 +38,6 @@ public class ProfissionalController {
     }
     
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA', 'PROFISSIONAL')")
     public ResponseEntity<ProfissionalResponse> buscarPorId(@PathVariable Long id) {
         return profissionalService.buscarPorId(id)
             .map(ProfissionalResponse::fromEntity)
@@ -50,7 +46,6 @@ public class ProfissionalController {
     }
     
     @GetMapping("/medicos")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
     public ResponseEntity<List<ProfissionalResponse>> listarMedicos() {
         List<Profissional> medicos = profissionalService.buscarMedicos();
         List<ProfissionalResponse> response = medicos.stream()
@@ -60,7 +55,6 @@ public class ProfissionalController {
     }
     
     @GetMapping("/dentistas")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
     public ResponseEntity<List<ProfissionalResponse>> listarDentistas() {
         List<Profissional> dentistas = profissionalService.buscarDentistas();
         List<ProfissionalResponse> response = dentistas.stream()
@@ -70,7 +64,6 @@ public class ProfissionalController {
     }
     
     @GetMapping("/tipo/{tipoCodigo}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
     public ResponseEntity<List<ProfissionalResponse>> listarPorTipo(@PathVariable String tipoCodigo) {
         List<Profissional> profissionais = profissionalService.buscarPorTipo(tipoCodigo.toUpperCase());
         List<ProfissionalResponse> response = profissionais.stream()
@@ -80,7 +73,6 @@ public class ProfissionalController {
     }
     
     @GetMapping("/buscar")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
     public ResponseEntity<List<ProfissionalResponse>> buscarPorNome(@RequestParam String nome) {
         List<Profissional> profissionais = profissionalService.buscarPorNome(nome);
         List<ProfissionalResponse> response = profissionais.stream()
@@ -90,7 +82,6 @@ public class ProfissionalController {
     }
     
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProfissionalResponse> cadastrar(
             @Valid @RequestBody CadastrarProfissionalRequest request) {
         Profissional profissional = profissionalService.cadastrar(request);
@@ -99,15 +90,49 @@ public class ProfissionalController {
     }
     
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         profissionalService.deletar(id);
         return ResponseEntity.noContent().build();
     }
     
     @GetMapping("/count")
-    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE')")
     public ResponseEntity<Long> contarAtivos() {
         return ResponseEntity.ok(profissionalService.contarAtivos());
+    }
+
+    // ==========================================
+    // ESTATÍSTICAS POR ORGANIZAÇÃO
+    // ==========================================
+
+    @GetMapping("/organizacao/{organizacaoId}")
+    public ResponseEntity<List<ProfissionalResponse>> listarPorOrganizacao(@PathVariable Long organizacaoId) {
+        List<Profissional> profissionais = profissionalService.buscarPorOrganizacao(organizacaoId);
+        List<ProfissionalResponse> response = profissionais.stream()
+            .map(ProfissionalResponse::fromEntity)
+            .toList();
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/estatisticas/organizacao/{organizacaoId}/medicos-ativos")
+    public ResponseEntity<Long> contarAtivosPorOrganizacao(@PathVariable Long organizacaoId) {
+        return ResponseEntity.ok(profissionalService.contarAtivosPorOrganizacao(organizacaoId));
+    }
+
+    // ==========================================
+    // ESTATÍSTICAS GLOBAIS (SUPER ADMIN)
+    // ==========================================
+
+    @GetMapping("/estatisticas/medicos-ativos")
+    public ResponseEntity<Long> contarTodosAtivos() {
+        return ResponseEntity.ok(profissionalService.contarTodosAtivos());
+    }
+
+    @GetMapping("/todos-ativos")
+    public ResponseEntity<List<ProfissionalResponse>> listarTodosAtivos() {
+        List<Profissional> profissionais = profissionalService.buscarTodosAtivos();
+        List<ProfissionalResponse> response = profissionais.stream()
+            .map(ProfissionalResponse::fromEntity)
+            .toList();
+        return ResponseEntity.ok(response);
     }
 }

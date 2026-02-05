@@ -72,25 +72,15 @@ public class Usuario implements Serializable, UserDetails, TenantAware {
         this.organizacao = organizacao;
     }
 
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        if (this.status != 1) {
+        if (!isEnabled()) {
             return List.of();
         }
-        
-        if (this.tipoUsuarioNovo != null) {
-            return this.tipoUsuarioNovo.getAuthorities();
-        }
-        
-        if (this.tipoUsuario == 1) {
-            return List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
-        } else if (this.tipoUsuario == 2) {
-            return List.of(new SimpleGrantedAuthority("ROLE_Secretaria"));
-        } else if (this.tipoUsuario == 3) {
-            return List.of(new SimpleGrantedAuthority("ROLE_Medico"));
-        } else {
-            return List.of(new SimpleGrantedAuthority("ROLE_USER"));
-        }
+        return this.tipoUsuarioNovo != null 
+            ? this.tipoUsuarioNovo.getAuthorities() 
+            : List.of();
     }
 
     @Override

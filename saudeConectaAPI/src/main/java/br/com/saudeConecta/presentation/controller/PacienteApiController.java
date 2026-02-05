@@ -13,7 +13,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,7 +26,6 @@ public class PacienteApiController {
     private final PacienteService pacienteService;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA', 'PROFISSIONAL')")
     public ResponseEntity<List<PacienteResponse>> listarTodos() {
         log.debug("Listando todos os pacientes do tenant");
         List<PacienteResponse> pacientes = pacienteService.buscarTodosPorTenant()
@@ -38,7 +36,6 @@ public class PacienteApiController {
     }
 
     @GetMapping("/pagina")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA', 'PROFISSIONAL')")
     public ResponseEntity<Page<PacienteResponse>> listarPaginado(
             @PageableDefault(size = 12, sort = {"paciNome"}) Pageable pageable) {
         log.debug("Listando pacientes paginados do tenant");
@@ -48,7 +45,6 @@ public class PacienteApiController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA', 'PROFISSIONAL')")
     public ResponseEntity<PacienteResponse> buscarPorId(@PathVariable Long id) {
         log.debug("Buscando paciente por ID: {} no tenant", id);
         return pacienteService.buscarPorIdTenant(id)
@@ -57,7 +53,6 @@ public class PacienteApiController {
     }
 
     @GetMapping("/buscar")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA', 'PROFISSIONAL')")
     public ResponseEntity<List<PacienteResponse>> buscarPorNome(@RequestParam String nome) {
         log.debug("Buscando pacientes por nome: {} no tenant", nome);
         List<PacienteResponse> pacientes = pacienteService.buscarPorNomeTenant(nome)
@@ -68,21 +63,18 @@ public class PacienteApiController {
     }
 
     @GetMapping("/estatisticas/ativos")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA')")
     public ResponseEntity<Long> contarAtivos() {
         log.debug("Contando pacientes ativos no tenant");
         return ResponseEntity.ok(pacienteService.contarAtivosTenant());
     }
 
     @GetMapping("/verificar-cpf")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA')")
     public ResponseEntity<Boolean> verificarCpfExiste(@RequestParam String cpf) {
         log.debug("Verificando se CPF existe no tenant: {}", cpf);
         return ResponseEntity.ok(pacienteService.existeCpfNoTenant(cpf));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA')")
     public ResponseEntity<PacienteResponse> cadastrar(
             @Valid @RequestBody CadastrarPacienteCompletoRequest request) {
         log.info("Cadastrando paciente no tenant: {}", request.paciNome());
@@ -92,7 +84,6 @@ public class PacienteApiController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA')")
     public ResponseEntity<PacienteResponse> atualizar(
             @PathVariable Long id,
             @Valid @RequestBody AtualizarPacienteRequest request) {
@@ -108,7 +99,6 @@ public class PacienteApiController {
     }
 
     @PutMapping("/{id}/status")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA')")
     public ResponseEntity<Void> alterarStatus(
             @PathVariable Long id,
             @RequestParam int status) {
@@ -124,7 +114,6 @@ public class PacienteApiController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG')")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         log.info("Deletando paciente ID: {} do tenant", id);
         

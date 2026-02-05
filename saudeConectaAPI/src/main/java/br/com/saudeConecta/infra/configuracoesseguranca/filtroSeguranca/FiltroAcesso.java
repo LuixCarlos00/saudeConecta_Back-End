@@ -29,7 +29,6 @@ public class FiltroAcesso extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, @NotNull FilterChain filterChain) throws ServletException, IOException {
 
-
         var tokenJwt = recuperarToken(request);
 
 

@@ -70,4 +70,66 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long> {
         @Param("orgId") Long organizacaoId,
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
+
+    // ==========================================
+    // ESTATÍSTICAS POR ORGANIZAÇÃO
+    // ==========================================
+
+    Long countByOrganizacao_IdAndDataHoraBetween(Long organizacaoId, LocalDateTime inicio, LocalDateTime fim);
+
+    Long countByOrganizacao_IdAndStatusAndDataHoraBetween(
+        Long organizacaoId, StatusConsulta status, LocalDateTime inicio, LocalDateTime fim);
+
+    List<Consulta> findByOrganizacao_IdAndDataHoraBetween(
+        Long organizacaoId, LocalDateTime inicio, LocalDateTime fim);
+
+    @Query("SELECT c FROM Consulta c " +
+           "LEFT JOIN FETCH c.profissional p " +
+           "LEFT JOIN FETCH p.tipoProfissional " +
+           "LEFT JOIN FETCH c.paciente " +
+           "LEFT JOIN FETCH c.especialidade " +
+           "LEFT JOIN FETCH c.formaPagamento " +
+           "WHERE c.organizacao.id = :organizacaoId " +
+           "AND c.dataHora BETWEEN :inicio AND :fim " +
+           "ORDER BY c.dataHora")
+    List<Consulta> findByOrganizacaoIdAndDataHoraBetweenWithRelations(
+        @Param("organizacaoId") Long organizacaoId,
+        @Param("inicio") LocalDateTime inicio,
+        @Param("fim") LocalDateTime fim);
+
+    @Query("SELECT c FROM Consulta c " +
+           "LEFT JOIN FETCH c.profissional p " +
+           "LEFT JOIN FETCH p.tipoProfissional " +
+           "LEFT JOIN FETCH c.paciente " +
+           "LEFT JOIN FETCH c.especialidade " +
+           "LEFT JOIN FETCH c.formaPagamento " +
+           "WHERE c.profissional.id = :profissionalId " +
+           "AND c.dataHora BETWEEN :inicio AND :fim " +
+           "ORDER BY c.dataHora")
+    List<Consulta> findByProfissionalIdAndDataHoraBetweenWithRelations(
+        @Param("profissionalId") Long profissionalId,
+        @Param("inicio") LocalDateTime inicio,
+        @Param("fim") LocalDateTime fim);
+
+    // ==========================================
+    // ESTATÍSTICAS GLOBAIS (SUPER ADMIN)
+    // ==========================================
+
+    Long countByDataHoraBetween(LocalDateTime inicio, LocalDateTime fim);
+
+    Long countByStatusAndDataHoraBetween(StatusConsulta status, LocalDateTime inicio, LocalDateTime fim);
+
+    List<Consulta> findByDataHoraBetween(LocalDateTime inicio, LocalDateTime fim);
+
+    @Query("SELECT c FROM Consulta c " +
+           "LEFT JOIN FETCH c.profissional p " +
+           "LEFT JOIN FETCH p.tipoProfissional " +
+           "LEFT JOIN FETCH c.paciente " +
+           "LEFT JOIN FETCH c.especialidade " +
+           "LEFT JOIN FETCH c.formaPagamento " +
+           "WHERE c.dataHora BETWEEN :inicio AND :fim " +
+           "ORDER BY c.dataHora")
+    List<Consulta> findByDataHoraBetweenWithRelations(
+        @Param("inicio") LocalDateTime inicio,
+        @Param("fim") LocalDateTime fim);
 }

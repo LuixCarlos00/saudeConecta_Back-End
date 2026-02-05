@@ -179,6 +179,31 @@ public class ProfissionalService {
         Long orgId = tenantHelper.getCurrentTenantId();
         return profissionalRepository.countAtivosByOrganizacaoId(orgId);
     }
+
+    // ==========================================
+    // ESTATÍSTICAS POR ORGANIZAÇÃO
+    // ==========================================
+
+    public Long contarAtivosPorOrganizacao(Long organizacaoId) {
+        return profissionalRepository.countAtivosByOrganizacaoId(organizacaoId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Profissional> buscarPorOrganizacao(Long organizacaoId) {
+        return profissionalRepository.findByOrganizacaoIdAndStatusWithRelations(organizacaoId, StatusProfissional.ATIVO);
+    }
+
+    // ==========================================
+    // ESTATÍSTICAS GLOBAIS (SUPER ADMIN)
+    // ==========================================
+
+    public Long contarTodosAtivos() {
+        return profissionalRepository.countAllAtivos();
+    }
+
+    public List<Profissional> buscarTodosAtivos() {
+        return profissionalRepository.findByStatus(StatusProfissional.ATIVO);
+    }
     
     private String gerarSenhaAleatoria() {
         SecureRandom random = new SecureRandom();
