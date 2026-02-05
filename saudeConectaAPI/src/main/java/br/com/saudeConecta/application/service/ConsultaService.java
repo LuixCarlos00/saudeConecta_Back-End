@@ -252,6 +252,95 @@ public class ConsultaService {
     public List<ConsultaHistorico> buscarHistorico(Long consultaId) {
         return historicoRepository.findByConsulta_IdOrderByCreatedAtDesc(consultaId);
     }
+
+    // ==========================================
+    // ESTATÍSTICAS POR ORGANIZAÇÃO
+    // ==========================================
+
+    public Long contarConsultasHojePorOrganizacao(Long organizacaoId) {
+        LocalDate hoje = LocalDate.now();
+        return consultaRepository.countByOrganizacao_IdAndDataHoraBetween(
+            organizacaoId, 
+            hoje.atStartOfDay(), 
+            hoje.plusDays(1).atStartOfDay()
+        );
+    }
+
+    public Long contarConsultasRealizadasHojePorOrganizacao(Long organizacaoId) {
+        LocalDate hoje = LocalDate.now();
+        return consultaRepository.countByOrganizacao_IdAndStatusAndDataHoraBetween(
+            organizacaoId,
+            StatusConsulta.REALIZADA,
+            hoje.atStartOfDay(),
+            hoje.plusDays(1).atStartOfDay()
+        );
+    }
+
+    public Long contarConsultasAgendadasHojePorOrganizacao(Long organizacaoId) {
+        LocalDate hoje = LocalDate.now();
+        return consultaRepository.countByOrganizacao_IdAndStatusAndDataHoraBetween(
+            organizacaoId,
+            StatusConsulta.AGENDADA,
+            hoje.atStartOfDay(),
+            hoje.plusDays(1).atStartOfDay()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<Consulta> buscarConsultasPorOrganizacaoEIntervalo(Long organizacaoId, LocalDate dataInicio, LocalDate dataFim) {
+        return consultaRepository.findByOrganizacaoIdAndDataHoraBetweenWithRelations(
+            organizacaoId,
+            dataInicio.atStartOfDay(),
+            dataFim.plusDays(1).atStartOfDay()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<Consulta> buscarConsultasPorProfissionalEIntervalo(Long profissionalId, LocalDate dataInicio, LocalDate dataFim) {
+        return consultaRepository.findByProfissionalIdAndDataHoraBetweenWithRelations(
+            profissionalId,
+            dataInicio.atStartOfDay(),
+            dataFim.plusDays(1).atStartOfDay()
+        );
+    }
+
+    // ==========================================
+    // ESTATÍSTICAS GLOBAIS (SUPER ADMIN)
+    // ==========================================
+
+    public Long contarTodasConsultasHoje() {
+        LocalDate hoje = LocalDate.now();
+        return consultaRepository.countByDataHoraBetween(
+            hoje.atStartOfDay(),
+            hoje.plusDays(1).atStartOfDay()
+        );
+    }
+
+    public Long contarTodasConsultasRealizadasHoje() {
+        LocalDate hoje = LocalDate.now();
+        return consultaRepository.countByStatusAndDataHoraBetween(
+            StatusConsulta.REALIZADA,
+            hoje.atStartOfDay(),
+            hoje.plusDays(1).atStartOfDay()
+        );
+    }
+
+    public Long contarTodasConsultasAgendadasHoje() {
+        LocalDate hoje = LocalDate.now();
+        return consultaRepository.countByStatusAndDataHoraBetween(
+            StatusConsulta.AGENDADA,
+            hoje.atStartOfDay(),
+            hoje.plusDays(1).atStartOfDay()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<Consulta> buscarTodasConsultasPorIntervalo(LocalDate dataInicio, LocalDate dataFim) {
+        return consultaRepository.findByDataHoraBetweenWithRelations(
+            dataInicio.atStartOfDay(),
+            dataFim.plusDays(1).atStartOfDay()
+        );
+    }
     
     private void registrarHistorico(Consulta consulta, StatusConsulta statusAnterior, 
                                      StatusConsulta statusNovo, String observacao, Usuario alteradoPor) {

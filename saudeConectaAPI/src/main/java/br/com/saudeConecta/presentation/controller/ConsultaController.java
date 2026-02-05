@@ -20,14 +20,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v2/consultas")
+@RequestMapping("/consultas")
 @RequiredArgsConstructor
 public class ConsultaController {
     
     private final ConsultaService consultaService;
     
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA', 'PROFISSIONAL')")
     public ResponseEntity<List<ConsultaResponse>> listarTodas() {
         List<ConsultaResponse> response = consultaService.buscarTodas().stream()
             .map(ConsultaResponse::fromEntity)
@@ -36,7 +35,6 @@ public class ConsultaController {
     }
     
     @GetMapping("/paginado")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA', 'PROFISSIONAL')")
     public ResponseEntity<Page<ConsultaResponse>> listarTodasPaginado(Pageable pageable) {
         Page<ConsultaResponse> response = consultaService.buscarTodas(pageable)
             .map(ConsultaResponse::fromEntity);
@@ -44,7 +42,6 @@ public class ConsultaController {
     }
     
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA', 'PROFISSIONAL')")
     public ResponseEntity<ConsultaResponse> buscarPorId(@PathVariable Long id) {
         return consultaService.buscarPorId(id)
             .map(ConsultaResponse::fromEntity)
@@ -53,7 +50,6 @@ public class ConsultaController {
     }
     
     @GetMapping("/hoje")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA', 'PROFISSIONAL')")
     public ResponseEntity<List<ConsultaResponse>> listarConsultasHoje() {
         List<ConsultaResponse> response = consultaService.buscarConsultasHoje().stream()
             .map(ConsultaResponse::fromEntity)
@@ -62,7 +58,6 @@ public class ConsultaController {
     }
     
     @GetMapping("/profissional/{profissionalId}")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA', 'PROFISSIONAL')")
     public ResponseEntity<List<ConsultaResponse>> listarPorProfissional(@PathVariable Long profissionalId) {
         List<ConsultaResponse> response = consultaService.buscarPorProfissional(profissionalId).stream()
             .map(ConsultaResponse::fromEntity)
@@ -71,7 +66,6 @@ public class ConsultaController {
     }
     
     @GetMapping("/profissional/{profissionalId}/agenda")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA', 'PROFISSIONAL')")
     public ResponseEntity<List<ConsultaResponse>> buscarAgendaDia(
             @PathVariable Long profissionalId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
@@ -82,7 +76,6 @@ public class ConsultaController {
     }
     
     @GetMapping("/periodo")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA', 'PROFISSIONAL')")
     public ResponseEntity<List<ConsultaResponse>> buscarPorPeriodo(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fim) {
@@ -93,7 +86,6 @@ public class ConsultaController {
     }
     
     @GetMapping("/paciente/{pacienteId}")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA', 'PROFISSIONAL')")
     public ResponseEntity<List<ConsultaResponse>> listarPorPaciente(@PathVariable Long pacienteId) {
         List<ConsultaResponse> response = consultaService.buscarPorPaciente(pacienteId).stream()
             .map(ConsultaResponse::fromEntity)
@@ -102,7 +94,6 @@ public class ConsultaController {
     }
     
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA')")
     public ResponseEntity<ConsultaResponse> agendar(@Valid @RequestBody AgendarConsultaRequest request) {
         Consulta consulta = consultaService.agendar(request);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -110,21 +101,18 @@ public class ConsultaController {
     }
     
     @PutMapping("/{id}/confirmar")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA')")
     public ResponseEntity<ConsultaResponse> confirmar(@PathVariable Long id) {
         Consulta consulta = consultaService.confirmar(id);
         return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
     }
     
     @PutMapping("/{id}/iniciar")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'PROFISSIONAL')")
     public ResponseEntity<ConsultaResponse> iniciar(@PathVariable Long id) {
         Consulta consulta = consultaService.iniciar(id);
         return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
     }
     
     @PutMapping("/{id}/realizar")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'PROFISSIONAL')")
     public ResponseEntity<ConsultaResponse> realizar(
             @PathVariable Long id,
             @RequestParam(required = false) String observacoes) {
@@ -133,7 +121,6 @@ public class ConsultaController {
     }
     
     @PutMapping("/{id}/cancelar")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA', 'PROFISSIONAL')")
     public ResponseEntity<ConsultaResponse> cancelar(
             @PathVariable Long id,
             @Valid @RequestBody CancelarConsultaRequest request) {
@@ -142,15 +129,85 @@ public class ConsultaController {
     }
     
     @PutMapping("/{id}/nao-compareceu")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'RECEPCIONISTA')")
     public ResponseEntity<ConsultaResponse> marcarNaoCompareceu(@PathVariable Long id) {
         Consulta consulta = consultaService.marcarNaoCompareceu(id);
         return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
     }
     
     @GetMapping("/count/hoje")
-    @PreAuthorize("hasAnyAuthority('ADMIN_ORG', 'GERENTE', 'RECEPCIONISTA')")
     public ResponseEntity<Long> contarAgendadasHoje() {
         return ResponseEntity.ok(consultaService.contarAgendadasHoje());
+    }
+
+    // ==========================================
+    // ESTATÍSTICAS POR ORGANIZAÇÃO
+    // ==========================================
+
+    @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-hoje")
+    public ResponseEntity<Long> contarConsultasHojePorOrganizacao(@PathVariable Long organizacaoId) {
+        return ResponseEntity.ok(consultaService.contarConsultasHojePorOrganizacao(organizacaoId));
+    }
+
+    @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-realizadas-hoje")
+    public ResponseEntity<Long> contarRealizadasHojePorOrganizacao(@PathVariable Long organizacaoId) {
+        return ResponseEntity.ok(consultaService.contarConsultasRealizadasHojePorOrganizacao(organizacaoId));
+    }
+
+    @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-agendadas-hoje")
+    public ResponseEntity<Long> contarAgendadasHojePorOrganizacao(@PathVariable Long organizacaoId) {
+        return ResponseEntity.ok(consultaService.contarConsultasAgendadasHojePorOrganizacao(organizacaoId));
+    }
+
+    @GetMapping("/organizacao/{organizacaoId}/intervalo")
+    public ResponseEntity<List<ConsultaResponse>> buscarPorOrganizacaoEIntervalo(
+            @PathVariable Long organizacaoId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal) {
+        List<ConsultaResponse> response = consultaService.buscarConsultasPorOrganizacaoEIntervalo(
+                organizacaoId, dataInicial, dataFinal).stream()
+            .map(ConsultaResponse::fromEntity)
+            .toList();
+        return ResponseEntity.ok(response);
+    }
+
+    // ==========================================
+    // ESTATÍSTICAS GLOBAIS (SUPER ADMIN)
+    // ==========================================
+
+    @GetMapping("/estatisticas/consultas-hoje")
+    public ResponseEntity<Long> contarTodasConsultasHoje() {
+        return ResponseEntity.ok(consultaService.contarTodasConsultasHoje());
+    }
+
+    @GetMapping("/estatisticas/consultas-realizadas-hoje")
+    public ResponseEntity<Long> contarTodasRealizadasHoje() {
+        return ResponseEntity.ok(consultaService.contarTodasConsultasRealizadasHoje());
+    }
+
+    @GetMapping("/estatisticas/consultas-agendadas-hoje")
+    public ResponseEntity<Long> contarTodasAgendadasHoje() {
+        return ResponseEntity.ok(consultaService.contarTodasConsultasAgendadasHoje());
+    }
+
+    @GetMapping("/intervalo")
+    public ResponseEntity<List<ConsultaResponse>> buscarTodasPorIntervalo(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal) {
+        List<ConsultaResponse> response = consultaService.buscarTodasConsultasPorIntervalo(dataInicial, dataFinal).stream()
+            .map(ConsultaResponse::fromEntity)
+            .toList();
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/profissional/{profissionalId}/intervalo")
+    public ResponseEntity<List<ConsultaResponse>> buscarPorProfissionalEIntervalo(
+            @PathVariable Long profissionalId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal) {
+        List<ConsultaResponse> response = consultaService.buscarConsultasPorProfissionalEIntervalo(
+                profissionalId, dataInicial, dataFinal).stream()
+            .map(ConsultaResponse::fromEntity)
+            .toList();
+        return ResponseEntity.ok(response);
     }
 }

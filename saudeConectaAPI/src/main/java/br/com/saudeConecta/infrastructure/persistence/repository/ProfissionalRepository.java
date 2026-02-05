@@ -22,6 +22,14 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
     Optional<Profissional> findByIdAndOrganizacao_Id(Long id, Long organizacaoId);
     
     List<Profissional> findByOrganizacao_IdAndStatus(Long organizacaoId, StatusProfissional status);
+
+    @Query("SELECT DISTINCT p FROM Profissional p " +
+           "LEFT JOIN FETCH p.tipoProfissional " +
+           "LEFT JOIN FETCH p.especialidades " +
+           "WHERE p.organizacao.id = :organizacaoId AND p.status = :status")
+    List<Profissional> findByOrganizacaoIdAndStatusWithRelations(
+        @Param("organizacaoId") Long organizacaoId,
+        @Param("status") StatusProfissional status);
     
     List<Profissional> findByOrganizacao_IdAndTipoProfissional_Codigo(Long organizacaoId, String codigo);
     
@@ -56,4 +64,13 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
     boolean existsByCpf(String cpf);
     
     boolean existsByEmailAndOrganizacao_Id(String email, Long organizacaoId);
+
+    // ==========================================
+    // ESTATÍSTICAS GLOBAIS (SUPER ADMIN)
+    // ==========================================
+
+    @Query("SELECT COUNT(p) FROM Profissional p WHERE p.status = 'ATIVO'")
+    Long countAllAtivos();
+
+    List<Profissional> findByStatus(StatusProfissional status);
 }
