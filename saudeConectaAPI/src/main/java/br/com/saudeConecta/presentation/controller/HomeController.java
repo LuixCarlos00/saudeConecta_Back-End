@@ -1,8 +1,14 @@
 package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.application.service.HomeService;
+import br.com.saudeConecta.domain.admin.AdminOrganizacao;
+import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infra.configuracoesseguranca.TokenService;
+import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.SecretariaRepository;
 import br.com.saudeConecta.presentation.dto.usuario.DadosLoginUsuario;
 import br.com.saudeConecta.presentation.dto.usuario.DadosTokenJWT;
 import jakarta.validation.constraints.NotNull;
@@ -15,6 +21,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/Home")
@@ -27,6 +34,9 @@ public class HomeController {
     private final AuthenticationManager authenticationManager;
     private final TokenService tokenService;
     private final HomeService recuperacaoSenhaService;
+    private final ProfissionalRepository profissionalRepository;
+    private final AdminOrganizacaoRepository adminOrganizacaoRepository;
+    private final SecretariaRepository secretariaRepository;
 
     @PostMapping("/login")
     @Description("Realiza autenticação do usuário e retorna token JWT. Utilizado em: LoginComponent, AuthService")
@@ -37,8 +47,11 @@ public class HomeController {
         Usuario usuario = (Usuario) authentication.getPrincipal();
         Long organizacaoId = usuario.getOrganizacaoId();
         
-        String tokenJWT = tokenService.gerarToken(usuario, organizacaoId);
-        log.info("Login realizado: {} | Org: {}", usuario.getLogin(), organizacaoId);
+        // Obter nome do usuário baseado no tipo
+        String nomeUsuario = getNomeUsuario(usuario);
+        
+        String tokenJWT = tokenService.gerarToken(usuario, organizacaoId, nomeUsuario);
+        log.info("Login realizado: {} | Org: {} | Nome: {}", usuario.getLogin(), organizacaoId, nomeUsuario);
 
         return ResponseEntity.ok(new DadosTokenJWT(tokenJWT));
     }
@@ -59,5 +72,25 @@ public class HomeController {
             log.error("Erro ao recuperar senha: {}", e.getMessage());
             return ResponseEntity.internalServerError().body(Map.of("message", "Erro ao processar solicitação"));
         }
+    }
+
+    private String getNomeUsuario(Usuario usuario) {
+        try {
+            // Busca baseada no tipo de usuário
+            if (usuario.isAdminOrganizacao()) {
+                Optional<AdminOrganizacao> admin = adminOrganizacaoRepository.findByUsuario_Id(usuario.getId());
+                return admin.map(AdminOrganizacao::getNome).orElse("Administrador");
+            } else if (usuario.isProfissional()) {
+                Optional<Profissional> profissional = profissionalRepository.findByUsuario_Id(usuario.getId());
+                return profissional.map(Profissional::getNome).orElse("Profissional");
+            } else if (usuario.getTipoUsuario() != null && usuario.getTipoUsuario() == 3) { // Secretaria
+                Optional<Secretaria> secretaria = secretariaRepository.findByUsuario_Id(usuario.getId());
+                return secretaria.map(Secretaria::getNome).orElse("Secretária");
+            }
+        } catch (Exception e) {
+            log.warn("Erro ao obter nome do usuário ID: {}", usuario.getId(), e);
+        }
+        
+        return "Usuário"; // Default fallback
     }
 }

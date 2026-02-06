@@ -19,9 +19,13 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
     
     Page<Profissional> findByOrganizacao_Id(Long organizacaoId, Pageable pageable);
     
-    Optional<Profissional> findByIdAndOrganizacao_Id(Long id, Long organizacaoId);
+    @Query("SELECT p FROM Profissional p " +
+           "LEFT JOIN FETCH p.tipoProfissional " +
+           "LEFT JOIN FETCH p.especialidades " +
+           "WHERE p.id = :id AND p.organizacao.id = :organizacaoId")
+    Optional<Profissional> findByIdAndOrganizacao_Id(@Param("id") Long id, @Param("organizacaoId") Long organizacaoId);
     
-    List<Profissional> findByOrganizacao_IdAndStatus(Long organizacaoId, StatusProfissional status);
+
 
     @Query("SELECT DISTINCT p FROM Profissional p " +
            "LEFT JOIN FETCH p.tipoProfissional " +
@@ -31,7 +35,7 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
         @Param("organizacaoId") Long organizacaoId,
         @Param("status") StatusProfissional status);
     
-    List<Profissional> findByOrganizacao_IdAndTipoProfissional_Codigo(Long organizacaoId, String codigo);
+
     
     @Query("SELECT p FROM Profissional p WHERE p.organizacao.id = :orgId " +
            "AND p.tipoProfissional.codigo = :tipo AND p.status = 'ATIVO'")
@@ -46,12 +50,12 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
         @Param("orgId") Long organizacaoId, 
         @Param("id") Long id);
     
-    @Query("SELECT p FROM Profissional p " +
-           "WHERE p.organizacao.id = :orgId " +
-           "AND LOWER(p.nome) LIKE LOWER(CONCAT('%', :nome, '%'))")
-    List<Profissional> findByOrganizacaoIdAndNomeContaining(
-        @Param("orgId") Long organizacaoId, 
-        @Param("nome") String nome);
+//    @Query("SELECT p FROM Profissional p " +
+//           "WHERE p.organizacao.id = :orgId " +
+//           "AND LOWER(p.nome) LIKE LOWER(CONCAT('%', :nome, '%'))")
+//    List<Profissional> findByOrganizacaoIdAndNomeContaining(
+//        @Param("orgId") Long organizacaoId,
+//        @Param("nome") String nome);
     
     @Query("SELECT COUNT(p) FROM Profissional p " +
            "WHERE p.organizacao.id = :orgId AND p.status = 'ATIVO'")
@@ -67,7 +71,7 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
            "WHERE p.usuario.id = :usuarioId")
     Optional<Profissional> findByUsuarioIdWithRelations(@Param("usuarioId") Long usuarioId);
     
-    Optional<Profissional> findByCpf(String cpf);
+
     
     boolean existsByCpf(String cpf);
     
@@ -83,4 +87,6 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
     Long countAllAtivos();
 
     List<Profissional> findByStatus(StatusProfissional status);
+
+    Optional<Profissional> findProfissionalByIdAndOrganizacao_Id(Long id, Long id1);
 }

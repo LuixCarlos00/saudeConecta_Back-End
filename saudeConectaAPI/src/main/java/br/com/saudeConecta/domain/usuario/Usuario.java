@@ -113,16 +113,12 @@ public class Usuario implements Serializable, UserDetails, TenantAware {
         return this.status != null && this.status == 1;
     }
 
-    public void update(Usuario dados) {
-        this.login = dados.getLogin();
-        this.senha = dados.getSenha();
-    }
-    
+
     @Override
     public Long getOrganizacaoId() {
         return this.organizacao != null ? this.organizacao.getId() : null;
     }
-    
+
     @Override
     public void setOrganizacaoId(Long organizacaoId) {
     }

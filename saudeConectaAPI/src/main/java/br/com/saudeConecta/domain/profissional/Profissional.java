@@ -111,11 +111,6 @@ public class Profissional implements Serializable, TenantAware {
         updatedAt = LocalDateTime.now();
     }
     
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
-    
     @Override
     public Long getOrganizacaoId() {
         return this.organizacao != null ? this.organizacao.getId() : null;
@@ -124,29 +119,11 @@ public class Profissional implements Serializable, TenantAware {
     @Override
     public void setOrganizacaoId(Long organizacaoId) {
     }
-    
-    public boolean isAtivo() {
-        return StatusProfissional.ATIVO.equals(this.status);
-    }
-    
-    public boolean isMedico() {
-        return this.tipoProfissional != null && this.tipoProfissional.isMedico();
-    }
-    
-    public boolean isDentista() {
-        return this.tipoProfissional != null && this.tipoProfissional.isDentista();
-    }
-    
+
+
     public String getConselhoFormatado() {
         if (this.tipoProfissional == null) return this.registroConselho;
         return this.tipoProfissional.getConselho() + " " + this.registroConselho;
     }
-    
-    public void addEspecialidade(Especialidade especialidade) {
-        this.especialidades.add(especialidade);
-    }
-    
-    public void removeEspecialidade(Especialidade especialidade) {
-        this.especialidades.remove(especialidade);
-    }
+
 }

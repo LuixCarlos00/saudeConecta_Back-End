@@ -3,6 +3,7 @@ package br.com.saudeConecta.presentation.controller;
 import br.com.saudeConecta.application.service.AdminOrganizacaoService;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.presentation.dto.admin.AtualizarAdminRequest;
 import br.com.saudeConecta.presentation.dto.admin.CadastrarAdminRequest;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -72,5 +73,19 @@ public class AdminOrganizacaoController {
         }
     }
 
-    public record AtualizarAdminRequest(String admNome, String admEmail) {}
+    @PutMapping("/bloquerAdminByOrg/{id}")
+    @Transactional
+    @Description("Bloqueia/Desbloqueia administrador por ID. Utilizado em: TabelaTodosUsuariosComponent")
+    public ResponseEntity<Void> bloquearAdminByOrg(@PathVariable Long id) {
+        log.debug("Bloqueando/Desbloqueando administrador ID: {}", id);
+        try {
+            adminOrganizacaoService.bloquearAdminByOrg(id);
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            log.warn("Erro ao bloquear/desbloquear administrador: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+
 }

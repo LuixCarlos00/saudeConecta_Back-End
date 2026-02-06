@@ -22,34 +22,6 @@ public class SecretariaController {
 
     private final SecretariaService secretariaService;
 
-    @GetMapping
-    @Description("Lista todas as secretárias da organização")
-    public ResponseEntity<List<SecretariaResponse>> listarTodas() {
-        List<Secretaria> secretarias = secretariaService.buscarTodas();
-        List<SecretariaResponse> response = secretarias.stream()
-            .map(SecretariaResponse::fromEntity)
-            .toList();
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/ativas")
-    @Description("Lista secretárias ativas da organização")
-    public ResponseEntity<List<SecretariaResponse>> listarAtivas() {
-        List<Secretaria> secretarias = secretariaService.buscarAtivas();
-        List<SecretariaResponse> response = secretarias.stream()
-            .map(SecretariaResponse::fromEntity)
-            .toList();
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/{id}")
-    @Description("Busca secretária por ID")
-    public ResponseEntity<SecretariaResponse> buscarPorId(@PathVariable Long id) {
-        return secretariaService.buscarPorId(id)
-            .map(SecretariaResponse::fromEntity)
-            .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
-    }
 
     @PostMapping("/cadastrarSecretariaByOrg")
     @Description("Cadastra nova secretária. Utilizado em: CadastroSecretariaComponent")
@@ -58,23 +30,32 @@ public class SecretariaController {
         try {
             Secretaria secretaria = secretariaService.cadastrar(request);
             return ResponseEntity.status(HttpStatus.CREATED)
-                .body(SecretariaResponse.fromEntity(secretaria));
+                    .body(SecretariaResponse.fromEntity(secretaria));
         } catch (IllegalStateException e) {
             log.warn("Erro ao cadastrar secretária: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         }
     }
 
-    @DeleteMapping("/{id}")
-    @Description("Inativa secretária por ID")
-    public ResponseEntity<Void> inativar(@PathVariable Long id) {
-        secretariaService.inativar(id);
-        return ResponseEntity.noContent().build();
+    @GetMapping("/buscarSecretariaIdByOrg/{idSecretaria}")
+    @Description("Busca secretária por ID")
+    public ResponseEntity<SecretariaResponse> buscarSecretariaIdByOrg(@PathVariable Long idSecretaria) {
+        return secretariaService.buscarSecretariaIdByOrg(idSecretaria)
+                .map(SecretariaResponse::fromEntity)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/count")
-    @Description("Conta secretárias ativas da organização")
-    public ResponseEntity<Long> contarAtivas() {
-        return ResponseEntity.ok(secretariaService.contarAtivas());
+
+    @PutMapping("/atualizarSecretariaIdByOrg/{id}")
+    @Description("Atualiza secretária por ID")
+    public ResponseEntity<SecretariaResponse> atualizarSecretariaIdByOrg(@PathVariable Long id, @RequestBody Secretaria secretaria) {
+        try {
+            Secretaria atualizada = secretariaService.atualizarSecretariaIdByOrg(id, secretaria);
+            return ResponseEntity.ok(SecretariaResponse.fromEntity(atualizada));
+        } catch (IllegalArgumentException e) {
+            log.warn("Erro ao atualizar secretária: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
     }
 }

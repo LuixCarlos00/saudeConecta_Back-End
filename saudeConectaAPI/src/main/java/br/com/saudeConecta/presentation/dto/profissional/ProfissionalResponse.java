@@ -1,6 +1,7 @@
 package br.com.saudeConecta.presentation.dto.profissional;
 
 import br.com.saudeConecta.domain.profissional.Profissional;
+import org.hibernate.Hibernate;
 
 import java.time.LocalDate;
 import java.util.List;

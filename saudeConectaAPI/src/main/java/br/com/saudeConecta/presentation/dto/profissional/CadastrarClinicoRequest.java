@@ -5,34 +5,40 @@ import jakarta.validation.constraints.NotBlank;
 
 public record CadastrarClinicoRequest(
     @NotBlank(message = "Nome é obrigatório")
-    String medNome,
+    String nome,
     
-    String medSexo,
+    String sexo,
     
-    String medDataNacimento,
+    String dataNascimento,
     
     @NotBlank(message = "CRM é obrigatório")
-    String medCrm,
+    String registroConselho,
     
     @NotBlank(message = "CPF é obrigatório")
-    String medCpf,
+    String cpf,
     
-    String medRg,
+    String rg,
     
     @NotBlank(message = "Email é obrigatório")
     @Email(message = "Email inválido")
-    String medEmail,
+    String email,
     
-    String medTelefone,
+    String telefone,
     
-    String medEspecialidade,
+    String especialidade,
     
-    String endNacionalidade,
-    String endUF,
-    String endMunicipio,
-    String endBairro,
-    String endCep,
-    String endRua,
-    Integer endNumero,
-    String endComplemento
+    String formacao,
+    
+    String instituicao,
+    
+    Integer tempoConsultaMinutos,
+    
+    String nacionalidade,
+    String uf,
+    String municipio,
+    String bairro,
+    String cep,
+    String rua,
+    Integer numero,
+    String complemento
 ) {}

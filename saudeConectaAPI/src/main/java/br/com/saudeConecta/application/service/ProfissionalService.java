@@ -70,48 +70,17 @@ public class ProfissionalService {
         this.credenciaisEmailService = credenciaisEmailService;
         this.emailTaskExecutor = emailTaskExecutor;
     }
-    
-    @RequiresTenant
-    public List<Profissional> buscarTodos() {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return profissionalRepository.findByOrganizacao_Id(orgId);
-    }
-    
-    @RequiresTenant
-    public Page<Profissional> buscarTodos(Pageable pageable) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return profissionalRepository.findByOrganizacao_Id(orgId, pageable);
-    }
-    
-    @RequiresTenant
-    public Optional<Profissional> buscarPorId(Long id) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return profissionalRepository.findByIdAndOrganizacao_Id(id, orgId);
-    }
-    
-    @RequiresTenant
-    public List<Profissional> buscarPorTipo(String tipoCodigo) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return profissionalRepository.findAtivosByOrganizacaoIdAndTipo(orgId, tipoCodigo);
-    }
-    
-    @RequiresTenant
-    public List<Profissional> buscarMedicos() {
-        return buscarPorTipo("MEDICO");
-    }
-    
-    @RequiresTenant
-    public List<Profissional> buscarDentistas() {
-        return buscarPorTipo("DENTISTA");
-    }
+
+
+
 
     @RequiresTenant
     @Transactional
     public Profissional cadastraClinicoByOrg(CadastrarClinicoRequest request) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Cadastrando clínico: {} na organização: {}", request.medNome(), orgId);
+        log.info("Cadastrando clínico: {} na organização: {}", request.nome(), orgId);
 
-        String cpfLimpo = limparCpf(request.medCpf());
+        String cpfLimpo = limparCpf(request.cpf());
 
         if (cpfLimpo != null && profissionalRepository.existsByCpfAndOrganizacao_Id(cpfLimpo, orgId)) {
             throw new IllegalStateException("CPF já cadastrado no sistema");
@@ -136,117 +105,41 @@ public class ProfissionalService {
 
 
         Endereco endereco = new Endereco();
-        endereco.setEndNacionalidade(request.endNacionalidade());
-        endereco.setEndUF(request.endUF());
-        endereco.setEndMunicipio(request.endMunicipio());
-        endereco.setEndBairro(request.endBairro());
-        endereco.setEndCep(request.endCep());
-        endereco.setEndRua(request.endRua());
-        endereco.setEndNumero(request.endNumero() != null ? request.endNumero().longValue() : null);
-        endereco.setEndComplemento(request.endComplemento());
+        endereco.setEndNacionalidade(request.nacionalidade());
+        endereco.setEndUF(request.uf());
+        endereco.setEndMunicipio(request.municipio());
+        endereco.setEndBairro(request.bairro());
+        endereco.setEndCep(request.cep());
+        endereco.setEndRua(request.rua());
+        endereco.setEndNumero(request.numero() != null ? request.numero().longValue() : null);
+        endereco.setEndComplemento(request.complemento());
 
         enderecoRepository.save(endereco);
         Usuario usuarioSalvo = usuarioRepository.save(usuario);
 
+        // Processa especialidades se fornecidas
+        Set<Especialidade> especialidades = new HashSet<>();
+        if (request.especialidade() != null && !request.especialidade().isEmpty()) {
+            // Assume que especialidade contém IDs separados por vírgula
+            String[] especialidadeIds = request.especialidade().split(",");
+            for (String especialidadeId : especialidadeIds) {
+                try {
+                    Long id = Long.parseLong(especialidadeId.trim());
+                    especialidadeRepository.findById(id).ifPresent(especialidades::add);
+                } catch (NumberFormatException e) {
+                    log.warn("ID de especialidade inválido: {}", especialidadeId);
+                }
+            }
+        }
+
         Profissional profissional = Profissional.builder()
             .organizacao(organizacao)
             .tipoProfissional(tipoMedico)
-            .nome(request.medNome())
-            .sexo(converterSexo(request.medSexo()))
-            .dataNascimento(request.medDataNacimento() != null ? java.time.LocalDate.parse(request.medDataNacimento()) : null)
-            .registroConselho(request.medCrm())
-            .cpf(cpfLimpo)
-            .rg(request.medRg())
-            .email(request.medEmail())
-            .telefone(request.medTelefone())
-            .usuario(usuarioSalvo)
-            .endereco(endereco)
-            .status(StatusProfissional.ATIVO)
-            .tempoConsultaMinutos(30)
-            .build();
-
-        Profissional salvo = profissionalRepository.save(profissional);
-        log.info("Clínico cadastrado com sucesso. ID: {}", salvo.getId());
-
-        CompletableFuture.runAsync(() -> {
-            try {
-                credenciaisEmailService.enviarCredenciaisMedico(
-                    request.medEmail(),
-                    request.medNome(),
-                    cpfLimpo,
-                    senhaGerada,
-                    organizacao.getNome()
-                );
-                log.info("Email de credenciais enviado para: {}", request.medEmail());
-            } catch (Exception e) {
-                log.error("Erro ao enviar email de credenciais: {}", e.getMessage());
-            }
-        }, emailTaskExecutor);
-
-        return salvo;
-    }
-    
-    @RequiresTenant
-    public List<Profissional> buscarPorNome(String nome) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return profissionalRepository.findByOrganizacaoIdAndNomeContaining(orgId, nome);
-    }
-    
-    @RequiresTenant
-    @Transactional
-    public Profissional cadastrar(CadastrarProfissionalRequest request) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Cadastrando profissional: {} na organização: {}", request.nome(), orgId);
-        
-        if (request.cpf() != null && profissionalRepository.existsByCpf(limparCpf(request.cpf()))) {
-            throw new IllegalStateException("CPF já cadastrado no sistema");
-        }
-        
-        Organizacao organizacao = organizacaoRepository.findById(orgId)
-            .orElseThrow(() -> new IllegalStateException("Organização não encontrada"));
-        
-        TipoProfissional tipo = tipoProfissionalRepository.findById(request.tipoProfissionalId())
-            .orElseThrow(() -> new IllegalArgumentException("Tipo de profissional não encontrado"));
-        
-        String senhaGerada = gerarSenhaAleatoria();
-        String senhaCriptografada = passwordEncoder.encode(senhaGerada);
-        
-        Usuario usuario = new Usuario();
-        usuario.setLogin(limparCpf(request.cpf()));
-        usuario.setSenha(senhaCriptografada);
-        usuario.setTipoUsuario((byte) 3);
-        usuario.setTipoUsuarioNovo(TipoUsuarioNovo.PROFISSIONAL);
-        usuario.setOrganizacao(organizacao);
-        usuario.setStatus((byte) 1);
-        Usuario usuarioSalvo = usuarioRepository.save(usuario);
-        
-        Endereco endereco = null;
-        if (request.endCep() != null) {
-            endereco = new Endereco();
-            endereco.setEndNacionalidade(request.endNacionalidade());
-            endereco.setEndUF(request.endUF());
-            endereco.setEndMunicipio(request.endMunicipio());
-            endereco.setEndBairro(request.endBairro());
-            endereco.setEndCep(request.endCep());
-            endereco.setEndRua(request.endRua());
-            endereco.setEndNumero(request.endNumero());
-            endereco.setEndComplemento(request.endComplemento());
-            endereco = enderecoRepository.save(endereco);
-        }
-        
-        Set<Especialidade> especialidades = new HashSet<>();
-        if (request.especialidadeIds() != null && !request.especialidadeIds().isEmpty()) {
-            especialidades = new HashSet<>(especialidadeRepository.findAllById(request.especialidadeIds()));
-        }
-        
-        Profissional profissional = Profissional.builder()
-            .organizacao(organizacao)
-            .tipoProfissional(tipo)
             .nome(request.nome())
-            .sexo(request.sexo() != null ? Sexo.valueOf(request.sexo()) : null)
-            .dataNascimento(request.dataNascimento())
+            .sexo(converterSexo(request.sexo()))
+            .dataNascimento(request.dataNascimento() != null ? java.time.LocalDate.parse(request.dataNascimento()) : null)
             .registroConselho(request.registroConselho())
-            .cpf(limparCpf(request.cpf()))
+            .cpf(cpfLimpo)
             .rg(request.rg())
             .email(request.email())
             .telefone(request.telefone())
@@ -258,13 +151,150 @@ public class ProfissionalService {
             .status(StatusProfissional.ATIVO)
             .especialidades(especialidades)
             .build();
-        
+
         Profissional salvo = profissionalRepository.save(profissional);
-        log.info("Profissional cadastrado com sucesso. ID: {}", salvo.getId());
-        
+        log.info("Clínico cadastrado com sucesso. ID: {}", salvo.getId());
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                credenciaisEmailService.enviarCredenciaisMedico(
+                    request.email(),
+                    request.nome(),
+                    cpfLimpo,
+                    senhaGerada,
+                    organizacao.getNome()
+                );
+                log.info("Email de credenciais enviado para: {}", request.email());
+            } catch (Exception e) {
+                log.error("Erro ao enviar email de credenciais: {}", e.getMessage());
+            }
+        }, emailTaskExecutor);
+
         return salvo;
     }
     
+
+    
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public Optional<Profissional> buscarClinicoIdByOrg(Long id) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return profissionalRepository.findByIdAndOrganizacao_Id(id, orgId);
+    }
+    
+    @RequiresTenant
+    @Transactional
+    public Profissional atualizarClinicoIdByOrg(Long id, Profissional dadosAtualizados) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        
+        Profissional profissional = profissionalRepository.findByIdAndOrganizacao_Id(id, orgId)
+            .orElseThrow(() -> new IllegalArgumentException("Profissional não encontrado"));
+        
+        // Atualiza todos os campos diretamente
+        profissional.setNome(dadosAtualizados.getNome());
+        profissional.setCpf(dadosAtualizados.getCpf());
+        profissional.setRg(dadosAtualizados.getRg());
+        profissional.setRegistroConselho(dadosAtualizados.getRegistroConselho());
+        profissional.setTelefone(dadosAtualizados.getTelefone());
+        profissional.setEmail(dadosAtualizados.getEmail());
+        profissional.setFormacao(dadosAtualizados.getFormacao());
+        profissional.setInstituicao(dadosAtualizados.getInstituicao());
+        profissional.setTempoConsultaMinutos(dadosAtualizados.getTempoConsultaMinutos());
+        profissional.setDataNascimento(dadosAtualizados.getDataNascimento());
+        profissional.setEspecialidades(dadosAtualizados.getEspecialidades());
+        profissional.setEndereco(dadosAtualizados.getEndereco());
+        
+        log.info("Profissional atualizado: {}", profissional);
+        return profissionalRepository.save(profissional);
+    }
+    private String gerarSenhaAleatoria() {
+        SecureRandom random = new SecureRandom();
+        StringBuilder senha = new StringBuilder(10);
+        for (int i = 0; i < 10; i++) {
+            int index = random.nextInt(CARACTERES_SENHA.length());
+            senha.append(CARACTERES_SENHA.charAt(index));
+        }
+        return senha.toString();
+    }
+
+    private String limparCpf(String cpf) {
+        return cpf != null ? cpf.replaceAll("[^0-9]", "") : null;
+    }
+
+    private Sexo converterSexo(String sexo) {
+        if (sexo == null || sexo.isEmpty()) {
+            return null;
+        }
+        return switch (sexo) {
+            case "1", "MASCULINO" -> Sexo.MASCULINO;
+            case "2", "FEMININO" -> Sexo.FEMININO;
+            case "3", "OUTRO" -> Sexo.OUTRO;
+            default -> null;
+        };
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    @RequiresTenant
+    public List<Profissional> buscarTodos() {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return profissionalRepository.findByOrganizacao_Id(orgId);
+    }
+
+    @RequiresTenant
+    public Page<Profissional> buscarTodos(Pageable pageable) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return profissionalRepository.findByOrganizacao_Id(orgId, pageable);
+    }
+
+    @RequiresTenant
+    public Optional<Profissional> buscarPorId(Long id) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return profissionalRepository.findByIdAndOrganizacao_Id(id, orgId);
+    }
+
+    @RequiresTenant
+    public List<Profissional> buscarPorTipo(String tipoCodigo) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return profissionalRepository.findAtivosByOrganizacaoIdAndTipo(orgId, tipoCodigo);
+    }
+
+    @RequiresTenant
+    public List<Profissional> buscarMedicos() {
+        return buscarPorTipo("MEDICO");
+    }
+
+    @RequiresTenant
+    public List<Profissional> buscarDentistas() {
+        return buscarPorTipo("DENTISTA");
+    }
+
+
+
     @RequiresTenant
     @Transactional
     public void deletar(Long id) {
@@ -302,6 +332,12 @@ public class ProfissionalService {
         return profissionalRepository.findByOrganizacaoIdAndStatusWithRelations(organizacaoId, StatusProfissional.ATIVO);
     }
 
+//    @RequiresTenant
+//    public List<Profissional> buscarPorNome(String nome) {
+//        Long orgId = tenantHelper.getCurrentTenantId();
+//        return profissionalRepository.findByOrganizacaoIdAndNomeContaining(orgId, nome);
+//    }
+
     // ==========================================
     // ESTATÍSTICAS GLOBAIS (SUPER ADMIN)
     // ==========================================
@@ -314,29 +350,81 @@ public class ProfissionalService {
         return profissionalRepository.findByStatus(StatusProfissional.ATIVO);
     }
     
-    private String gerarSenhaAleatoria() {
-        SecureRandom random = new SecureRandom();
-        StringBuilder senha = new StringBuilder(10);
-        for (int i = 0; i < 10; i++) {
-            int index = random.nextInt(CARACTERES_SENHA.length());
-            senha.append(CARACTERES_SENHA.charAt(index));
-        }
-        return senha.toString();
-    }
-    
-    private String limparCpf(String cpf) {
-        return cpf != null ? cpf.replaceAll("[^0-9]", "") : null;
-    }
 
-    private Sexo converterSexo(String sexo) {
-        if (sexo == null || sexo.isEmpty()) {
-            return null;
+
+
+
+
+    @RequiresTenant
+    @Transactional
+    public Profissional cadastrar(CadastrarProfissionalRequest request) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.info("Cadastrando profissional: {} na organização: {}", request.nome(), orgId);
+
+        if (request.cpf() != null && profissionalRepository.existsByCpf(limparCpf(request.cpf()))) {
+            throw new IllegalStateException("CPF já cadastrado no sistema");
         }
-        return switch (sexo) {
-            case "1", "MASCULINO" -> Sexo.MASCULINO;
-            case "2", "FEMININO" -> Sexo.FEMININO;
-            case "3", "OUTRO" -> Sexo.OUTRO;
-            default -> null;
-        };
+
+        Organizacao organizacao = organizacaoRepository.findById(orgId)
+                .orElseThrow(() -> new IllegalStateException("Organização não encontrada"));
+
+        TipoProfissional tipo = tipoProfissionalRepository.findById(request.tipoProfissionalId())
+                .orElseThrow(() -> new IllegalArgumentException("Tipo de profissional não encontrado"));
+
+        String senhaGerada = gerarSenhaAleatoria();
+        String senhaCriptografada = passwordEncoder.encode(senhaGerada);
+
+        Usuario usuario = new Usuario();
+        usuario.setLogin(limparCpf(request.cpf()));
+        usuario.setSenha(senhaCriptografada);
+        usuario.setTipoUsuario((byte) 3);
+        usuario.setTipoUsuarioNovo(TipoUsuarioNovo.PROFISSIONAL);
+        usuario.setOrganizacao(organizacao);
+        usuario.setStatus((byte) 1);
+        Usuario usuarioSalvo = usuarioRepository.save(usuario);
+
+        Endereco endereco = null;
+        if (request.endCep() != null) {
+            endereco = new Endereco();
+            endereco.setEndNacionalidade(request.endNacionalidade());
+            endereco.setEndUF(request.endUF());
+            endereco.setEndMunicipio(request.endMunicipio());
+            endereco.setEndBairro(request.endBairro());
+            endereco.setEndCep(request.endCep());
+            endereco.setEndRua(request.endRua());
+            endereco.setEndNumero(request.endNumero());
+            endereco.setEndComplemento(request.endComplemento());
+            endereco = enderecoRepository.save(endereco);
+        }
+
+        Set<Especialidade> especialidades = new HashSet<>();
+        if (request.especialidadeIds() != null && !request.especialidadeIds().isEmpty()) {
+            especialidades = new HashSet<>(especialidadeRepository.findAllById(request.especialidadeIds()));
+        }
+
+        Profissional profissional = Profissional.builder()
+                .organizacao(organizacao)
+                .tipoProfissional(tipo)
+                .nome(request.nome())
+                .sexo(request.sexo() != null ? Sexo.valueOf(request.sexo()) : null)
+                .dataNascimento(request.dataNascimento())
+                .registroConselho(request.registroConselho())
+                .cpf(limparCpf(request.cpf()))
+                .rg(request.rg())
+                .email(request.email())
+                .telefone(request.telefone())
+                .formacao(request.formacao())
+                .instituicao(request.instituicao())
+                .tempoConsultaMinutos(request.tempoConsultaMinutos() != null ? request.tempoConsultaMinutos() : 30)
+                .usuario(usuarioSalvo)
+                .endereco(endereco)
+                .status(StatusProfissional.ATIVO)
+                .especialidades(especialidades)
+                .build();
+
+        Profissional salvo = profissionalRepository.save(profissional);
+        log.info("Profissional cadastrado com sucesso. ID: {}", salvo.getId());
+
+        return salvo;
     }
 }

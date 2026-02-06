@@ -56,25 +56,31 @@ public class SecretariaService {
         this.emailTaskExecutor = emailTaskExecutor;
     }
 
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public List<Secretaria> buscarTodas() {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return secretariaRepository.findByOrganizacao_Id(orgId);
-    }
+
 
     @RequiresTenant
     @Transactional(readOnly = true)
-    public List<Secretaria> buscarAtivas() {
+    public Optional<Secretaria> buscarSecretariaIdByOrg(Long idSecretaria) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        return secretariaRepository.findByOrganizacao_IdAndStatus(orgId, StatusSecretaria.ATIVO);
+        return secretariaRepository.findByIdAndOrganizacao_Id(idSecretaria, orgId);
     }
 
     @RequiresTenant
-    @Transactional(readOnly = true)
-    public Optional<Secretaria> buscarPorId(Long id) {
+    @Transactional
+    public Secretaria atualizarSecretariaIdByOrg(Long id, Secretaria dadosAtualizados) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        return secretariaRepository.findByIdAndOrganizacao_Id(id, orgId);
+        
+        Secretaria secretaria = secretariaRepository.findByIdAndOrganizacao_Id(id, orgId)
+            .orElseThrow(() -> new IllegalArgumentException("Secretária não encontrada"));
+
+        // Atualiza apenas os campos permitidos (nome e email)
+        if (dadosAtualizados.getNome() != null) {
+            secretaria.setNome(dadosAtualizados.getNome());
+        }
+        if (dadosAtualizados.getEmail() != null) {
+            secretaria.setEmail(dadosAtualizados.getEmail());
+        }
+         return secretariaRepository.save(secretaria);
     }
 
     @RequiresTenant
@@ -90,7 +96,7 @@ public class SecretariaService {
         }
 
         Organizacao organizacao = organizacaoRepository.findById(orgId)
-            .orElseThrow(() -> new IllegalStateException("Organização não encontrada"));
+                .orElseThrow(() -> new IllegalStateException("Organização não encontrada"));
 
         String senhaGerada = gerarSenhaAleatoria();
         String senhaCriptografada = passwordEncoder.encode(senhaGerada);
@@ -104,13 +110,13 @@ public class SecretariaService {
         usuario.setStatus((byte) 1);
 
         Secretaria secretaria = Secretaria.builder()
-            .organizacao(organizacao)
-            .usuario(usuario)
-            .nome(request.secreNome())
-            .cpf(cpfLimpo)
-            .email(request.secreEmail())
-            .status(StatusSecretaria.ATIVO)
-            .build();
+                .organizacao(organizacao)
+                .usuario(usuario)
+                .nome(request.secreNome())
+                .cpf(cpfLimpo)
+                .email(request.secreEmail())
+                .status(StatusSecretaria.ATIVO)
+                .build();
 
         usuarioRepository.save(usuario);
         Secretaria salva = secretariaRepository.save(secretaria);
@@ -120,10 +126,10 @@ public class SecretariaService {
         CompletableFuture.runAsync(() -> {
             try {
                 credenciaisEmailService.enviarCredenciaisSecretaria(
-                    request.secreEmail(),
-                    request.secreNome(),
-                    cpfLimpo,
-                    senhaGerada
+                        request.secreEmail(),
+                        request.secreNome(),
+                        cpfLimpo,
+                        senhaGerada
                 );
                 log.info("Email enviado para: {}", request.secreEmail());
             } catch (Exception e) {
@@ -132,31 +138,6 @@ public class SecretariaService {
         }, emailTaskExecutor);
 
         return salva;
-    }
-
-    @RequiresTenant
-    @Transactional
-    public void inativar(Long id) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        Secretaria secretaria = secretariaRepository.findByIdAndOrganizacao_Id(id, orgId)
-            .orElseThrow(() -> new IllegalArgumentException("Secretária não encontrada"));
-
-        secretaria.setStatus(StatusSecretaria.INATIVO);
-        secretariaRepository.save(secretaria);
-
-        if (secretaria.getUsuario() != null) {
-            secretaria.getUsuario().setStatus((byte) 0);
-            usuarioRepository.save(secretaria.getUsuario());
-        }
-
-        log.info("Secretária ID: {} inativada com sucesso", id);
-    }
-
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public Long contarAtivas() {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return secretariaRepository.countAtivosByOrganizacaoId(orgId);
     }
 
     private String gerarSenhaAleatoria() {

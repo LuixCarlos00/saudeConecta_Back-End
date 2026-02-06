@@ -135,6 +135,32 @@ public class AdminOrganizacaoService {
         return admin;
     }
 
+    @Transactional
+    public void bloquearAdminByOrg(Long id) {
+        log.info("Bloqueando/Desbloqueando administrador ID: {}", id);
+
+        AdminOrganizacao admin = adminOrganizacaoRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
+
+        // Alterna o status do administrador
+        if (admin.getStatus() == AdminOrganizacao.StatusAdmin.ATIVO) {
+            admin.setStatus(AdminOrganizacao.StatusAdmin.INATIVO);
+            // Também bloqueia o usuário associado
+            if (admin.getUsuario() != null) {
+                admin.getUsuario().setStatus((byte) 0);
+            }
+        } else {
+            admin.setStatus(AdminOrganizacao.StatusAdmin.ATIVO);
+            // Também ativa o usuário associado
+            if (admin.getUsuario() != null) {
+                admin.getUsuario().setStatus((byte) 1);
+            }
+        }
+
+        adminOrganizacaoRepository.save(admin);
+        log.info("Status do administrador atualizado com sucesso. ID: {}, Novo status: {}", id, admin.getStatus());
+    }
+
     private String gerarSenhaAleatoria() {
         SecureRandom random = new SecureRandom();
         StringBuilder senha = new StringBuilder(TAMANHO_SENHA);

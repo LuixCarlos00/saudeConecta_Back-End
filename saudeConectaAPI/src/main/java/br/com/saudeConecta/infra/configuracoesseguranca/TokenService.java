@@ -24,6 +24,7 @@ public class TokenService {
     private static final String CLAIM_USER_ID = "id";
     private static final String CLAIM_ORGANIZACAO_ID = "organizacaoId";
     private static final String CLAIM_TIPO_USUARIO = "tipoUsuario";
+    private static final String CLAIM_NOME = "nome";
 
     @Value("${api.security.token.secret}")
     private String secret;
@@ -39,7 +40,7 @@ public class TokenService {
                 .sign(Algorithm.HMAC256(secret));
     }
 
-    public String gerarToken(@NotNull Usuario usuario, Long organizacaoId) {
+    public String gerarToken(@NotNull Usuario usuario, Long organizacaoId, String nome) {
         String autorizacao = usuario.getAuthorities().toString();
         return JWT.create()
                 .withIssuer(ISSUER)
@@ -47,6 +48,7 @@ public class TokenService {
                 .withClaim(CLAIM_USER_ID, usuario.getId())
                 .withClaim(CLAIM_ORGANIZACAO_ID, organizacaoId)
                 .withClaim(CLAIM_TIPO_USUARIO, usuario.getTipoUsuario().intValue())
+                .withClaim(CLAIM_NOME, nome)
                 .withAudience(autorizacao)
                 .withExpiresAt(calcularDataExpiracao())
                 .sign(Algorithm.HMAC256(secret));
@@ -99,6 +101,16 @@ public class TokenService {
             return jwt.getClaim(CLAIM_TIPO_USUARIO).asInt();
         } catch (Exception e) {
             log.warn("Erro ao extrair tipoUsuario do token: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    public String getNomeFromToken(String token) {
+        try {
+            DecodedJWT jwt = decodeToken(token);
+            return jwt.getClaim(CLAIM_NOME).asString();
+        } catch (Exception e) {
+            log.warn("Erro ao extrair nome do token: {}", e.getMessage());
             return null;
         }
     }
