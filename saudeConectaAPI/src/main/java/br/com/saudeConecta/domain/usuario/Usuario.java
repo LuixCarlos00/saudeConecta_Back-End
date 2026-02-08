@@ -6,10 +6,7 @@ import br.com.saudeConecta.presentation.dto.usuario.CadastrarUsuarioRequest;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -23,6 +20,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @Table(name = "usuarios")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "senha", "password", "authorities"})
 public class Usuario implements Serializable, UserDetails, TenantAware {

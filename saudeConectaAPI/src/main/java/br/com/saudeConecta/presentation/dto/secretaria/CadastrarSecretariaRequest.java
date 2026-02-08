@@ -5,14 +5,15 @@ import jakarta.validation.constraints.NotBlank;
 
 public record CadastrarSecretariaRequest(
     @NotBlank(message = "Nome é obrigatório")
-    String secreNome,
+    String nome,
     
     @NotBlank(message = "CPF é obrigatório")
-    String secreCpf,
+    String cpf,
     
     @NotBlank(message = "Email é obrigatório")
     @Email(message = "Email inválido")
-    String secreEmail,
+    String email,
     
-    String secreCodigoAutorizacao
+    String telefone
+
 ) {}

@@ -25,8 +25,14 @@ public interface PacienteRepository extends JpaRepository<Paciente, Long> {
     List<Paciente> findByOrganizacao_Id(Long organizacaoId);
     
     Page<Paciente> findByOrganizacao_Id(Long organizacaoId, Pageable pageable);
-    
-    Optional<Paciente> findByPaciCodigoAndOrganizacao_Id(Long id, Long organizacaoId);
+
+    @Query("SELECT p FROM Paciente p " +
+            "LEFT JOIN FETCH p.endereco " +
+            "WHERE p.paciCodigo = :id AND p.organizacao.id = :orgId")
+    Optional<Paciente> findByPaciCodigoAndOrganizacao_IdWithEndereco(
+            @Param("id") Long id,
+            @Param("orgId") Long orgId
+    );
     
     @Query("SELECT p FROM Paciente p WHERE p.organizacao.id = :orgId " +
            "AND LOWER(p.paciNome) LIKE LOWER(CONCAT('%', :nome, '%'))")

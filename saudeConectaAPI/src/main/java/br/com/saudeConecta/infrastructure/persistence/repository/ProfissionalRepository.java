@@ -22,6 +22,7 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
     @Query("SELECT p FROM Profissional p " +
            "LEFT JOIN FETCH p.tipoProfissional " +
            "LEFT JOIN FETCH p.especialidades " +
+           "LEFT JOIN FETCH p.endereco " +
            "WHERE p.id = :id AND p.organizacao.id = :organizacaoId")
     Optional<Profissional> findByIdAndOrganizacao_Id(@Param("id") Long id, @Param("organizacaoId") Long organizacaoId);
     

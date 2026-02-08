@@ -5,14 +5,13 @@ import jakarta.validation.constraints.NotBlank;
 
 public record CadastrarAdminRequest(
     @NotBlank(message = "Nome é obrigatório")
-    String admNome,
+    String nome,
     
     @NotBlank(message = "CPF é obrigatório")
-    String admCpf,
+    String cpf,
     
     @NotBlank(message = "Email é obrigatório")
     @Email(message = "Email inválido")
-    String admEmail,
-    
-    String admCodigoAutorizacao
+    String email
+
 ) {}

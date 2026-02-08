@@ -24,12 +24,12 @@ public class AdminOrganizacaoController {
 
     private final AdminOrganizacaoService adminOrganizacaoService;
 
-    @GetMapping("/buscarId/{id}")
+    @GetMapping("/buscarrAdminByOrg/{id}")
     @Transactional
     @Description("Busca administrador por ID. Utilizado em: VisualizarEditarUsuarioComponent")
-    public ResponseEntity<AdminOrganizacao> buscarPorId(@PathVariable Long id) {
+    public ResponseEntity<AdminOrganizacao> buscarrAdminByOrg(@PathVariable Long id) {
         log.debug("Buscando administrador por ID: {}", id);
-        return adminOrganizacaoService.buscarPorId(id)
+        return adminOrganizacaoService.buscarrAdminByOrg(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -39,7 +39,7 @@ public class AdminOrganizacaoController {
     @Description("Cadastra novo administrador de uma organização . Utilizado em: CadastroAdmComponent")
     public ResponseEntity<?> cadastrarAdminByOrg(@RequestBody @Valid CadastrarAdminRequest request) {
         Long organizacaoId = TenantContext.getCurrentTenant();
-        log.debug("Cadastrando administrador para organização ID: {}", organizacaoId);
+        log.debug("Cadastrando administrador : {}", request.nome());
 
         if (organizacaoId == null) {
             log.warn("Organização não encontrada no contexto");
@@ -47,7 +47,7 @@ public class AdminOrganizacaoController {
         }
 
         try {
-            AdminOrganizacao admin = adminOrganizacaoService.cadastrar(request, organizacaoId);
+            AdminOrganizacao admin = adminOrganizacaoService.cadastrarAdminByOrg(request, organizacaoId);
             return ResponseEntity.status(HttpStatus.CREATED).body(admin);
         } catch (IllegalStateException e) {
             log.warn("Erro ao cadastrar administrador: {}", e.getMessage());
@@ -65,7 +65,7 @@ public class AdminOrganizacaoController {
     public ResponseEntity<?> atualizarAdmByOrg(@PathVariable Long id, @RequestBody AtualizarAdminRequest request) {
         log.debug("Atualizando administrador ID: {}", id);
         try {
-            AdminOrganizacao admin = adminOrganizacaoService.atualizarAdmByOrg(id, request.admNome(), request.admEmail());
+            AdminOrganizacao admin = adminOrganizacaoService.atualizarAdmByOrg(id, request.nome(), request.email());
             return ResponseEntity.ok(admin);
         } catch (IllegalArgumentException e) {
             log.warn("Erro ao atualizar administrador: {}", e.getMessage());

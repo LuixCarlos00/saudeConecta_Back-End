@@ -16,6 +16,7 @@ import java.sql.Date;
 @Getter
 @Setter
 @NoArgsConstructor
+@Builder
 @AllArgsConstructor
 @Table(name = "paciente")
 @EqualsAndHashCode(of = "paciCodigo")

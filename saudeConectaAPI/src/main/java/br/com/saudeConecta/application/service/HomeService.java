@@ -2,7 +2,7 @@ package br.com.saudeConecta.application.service;
 
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.email.EnviarService.EmailRecuperacaoSenhaService;
+import br.com.saudeConecta.email.EmailRecuperacaoSenhaService;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
 import lombok.extern.slf4j.Slf4j;

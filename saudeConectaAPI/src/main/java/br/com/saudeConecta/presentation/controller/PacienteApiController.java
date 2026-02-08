@@ -25,20 +25,12 @@ public class PacienteApiController {
 
     private final PacienteService pacienteService;
 
-    @GetMapping
-    public ResponseEntity<List<PacienteResponse>> listarTodos() {
-        log.debug("Listando todos os pacientes do tenant");
-        List<PacienteResponse> pacientes = pacienteService.buscarTodosPorTenant()
-            .stream()
-            .map(PacienteResponse::new)
-            .toList();
-        return ResponseEntity.ok(pacientes);
-    }
+
 
     @PostMapping("/cadastrarPacientebyOrg")
     public ResponseEntity<?> cadastrarPacientebyOrg(
             @Valid @RequestBody CadastrarPacienteCompletoRequest request) {
-        log.info("Cadastrando paciente na organização: {}", request.paciNome());
+        log.info("Cadastrando paciente: {}", request.nome());
         try {
             Paciente paciente = pacienteService.cadastrarPacientebyOrg(request);
             return ResponseEntity.status(HttpStatus.CREATED)
@@ -49,6 +41,60 @@ public class PacienteApiController {
         }
     }
 
+    @GetMapping("/buscarrPacientebyOrg/{id}")
+    public ResponseEntity<PacienteResponse> buscarrPacientebyOrg(@PathVariable Long id) {
+        log.debug("Buscando paciente por ID: {} no tenant", id);
+        return pacienteService.buscarrPacientebyOrg(id)
+                .map(p -> ResponseEntity.ok(new PacienteResponse(p)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+
+    @PutMapping("/atualizarPacientebyOrg/{id}")
+    public ResponseEntity<PacienteResponse> buscarrPatualizarPacientebyOrgacientebyOrg(
+            @PathVariable Long id,
+            @Valid @RequestBody AtualizarPacienteRequest request) {
+        log.info("Atualizando paciente ID: {} no tenant", id);
+
+        // Verifica se paciente pertence ao tenant
+        if (pacienteService.buscarrPacientebyOrg(id).isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Paciente paciente = pacienteService.atualizarPacientebyOrg(id, request);
+        return ResponseEntity.ok(new PacienteResponse(paciente));
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    @GetMapping
+    public ResponseEntity<List<PacienteResponse>> listarTodos() {
+        log.debug("Listando todos os pacientes do tenant");
+        List<PacienteResponse> pacientes = pacienteService.buscarTodosPorTenant()
+                .stream()
+                .map(PacienteResponse::new)
+                .toList();
+        return ResponseEntity.ok(pacientes);
+    }
+
+
+
+
+
     @GetMapping("/pagina")
     public ResponseEntity<Page<PacienteResponse>> listarPaginado(
             @PageableDefault(size = 12, sort = {"paciNome"}) Pageable pageable) {
@@ -58,13 +104,7 @@ public class PacienteApiController {
         return ResponseEntity.ok(pacientes);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<PacienteResponse> buscarPorId(@PathVariable Long id) {
-        log.debug("Buscando paciente por ID: {} no tenant", id);
-        return pacienteService.buscarPorIdTenant(id)
-            .map(p -> ResponseEntity.ok(new PacienteResponse(p)))
-            .orElse(ResponseEntity.notFound().build());
-    }
+
 
     @GetMapping("/buscar")
     public ResponseEntity<List<PacienteResponse>> buscarPorNome(@RequestParam String nome) {
@@ -88,29 +128,9 @@ public class PacienteApiController {
         return ResponseEntity.ok(pacienteService.existeCpfNoTenant(cpf));
     }
 
-    @PostMapping
-    public ResponseEntity<PacienteResponse> cadastrar(
-            @Valid @RequestBody CadastrarPacienteCompletoRequest request) {
-        log.info("Cadastrando paciente no tenant: {}", request.paciNome());
-        Paciente paciente = pacienteService.cadastrarCompleto(request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(new PacienteResponse(paciente));
-    }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<PacienteResponse> atualizar(
-            @PathVariable Long id,
-            @Valid @RequestBody AtualizarPacienteRequest request) {
-        log.info("Atualizando paciente ID: {} no tenant", id);
-        
-        // Verifica se paciente pertence ao tenant
-        if (pacienteService.buscarPorIdTenant(id).isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        
-        Paciente paciente = pacienteService.atualizar(id, request);
-        return ResponseEntity.ok(new PacienteResponse(paciente));
-    }
+
+
 
     @PutMapping("/{id}/status")
     public ResponseEntity<Void> alterarStatus(
@@ -119,7 +139,7 @@ public class PacienteApiController {
         log.info("Alterando status do paciente ID: {} para {}", id, status);
         
         // Verifica se paciente pertence ao tenant
-        if (pacienteService.buscarPorIdTenant(id).isEmpty()) {
+        if (pacienteService.buscarrPacientebyOrg(id).isEmpty()) {
             return ResponseEntity.notFound().build();
         }
         
@@ -132,7 +152,7 @@ public class PacienteApiController {
         log.info("Deletando paciente ID: {} do tenant", id);
         
         // Verifica se paciente pertence ao tenant
-        if (pacienteService.buscarPorIdTenant(id).isEmpty()) {
+        if (pacienteService.buscarrPacientebyOrg(id).isEmpty()) {
             return ResponseEntity.notFound().build();
         }
         

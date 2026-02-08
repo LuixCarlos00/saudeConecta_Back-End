@@ -9,7 +9,7 @@ import java.util.List;
 
 public record TodosUsuariosAgrupadosResponse(
     List<PacienteResumo> paciente,
-    List<ProfissionalResumo> medico,
+    List<ProfissionalResumo> clinico,
     List<SecretariaResumo> secretaria,
     List<AdminResumo> administrador
 ) {

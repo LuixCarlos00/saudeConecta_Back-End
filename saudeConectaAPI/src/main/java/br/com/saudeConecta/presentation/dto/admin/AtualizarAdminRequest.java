@@ -1,4 +1,6 @@
 package br.com.saudeConecta.presentation.dto.admin;
 
-public record AtualizarAdminRequest(String admNome, String admEmail) {
-}
+public record AtualizarAdminRequest(
+        String nome,
+        String email
+) {}

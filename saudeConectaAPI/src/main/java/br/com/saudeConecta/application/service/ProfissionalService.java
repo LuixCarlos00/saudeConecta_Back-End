@@ -9,12 +9,13 @@ import br.com.saudeConecta.domain.profissional.StatusProfissional;
 import br.com.saudeConecta.domain.profissional.TipoProfissional;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.email.EnviarService.CredenciaisEmailService;
+import br.com.saudeConecta.email.EmailCadastroService;
 import br.com.saudeConecta.infra.tenant.RequiresTenant;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.presentation.dto.profissional.CadastrarClinicoRequest;
 import br.com.saudeConecta.presentation.dto.profissional.CadastrarProfissionalRequest;
+import br.com.saudeConecta.presentation.dto.profissional.ProfissionalResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
@@ -25,11 +26,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.util.HashSet;
+import java.util.stream.Collectors;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 
 @Service
 @Slf4j
@@ -43,8 +43,7 @@ public class ProfissionalService {
     private final EnderecoRepository enderecoRepository;
     private final PasswordEncoder passwordEncoder;
     private final TenantHelper tenantHelper;
-    private final CredenciaisEmailService credenciaisEmailService;
-    private final Executor emailTaskExecutor;
+    private final EmailCadastroService emailCadastroService;
     
     private static final String CARACTERES_SENHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*";
 
@@ -57,8 +56,7 @@ public class ProfissionalService {
             EnderecoRepository enderecoRepository,
             PasswordEncoder passwordEncoder,
             TenantHelper tenantHelper,
-            CredenciaisEmailService credenciaisEmailService,
-            @Qualifier("emailTaskExecutor") Executor emailTaskExecutor) {
+            EmailCadastroService emailCadastroService) {
         this.profissionalRepository = profissionalRepository;
         this.tipoProfissionalRepository = tipoProfissionalRepository;
         this.especialidadeRepository = especialidadeRepository;
@@ -67,8 +65,7 @@ public class ProfissionalService {
         this.enderecoRepository = enderecoRepository;
         this.passwordEncoder = passwordEncoder;
         this.tenantHelper = tenantHelper;
-        this.credenciaisEmailService = credenciaisEmailService;
-        this.emailTaskExecutor = emailTaskExecutor;
+        this.emailCadastroService = emailCadastroService;
     }
 
 
@@ -95,24 +92,26 @@ public class ProfissionalService {
         String senhaGerada = gerarSenhaAleatoria();
         String senhaCriptografada = passwordEncoder.encode(senhaGerada);
 
-        Usuario usuario = new Usuario();
-        usuario.setLogin(cpfLimpo);
-        usuario.setSenha(senhaCriptografada);
-        usuario.setTipoUsuario((byte) 3);
-        usuario.setTipoUsuarioNovo(TipoUsuarioNovo.PROFISSIONAL);
-        usuario.setOrganizacao(organizacao);
-        usuario.setStatus((byte) 1);
+        Usuario usuario = Usuario.builder()
+                .login(cpfLimpo)
+                .senha(senhaCriptografada)
+                .tipoUsuario((byte) 3)
+                .tipoUsuarioNovo(TipoUsuarioNovo.PROFISSIONAL)
+                .organizacao(organizacao)
+                .status((byte) 1)
+                .build();
 
 
-        Endereco endereco = new Endereco();
-        endereco.setEndNacionalidade(request.nacionalidade());
-        endereco.setEndUF(request.uf());
-        endereco.setEndMunicipio(request.municipio());
-        endereco.setEndBairro(request.bairro());
-        endereco.setEndCep(request.cep());
-        endereco.setEndRua(request.rua());
-        endereco.setEndNumero(request.numero() != null ? request.numero().longValue() : null);
-        endereco.setEndComplemento(request.complemento());
+        Endereco endereco = Endereco.builder()
+                .endNacionalidade(request.nacionalidade())
+                .endUF(request.uf())
+                .endMunicipio(request.municipio())
+                .endBairro(request.bairro())
+                .endCep(request.cep())
+                .endRua(request.rua())
+                .endNumero(request.numero() != null ? request.numero().longValue() : null)
+                .endComplemento(request.complemento())
+                .build();
 
         enderecoRepository.save(endereco);
         Usuario usuarioSalvo = usuarioRepository.save(usuario);
@@ -155,24 +154,18 @@ public class ProfissionalService {
         Profissional salvo = profissionalRepository.save(profissional);
         log.info("Clínico cadastrado com sucesso. ID: {}", salvo.getId());
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                credenciaisEmailService.enviarCredenciaisMedico(
-                    request.email(),
-                    request.nome(),
-                    cpfLimpo,
-                    senhaGerada,
-                    organizacao.getNome()
-                );
-                log.info("Email de credenciais enviado para: {}", request.email());
-            } catch (Exception e) {
-                log.error("Erro ao enviar email de credenciais: {}", e.getMessage());
-            }
-        }, emailTaskExecutor);
+        // Enviar email de credenciais de forma assíncrona
+        emailCadastroService.enviarCredenciaisClinicoAsync(
+            request.email(),
+            request.nome(),
+            cpfLimpo,
+            senhaGerada,
+            organizacao.getNome()
+        );
 
         return salvo;
     }
-    
+
 
     
     @RequiresTenant
@@ -181,32 +174,59 @@ public class ProfissionalService {
         Long orgId = tenantHelper.getCurrentTenantId();
         return profissionalRepository.findByIdAndOrganizacao_Id(id, orgId);
     }
-    
+
     @RequiresTenant
     @Transactional
-    public Profissional atualizarClinicoIdByOrg(Long id, Profissional dadosAtualizados) {
+    public Profissional atualizarClinicoIdByOrg(Long id, ProfissionalResponse dadosAtualizados) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        
+
         Profissional profissional = profissionalRepository.findByIdAndOrganizacao_Id(id, orgId)
-            .orElseThrow(() -> new IllegalArgumentException("Profissional não encontrado"));
-        
-        // Atualiza todos os campos diretamente
-        profissional.setNome(dadosAtualizados.getNome());
-        profissional.setCpf(dadosAtualizados.getCpf());
-        profissional.setRg(dadosAtualizados.getRg());
-        profissional.setRegistroConselho(dadosAtualizados.getRegistroConselho());
-        profissional.setTelefone(dadosAtualizados.getTelefone());
-        profissional.setEmail(dadosAtualizados.getEmail());
-        profissional.setFormacao(dadosAtualizados.getFormacao());
-        profissional.setInstituicao(dadosAtualizados.getInstituicao());
-        profissional.setTempoConsultaMinutos(dadosAtualizados.getTempoConsultaMinutos());
-        profissional.setDataNascimento(dadosAtualizados.getDataNascimento());
-        profissional.setEspecialidades(dadosAtualizados.getEspecialidades());
-        profissional.setEndereco(dadosAtualizados.getEndereco());
-        
+                .orElseThrow(() -> new IllegalArgumentException("Profissional não encontrado"));
+
+        // Atualiza campos básicos
+        profissional.setNome(dadosAtualizados.nome());
+        profissional.setCpf(dadosAtualizados.cpf());
+        profissional.setRg(dadosAtualizados.rg());
+        profissional.setRegistroConselho(dadosAtualizados.registroConselho());
+        profissional.setTelefone(dadosAtualizados.telefone());
+        profissional.setEmail(dadosAtualizados.email());
+        profissional.setFormacao(dadosAtualizados.formacao());
+        profissional.setInstituicao(dadosAtualizados.instituicao());
+        profissional.setTempoConsultaMinutos(dadosAtualizados.tempoConsultaMinutos());
+        profissional.setDataNascimento(dadosAtualizados.dataNascimento());
+
+        // Atualiza especialidades se fornecidas
+        if (dadosAtualizados.especialidades() != null && !dadosAtualizados.especialidades().isEmpty()) {
+            Set<Especialidade> especialidades = dadosAtualizados.especialidades().stream()
+                    .map(especialidadeResumo -> especialidadeRepository.findById(especialidadeResumo.id())
+                            .orElseThrow(() -> new IllegalArgumentException("Especialidade não encontrada: " + especialidadeResumo.id())))
+                    .collect(Collectors.toSet());
+            profissional.setEspecialidades(especialidades);
+        }
+
+        // Atualiza endereço se fornecido
+        // Atualiza endereço usando o método helper
+        if (dadosAtualizados.endereco() != null) {
+            Endereco endereco = profissional.getEndereco();
+
+            if (endereco == null) {
+                // Cria novo endereço
+                endereco = dadosAtualizados.endereco().toEntity();
+                endereco = enderecoRepository.save(endereco);
+            } else {
+                // Atualiza endereço existente
+                dadosAtualizados.endereco().updateEntity(endereco);
+            }
+
+            profissional.setEndereco(endereco);
+        }
+
         log.info("Profissional atualizado: {}", profissional);
         return profissionalRepository.save(profissional);
     }
+
+
+
     private String gerarSenhaAleatoria() {
         SecureRandom random = new SecureRandom();
         StringBuilder senha = new StringBuilder(10);

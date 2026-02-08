@@ -94,8 +94,7 @@ public class UsuarioController {
     @Description("Lista todos os usuários agrupados por tipo (paciente, medico, secretaria, administrador). Utilizado em: TabelaTodosUsuariosComponent")
     public ResponseEntity<TodosUsuariosAgrupadosResponse> buscarTodosAgrupados() {
         Long organizacaoId = TenantContext.getCurrentTenant();
-        log.debug("Buscando todos os usuários agrupados para organização ID: {}", organizacaoId);
-        
+
         if (organizacaoId == null) {
             log.warn("Organização não encontrada no contexto");
             return ResponseEntity.badRequest().build();

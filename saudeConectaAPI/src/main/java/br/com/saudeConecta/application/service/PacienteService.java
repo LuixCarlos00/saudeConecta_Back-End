@@ -13,6 +13,7 @@ import br.com.saudeConecta.infrastructure.persistence.repository.PacienteReposit
 import br.com.saudeConecta.presentation.dto.paciente.AtualizarPacienteRequest;
 import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteCompletoRequest;
 import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteRequest;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -39,9 +40,9 @@ public class PacienteService implements PacienteInputPort {
     @RequiresTenant
     public Paciente cadastrarPacientebyOrg(CadastrarPacienteCompletoRequest request) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Cadastrando paciente: {} na organização: {}", request.paciNome(), orgId);
+        log.info("Cadastrando paciente: {} na organização: {}", request.nome(), orgId);
 
-        String cpfLimpo = limparCpf(request.paciCpf());
+        String cpfLimpo = limparCpf(request.cpf());
 
         if (cpfLimpo != null && !cpfLimpo.isEmpty() && existeCpfNoTenant(cpfLimpo)) {
             throw new IllegalStateException("CPF já cadastrado no sistema");
@@ -50,30 +51,32 @@ public class PacienteService implements PacienteInputPort {
         Organizacao organizacao = organizacaoRepository.findById(orgId)
             .orElseThrow(() -> new IllegalStateException("Organização não encontrada"));
 
-        Endereco endereco = new Endereco();
-        endereco.setEndNacionalidade(request.endNacionalidade());
-        endereco.setEndUF(request.endUF());
-        endereco.setEndMunicipio(request.endMunicipio());
-        endereco.setEndBairro(request.endBairro());
-        endereco.setEndCep(request.endCep());
-        endereco.setEndRua(request.endRua());
-        endereco.setEndNumero(request.endNumero() != null ? request.endNumero().longValue() : null);
-        endereco.setEndComplemento(request.endComplemento());
+        Endereco endereco = Endereco.builder()
+                .endNacionalidade(request.nacionalidade())
+                .endUF(request.uf())
+                .endMunicipio(request.municipio())
+                .endBairro(request.bairro())
+                .endCep(request.cep())
+                .endRua(request.rua())
+                .endNumero(request.numero() != null ? request.numero().longValue() : null)
+                .endComplemento(request.complemento())
+                .build();
 
 
 
-        Paciente paciente = new Paciente();
-        paciente.setOrganizacao(organizacao);
-        paciente.setPaciNome(request.paciNome());
-        paciente.setPaciSexo(request.paciSexo());
-        paciente.setPaciDataNacimento(request.paciDataNacimento() != null ? 
-            Date.valueOf(request.paciDataNacimento()) : null);
-        paciente.setPaciCpf(cpfLimpo);
-        paciente.setPaciRg(request.paciRg());
-        paciente.setPaciEmail(request.paciEmail());
-        paciente.setPaciTelefone(request.paciTelefone());
-        paciente.setEndereco(endereco);
-        paciente.setPaciStatus("ATIVO");
+        Paciente paciente = Paciente.builder()
+                .organizacao(organizacao)
+                .paciNome(request.nome())
+                .paciSexo(request.sexo())
+                .paciDataNacimento(request.dataNacimento() != null ?
+                    Date.valueOf(request.dataNacimento()) : null)
+                .paciCpf(cpfLimpo)
+                .paciRg(request.rg())
+                .paciEmail(request.email())
+                .paciTelefone(request.telefone())
+                .endereco(endereco)
+                .paciStatus("ATIVO")
+                .build();
 
         enderecoRepository.save(endereco);
         Paciente salvo = pacienteRepository.save(paciente);
@@ -85,6 +88,98 @@ public class PacienteService implements PacienteInputPort {
     private String limparCpf(String cpf) {
         return cpf != null ? cpf.replaceAll("[^0-9]", "") : null;
     }
+
+
+    @RequiresTenant
+    public Optional<Paciente> buscarrPacientebyOrg(Long id) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.debug("Buscando paciente ID: {} da organização: {}", id, orgId);
+           return   pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(id, orgId);
+    }
+
+
+
+    @Transactional
+    public Paciente atualizarPacientebyOrg(Long id, AtualizarPacienteRequest dados) {
+        log.info("Atualizando paciente ID: {}", id);
+
+        // Busca o paciente existente
+        Paciente pacienteExistente = buscarrPacientebyOrg(id)
+                .orElseThrow(() -> {
+                    log.warn("Paciente não encontrado para atualização: {}", id);
+                    return new IllegalArgumentException("Paciente não encontrado");
+                });
+
+        // Atualiza o endereço se existir
+        Endereco enderecoAtualizado = null;
+        if (pacienteExistente.getEndereco() != null) {
+            enderecoAtualizado = Endereco.builder()
+                    .endCodigo(pacienteExistente.getEndereco().getEndCodigo())
+                    .endNacionalidade(dados.nacionalidade() != null ?
+                            dados.nacionalidade() : pacienteExistente.getEndereco().getEndNacionalidade())
+                    .endUF(dados.uf() != null ?
+                            dados.uf() : pacienteExistente.getEndereco().getEndUF())
+                    .endMunicipio(dados.municipio() != null ?
+                            dados.municipio() : pacienteExistente.getEndereco().getEndMunicipio())
+                    .endBairro(dados.bairro() != null ?
+                            dados.bairro() : pacienteExistente.getEndereco().getEndBairro())
+                    .endCep(dados.cep() != null ?
+                            dados.cep() : pacienteExistente.getEndereco().getEndCep())
+                    .endRua(dados.rua() != null ?
+                            dados.rua() : pacienteExistente.getEndereco().getEndRua())
+                    .endNumero(dados.numero() != null ?
+                            dados.numero().longValue() : pacienteExistente.getEndereco().getEndNumero())
+                    .endComplemento(dados.complemento() != null ?
+                            dados.complemento() : pacienteExistente.getEndereco().getEndComplemento())
+                    .build();
+
+            // Salva o endereço atualizado
+            enderecoAtualizado = enderecoRepository.save(enderecoAtualizado);
+        }
+
+        // Reconstrói o paciente com os dados atualizados
+        Paciente pacienteAtualizado = Paciente.builder()
+                .paciCodigo(pacienteExistente.getPaciCodigo())
+                .organizacao(pacienteExistente.getOrganizacao())
+                .paciNome(dados.nome() != null ? dados.nome() : pacienteExistente.getPaciNome())
+                .paciSexo(dados.sexo() != null ? dados.sexo() : pacienteExistente.getPaciSexo())
+                .paciDataNacimento(dados.dataNacimento() != null ?
+                        Date.valueOf(dados.dataNacimento()) : pacienteExistente.getPaciDataNacimento())
+                .paciCpf(dados.cpf() != null ? dados.cpf() : pacienteExistente.getPaciCpf())
+                .paciRg(dados.rg() != null ? dados.rg() : pacienteExistente.getPaciRg())
+                .paciEmail(dados.email() != null ? dados.email() : pacienteExistente.getPaciEmail())
+                .paciTelefone(dados.telefone() != null ? dados.telefone() : pacienteExistente.getPaciTelefone())
+                .endereco(enderecoAtualizado)
+                .paciStatus(pacienteExistente.getPaciStatus())
+                .build();
+
+        // Salva o paciente atualizado
+        Paciente resultado = pacienteOutputPort.save(pacienteAtualizado);
+        log.info("Paciente ID: {} atualizado com sucesso", id);
+
+        return resultado;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     @RequiresTenant
     public List<Paciente> buscarTodosPorTenant() {
@@ -100,12 +195,7 @@ public class PacienteService implements PacienteInputPort {
         return pacienteRepository.findByOrganizacao_Id(orgId, pageable);
     }
     
-    @RequiresTenant
-    public Optional<Paciente> buscarPorIdTenant(Long id) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando paciente ID: {} da organização: {}", id, orgId);
-        return pacienteRepository.findByPaciCodigoAndOrganizacao_Id(id, orgId);
-    }
+
     
     @RequiresTenant
     public List<Paciente> buscarPorNomeTenant(String nome) {
@@ -279,88 +369,8 @@ public class PacienteService implements PacienteInputPort {
         log.info("Status do paciente ID: {} alterado com sucesso", id);
     }
 
-    /**
-     * Cadastra paciente completo com endereço em uma única operação.
-     * Paciente não faz login no sistema, apenas seus dados são cadastrados.
-     */
-    public Paciente cadastrarCompleto(CadastrarPacienteCompletoRequest dados) {
-        log.info("Cadastrando paciente completo: {}", dados.paciNome());
-        
-        // Criar e salvar endereço
-        Endereco endereco = new Endereco();
-        endereco.setEndNacionalidade(dados.endNacionalidade());
-        endereco.setEndUF(dados.endUF());
-        endereco.setEndMunicipio(dados.endMunicipio());
-        endereco.setEndBairro(dados.endBairro());
-        endereco.setEndCep(dados.endCep());
-        endereco.setEndRua(dados.endRua());
-        endereco.setEndNumero(dados.endNumero() != null ? dados.endNumero().longValue() : null);
-        endereco.setEndComplemento(dados.endComplemento() != null ? dados.endComplemento() : "");
-        Endereco enderecoSalvo = enderecoRepository.save(endereco);
-        log.info("Endereço criado para paciente. ID: {}", enderecoSalvo.getEndCodigo());
-        
-        // Criar e salvar paciente
-        Paciente paciente = new Paciente();
-        paciente.setPaciNome(dados.paciNome());
-        paciente.setPaciSexo(dados.paciSexo());
-        paciente.setPaciDataNacimento(dados.paciDataNacimento() != null ? Date.valueOf(dados.paciDataNacimento()) : null);
-        paciente.setPaciCpf(dados.paciCpf());
-        paciente.setPaciRg(dados.paciRg());
-        paciente.setPaciEmail(dados.paciEmail());
-        paciente.setPaciTelefone(dados.paciTelefone());
-        paciente.setEndereco(enderecoSalvo);
-        paciente.setPaciStatus("ATIVO");
-        
-        Paciente pacienteSalvo = pacienteOutputPort.save(paciente);
-        log.info("Paciente cadastrado com sucesso. ID: {}", pacienteSalvo.getPaciCodigo());
-        
-        return pacienteSalvo;
-    }
 
-    /**
-     * Atualiza os dados de um paciente existente.
-     * @param id ID do paciente
-     * @param dados DTO com dados atualizados
-     * @return Paciente atualizado
-     * @throws IllegalArgumentException se paciente não for encontrado
-     */
-    public Paciente atualizar(Long id, AtualizarPacienteRequest dados) {
-        log.info("Atualizando paciente ID: {}", id);
-        
-        var pacienteOpt = buscarPorId(id);
-        if (pacienteOpt.isEmpty()) {
-            log.warn("Paciente não encontrado para atualização: {}", id);
-            throw new IllegalArgumentException("Paciente não encontrado");
-        }
-        
-        Paciente paciente = pacienteOpt.get();
-        
-        // Atualiza dados do paciente
-        if (dados.paciNome() != null) paciente.setPaciNome(dados.paciNome());
-        if (dados.paciSexo() != null) paciente.setPaciSexo(dados.paciSexo());
-        if (dados.paciDataNacimento() != null) paciente.setPaciDataNacimento(Date.valueOf(dados.paciDataNacimento()));
-        if (dados.paciCpf() != null) paciente.setPaciCpf(dados.paciCpf());
-        if (dados.paciRg() != null) paciente.setPaciRg(dados.paciRg());
-        if (dados.paciEmail() != null) paciente.setPaciEmail(dados.paciEmail());
-        if (dados.paciTelefone() != null) paciente.setPaciTelefone(dados.paciTelefone());
-        
-        // Atualiza endereço se existir
-        if (paciente.getEndereco() != null) {
-            Endereco endereco = paciente.getEndereco();
-            if (dados.endNacionalidade() != null) endereco.setEndNacionalidade(dados.endNacionalidade());
-            if (dados.endUF() != null) endereco.setEndUF(dados.endUF());
-            if (dados.endMunicipio() != null) endereco.setEndMunicipio(dados.endMunicipio());
-            if (dados.endBairro() != null) endereco.setEndBairro(dados.endBairro());
-            if (dados.endCep() != null) endereco.setEndCep(dados.endCep());
-            if (dados.endRua() != null) endereco.setEndRua(dados.endRua());
-            if (dados.endNumero() != null) endereco.setEndNumero(dados.endNumero().longValue());
-            if (dados.endComplemento() != null) endereco.setEndComplemento(dados.endComplemento());
-            enderecoRepository.save(endereco);
-        }
-        
-        Paciente pacienteAtualizado = pacienteOutputPort.save(paciente);
-        log.info("Paciente ID: {} atualizado com sucesso", id);
-        
-        return pacienteAtualizado;
-    }
+
+
+
 }

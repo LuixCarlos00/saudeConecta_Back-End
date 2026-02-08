@@ -3,12 +3,12 @@ package br.com.saudeConecta.application.service;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.email.EnviarService.CredenciaisEmailService;
+import br.com.saudeConecta.email.CredenciaisEmailService;
+import br.com.saudeConecta.email.EmailCadastroService;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
 import br.com.saudeConecta.presentation.dto.admin.CadastrarAdminRequest;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -31,7 +31,7 @@ public class AdminOrganizacaoService {
     private final UsuarioRepository usuarioRepository;
     private final OrganizacaoRepository organizacaoRepository;
     private final PasswordEncoder passwordEncoder;
-    private final CredenciaisEmailService credenciaisEmailService;
+    private final EmailCadastroService emailCadastroService;
     private final Executor emailTaskExecutor;
 
     public AdminOrganizacaoService(
@@ -39,29 +39,30 @@ public class AdminOrganizacaoService {
             UsuarioRepository usuarioRepository,
             OrganizacaoRepository organizacaoRepository,
             PasswordEncoder passwordEncoder,
-            CredenciaisEmailService credenciaisEmailService,
+            EmailCadastroService emailCadastroService,
             @Qualifier("emailTaskExecutor") Executor emailTaskExecutor) {
         this.adminOrganizacaoRepository = adminOrganizacaoRepository;
         this.usuarioRepository = usuarioRepository;
         this.organizacaoRepository = organizacaoRepository;
         this.passwordEncoder = passwordEncoder;
-        this.credenciaisEmailService = credenciaisEmailService;
+        this.emailCadastroService = emailCadastroService;
         this.emailTaskExecutor = emailTaskExecutor;
     }
 
     @Transactional(readOnly = true)
-    public Optional<AdminOrganizacao> buscarPorId(Long id) {
+    public Optional<AdminOrganizacao> buscarrAdminByOrg(Long id) {
         log.debug("Buscando administrador por ID: {}", id);
         return adminOrganizacaoRepository.findById(id);
     }
 
     @Transactional
-    public AdminOrganizacao cadastrar(CadastrarAdminRequest request, Long organizacaoId) {
-        log.info("Cadastrando administrador: {} para organização ID: {}", request.admNome(), organizacaoId);
+    public AdminOrganizacao cadastrarAdminByOrg(CadastrarAdminRequest request, Long organizacaoId) {
+        log.info("Cadastrando administrador: {} para organização ID: {}", request.nome(), organizacaoId);
 
         // Verifica se CPF já existe como login
-        if (usuarioRepository.existsByLogin(request.admCpf())) {
-            log.warn("CPF já cadastrado como login: {}", request.admCpf());
+        //Todo Colocar validação de CPF de login na tabela de usuários nao da entidade
+        if (usuarioRepository.existsByLogin(request.cpf())) {
+            log.warn("CPF já cadastrado como login: {}", request.cpf());
             throw new IllegalStateException("CPF já cadastrado no sistema");
         }
 
@@ -69,24 +70,23 @@ public class AdminOrganizacaoService {
         Organizacao organizacao = organizacaoRepository.findById(organizacaoId)
             .orElseThrow(() -> new IllegalArgumentException("Organização não encontrada"));
 
-        // Cria o usuário com CPF como login e senha aleatória
-        String cpfLimpo = limparCpf(request.admCpf());
+        String cpfLimpo = limparCpf(request.cpf());
         String senhaGerada = gerarSenhaAleatoria();
-        
-        Usuario usuario = new Usuario();
-        usuario.setLogin(cpfLimpo);
-        usuario.setSenha(passwordEncoder.encode(senhaGerada));
-        usuario.setTipoUsuario((byte) 1); // ADMIN_ORG
-        usuario.setStatus((byte) 1); // ATIVO
-        usuario.setOrganizacao(organizacao);
+
+        Usuario usuario = Usuario.builder()
+                .login(cpfLimpo)
+                .senha(passwordEncoder.encode(senhaGerada))
+                .tipoUsuario((byte) 1) // ADMIN_ORG
+                .status((byte) 1) // ATIVO
+                .organizacao(organizacao)
+                .build();
         
 
-        // Cria o AdminOrganizacao
-        AdminOrganizacao admin = AdminOrganizacao.builder()
+         AdminOrganizacao admin = AdminOrganizacao.builder()
             .organizacao(organizacao)
             .usuario(usuario)
-            .nome(request.admNome())
-            .email(request.admEmail())
+            .nome(request.nome())
+            .email(request.email())
             .cargo("Administrador")
             .isOwner(false)
             .status(AdminOrganizacao.StatusAdmin.ATIVO)
@@ -100,15 +100,15 @@ public class AdminOrganizacaoService {
         // Envio de email assíncrono otimizado
         CompletableFuture.runAsync(() -> {
             try {
-                credenciaisEmailService.enviarCredenciaisAdministrador(
-                    request.admEmail(), 
-                    request.admNome(), 
+                emailCadastroService.enviarCredenciaisAdministradorAsync(
+                    request.email(), 
+                    request.nome(), 
                     cpfLimpo, 
                     senhaGerada
                 );
-                log.info("Email enviado para: {}", request.admEmail());
+                log.info("Email enviado para: {}", request.email());
             } catch (Exception e) {
-                log.error("Erro ao enviar email para: {}", request.admEmail(), e);
+                log.error("Erro ao enviar email para: {}", request.email(), e);
             }
         }, emailTaskExecutor);
 

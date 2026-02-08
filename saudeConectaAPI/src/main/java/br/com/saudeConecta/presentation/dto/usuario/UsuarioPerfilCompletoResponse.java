@@ -62,7 +62,7 @@ public record UsuarioPerfilCompletoResponse(
                 p.getTipoProfissional() != null ? p.getTipoProfissional().getNome() : null,
                 p.getTipoProfissional() != null ? p.getTipoProfissional().getConselho() : null,
                 p.getRegistroConselho(),
-                p.getConselhoFormatado(),
+                p.getRegistroConselho(),
                 p.getSexo() != null ? p.getSexo().name() : null,
                 p.getDataNascimento(),
                 p.getCpf(),

@@ -7,17 +7,16 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDate;
 
 public record PacienteResponse(
-        Long paciCodigo,
-        String paciNome,
-        String paciSexo,
+        Long codigo,
+        String nome,
+        String sexo,
         @JsonFormat(pattern = "dd/MM/yyyy")
-        LocalDate paciDataNacimento,
-        String paciCpf,
-        String paciRg,
-        String paciEmail,
-        String paciTelefone,
-        String paciStatus,
-        Long enderecoId,
+        LocalDate dataNacimento,
+        String cpf,
+        String rg,
+        String email,
+        String telefone,
+        String status,
         EnderecoResponse endereco
 ) {
     public PacienteResponse(Paciente paciente) {
@@ -32,8 +31,6 @@ public record PacienteResponse(
                 paciente.getPaciEmail(),
                 paciente.getPaciTelefone(),
                 paciente.getPaciStatus(),
-                paciente.getEndereco() != null ? 
-                    paciente.getEndereco().getEndCodigo() : null,
                 paciente.getEndereco() != null ? 
                     new EnderecoResponse(paciente.getEndereco()) : null
         );
