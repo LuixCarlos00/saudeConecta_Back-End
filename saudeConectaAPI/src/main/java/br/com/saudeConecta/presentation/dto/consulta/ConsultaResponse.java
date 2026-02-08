@@ -31,7 +31,7 @@ public record ConsultaResponse(
             c.getId(),
             c.getProfissional() != null ? c.getProfissional().getId() : null,
             c.getProfissional() != null ? c.getProfissional().getNome() : null,
-            c.getProfissional() != null ? c.getProfissional().getConselhoFormatado() : null,
+            c.getProfissional() != null ? c.getProfissional().getRegistroConselho() : null,
             c.getPaciente() != null ? c.getPaciente().getPaciCodigo() : null,
             c.getPaciente() != null ? c.getPaciente().getPaciNome() : null,
             c.getEspecialidade() != null ? c.getEspecialidade().getId() : null,

@@ -3,7 +3,7 @@ package br.com.saudeConecta.presentation.dto.secretaria;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
 
 public record SecretariaResponse(
-    Long id,
+    Long codigo,
     String nome,
     String cpf,
     String email,

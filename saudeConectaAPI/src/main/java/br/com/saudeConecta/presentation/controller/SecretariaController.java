@@ -26,9 +26,9 @@ public class SecretariaController {
     @PostMapping("/cadastrarSecretariaByOrg")
     @Description("Cadastra nova secretária. Utilizado em: CadastroSecretariaComponent")
     public ResponseEntity<?> cadastrarSecretariaByOrg(@RequestBody @Valid CadastrarSecretariaRequest request) {
-        log.info("Cadastrando secretária: {}", request.secreNome());
+        log.info("Cadastrando secretária: {}", request.nome());
         try {
-            Secretaria secretaria = secretariaService.cadastrar(request);
+            Secretaria secretaria = secretariaService.cadastrarSecretariaByOrg(request);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(SecretariaResponse.fromEntity(secretaria));
         } catch (IllegalStateException e) {

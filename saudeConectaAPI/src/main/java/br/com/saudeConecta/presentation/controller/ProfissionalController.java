@@ -26,7 +26,19 @@ public class ProfissionalController {
     private final ProfissionalService profissionalService;
 
 
-
+    @PutMapping("/atualizarClinicoIdByOrg/{id}")
+    @Description("Atualiza médico/clínico por ID dentro da organização")
+    public ResponseEntity<ProfissionalResponse> atualizarClinicoIdByOrg(@PathVariable Long id,
+                                                                     @Valid @RequestBody ProfissionalResponse profissional) {
+        try {
+            log.info("Atualizando clínico: {}", profissional.nome());
+            Profissional atualizado = profissionalService.atualizarClinicoIdByOrg(id, profissional);
+            return ResponseEntity.ok(ProfissionalResponse.fromEntity(atualizado));
+        } catch (IllegalArgumentException e) {
+            log.warn("Erro ao atualizar profissional: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
+    }
 
     @PostMapping("/cadastraClinicoByOrg")
     @Description("Cadastra médico/clínico com CPF como login e envia credenciais por email. Utilizado em: CadastroMedicoComponent")
@@ -42,18 +54,7 @@ public class ProfissionalController {
         }
     }
 
-    @PutMapping("/atualizarClinicoIdByOrg/{id}")
-    @Description("Atualiza médico/clínico por ID dentro da organização")
-    public ResponseEntity<ProfissionalResponse> atualizarClinicoIdByOrg(@PathVariable Long id, @RequestBody Profissional profissional) {
-        try {
-            log.info("Atualizando clínico: {}", profissional.getNome());
-            Profissional atualizado = profissionalService.atualizarClinicoIdByOrg(id, profissional);
-            return ResponseEntity.ok(ProfissionalResponse.fromEntity(atualizado));
-        } catch (IllegalArgumentException e) {
-            log.warn("Erro ao atualizar profissional: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
-        }
-    }
+
 
     @GetMapping("/buscarClinicoIdByOrg/{id}")
     @Description("Busca médico/clínico por ID dentro da organização")

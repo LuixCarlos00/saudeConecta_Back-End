@@ -1,4 +1,4 @@
-package br.com.saudeConecta.email.EnviarService;
+package br.com.saudeConecta.email;
 
 import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ import java.util.Map;
 @Slf4j
 public class EmailRecuperacaoSenhaService {
 
-    private final EmailServices emailServices;
+    private final MailService emailServices;
 
     /**
      * Envia email com nova senha para o usuário.

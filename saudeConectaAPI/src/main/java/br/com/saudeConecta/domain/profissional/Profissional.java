@@ -121,9 +121,5 @@ public class Profissional implements Serializable, TenantAware {
     }
 
 
-    public String getConselhoFormatado() {
-        if (this.tipoProfissional == null) return this.registroConselho;
-        return this.tipoProfissional.getConselho() + " " + this.registroConselho;
-    }
 
 }

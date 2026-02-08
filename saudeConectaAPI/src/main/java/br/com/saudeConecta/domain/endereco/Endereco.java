@@ -11,6 +11,7 @@ import java.io.Serializable;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @Table(name = "endereco")
 @EqualsAndHashCode(of = "endCodigo")
 @JsonIgnoreProperties({"hibernateLazyInitializer"})

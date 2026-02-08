@@ -1,4 +1,4 @@
-package br.com.saudeConecta.email.EnviarService;
+package br.com.saudeConecta.email;
 
 import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
@@ -17,14 +17,14 @@ import java.util.Map;
 @Slf4j
 public class CredenciaisEmailService {
 
-    private final EmailServices emailServices;
+    private final MailService emailServices;
 
     /**
      * Envia email com credenciais de acesso para administrador.
      */
     public void enviarCredenciaisAdministrador(String email, String nome, String login, String senha) {
         log.info("Enviando credenciais para administrador: {}", email);
-        enviarCredenciais(email, nome, login, senha, "email-credenciais-administrador", "Administrador");
+        sendPageWithPasswordByGeneric(email, nome, login, senha, "email-credenciais-administrador", "Administrador");
     }
 
     /**
@@ -32,42 +32,24 @@ public class CredenciaisEmailService {
      */
     public void enviarCredenciaisSecretaria(String email, String nome, String login, String senha) {
         log.info("Enviando credenciais para secretária: {}", email);
-        enviarCredenciais(email, nome, login, senha, "email-credenciais-secretaria", "Secretária");
+        sendPageWithPasswordByGeneric(email, nome, login, senha, "email-credenciais-secretaria", "Secretária");
     }
 
     /**
      * Envia email com credenciais de acesso para médico/clínico.
      */
-    public void enviarCredenciaisMedico(String email, String nome, String login, String senha, String nomeOrganizacao) {
+    public void enviarCredenciaisClinico(String email, String nome, String login, String senha, String nomeOrganizacao) {
         log.info("Enviando credenciais para médico: {}", email);
-        enviarCredenciaisComOrganizacao(email, nome, login, senha, "email-credenciais-medico", "Médico", nomeOrganizacao);
+        sendPageWithPasswordByClinic(email, nome, login, senha, "email-credenciais-medico", "Médico", nomeOrganizacao);
     }
 
-    /**
-     * Envia email com credenciais de acesso para profissional.
-     */
-    public void enviarCredenciaisProfissional(String email, String nome, String login, String senha) {
-        enviarCredenciais(email, nome, login, senha, "email-credenciais-template", "Profissional");
-    }
 
-    /**
-     * Envia email com credenciais de acesso para o paciente.
-     */
-    public void enviarCredenciaisPaciente(String email, String nome, String login, String senha) {
-        enviarCredenciais(email, nome, login, senha, "email-credenciais-template", "Paciente");
-    }
 
-    /**
-     * Envia email com credenciais de acesso para usuário genérico.
-     */
-    public void enviarCredenciaisUsuario(String email, String nome, String login, String senha, String tipoUsuario) {
-        enviarCredenciais(email, nome, login, senha, "email-credenciais-template", tipoUsuario);
-    }
 
     /**
      * Método genérico para envio de credenciais.
      */
-    private void enviarCredenciais(String email, String nome, String login, String senha, 
+    private void sendPageWithPasswordByGeneric(String email, String nome, String login, String senha,
                                     String template, String tipoUsuario) {
         try {
             Map<String, Object> model = new HashMap<>();
@@ -89,10 +71,13 @@ public class CredenciaisEmailService {
         }
     }
 
+
+
+
     /**
      * Método genérico para envio de credenciais com nome da organização.
      */
-    private void enviarCredenciaisComOrganizacao(String email, String nome, String login, String senha, 
+    private void sendPageWithPasswordByClinic(String email, String nome, String login, String senha,
                                                   String template, String tipoUsuario, String nomeOrganizacao) {
         try {
             Map<String, Object> model = new HashMap<>();
