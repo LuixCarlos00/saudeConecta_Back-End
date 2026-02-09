@@ -25,5 +25,8 @@
     
     <!-- Tabela Secretaria -->
     <include file="db/changelog/changes/018-criar-tabela-secretaria.xml"/>
+    
+    <!-- Atualizar Status Usuario para VARCHAR -->
+    <include file="db/changelog/changes/019-alterar-status-usuarios-varchar.xml"/>
 
 </databaseChangeLog>

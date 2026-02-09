@@ -4,6 +4,7 @@ import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
+import br.com.saudeConecta.domain.usuario.Usuario;
 
 import java.util.List;
 
@@ -42,7 +43,9 @@ public record TodosUsuariosAgrupadosResponse(
         String telefone,
         String tipoProfissional,
         String registroConselho,
-        String status
+        String status,
+        Long usuarioId,
+        String usuarioLogin
     ) {
         public static ProfissionalResumo fromEntity(Profissional p) {
             return new ProfissionalResumo(
@@ -53,7 +56,9 @@ public record TodosUsuariosAgrupadosResponse(
                 p.getTelefone(),
                 p.getTipoProfissional() != null ? p.getTipoProfissional().getNome() : null,
                 p.getRegistroConselho(),
-                p.getStatus() != null ? p.getStatus().name() : null
+                p.getStatus() != null ? p.getStatus().name() : null,
+                p.getUsuario() != null ? p.getUsuario().getId() : null,
+                p.getUsuario() != null ? p.getUsuario().getLogin() : null
             );
         }
     }
@@ -64,7 +69,9 @@ public record TodosUsuariosAgrupadosResponse(
         String cpf,
         String email,
         String telefone,
-        String status
+        String status,
+        Long usuarioId,
+        String usuarioLogin
     ) {
         public static SecretariaResumo fromEntity(Secretaria s) {
             return new SecretariaResumo(
@@ -73,7 +80,9 @@ public record TodosUsuariosAgrupadosResponse(
                 s.getCpf(),
                 s.getEmail(),
                 s.getTelefone(),
-                s.getStatus() != null ? s.getStatus().name() : null
+                s.getStatus() != null ? s.getStatus().name() : null,
+                s.getUsuario() != null ? s.getUsuario().getId() : null,
+                s.getUsuario() != null ? s.getUsuario().getLogin() : null
             );
         }
     }
@@ -84,7 +93,9 @@ public record TodosUsuariosAgrupadosResponse(
         String cargo,
         String email,
         Boolean isOwner,
-        String status
+        String status,
+        Long usuarioId,
+        String usuarioLogin
     ) {
         public static AdminResumo fromEntity(AdminOrganizacao a) {
             return new AdminResumo(
@@ -93,7 +104,9 @@ public record TodosUsuariosAgrupadosResponse(
                 a.getCargo(),
                 a.getEmail(),
                 a.getIsOwner(),
-                a.getStatus() != null ? a.getStatus().name() : null
+                a.getStatus() != null ? a.getStatus().name() : null,
+                a.getUsuario() != null ? a.getUsuario().getId() : null,
+                a.getUsuario() != null ? a.getUsuario().getLogin() : null
             );
         }
     }

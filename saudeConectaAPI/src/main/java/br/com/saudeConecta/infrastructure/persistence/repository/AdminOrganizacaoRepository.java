@@ -13,8 +13,14 @@ import java.util.Optional;
 public interface AdminOrganizacaoRepository extends JpaRepository<AdminOrganizacao, Long> {
     
     Optional<AdminOrganizacao> findByUsuario_Id(Long usuarioId);
+
+    @Query("SELECT a FROM AdminOrganizacao a WHERE a.usuario.id = :usuarioId AND a.organizacao.id = :organizacaoId")
+    Optional<AdminOrganizacao> findByUsuarioAndOrganizacao_Id(@Param("usuarioId") Long usuarioId, @Param("organizacaoId") Long organizacaoId);
     
     List<AdminOrganizacao> findByOrganizacao_Id(Long organizacaoId);
+    
+    @Query("SELECT a FROM AdminOrganizacao a LEFT JOIN FETCH a.usuario WHERE a.organizacao.id = :organizacaoId")
+    List<AdminOrganizacao> findByOrganizacao_IdWithUsuario(@Param("organizacaoId") Long organizacaoId);
     
     @Query("SELECT a FROM AdminOrganizacao a " +
            "LEFT JOIN FETCH a.usuario " +
@@ -23,4 +29,6 @@ public interface AdminOrganizacaoRepository extends JpaRepository<AdminOrganizac
     Optional<AdminOrganizacao> findByUsuarioIdWithRelations(@Param("usuarioId") Long usuarioId);
     
     boolean existsByOrganizacao_IdAndUsuario_Id(Long organizacaoId, Long usuarioId);
+
+    Optional<AdminOrganizacao> findByIdAndOrganizacao_Id(Long id, Long id1);
 }

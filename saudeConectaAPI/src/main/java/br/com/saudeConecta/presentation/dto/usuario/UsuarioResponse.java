@@ -1,12 +1,13 @@
 package br.com.saudeConecta.presentation.dto.usuario;
 
 import br.com.saudeConecta.domain.usuario.Usuario;
+import br.com.saudeConecta.domain.usuario.StatusUsuario;
 
 public record UsuarioResponse(
         Long id,
         String login,
         Byte tipoUsuario,
-        Byte status
+        StatusUsuario status
 ) {
     public UsuarioResponse(Usuario usuario) {
         this(
