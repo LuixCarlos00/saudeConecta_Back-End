@@ -17,6 +17,9 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
     
     List<Profissional> findByOrganizacao_Id(Long organizacaoId);
     
+    @Query("SELECT p FROM Profissional p LEFT JOIN FETCH p.usuario WHERE p.organizacao.id = :organizacaoId")
+    List<Profissional> findByOrganizacao_IdWithUsuario(@Param("organizacaoId") Long organizacaoId);
+    
     Page<Profissional> findByOrganizacao_Id(Long organizacaoId, Pageable pageable);
     
     @Query("SELECT p FROM Profissional p " +
@@ -24,7 +27,7 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
            "LEFT JOIN FETCH p.especialidades " +
            "LEFT JOIN FETCH p.endereco " +
            "WHERE p.id = :id AND p.organizacao.id = :organizacaoId")
-    Optional<Profissional> findByIdAndOrganizacao_Id(@Param("id") Long id, @Param("organizacaoId") Long organizacaoId);
+    Optional<Profissional> buscarClinicoIdByOrg(@Param("id") Long id, @Param("organizacaoId") Long organizacaoId);
     
 
 
@@ -63,6 +66,11 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
     Long countAtivosByOrganizacaoId(@Param("orgId") Long organizacaoId);
     
     Optional<Profissional> findByUsuario_Id(Long usuarioId);
+
+    @Query("SELECT p FROM Profissional p WHERE p.usuario.id = :usuarioId AND p.organizacao.id = :organizacaoId")
+    Optional<Profissional> findByUsuarioAndOrganizacao_Id(@Param("usuarioId") Long usuarioId, @Param("organizacaoId") Long organizacaoId);
+
+
 
     @Query("SELECT p FROM Profissional p " +
            "LEFT JOIN FETCH p.tipoProfissional " +

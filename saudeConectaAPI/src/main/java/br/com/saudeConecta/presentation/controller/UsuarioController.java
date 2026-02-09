@@ -3,6 +3,7 @@ package br.com.saudeConecta.presentation.controller;
 import br.com.saudeConecta.application.service.UsuarioService;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.presentation.dto.usuario.BloquearUsuarioRequest;
 import br.com.saudeConecta.presentation.dto.usuario.CadastrarUsuarioRequest;
 import br.com.saudeConecta.presentation.dto.usuario.PacienteResponse;
 import br.com.saudeConecta.presentation.dto.usuario.TodosUsuariosAgrupadosResponse;
@@ -33,6 +34,63 @@ import java.util.List;
 public class UsuarioController {
 
     private final UsuarioService usuarioService;
+
+
+
+    @PutMapping("/bloquearUsuariobyOrg")
+    @Description("Bloqueia ou desbloqueia usuário por ID. Utilizado em: GerenciamentoUsuariosComponent")
+    public ResponseEntity<Void> bloquearUsuariobyOrg(@RequestBody @Valid BloquearUsuarioRequest request) {
+        log.debug("Alterando status do usuário ID: {}", request.codigoUsuario());
+        try {
+            usuarioService.bloquearUsuariobyOrg( request );
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            log.error("Erro ao alterar status do usuário ID: {}", request.codigoUsuario(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+
+
+
+    @GetMapping("/buscarTodosAgrupados")
+    @Transactional
+    @Description("Lista todos os usuários agrupados por tipo (paciente, medico, secretaria, administrador). Utilizado em: TabelaTodosUsuariosComponent")
+    public ResponseEntity<TodosUsuariosAgrupadosResponse> buscarTodosAgrupados() {
+        Long organizacaoId = TenantContext.getCurrentTenant();
+
+        if (organizacaoId == null) {
+            log.warn("Organização não encontrada no contexto");
+            return ResponseEntity.badRequest().build();
+        }
+
+        return ResponseEntity.ok(usuarioService.buscarTodosAgrupados(organizacaoId));
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     @GetMapping("/perfil/{id}")
     @Transactional
@@ -89,19 +147,7 @@ public class UsuarioController {
 //        return ResponseEntity.ok(usuarioService.buscarTodosPacientes());
 //    }
 
-    @GetMapping("/buscarTodosAgrupados")
-    @Transactional
-    @Description("Lista todos os usuários agrupados por tipo (paciente, medico, secretaria, administrador). Utilizado em: TabelaTodosUsuariosComponent")
-    public ResponseEntity<TodosUsuariosAgrupadosResponse> buscarTodosAgrupados() {
-        Long organizacaoId = TenantContext.getCurrentTenant();
 
-        if (organizacaoId == null) {
-            log.warn("Organização não encontrada no contexto");
-            return ResponseEntity.badRequest().build();
-        }
-        
-        return ResponseEntity.ok(usuarioService.buscarTodosAgrupados(organizacaoId));
-    }
 
     @GetMapping("/pagina")
     @Transactional
@@ -149,21 +195,6 @@ public class UsuarioController {
         }
     }
 
-    @PutMapping("/bloquear/{id}")
-    @Description("Bloqueia ou desbloqueia usuário por ID. Utilizado em: GerenciamentoUsuariosComponent")
-    public ResponseEntity<Void> bloquearUsuario(@PathVariable Long id, @RequestBody java.util.Map<String, Integer> body) {
-        log.debug("Alterando status do usuário ID: {}", id);
-        try {
-            int status = body.get("status");
-            usuarioService.bloquear(id, status);
-            return ResponseEntity.ok().build();
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            log.error("Erro ao alterar status do usuário ID: {}", id, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
 
     @PutMapping("/trocarSenha/{id}")
     @Description("Troca a senha do usuário por ID. Utilizado em: TrocaSenhaUsuariosComponent")

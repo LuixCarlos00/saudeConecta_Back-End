@@ -14,6 +14,9 @@ import java.util.Optional;
 public interface SecretariaRepository extends JpaRepository<Secretaria, Long> {
 
     List<Secretaria> findByOrganizacao_Id(Long organizacaoId);
+    
+    @Query("SELECT s FROM Secretaria s LEFT JOIN FETCH s.usuario WHERE s.organizacao.id = :organizacaoId")
+    List<Secretaria> findByOrganizacao_IdWithUsuario(@Param("organizacaoId") Long organizacaoId);
 
     List<Secretaria> findByOrganizacao_IdAndStatus(Long organizacaoId, StatusSecretaria status);
 
@@ -27,4 +30,6 @@ public interface SecretariaRepository extends JpaRepository<Secretaria, Long> {
 
     @Query("SELECT COUNT(s) FROM Secretaria s WHERE s.organizacao.id = :orgId AND s.status = 'ATIVO'")
     Long countAtivosByOrganizacaoId(@Param("orgId") Long organizacaoId);
+
+    Optional<Secretaria> findByOrganizacao_IdAndUsuario_Id(Long id, Long id1);
 }

@@ -354,10 +354,10 @@ public class PacienteService implements PacienteInputPort {
      * @param status 0 para inativo, 1 para ativo
      * @throws IllegalArgumentException se paciente não for encontrado
      */
-    public void bloquear(Long id, int status) {
+    public void bloquearPacientebyOrg(Long id, int status) {
         log.info("Alterando status do paciente ID: {} para {}", id, status == 0 ? "INATIVO" : "ATIVO");
         
-        var pacienteOpt = buscarPorId(id);
+        var pacienteOpt = buscarrPacientebyOrg(id);
         if (pacienteOpt.isEmpty()) {
             log.warn("Paciente não encontrado para alteração de status: {}", id);
             throw new IllegalArgumentException("Paciente não encontrado");

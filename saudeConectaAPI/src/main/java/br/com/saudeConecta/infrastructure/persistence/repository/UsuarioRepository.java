@@ -34,4 +34,15 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     
     @Query("SELECT u FROM Usuario u LEFT JOIN FETCH u.organizacao WHERE u.login = :login")
     Optional<Usuario> findByLoginWithOrganizacao(@Param("login") String login);
+
+    @Query("SELECT u FROM Usuario u " +
+            "LEFT JOIN br.com.saudeConecta.domain.profissional.Profissional p ON p.usuario.id = u.id AND p.organizacao.id = :organizacaoId " +
+            "LEFT JOIN br.com.saudeConecta.domain.secretaria.Secretaria s ON s.usuario.id = u.id AND s.organizacao.id = :organizacaoId " +
+            "LEFT JOIN br.com.saudeConecta.domain.admin.AdminOrganizacao a ON a.usuario.id = u.id AND a.organizacao.id = :organizacaoId " +
+            "WHERE u.id = :usuarioId " +
+            "AND u.organizacao.id = :organizacaoId")
+    Optional<Usuario> buscarUsuarioRelacionamento(
+            @Param("usuarioId") Long usuarioId,
+            @Param("organizacaoId") Long organizacaoId
+    );
 }

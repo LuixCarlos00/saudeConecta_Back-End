@@ -3,8 +3,10 @@ package br.com.saudeConecta.application.service;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.usuario.Usuario;
+import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.email.CredenciaisEmailService;
 import br.com.saudeConecta.email.EmailCadastroService;
+import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
@@ -33,18 +35,22 @@ public class AdminOrganizacaoService {
     private final PasswordEncoder passwordEncoder;
     private final EmailCadastroService emailCadastroService;
     private final Executor emailTaskExecutor;
+    private final TenantHelper tenantHelper;
+
 
     public AdminOrganizacaoService(
             AdminOrganizacaoRepository adminOrganizacaoRepository,
             UsuarioRepository usuarioRepository,
             OrganizacaoRepository organizacaoRepository,
             PasswordEncoder passwordEncoder,
+            TenantHelper tenantHelper,
             EmailCadastroService emailCadastroService,
             @Qualifier("emailTaskExecutor") Executor emailTaskExecutor) {
         this.adminOrganizacaoRepository = adminOrganizacaoRepository;
         this.usuarioRepository = usuarioRepository;
         this.organizacaoRepository = organizacaoRepository;
         this.passwordEncoder = passwordEncoder;
+        this.tenantHelper = tenantHelper;
         this.emailCadastroService = emailCadastroService;
         this.emailTaskExecutor = emailTaskExecutor;
     }
@@ -52,7 +58,8 @@ public class AdminOrganizacaoService {
     @Transactional(readOnly = true)
     public Optional<AdminOrganizacao> buscarrAdminByOrg(Long id) {
         log.debug("Buscando administrador por ID: {}", id);
-        return adminOrganizacaoRepository.findById(id);
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return adminOrganizacaoRepository.findByIdAndOrganizacao_Id(id,orgId);
     }
 
     @Transactional
@@ -77,7 +84,7 @@ public class AdminOrganizacaoService {
                 .login(cpfLimpo)
                 .senha(passwordEncoder.encode(senhaGerada))
                 .tipoUsuario((byte) 1) // ADMIN_ORG
-                .status((byte) 1) // ATIVO
+                .status(StatusUsuario.ATIVO)
                 .organizacao(organizacao)
                 .build();
         
@@ -135,32 +142,7 @@ public class AdminOrganizacaoService {
         return admin;
     }
 
-    @Transactional
-    public void bloquearAdminByOrg(Long id) {
-        log.info("Bloqueando/Desbloqueando administrador ID: {}", id);
-
-        AdminOrganizacao admin = adminOrganizacaoRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
-
-        // Alterna o status do administrador
-        if (admin.getStatus() == AdminOrganizacao.StatusAdmin.ATIVO) {
-            admin.setStatus(AdminOrganizacao.StatusAdmin.INATIVO);
-            // Também bloqueia o usuário associado
-            if (admin.getUsuario() != null) {
-                admin.getUsuario().setStatus((byte) 0);
-            }
-        } else {
-            admin.setStatus(AdminOrganizacao.StatusAdmin.ATIVO);
-            // Também ativa o usuário associado
-            if (admin.getUsuario() != null) {
-                admin.getUsuario().setStatus((byte) 1);
-            }
-        }
-
-        adminOrganizacaoRepository.save(admin);
-        log.info("Status do administrador atualizado com sucesso. ID: {}, Novo status: {}", id, admin.getStatus());
-    }
-
+ 
     private String gerarSenhaAleatoria() {
         SecureRandom random = new SecureRandom();
         StringBuilder senha = new StringBuilder(TAMANHO_SENHA);

@@ -97,7 +97,7 @@ public class ConsultaService {
         Organizacao organizacao = organizacaoRepository.findById(orgId)
             .orElseThrow(() -> new IllegalStateException("Organização não encontrada"));
         
-        Profissional profissional = profissionalRepository.findByIdAndOrganizacao_Id(request.profissionalId(), orgId)
+        Profissional profissional = profissionalRepository.buscarClinicoIdByOrg(request.profissionalId(), orgId)
             .orElseThrow(() -> new IllegalArgumentException("Profissional não encontrado"));
         
         Paciente paciente = pacienteRepository.findById(request.pacienteId())

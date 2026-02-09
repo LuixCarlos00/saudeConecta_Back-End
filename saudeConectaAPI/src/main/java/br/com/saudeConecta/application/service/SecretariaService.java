@@ -5,6 +5,7 @@ import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.domain.secretaria.StatusSecretaria;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
+import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.email.CredenciaisEmailService;
 import br.com.saudeConecta.email.EmailCadastroService;
 import br.com.saudeConecta.infra.tenant.RequiresTenant;
@@ -107,7 +108,7 @@ public class SecretariaService {
                 .tipoUsuario((byte) 2) // RECEPCIONISTA
                 .tipoUsuarioNovo(TipoUsuarioNovo.RECEPCIONISTA)
                 .organizacao(organizacao)
-                .status((byte) 1)
+                .status(StatusUsuario.ATIVO)
                 .build();
 
         Secretaria secretaria = Secretaria.builder()

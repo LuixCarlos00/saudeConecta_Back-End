@@ -68,6 +68,20 @@ public class PacienteApiController {
 
 
 
+    @PutMapping("/bloquearPacientebyOrg/{id}")
+    public ResponseEntity<Void> bloquearPacientebyOrg(
+            @PathVariable Long id,
+            @RequestParam int status) {
+        log.info("Alterando status do paciente ID: {} para {}", id, status);
+
+        // Verifica se paciente pertence ao tenant
+        if (pacienteService.buscarrPacientebyOrg(id).isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        pacienteService.bloquearPacientebyOrg(id, status);
+        return ResponseEntity.ok().build();
+    }
 
 
 
@@ -132,20 +146,6 @@ public class PacienteApiController {
 
 
 
-    @PutMapping("/{id}/status")
-    public ResponseEntity<Void> alterarStatus(
-            @PathVariable Long id,
-            @RequestParam int status) {
-        log.info("Alterando status do paciente ID: {} para {}", id, status);
-        
-        // Verifica se paciente pertence ao tenant
-        if (pacienteService.buscarrPacientebyOrg(id).isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        
-        pacienteService.bloquear(id, status);
-        return ResponseEntity.ok().build();
-    }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {

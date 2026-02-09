@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Alterar coluna status de TINYINT para VARCHAR(20) -->
+    <changeSet id="019-001-alterar-status-para-varchar" author="saudeConecta">
+        <modifyDataType 
+            tableName="usuarios" 
+            columnName="status" 
+            newDataType="VARCHAR(20)"/>
+    </changeSet>
+
+    <!-- Migrar dados existentes de TINYINT para VARCHAR -->
+    <changeSet id="019-002-migrar-dados-status" author="saudeConecta">
+        <sql>
+            UPDATE usuarios 
+            SET status = CASE 
+                WHEN status = '1' THEN 'ATIVO'
+                WHEN status = '0' THEN 'INATIVO'
+                ELSE 'ATIVO'
+            END
+            WHERE status IN ('0', '1');
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

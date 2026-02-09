@@ -50,14 +50,19 @@ public class Usuario implements Serializable, UserDetails, TenantAware {
     @Column(name = "tipo_usuario_novo")
     private TipoUsuarioNovo tipoUsuarioNovo;
 
-    @Column(nullable = false, name = "status")
-    private Byte status;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private StatusUsuario status = StatusUsuario.ATIVO;
+
+    private StatusUsuario converterByteParaStatus(Byte statusByte) {
+        return statusByte != null && statusByte == 1 ? StatusUsuario.ATIVO : StatusUsuario.INATIVO;
+    }
 
     public Usuario(CadastrarUsuarioRequest dados, String senhaCriptografada) {
         this.login = dados.login();
         this.senha = senhaCriptografada;
         this.tipoUsuario = dados.tipoUsuario();
-        this.status = dados.status();
+        this.status = converterByteParaStatus(dados.status());
     }
     
     public Usuario(CadastrarUsuarioRequest dados, String senhaCriptografada, 
@@ -66,7 +71,7 @@ public class Usuario implements Serializable, UserDetails, TenantAware {
         this.senha = senhaCriptografada;
         this.tipoUsuario = dados.tipoUsuario();
         this.tipoUsuarioNovo = tipoNovo;
-        this.status = dados.status();
+        this.status = converterByteParaStatus(dados.status());
         this.organizacao = organizacao;
     }
 
@@ -108,7 +113,7 @@ public class Usuario implements Serializable, UserDetails, TenantAware {
 
     @Override
     public boolean isEnabled() {
-        return this.status != null && this.status == 1;
+        return StatusUsuario.ATIVO.equals(this.status);
     }
 
 

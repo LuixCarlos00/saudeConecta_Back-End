@@ -4,15 +4,13 @@ import br.com.saudeConecta.application.port.in.usuario.UsuarioInputPort;
 import br.com.saudeConecta.application.port.out.usuario.UsuarioOutputPort;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.domain.profissional.StatusProfissional;
+import br.com.saudeConecta.domain.secretaria.StatusSecretaria;
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
-import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
-import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
-import br.com.saudeConecta.infrastructure.persistence.repository.SecretariaRepository;
-import br.com.saudeConecta.presentation.dto.usuario.CadastrarUsuarioRequest;
-import br.com.saudeConecta.presentation.dto.usuario.PacienteResponse;
-import br.com.saudeConecta.presentation.dto.usuario.TodosUsuariosAgrupadosResponse;
-import br.com.saudeConecta.presentation.dto.usuario.UsuarioPerfilCompletoResponse;
+import br.com.saudeConecta.domain.usuario.StatusUsuario;
+import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.infrastructure.persistence.repository.*;
+import br.com.saudeConecta.presentation.dto.usuario.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
@@ -28,6 +26,7 @@ import java.util.Optional;
 @Service
 @Slf4j
 public class UsuarioService implements UsuarioInputPort {
+    private final UsuarioRepository usuarioRepository;
 
     private final UsuarioOutputPort usuarioOutputPort;
     private final PasswordEncoder passwordEncoder;
@@ -44,7 +43,8 @@ public class UsuarioService implements UsuarioInputPort {
             ProfissionalRepository profissionalRepository,
             AdminOrganizacaoRepository adminOrganizacaoRepository,
             PacienteRepository pacienteRepository,
-            SecretariaRepository secretariaRepository) {
+            SecretariaRepository secretariaRepository,
+            UsuarioRepository usuarioRepository) {
         this.usuarioOutputPort = usuarioOutputPort;
         this.passwordEncoder = passwordEncoder;
         this.pacienteService = pacienteService;
@@ -52,7 +52,93 @@ public class UsuarioService implements UsuarioInputPort {
         this.adminOrganizacaoRepository = adminOrganizacaoRepository;
         this.pacienteRepository = pacienteRepository;
         this.secretariaRepository = secretariaRepository;
+        this.usuarioRepository = usuarioRepository;
     }
+
+
+
+
+    @Transactional
+    public void bloquearUsuariobyOrg(BloquearUsuarioRequest request) {
+        log.info("Alterando status do usuário ID: {} para {}",
+                request.codigoUsuario(), request.status() == 0 ? "BLOQUEADO" : "ATIVO");
+
+        // Obtém o ID da organização do contexto do tenant
+        Long organizacaoId = TenantContext.getCurrentTenant();;
+
+        // Busca o usuário com relacionamentos filtrado por organização
+        Usuario usuario = usuarioRepository.findById(request.codigoUsuario())
+                .orElseThrow(() -> {
+                    log.warn("Usuário não encontrado para alteração de status: {}", request.codigoUsuario());
+                    return new IllegalArgumentException("Usuário não encontrado");
+                });
+
+        // Atualiza status do usuário
+        StatusUsuario statusEnum = request.status() == 0 ? StatusUsuario.INATIVO : StatusUsuario.ATIVO;
+        usuario.setStatus(statusEnum);
+        usuarioRepository.save(usuario);
+
+        // Atualiza status nas tabelas relacionadas
+        atualizarStatusRelacionamentos(request.codigo(), organizacaoId, request.status());
+
+        log.info("Status do usuário ID: {} alterado com sucesso", request.codigoUsuario());
+    }
+
+    private void atualizarStatusRelacionamentos(Long codigo, Long organizacaoId, int status) {
+        // Atualiza Profissional
+        profissionalRepository.findByUsuarioAndOrganizacao_Id(codigo, organizacaoId)
+                .ifPresent(profissional -> {
+                    profissional.setStatus(status == 0 ?
+                            StatusProfissional.INATIVO : StatusProfissional.ATIVO);
+                    profissionalRepository.save(profissional);
+                    log.debug("Status do profissional ID: {} atualizado", profissional.getId());
+                });
+
+        // Atualiza Secretaria
+        secretariaRepository.findByOrganizacao_IdAndUsuario_Id(codigo, organizacaoId)
+                .ifPresent(secretaria -> {
+                    secretaria.setStatus(status == 0 ?
+                            StatusSecretaria.INATIVO : StatusSecretaria.ATIVO);
+                    secretariaRepository.save(secretaria);
+                    log.debug("Status da secretária ID: {} atualizado", secretaria.getId());
+                });
+
+        // Atualiza AdminOrganizacao
+        adminOrganizacaoRepository.findByUsuarioAndOrganizacao_Id(codigo, organizacaoId)
+                .ifPresent(admin -> {
+                    admin.setStatus(status == 0 ?
+                            AdminOrganizacao.StatusAdmin.INATIVO : AdminOrganizacao.StatusAdmin.ATIVO);
+                    adminOrganizacaoRepository.save(admin);
+                    log.debug("Status do admin ID: {} atualizado", admin.getId());
+                });
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     @Override
     public Optional<Usuario> buscarPorId(Long id) {
@@ -147,20 +233,6 @@ public class UsuarioService implements UsuarioInputPort {
      * @param status 0 para bloqueado, 1 para ativo
      * @throws IllegalArgumentException se usuário não for encontrado
      */
-    public void bloquear(Long id, int status) {
-        log.info("Alterando status do usuário ID: {} para {}", id, status == 0 ? "BLOQUEADO" : "ATIVO");
-        
-        var usuarioOpt = buscarPorId(id);
-        if (usuarioOpt.isEmpty()) {
-            log.warn("Usuário não encontrado para alteração de status: {}", id);
-            throw new IllegalArgumentException("Usuário não encontrado");
-        }
-        
-        var usuario = usuarioOpt.get();
-        usuario.setStatus(status == 0 ? (byte) 0 : (byte) 1);
-        cadastrar(usuario);
-        log.info("Status do usuário ID: {} alterado com sucesso", id);
-    }
 
     /**
      * Busca todos os pacientes.
@@ -220,7 +292,7 @@ public class UsuarioService implements UsuarioInputPort {
             .map(TodosUsuariosAgrupadosResponse.PacienteResumo::fromEntity)
             .toList();
 
-        var profissionais = profissionalRepository.findByOrganizacao_Id(organizacaoId);
+        var profissionais = profissionalRepository.findByOrganizacao_IdWithUsuario(organizacaoId);
         
         var medicos = profissionais.stream()
             .filter(p -> p.getTipoProfissional() != null && 
@@ -229,11 +301,11 @@ public class UsuarioService implements UsuarioInputPort {
             .map(TodosUsuariosAgrupadosResponse.ProfissionalResumo::fromEntity)
             .toList();
 
-        var secretarias = secretariaRepository.findByOrganizacao_Id(organizacaoId).stream()
+        var secretarias = secretariaRepository.findByOrganizacao_IdWithUsuario(organizacaoId).stream()
             .map(TodosUsuariosAgrupadosResponse.SecretariaResumo::fromEntity)
             .toList();
 
-        var administradores = adminOrganizacaoRepository.findByOrganizacao_Id(organizacaoId).stream()
+        var administradores = adminOrganizacaoRepository.findByOrganizacao_IdWithUsuario(organizacaoId).stream()
             .map(TodosUsuariosAgrupadosResponse.AdminResumo::fromEntity)
             .toList();
 
