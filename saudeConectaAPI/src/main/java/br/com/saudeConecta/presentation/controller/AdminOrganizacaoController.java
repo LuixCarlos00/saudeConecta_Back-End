@@ -1,6 +1,6 @@
 package br.com.saudeConecta.presentation.controller;
 
-import br.com.saudeConecta.application.service.AdminOrganizacaoService;
+import br.com.saudeConecta.service.AdminOrganizacaoService;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.presentation.dto.admin.AtualizarAdminRequest;
@@ -74,6 +74,22 @@ public class AdminOrganizacaoController {
     }
 
 
+@DeleteMapping("/deletarAdmByOrg/{id}")
+    @Transactional
+    @Description("Deleta administrador por ID")
+    public ResponseEntity<?> deletarAdmByOrg(@PathVariable Long id) {
+        log.debug("Deletando administrador ID: {}", id);
+        try {
+            adminOrganizacaoService.deletarAdmByOrg(id);
+            return ResponseEntity.ok().build();
+        } catch (IllegalStateException e) {
+            log.warn("Erro ao deletar administrador: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            log.warn("Administrador não encontrado: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
+    }
 
 
 }

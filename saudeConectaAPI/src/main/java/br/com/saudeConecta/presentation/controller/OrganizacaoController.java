@@ -1,6 +1,6 @@
 package br.com.saudeConecta.presentation.controller;
 
-import br.com.saudeConecta.application.service.OrganizacaoService;
+import br.com.saudeConecta.service.OrganizacaoService;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.presentation.dto.organizacao.AtualizarOrganizacaoRequest;
 import br.com.saudeConecta.presentation.dto.organizacao.CriarOrganizacaoRequest;

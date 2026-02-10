@@ -1,8 +1,7 @@
 package br.com.saudeConecta.presentation.controller;
 
-import br.com.saudeConecta.application.service.EspecialidadeService;
+import br.com.saudeConecta.service.EspecialidadeService;
 import br.com.saudeConecta.presentation.dto.especialidade.EspecialidadeResponse;
-import br.com.saudeConecta.presentation.dto.especialidade.TipoProfissionalResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

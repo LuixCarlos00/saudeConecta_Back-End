@@ -16,7 +16,18 @@ import java.util.Optional;
 public interface ProfissionalRepository extends JpaRepository<Profissional, Long> {
     
     List<Profissional> findByOrganizacao_Id(Long organizacaoId);
-    
+
+    Optional<Profissional> findByIdAndOrganizacao_Id(Long id, Long organizacaoId);
+
+
+
+
+
+
+
+
+
+
     @Query("SELECT p FROM Profissional p LEFT JOIN FETCH p.usuario WHERE p.organizacao.id = :organizacaoId")
     List<Profissional> findByOrganizacao_IdWithUsuario(@Param("organizacaoId") Long organizacaoId);
     
@@ -96,6 +107,4 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
     Long countAllAtivos();
 
     List<Profissional> findByStatus(StatusProfissional status);
-
-    Optional<Profissional> findProfissionalByIdAndOrganizacao_Id(Long id, Long id1);
 }

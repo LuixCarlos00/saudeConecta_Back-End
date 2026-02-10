@@ -24,7 +24,7 @@ public class Endereco implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long endCodigo;
 
-    @Column(name = "EndNacionalidade", nullable = false)
+    @Column(name = "EndNacionalidade", nullable = true)
     private String endNacionalidade;
 
     @Column(name = "EndUF", nullable = false)

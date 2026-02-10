@@ -6,6 +6,8 @@ import br.com.saudeConecta.presentation.dto.usuario.CadastrarUsuarioRequest;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import jakarta.persistence.Convert;
+
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -51,7 +53,7 @@ public class Usuario implements Serializable, UserDetails, TenantAware {
     private TipoUsuarioNovo tipoUsuarioNovo;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 20)
+    @Column(name = "status")
     private StatusUsuario status = StatusUsuario.ATIVO;
 
     private StatusUsuario converterByteParaStatus(Byte statusByte) {
