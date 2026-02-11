@@ -147,6 +147,7 @@ public class ConsultaController {
         return ResponseEntity.ok(consultaService.contarConsultasHojePorOrganizacao(organizacaoId));
     }
 
+
     @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-realizadas-hoje")
     public ResponseEntity<Long> contarRealizadasHojePorOrganizacao(@PathVariable Long organizacaoId) {
         return ResponseEntity.ok(consultaService.contarConsultasRealizadasHojePorOrganizacao(organizacaoId));

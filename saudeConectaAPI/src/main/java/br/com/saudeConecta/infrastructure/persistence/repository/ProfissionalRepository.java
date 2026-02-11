@@ -45,6 +45,7 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
     @Query("SELECT DISTINCT p FROM Profissional p " +
            "LEFT JOIN FETCH p.tipoProfissional " +
            "LEFT JOIN FETCH p.especialidades " +
+           "LEFT JOIN FETCH p.endereco " +
            "WHERE p.organizacao.id = :organizacaoId AND p.status = :status")
     List<Profissional> findByOrganizacaoIdAndStatusWithRelations(
         @Param("organizacaoId") Long organizacaoId,
@@ -65,12 +66,7 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
         @Param("orgId") Long organizacaoId, 
         @Param("id") Long id);
     
-//    @Query("SELECT p FROM Profissional p " +
-//           "WHERE p.organizacao.id = :orgId " +
-//           "AND LOWER(p.nome) LIKE LOWER(CONCAT('%', :nome, '%'))")
-//    List<Profissional> findByOrganizacaoIdAndNomeContaining(
-//        @Param("orgId") Long organizacaoId,
-//        @Param("nome") String nome);
+
     
     @Query("SELECT COUNT(p) FROM Profissional p " +
            "WHERE p.organizacao.id = :orgId AND p.status = 'ATIVO'")
@@ -93,15 +89,11 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
     
 
     
-    boolean existsByCpf(String cpf);
-    
+
     boolean existsByCpfAndOrganizacao_Id(String cpf, Long organizacaoId);
     
-    boolean existsByEmailAndOrganizacao_Id(String email, Long organizacaoId);
 
-    // ==========================================
-    // ESTATÍSTICAS GLOBAIS (SUPER ADMIN)
-    // ==========================================
+
 
     @Query("SELECT COUNT(p) FROM Profissional p WHERE p.status = 'ATIVO'")
     Long countAllAtivos();

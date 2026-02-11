@@ -12,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/profissionais")
 @RequiredArgsConstructor
@@ -78,13 +80,28 @@ public class ProfissionalController {
         }
     }
 
-//deletarClinicoIdByOrg
 
 
 
+    @GetMapping("/estatisticas/organizacao/{organizacaoId}/medicos-ativos")
+    public ResponseEntity<Long> contarAtivosPorOrganizacao(@PathVariable Long organizacaoId) {
+        return ResponseEntity.ok(profissionalService.contarAtivosPorOrganizacao(organizacaoId));
+    }
 
 
 
+    // ==========================================
+    // ESTATÍSTICAS POR ORGANIZAÇÃO
+    // ==========================================
+
+    @GetMapping("/organizacao/{organizacaoId}")
+    public ResponseEntity<List<ProfissionalResponse>> listarPorOrganizacao(@PathVariable Long organizacaoId) {
+        List<Profissional> profissionais = profissionalService.buscarPorOrganizacao(organizacaoId);
+        List<ProfissionalResponse> response = profissionais.stream()
+                .map(ProfissionalResponse::fromEntity)
+                .toList();
+        return ResponseEntity.ok(response);
+    }
 
 
 
@@ -180,24 +197,8 @@ public class ProfissionalController {
 //        return ResponseEntity.ok(profissionalService.contarAtivos());
 //    }
 //
-//    // ==========================================
-//    // ESTATÍSTICAS POR ORGANIZAÇÃO
-//    // ==========================================
-//
-//    @GetMapping("/organizacao/{organizacaoId}")
-//    public ResponseEntity<List<ProfissionalResponse>> listarPorOrganizacao(@PathVariable Long organizacaoId) {
-//        List<Profissional> profissionais = profissionalService.buscarPorOrganizacao(organizacaoId);
-//        List<ProfissionalResponse> response = profissionais.stream()
-//            .map(ProfissionalResponse::fromEntity)
-//            .toList();
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    @GetMapping("/estatisticas/organizacao/{organizacaoId}/medicos-ativos")
-//    public ResponseEntity<Long> contarAtivosPorOrganizacao(@PathVariable Long organizacaoId) {
-//        return ResponseEntity.ok(profissionalService.contarAtivosPorOrganizacao(organizacaoId));
-//    }
-//
+
+
 //    // ==========================================
 //    // ESTATÍSTICAS GLOBAIS (SUPER ADMIN)
 //    // ==========================================

@@ -287,9 +287,15 @@ public class ProfissionalService {
 
 
 
+    public Long contarAtivosPorOrganizacao(Long organizacaoId) {
+        return profissionalRepository.countAtivosByOrganizacaoId(organizacaoId);
+    }
 
 
-
+    @Transactional(readOnly = true)
+    public List<Profissional> buscarPorOrganizacao(Long organizacaoId) {
+        return profissionalRepository.findByOrganizacaoIdAndStatusWithRelations(organizacaoId, StatusProfissional.ATIVO);
+    }
 
 
 
@@ -371,14 +377,8 @@ public class ProfissionalService {
         return profissionalRepository.countAtivosByOrganizacaoId(orgId);
     }
 
-    public Long contarAtivosPorOrganizacao(Long organizacaoId) {
-        return profissionalRepository.countAtivosByOrganizacaoId(organizacaoId);
-    }
 
-    @Transactional(readOnly = true)
-    public List<Profissional> buscarPorOrganizacao(Long organizacaoId) {
-        return profissionalRepository.findByOrganizacaoIdAndStatusWithRelations(organizacaoId, StatusProfissional.ATIVO);
-    }
+
 
 
     public Long contarTodosAtivos() {

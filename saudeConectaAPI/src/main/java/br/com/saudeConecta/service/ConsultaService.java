@@ -266,6 +266,8 @@ public class ConsultaService {
         );
     }
 
+
+
     public Long contarConsultasRealizadasHojePorOrganizacao(Long organizacaoId) {
         LocalDate hoje = LocalDate.now();
         return consultaRepository.countByOrganizacao_IdAndStatusAndDataHoraBetween(
