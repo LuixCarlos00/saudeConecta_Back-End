@@ -1,16 +1,13 @@
 package br.com.saudeConecta.presentation.controller;
 
-import br.com.saudeConecta.application.service.ProfissionalService;
+import br.com.saudeConecta.service.ProfissionalService;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.presentation.dto.profissional.CadastrarClinicoRequest;
-import br.com.saudeConecta.presentation.dto.profissional.CadastrarProfissionalRequest;
 import br.com.saudeConecta.presentation.dto.profissional.ProfissionalResponse;
 import jakarta.validation.Valid;
 import jdk.jfr.Description;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -67,13 +64,44 @@ public class ProfissionalController {
     }
 
 
+@DeleteMapping("/deletarClinicoIdByOrg/{id}")
+    @Description("Deleta médico/clínico por ID")
+    public ResponseEntity<?> deletarClinicoIdByOrg(@PathVariable Long id) {
+        log.info("Deletando clínico ID: {}", id);
+        try {
+            profissionalService.deletarClinicoIdByOrg(id);
+            return ResponseEntity.ok().build();
+        } catch (IllegalStateException e) {
+            log.warn("Erro ao deletar clínico: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            log.warn("Clínico não encontrado: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
+    }
 
 
 
 
+    @GetMapping("/estatisticas/organizacao/{organizacaoId}/medicos-ativos")
+    public ResponseEntity<Long> contarAtivosPorOrganizacao(@PathVariable Long organizacaoId) {
+        return ResponseEntity.ok(profissionalService.contarAtivosPorOrganizacao(organizacaoId));
+    }
 
 
 
+    // ==========================================
+    // ESTATÍSTICAS POR ORGANIZAÇÃO
+    // ==========================================
+
+    @GetMapping("/organizacao/{organizacaoId}")
+    public ResponseEntity<List<ProfissionalResponse>> listarPorOrganizacao(@PathVariable Long organizacaoId) {
+        List<Profissional> profissionais = profissionalService.buscarPorOrganizacao(organizacaoId);
+        List<ProfissionalResponse> response = profissionais.stream()
+                .map(ProfissionalResponse::fromEntity)
+                .toList();
+        return ResponseEntity.ok(response);
+    }
 
 
 
@@ -163,35 +191,14 @@ public class ProfissionalController {
 //
 //
 //
-//    @DeleteMapping("/{id}")
-//    public ResponseEntity<Void> deletar(@PathVariable Long id) {
-//        profissionalService.deletar(id);
-//        return ResponseEntity.noContent().build();
-//    }
 //
 //    @GetMapping("/count")
 //    public ResponseEntity<Long> contarAtivos() {
 //        return ResponseEntity.ok(profissionalService.contarAtivos());
 //    }
 //
-//    // ==========================================
-//    // ESTATÍSTICAS POR ORGANIZAÇÃO
-//    // ==========================================
-//
-//    @GetMapping("/organizacao/{organizacaoId}")
-//    public ResponseEntity<List<ProfissionalResponse>> listarPorOrganizacao(@PathVariable Long organizacaoId) {
-//        List<Profissional> profissionais = profissionalService.buscarPorOrganizacao(organizacaoId);
-//        List<ProfissionalResponse> response = profissionais.stream()
-//            .map(ProfissionalResponse::fromEntity)
-//            .toList();
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    @GetMapping("/estatisticas/organizacao/{organizacaoId}/medicos-ativos")
-//    public ResponseEntity<Long> contarAtivosPorOrganizacao(@PathVariable Long organizacaoId) {
-//        return ResponseEntity.ok(profissionalService.contarAtivosPorOrganizacao(organizacaoId));
-//    }
-//
+
+
 //    // ==========================================
 //    // ESTATÍSTICAS GLOBAIS (SUPER ADMIN)
 //    // ==========================================

@@ -1,6 +1,6 @@
 package br.com.saudeConecta.presentation.controller;
 
-import br.com.saudeConecta.application.service.SecretariaService;
+import br.com.saudeConecta.service.SecretariaService;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.presentation.dto.secretaria.CadastrarSecretariaRequest;
 import br.com.saudeConecta.presentation.dto.secretaria.SecretariaResponse;
@@ -11,8 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/secretaria")
@@ -58,4 +56,22 @@ public class SecretariaController {
             return ResponseEntity.notFound().build();
         }
     }
+
+
+    @DeleteMapping("/deletarSecretariaIdByOrg/{id}")
+    @Description("Deleta secretária por ID")
+    public ResponseEntity<?> deletarSecretariaIdByOrg(@PathVariable Long id) {
+        try {
+            secretariaService.deletarSecretariaIdByOrg(id);
+            return ResponseEntity.ok().build();
+        } catch (IllegalStateException e) {
+            log.warn("Erro ao deletar secretária: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            log.warn("Secretária não encontrada: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    //deletarSecretariaIdByOrg
 }

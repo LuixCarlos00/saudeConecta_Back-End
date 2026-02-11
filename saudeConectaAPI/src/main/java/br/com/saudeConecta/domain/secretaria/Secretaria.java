@@ -32,7 +32,7 @@ public class Secretaria implements Serializable, TenantAware {
     @JsonIgnore
     private Organizacao organizacao;
 
-    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id")
     @JsonIgnore
     private Usuario usuario;

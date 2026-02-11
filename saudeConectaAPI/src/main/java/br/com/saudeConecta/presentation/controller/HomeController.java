@@ -1,6 +1,6 @@
 package br.com.saudeConecta.presentation.controller;
 
-import br.com.saudeConecta.application.service.HomeService;
+import br.com.saudeConecta.service.HomeService;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.secretaria.Secretaria;

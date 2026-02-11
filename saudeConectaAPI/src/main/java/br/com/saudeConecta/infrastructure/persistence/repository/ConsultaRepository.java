@@ -27,8 +27,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long> {
     
     List<Consulta> findByOrganizacao_IdAndPaciente_PaciCodigo(Long organizacaoId, Long pacienteId);
     
-    List<Consulta> findByOrganizacao_IdAndStatus(Long organizacaoId, StatusConsulta status);
-    
+
     @Query("SELECT c FROM Consulta c WHERE c.organizacao.id = :orgId " +
            "AND c.dataHora BETWEEN :inicio AND :fim ORDER BY c.dataHora")
     List<Consulta> findByOrganizacaoIdAndPeriodo(
@@ -64,12 +63,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long> {
            "AND DATE(c.dataHora) = CURRENT_DATE AND c.status = 'AGENDADA'")
     Long countAgendadasHoje(@Param("orgId") Long organizacaoId);
     
-    @Query("SELECT COUNT(c) FROM Consulta c WHERE c.organizacao.id = :orgId " +
-           "AND c.dataHora BETWEEN :inicio AND :fim")
-    Long countByOrganizacaoIdAndPeriodo(
-        @Param("orgId") Long organizacaoId,
-        @Param("inicio") LocalDateTime inicio,
-        @Param("fim") LocalDateTime fim);
+
 
     // ==========================================
     // ESTATÍSTICAS POR ORGANIZAÇÃO
@@ -80,8 +74,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long> {
     Long countByOrganizacao_IdAndStatusAndDataHoraBetween(
         Long organizacaoId, StatusConsulta status, LocalDateTime inicio, LocalDateTime fim);
 
-    List<Consulta> findByOrganizacao_IdAndDataHoraBetween(
-        Long organizacaoId, LocalDateTime inicio, LocalDateTime fim);
+
 
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
@@ -119,7 +112,6 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long> {
 
     Long countByStatusAndDataHoraBetween(StatusConsulta status, LocalDateTime inicio, LocalDateTime fim);
 
-    List<Consulta> findByDataHoraBetween(LocalDateTime inicio, LocalDateTime fim);
 
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +

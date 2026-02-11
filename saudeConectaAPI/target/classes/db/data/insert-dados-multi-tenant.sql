@@ -43,17 +43,17 @@ INSERT INTO endereco (EndNacionalidade, EndUF, EndMunicipio, EndBairro, EndCep, 
 -- ==========================================
 INSERT INTO usuarios (organizacao_id, login, senha, TipoUsuario, tipo_usuario_novo, status) VALUES
 -- Super Admin Global (sem organização)
-(NULL, 'luiz', '$2a$12$2PB982s8AFV43nFCuSvXlOqMeISkNeyC/bGyLnRS.LwOq.O3jQuD.', 1, 'SUPER_ADMIN', 1),
+(NULL, 'luiz', '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 1, 'SUPER_ADMIN', 'ATIVO'),
 -- Organização 1 - Clínica Saúde Total
-(1, 'org1', '$2a$12$2PB982s8AFV43nFCuSvXlOqMeISkNeyC/bGyLnRS.LwOq.O3jQuD.', 1, 'ADMIN_ORG', 1),
-(1, 'med', '$2a$12$2PB982s8AFV43nFCuSvXlOqMeISkNeyC/bGyLnRS.LwOq.O3jQuD.', 3, 'PROFISSIONAL', 1),
-(1, 'dra.maria@saudetotal.com.br', '$2a$12$2PB982s8AFV43nFCuSvXlOqMeISkNeyC/bGyLnRS.LwOq.O3jQuD.', 3, 'PROFISSIONAL', 1),
-(1, 'recepcao@saudetotal.com.br', '$2a$12$2PB982s8AFV43nFCuSvXlOqMeISkNeyC/bGyLnRS.LwOq.O3jQuD.', 2, 'RECEPCIONISTA', 1),
+(1, 'adm', '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 1, 'ADMIN_ORG', 'ATIVO'),
+(1, 'med', '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 3, 'PROFISSIONAL', 'ATIVO'),
+(1, 'dra.maria@saudetotal.com.br', '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 3, 'PROFISSIONAL', 'ATIVO'),
+(1, 'recepcao@saudetotal.com.br', '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 2, 'RECEPCIONISTA', 'ATIVO'),
 -- Organização 2 - Consultório Dr. Silva
-(2, 'admin@drsilva.com.br', '$2a$12$2PB982s8AFV43nFCuSvXlOqMeISkNeyC/bGyLnRS.LwOq.O3jQuD.', 1, 'ADMIN_ORG', 1),
-(2, 'dr.pedro@drsilva.com.br', '$2a$12$2PB982s8AFV43nFCuSvXlOqMeISkNeyC/bGyLnRS.LwOq.O3jQuD.', 3, 'PROFISSIONAL', 1),
-(2, 'dra.ana@drsilva.com.br', '$2a$12$2PB982s8AFV43nFCuSvXlOqMeISkNeyC/bGyLnRS.LwOq.O3jQuD.', 3, 'PROFISSIONAL', 1),
-(2, 'atendimento@drsilva.com.br', '$2a$12$2PB982s8AFV43nFCuSvXlOqMeISkNeyC/bGyLnRS.LwOq.O3jQuD.', 2, 'RECEPCIONISTA', 1);
+(2, 'admin@drsilva.com.br', '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 1, 'ADMIN_ORG', 'ATIVO'),
+(2, 'dr.pedro@drsilva.com.br', '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 3, 'PROFISSIONAL', 'ATIVO'),
+(2, 'dra.ana@drsilva.com.br', '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 3, 'PROFISSIONAL', 'ATIVO'),
+(2, 'atendimento@drsilva.com.br', '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 2, 'RECEPCIONISTA', 'ATIVO');
 
 -- ==========================================
 -- TABELA: admin_organizacao
@@ -173,7 +173,7 @@ SELECT 'Consultas v2: 15' AS Tabela;
 SELECT 'Histórico Consultas: 9' AS Tabela;
 SELECT '========================================' AS '';
 SELECT 'CREDENCIAIS DE TESTE:' AS '';
-SELECT 'Super Admin: superadmin@saudeconecta.com / 123456' AS '';
-SELECT 'Admin Org1: admin@saudetotal.com.br / 123456' AS '';
-SELECT 'Admin Org2: admin@drsilva.com.br / 123456' AS '';
+SELECT 'Super Admin: superadmin@saudeconecta.com / 123' AS '';
+SELECT 'Admin adm: admin@saudetotal.com.br / 123' AS '';
+SELECT 'Admin Org2: admin@drsilva.com.br / 123' AS '';
 SELECT '========================================' AS '';

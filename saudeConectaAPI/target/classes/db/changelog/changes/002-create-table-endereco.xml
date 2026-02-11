@@ -11,7 +11,7 @@
                 <constraints primaryKey="true" nullable="false"/>
             </column>
             <column name="EndNacionalidade" type="VARCHAR(100)">
-                <constraints nullable="false"/>
+                <constraints nullable="true"/>
             </column>
             <column name="EndUF" type="VARCHAR(2)">
                 <constraints nullable="false"/>

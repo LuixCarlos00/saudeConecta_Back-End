@@ -27,8 +27,6 @@ public interface AdminOrganizacaoRepository extends JpaRepository<AdminOrganizac
            "LEFT JOIN FETCH a.organizacao " +
            "WHERE a.usuario.id = :usuarioId")
     Optional<AdminOrganizacao> findByUsuarioIdWithRelations(@Param("usuarioId") Long usuarioId);
-    
-    boolean existsByOrganizacao_IdAndUsuario_Id(Long organizacaoId, Long usuarioId);
 
-    Optional<AdminOrganizacao> findByIdAndOrganizacao_Id(Long id, Long id1);
+    Optional<AdminOrganizacao> findByIdAndOrganizacao_Id(Long id, Long organizacaoId);
 }
