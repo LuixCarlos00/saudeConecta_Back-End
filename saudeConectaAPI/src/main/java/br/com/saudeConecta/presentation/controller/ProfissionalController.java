@@ -216,4 +216,56 @@ public class ProfissionalController {
 //            .toList();
 //        return ResponseEntity.ok(response);
 //    }
+
+    // ========== MÉTODOS DE BUSCA PARA AUTOCOMPLETE ==========
+    
+    @GetMapping
+    public ResponseEntity<List<ProfissionalResponse>> buscarTodos() {
+        log.debug("Buscando todos os profissionais do tenant");
+        List<ProfissionalResponse> profissionais = profissionalService.buscarTodos()
+                .stream()
+                .map(ProfissionalResponse::fromEntity)
+                .toList();
+        return ResponseEntity.ok(profissionais);
+    }
+    
+    @GetMapping("/buscar-por-nome")
+    public ResponseEntity<List<ProfissionalResponse>> buscarPorNome(@RequestParam String nome) {
+        log.debug("Buscando profissionais por nome: {} no tenant", nome);
+        List<ProfissionalResponse> profissionais = profissionalService.buscarPorNome(nome)
+                .stream()
+                .map(ProfissionalResponse::fromEntity)
+                .toList();
+        return ResponseEntity.ok(profissionais);
+    }
+    
+    @GetMapping("/buscar-por-crm")
+    public ResponseEntity<List<ProfissionalResponse>> buscarPorCRM(@RequestParam String crm) {
+        log.debug("Buscando profissionais por CRM: {} no tenant", crm);
+        List<ProfissionalResponse> profissionais = profissionalService.buscarPorCRM(crm)
+                .stream()
+                .map(ProfissionalResponse::fromEntity)
+                .toList();
+        return ResponseEntity.ok(profissionais);
+    }
+    
+    @GetMapping("/buscar-por-cidade")
+    public ResponseEntity<List<ProfissionalResponse>> buscarPorCidade(@RequestParam String cidade) {
+        log.debug("Buscando profissionais por cidade: {} no tenant", cidade);
+        List<ProfissionalResponse> profissionais = profissionalService.buscarPorCidade(cidade)
+                .stream()
+                .map(ProfissionalResponse::fromEntity)
+                .toList();
+        return ResponseEntity.ok(profissionais);
+    }
+    
+    @GetMapping("/buscar-por-especialidade")
+    public ResponseEntity<List<ProfissionalResponse>> buscarPorEspecialidade(@RequestParam String especialidade) {
+        log.debug("Buscando profissionais por especialidade: {} no tenant", especialidade);
+        List<ProfissionalResponse> profissionais = profissionalService.buscarPorEspecialidade(especialidade)
+                .stream()
+                .map(ProfissionalResponse::fromEntity)
+                .toList();
+        return ResponseEntity.ok(profissionais);
+    }
 }

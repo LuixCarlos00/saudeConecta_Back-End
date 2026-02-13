@@ -34,6 +34,7 @@
             <column name="formacao" type="VARCHAR(200)"/>
             <column name="instituicao" type="VARCHAR(200)"/>
             <column name="tempo_consulta_minutos" type="INT" defaultValue="30"/>
+            <column name="valor_consulta" type="DECIMAL(10,2)"/>
             <column name="usuario_id" type="BIGINT"/>
             <column name="endereco_id" type="BIGINT"/>
             <column name="status" type="VARCHAR(20)" defaultValue="ATIVO"/>

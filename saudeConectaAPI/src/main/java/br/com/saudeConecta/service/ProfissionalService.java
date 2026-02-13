@@ -317,78 +317,61 @@ public class ProfissionalService {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // ========== MÉTODOS DE BUSCA PARA AUTOCOMPLETE ==========
+    
     @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<Profissional> buscarPorNome(String nome) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.debug("Buscando profissionais por nome: {} na organização: {}", nome, orgId);
+        return profissionalRepository.findByOrganizacaoIdAndNomeContaining(orgId, nome);
+    }
+    
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<Profissional> buscarPorCRM(String crm) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.debug("Buscando profissionais por CRM: {} na organização: {}", crm, orgId);
+        return profissionalRepository.findByOrganizacaoIdAndCrmContaining(orgId, crm);
+    }
+    
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<Profissional> buscarPorCidade(String cidade) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.debug("Buscando profissionais por cidade: {} na organização: {}", cidade, orgId);
+        return profissionalRepository.findByOrganizacaoIdAndCidadeContaining(orgId, cidade);
+    }
+    
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<Profissional> buscarPorEspecialidade(String especialidade) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.debug("Buscando profissionais por especialidade: {} na organização: {}", especialidade, orgId);
+        return profissionalRepository.findByOrganizacaoIdAndEspecialidadeContaining(orgId, especialidade);
+    }
+    
+    @RequiresTenant
+    @Transactional(readOnly = true)
     public List<Profissional> buscarTodos() {
         Long orgId = tenantHelper.getCurrentTenantId();
-        return profissionalRepository.findByOrganizacao_Id(orgId);
+        log.debug("Buscando todos os profissionais na organização: {}", orgId);
+        return profissionalRepository.findByOrganizacao_IdWithUsuario(orgId);
     }
-
-    @RequiresTenant
-    public Page<Profissional> buscarTodos(Pageable pageable) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return profissionalRepository.findByOrganizacao_Id(orgId, pageable);
-    }
-
-    @RequiresTenant
-    public Optional<Profissional> buscarPorId(Long id) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return profissionalRepository.buscarClinicoIdByOrg(id, orgId);
-    }
-
-    @RequiresTenant
-    public List<Profissional> buscarPorTipo(String tipoCodigo) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return profissionalRepository.findAtivosByOrganizacaoIdAndTipo(orgId, tipoCodigo);
-    }
-
-    @RequiresTenant
-    public List<Profissional> buscarMedicos() {
-        return buscarPorTipo("MEDICO");
-    }
-
-    @RequiresTenant
-    public List<Profissional> buscarDentistas() {
-        return buscarPorTipo("DENTISTA");
-    }
-
-
-
-    @RequiresTenant
-    @Transactional
-    public void deletar(Long id) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        Profissional profissional = profissionalRepository.buscarClinicoIdByOrg(id, orgId)
-            .orElseThrow(() -> new IllegalArgumentException("Profissional não encontrado"));
-        
-        profissional.setStatus(StatusProfissional.INATIVO);
-        profissionalRepository.save(profissional);
-        
-        if (profissional.getUsuario() != null) {
-            //profissional.getUsuario().setStatus((byte) 0);
-            usuarioRepository.save(profissional.getUsuario());
-        }
-        
-        log.info("Profissional ID: {} inativado com sucesso", id);
-    }
-    
-    @RequiresTenant
-    public Long contarAtivos() {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return profissionalRepository.countAtivosByOrganizacaoId(orgId);
-    }
-
-
-
-
-
-    public Long contarTodosAtivos() {
-        return profissionalRepository.countAllAtivos();
-    }
-
-    public List<Profissional> buscarTodosAtivos() {
-        return profissionalRepository.findByStatus(StatusProfissional.ATIVO);
-    }
-    
 
 
 

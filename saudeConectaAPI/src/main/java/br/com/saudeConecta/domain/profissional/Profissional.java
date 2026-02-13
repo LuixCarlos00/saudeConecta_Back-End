@@ -11,6 +11,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -75,6 +76,9 @@ public class Profissional implements Serializable, TenantAware {
     
     @Column(name = "tempo_consulta_minutos")
     private Integer tempoConsultaMinutos = 30;
+    
+    @Column(name = "valor_consulta")
+    private BigDecimal valorConsulta;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id")

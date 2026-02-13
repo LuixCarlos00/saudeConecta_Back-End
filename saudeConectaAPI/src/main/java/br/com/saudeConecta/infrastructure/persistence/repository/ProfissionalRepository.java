@@ -28,7 +28,7 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
 
 
 
-    @Query("SELECT p FROM Profissional p LEFT JOIN FETCH p.usuario WHERE p.organizacao.id = :organizacaoId")
+    @Query("SELECT p FROM Profissional p LEFT JOIN FETCH p.usuario LEFT JOIN FETCH p.tipoProfissional LEFT JOIN FETCH p.especialidades LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :organizacaoId")
     List<Profissional> findByOrganizacao_IdWithUsuario(@Param("organizacaoId") Long organizacaoId);
     
     Page<Profissional> findByOrganizacao_Id(Long organizacaoId, Pageable pageable);
@@ -99,4 +99,18 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
     Long countAllAtivos();
 
     List<Profissional> findByStatus(StatusProfissional status);
+    
+    // ========== MÉTODOS DE BUSCA PARA AUTOCOMPLETE ==========
+    
+    @Query("SELECT p FROM Profissional p LEFT JOIN FETCH p.tipoProfissional LEFT JOIN FETCH p.especialidades LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId AND LOWER(p.nome) LIKE LOWER(CONCAT('%', :nome, '%'))")
+    List<Profissional> findByOrganizacaoIdAndNomeContaining(@Param("orgId") Long orgId, @Param("nome") String nome);
+    
+    @Query("SELECT p FROM Profissional p LEFT JOIN FETCH p.tipoProfissional LEFT JOIN FETCH p.especialidades LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId AND LOWER(p.registroConselho) LIKE LOWER(CONCAT('%', :crm, '%'))")
+    List<Profissional> findByOrganizacaoIdAndCrmContaining(@Param("orgId") Long orgId, @Param("crm") String crm);
+    
+    @Query("SELECT p FROM Profissional p LEFT JOIN FETCH p.tipoProfissional LEFT JOIN FETCH p.especialidades LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId AND LOWER(p.endereco.endMunicipio) LIKE LOWER(CONCAT('%', :cidade, '%'))")
+    List<Profissional> findByOrganizacaoIdAndCidadeContaining(@Param("orgId") Long orgId, @Param("cidade") String cidade);
+    
+    @Query("SELECT p FROM Profissional p LEFT JOIN FETCH p.tipoProfissional LEFT JOIN FETCH p.especialidades LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId AND EXISTS (SELECT 1 FROM p.especialidades e WHERE LOWER(e.nome) LIKE LOWER(CONCAT('%', :especialidade, '%')))")
+    List<Profissional> findByOrganizacaoIdAndEspecialidadeContaining(@Param("orgId") Long orgId, @Param("especialidade") String especialidade);
 }
