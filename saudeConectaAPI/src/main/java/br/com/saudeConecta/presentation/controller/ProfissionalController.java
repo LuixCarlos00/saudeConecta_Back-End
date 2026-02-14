@@ -217,12 +217,13 @@ public class ProfissionalController {
 //        return ResponseEntity.ok(response);
 //    }
 
-    // ========== MÉTODOS DE BUSCA PARA AUTOCOMPLETE ==========
+    // ========== MÉTODOS DE BUSCA PARA AUTOCOMPLETE COM FILTRO OPCIONAL ==========
     
     @GetMapping
-    public ResponseEntity<List<ProfissionalResponse>> buscarTodos() {
-        log.debug("Buscando todos os profissionais do tenant");
-        List<ProfissionalResponse> profissionais = profissionalService.buscarTodos()
+    public ResponseEntity<List<ProfissionalResponse>> buscarTodos(
+            @RequestParam(required = false, defaultValue = "ALL") String filtro) {
+        log.debug("Buscando todos os profissionais do tenant com filtro: {}", filtro);
+        List<ProfissionalResponse> profissionais = profissionalService.buscarTodosComFiltro(filtro)
                 .stream()
                 .map(ProfissionalResponse::fromEntity)
                 .toList();
@@ -230,9 +231,11 @@ public class ProfissionalController {
     }
     
     @GetMapping("/buscar-por-nome")
-    public ResponseEntity<List<ProfissionalResponse>> buscarPorNome(@RequestParam String nome) {
-        log.debug("Buscando profissionais por nome: {} no tenant", nome);
-        List<ProfissionalResponse> profissionais = profissionalService.buscarPorNome(nome)
+    public ResponseEntity<List<ProfissionalResponse>> buscarPorNome(
+            @RequestParam String nome, 
+            @RequestParam(required = false, defaultValue = "ALL") String filtro) {
+        log.debug("Buscando profissionais por nome: {} no tenant com filtro: {}", nome, filtro);
+        List<ProfissionalResponse> profissionais = profissionalService.buscarPorNomeComFiltro(nome, filtro)
                 .stream()
                 .map(ProfissionalResponse::fromEntity)
                 .toList();
@@ -240,9 +243,11 @@ public class ProfissionalController {
     }
     
     @GetMapping("/buscar-por-crm")
-    public ResponseEntity<List<ProfissionalResponse>> buscarPorCRM(@RequestParam String crm) {
-        log.debug("Buscando profissionais por CRM: {} no tenant", crm);
-        List<ProfissionalResponse> profissionais = profissionalService.buscarPorCRM(crm)
+    public ResponseEntity<List<ProfissionalResponse>> buscarPorCRM(
+            @RequestParam String crm, 
+            @RequestParam(required = false, defaultValue = "ALL") String filtro) {
+        log.debug("Buscando profissionais por CRM: {} no tenant com filtro: {}", crm, filtro);
+        List<ProfissionalResponse> profissionais = profissionalService.buscarPorCRMComFiltro(crm, filtro)
                 .stream()
                 .map(ProfissionalResponse::fromEntity)
                 .toList();
@@ -250,9 +255,11 @@ public class ProfissionalController {
     }
     
     @GetMapping("/buscar-por-cidade")
-    public ResponseEntity<List<ProfissionalResponse>> buscarPorCidade(@RequestParam String cidade) {
-        log.debug("Buscando profissionais por cidade: {} no tenant", cidade);
-        List<ProfissionalResponse> profissionais = profissionalService.buscarPorCidade(cidade)
+    public ResponseEntity<List<ProfissionalResponse>> buscarPorCidade(
+            @RequestParam String cidade, 
+            @RequestParam(required = false, defaultValue = "ALL") String filtro) {
+        log.debug("Buscando profissionais por cidade: {} no tenant com filtro: {}", cidade, filtro);
+        List<ProfissionalResponse> profissionais = profissionalService.buscarPorCidadeComFiltro(cidade, filtro)
                 .stream()
                 .map(ProfissionalResponse::fromEntity)
                 .toList();
@@ -260,9 +267,11 @@ public class ProfissionalController {
     }
     
     @GetMapping("/buscar-por-especialidade")
-    public ResponseEntity<List<ProfissionalResponse>> buscarPorEspecialidade(@RequestParam String especialidade) {
-        log.debug("Buscando profissionais por especialidade: {} no tenant", especialidade);
-        List<ProfissionalResponse> profissionais = profissionalService.buscarPorEspecialidade(especialidade)
+    public ResponseEntity<List<ProfissionalResponse>> buscarPorEspecialidade(
+            @RequestParam String especialidade, 
+            @RequestParam(required = false, defaultValue = "ALL") String filtro) {
+        log.debug("Buscando profissionais por especialidade: {} no tenant com filtro: {}", especialidade, filtro);
+        List<ProfissionalResponse> profissionais = profissionalService.buscarPorEspecialidadeComFiltro(especialidade, filtro)
                 .stream()
                 .map(ProfissionalResponse::fromEntity)
                 .toList();

@@ -113,4 +113,49 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
     
     @Query("SELECT p FROM Profissional p LEFT JOIN FETCH p.tipoProfissional LEFT JOIN FETCH p.especialidades LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId AND EXISTS (SELECT 1 FROM p.especialidades e WHERE LOWER(e.nome) LIKE LOWER(CONCAT('%', :especialidade, '%')))")
     List<Profissional> findByOrganizacaoIdAndEspecialidadeContaining(@Param("orgId") Long orgId, @Param("especialidade") String especialidade);
+    
+    // ========== MÉTODOS COM FILTRO DE STATUS ==========
+    
+    @Query("SELECT p FROM Profissional p LEFT JOIN FETCH p.tipoProfissional LEFT JOIN FETCH p.especialidades LEFT JOIN FETCH p.endereco LEFT JOIN FETCH p.usuario WHERE p.organizacao.id = :orgId " +
+           "AND (:filtro = 'ALL' OR p.status = :status)")
+    List<Profissional> findByOrganizacao_IdWithUsuarioWithFiltro(
+        @Param("orgId") Long orgId, 
+        @Param("filtro") String filtro,
+        @Param("status") StatusProfissional status);
+    
+    @Query("SELECT p FROM Profissional p LEFT JOIN FETCH p.tipoProfissional LEFT JOIN FETCH p.especialidades LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
+           "AND LOWER(p.nome) LIKE LOWER(CONCAT('%', :nome, '%')) " +
+           "AND (:filtro = 'ALL' OR p.status = :status)")
+    List<Profissional> findByOrganizacaoIdAndNomeContainingWithFiltro(
+        @Param("orgId") Long orgId, 
+        @Param("nome") String nome,
+        @Param("filtro") String filtro,
+        @Param("status") StatusProfissional status);
+    
+    @Query("SELECT p FROM Profissional p LEFT JOIN FETCH p.tipoProfissional LEFT JOIN FETCH p.especialidades LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
+           "AND LOWER(p.registroConselho) LIKE LOWER(CONCAT('%', :crm, '%')) " +
+           "AND (:filtro = 'ALL' OR p.status = :status)")
+    List<Profissional> findByOrganizacaoIdAndCrmContainingWithFiltro(
+        @Param("orgId") Long orgId, 
+        @Param("crm") String crm,
+        @Param("filtro") String filtro,
+        @Param("status") StatusProfissional status);
+    
+    @Query("SELECT p FROM Profissional p LEFT JOIN FETCH p.tipoProfissional LEFT JOIN FETCH p.especialidades LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
+           "AND LOWER(p.endereco.endMunicipio) LIKE LOWER(CONCAT('%', :cidade, '%')) " +
+           "AND (:filtro = 'ALL' OR p.status = :status)")
+    List<Profissional> findByOrganizacaoIdAndCidadeContainingWithFiltro(
+        @Param("orgId") Long orgId, 
+        @Param("cidade") String cidade,
+        @Param("filtro") String filtro,
+        @Param("status") StatusProfissional status);
+    
+    @Query("SELECT p FROM Profissional p LEFT JOIN FETCH p.tipoProfissional LEFT JOIN FETCH p.especialidades LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
+           "AND EXISTS (SELECT 1 FROM p.especialidades e WHERE LOWER(e.nome) LIKE LOWER(CONCAT('%', :especialidade, '%'))) " +
+           "AND (:filtro = 'ALL' OR p.status = :status)")
+    List<Profissional> findByOrganizacaoIdAndEspecialidadeContainingWithFiltro(
+        @Param("orgId") Long orgId, 
+        @Param("especialidade") String especialidade,
+        @Param("filtro") String filtro,
+        @Param("status") StatusProfissional status);
 }

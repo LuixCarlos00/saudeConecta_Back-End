@@ -191,6 +191,7 @@ public class ProfissionalService {
         profissional.setEmail(dadosAtualizados.email());
         profissional.setFormacao(dadosAtualizados.formacao());
         profissional.setInstituicao(dadosAtualizados.instituicao());
+        profissional.setValorConsulta(dadosAtualizados.valorConsulta());
         profissional.setTempoConsultaMinutos(dadosAtualizados.tempoConsultaMinutos());
         profissional.setDataNascimento(dadosAtualizados.dataNascimento());
 
@@ -331,46 +332,106 @@ public class ProfissionalService {
 
 
 
-    // ========== MÉTODOS DE BUSCA PARA AUTOCOMPLETE ==========
+    // ========== MÉTODOS DE BUSCA PARA AUTOCOMPLETE COM FILTRO ==========
     
     @RequiresTenant
     @Transactional(readOnly = true)
     public List<Profissional> buscarPorNome(String nome) {
+        return buscarPorNomeComFiltro(nome, "ALL");
+    }
+    
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<Profissional> buscarPorNomeComFiltro(String nome, String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando profissionais por nome: {} na organização: {}", nome, orgId);
-        return profissionalRepository.findByOrganizacaoIdAndNomeContaining(orgId, nome);
+        log.debug("Buscando profissionais por nome: {} na organização: {} com filtro: {}", nome, orgId, filtro);
+        
+        if ("ATIVO".equals(filtro)) {
+            return profissionalRepository.findByOrganizacaoIdAndNomeContainingWithFiltro(orgId, nome, filtro, StatusProfissional.ATIVO);
+        } else {
+            // ALL - usa consulta original
+            return profissionalRepository.findByOrganizacaoIdAndNomeContaining(orgId, nome);
+        }
     }
     
     @RequiresTenant
     @Transactional(readOnly = true)
     public List<Profissional> buscarPorCRM(String crm) {
+        return buscarPorCRMComFiltro(crm, "ALL");
+    }
+    
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<Profissional> buscarPorCRMComFiltro(String crm, String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando profissionais por CRM: {} na organização: {}", crm, orgId);
-        return profissionalRepository.findByOrganizacaoIdAndCrmContaining(orgId, crm);
+        log.debug("Buscando profissionais por CRM: {} na organização: {} com filtro: {}", crm, orgId, filtro);
+        
+        if ("ATIVO".equals(filtro)) {
+            return profissionalRepository.findByOrganizacaoIdAndCrmContainingWithFiltro(orgId, crm, filtro, StatusProfissional.ATIVO);
+        } else {
+            // ALL - usa consulta original
+            return profissionalRepository.findByOrganizacaoIdAndCrmContaining(orgId, crm);
+        }
     }
     
     @RequiresTenant
     @Transactional(readOnly = true)
     public List<Profissional> buscarPorCidade(String cidade) {
+        return buscarPorCidadeComFiltro(cidade, "ALL");
+    }
+    
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<Profissional> buscarPorCidadeComFiltro(String cidade, String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando profissionais por cidade: {} na organização: {}", cidade, orgId);
-        return profissionalRepository.findByOrganizacaoIdAndCidadeContaining(orgId, cidade);
+        log.debug("Buscando profissionais por cidade: {} na organização: {} com filtro: {}", cidade, orgId, filtro);
+        
+        if ("ATIVO".equals(filtro)) {
+            return profissionalRepository.findByOrganizacaoIdAndCidadeContainingWithFiltro(orgId, cidade, filtro, StatusProfissional.ATIVO);
+        } else {
+            // ALL - usa consulta original
+            return profissionalRepository.findByOrganizacaoIdAndCidadeContaining(orgId, cidade);
+        }
     }
     
     @RequiresTenant
     @Transactional(readOnly = true)
     public List<Profissional> buscarPorEspecialidade(String especialidade) {
+        return buscarPorEspecialidadeComFiltro(especialidade, "ALL");
+    }
+    
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<Profissional> buscarPorEspecialidadeComFiltro(String especialidade, String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando profissionais por especialidade: {} na organização: {}", especialidade, orgId);
-        return profissionalRepository.findByOrganizacaoIdAndEspecialidadeContaining(orgId, especialidade);
+        log.debug("Buscando profissionais por especialidade: {} na organização: {} com filtro: {}", especialidade, orgId, filtro);
+        
+        if ("ATIVO".equals(filtro)) {
+            return profissionalRepository.findByOrganizacaoIdAndEspecialidadeContainingWithFiltro(orgId, especialidade, filtro, StatusProfissional.ATIVO);
+        } else {
+            // ALL - usa consulta original
+            return profissionalRepository.findByOrganizacaoIdAndEspecialidadeContaining(orgId, especialidade);
+        }
     }
     
     @RequiresTenant
     @Transactional(readOnly = true)
     public List<Profissional> buscarTodos() {
+        return buscarTodosComFiltro("ALL");
+    }
+    
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<Profissional> buscarTodosComFiltro(String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando todos os profissionais na organização: {}", orgId);
-        return profissionalRepository.findByOrganizacao_IdWithUsuario(orgId);
+        log.debug("Buscando todos os profissionais na organização: {} com filtro: {}", orgId, filtro);
+        
+        if ("ATIVO".equals(filtro)) {
+            return profissionalRepository.findByOrganizacao_IdWithUsuarioWithFiltro(orgId, filtro, StatusProfissional.ATIVO);
+        } else {
+            // ALL - usa consulta original
+            return profissionalRepository.findByOrganizacao_IdWithUsuario(orgId);
+        }
     }
 
 

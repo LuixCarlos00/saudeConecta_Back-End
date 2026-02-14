@@ -16,7 +16,6 @@ public record AgendarConsultaRequest(
     Long especialidadeId,
     
     @NotNull(message = "Data e hora são obrigatórios")
-    @Future(message = "Data deve ser futura")
     LocalDateTime dataHora,
     
     Integer duracaoMinutos,

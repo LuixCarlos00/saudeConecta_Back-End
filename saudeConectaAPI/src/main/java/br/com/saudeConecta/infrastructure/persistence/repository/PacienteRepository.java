@@ -14,18 +14,11 @@ import java.util.Optional;
 @Repository
 public interface PacienteRepository extends JpaRepository<Paciente, Long> {
     
-    // Métodos legados (sem tenant)
-    Optional<Paciente> findByPaciEmail(String email);
-    List<Paciente> findByPaciCpfContainingIgnoreCase(String cpf);
-    List<Paciente> findByPaciRgContainingIgnoreCase(String rg);
-    List<Paciente> findByPaciTelefoneContainingIgnoreCase(String telefone);
-    List<Paciente> findByPaciNomeContainingIgnoreCase(String nome);
-    
+
     // Métodos com tenant (multi-tenant)
     @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId")
     List<Paciente> findByOrganizacao_Id(@Param("orgId") Long organizacaoId);
     
-    Page<Paciente> findByOrganizacao_Id(Long organizacaoId, Pageable pageable);
 
     @Query("SELECT p FROM Paciente p " +
             "LEFT JOIN FETCH p.endereco " +
@@ -39,28 +32,84 @@ public interface PacienteRepository extends JpaRepository<Paciente, Long> {
            "AND LOWER(p.paciNome) LIKE LOWER(CONCAT('%', :nome, '%'))")
     List<Paciente> findByOrganizacaoIdAndNomeContaining(
         @Param("orgId") Long orgId, @Param("nome") String nome);
-    
+
+
+
     @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
            "AND LOWER(p.paciCpf) LIKE LOWER(CONCAT('%', :cpf, '%'))")
     List<Paciente> findByOrganizacaoIdAndCpfContaining(
         @Param("orgId") Long orgId, @Param("cpf") String cpf);
-    
+
+
+
     @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
            "AND LOWER(p.paciRg) LIKE LOWER(CONCAT('%', :rg, '%'))")
     List<Paciente> findByOrganizacaoIdAndRgContaining(
         @Param("orgId") Long orgId, @Param("rg") String rg);
-    
+
+
+
     @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
            "AND LOWER(p.paciTelefone) LIKE LOWER(CONCAT('%', :telefone, '%'))")
     List<Paciente> findByOrganizacaoIdAndTelefoneContaining(
         @Param("orgId") Long orgId, @Param("telefone") String telefone);
-    
-    @Query("SELECT COUNT(p) FROM Paciente p WHERE p.organizacao.id = :orgId AND p.paciStatus = :status")
-    Long countByOrganizacaoIdAndStatus(@Param("orgId") Long orgId, @Param("status") String status);
-    
-    Optional<Paciente> findByPaciCpfAndOrganizacao_Id(String cpf, Long orgId);
-    
+
+
+
     boolean existsByPaciCpfAndOrganizacao_Id(String cpf, Long orgId);
     
-    Optional<Paciente> findByPaciEmailAndOrganizacao_Id(String email, Long orgId);
+
+
+
+    // Métodos com filtro de status
+    @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
+           "AND (:filtro = 'ALL' OR p.paciStatus = :status)")
+    List<Paciente> findByOrganizacao_IdWithFiltro(
+        @Param("orgId") Long orgId, 
+        @Param("filtro") String filtro,
+        @Param("status") String status);
+
+
+
+    @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
+           "AND LOWER(p.paciNome) LIKE LOWER(CONCAT('%', :nome, '%')) " +
+           "AND (:filtro = 'ALL' OR p.paciStatus = :status)")
+    List<Paciente> findByOrganizacaoIdAndNomeContainingWithFiltro(
+        @Param("orgId") Long orgId, 
+        @Param("nome") String nome,
+        @Param("filtro") String filtro,
+        @Param("status") String status);
+
+
+
+    @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
+           "AND LOWER(p.paciCpf) LIKE LOWER(CONCAT('%', :cpf, '%')) " +
+           "AND (:filtro = 'ALL' OR p.paciStatus = :status)")
+    List<Paciente> findByOrganizacaoIdAndCpfContainingWithFiltro(
+        @Param("orgId") Long orgId, 
+        @Param("cpf") String cpf,
+        @Param("filtro") String filtro,
+        @Param("status") String status);
+
+
+
+    @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
+           "AND LOWER(p.paciRg) LIKE LOWER(CONCAT('%', :rg, '%')) " +
+           "AND (:filtro = 'ALL' OR p.paciStatus = :status)")
+    List<Paciente> findByOrganizacaoIdAndRgContainingWithFiltro(
+        @Param("orgId") Long orgId, 
+        @Param("rg") String rg,
+        @Param("filtro") String filtro,
+        @Param("status") String status);
+
+
+
+    @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
+           "AND LOWER(p.paciTelefone) LIKE LOWER(CONCAT('%', :telefone, '%')) " +
+           "AND (:filtro = 'ALL' OR p.paciStatus = :status)")
+    List<Paciente> findByOrganizacaoIdAndTelefoneContainingWithFiltro(
+        @Param("orgId") Long orgId, 
+        @Param("telefone") String telefone,
+        @Param("filtro") String filtro,
+        @Param("status") String status);
 }
