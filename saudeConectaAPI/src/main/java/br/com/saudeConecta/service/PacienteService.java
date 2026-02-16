@@ -354,46 +354,83 @@ public class PacienteService  {
 //     * @throws IllegalArgumentException se paciente não for encontrado
 //     */
 
-    // ========== MÉTODOS DE BUSCA PARA AUTOCOMPLETE ==========
+    // ========== MÉTODOS DE BUSCA PARA AUTOCOMPLETE COM FILTRO ==========
     
+
     @RequiresTenant
     @Transactional(readOnly = true)
-    public List<Paciente> buscarListaPacientesPorNome(String pesquisa) {
+    public List<Paciente> buscarListaPacientesPorNomeComFiltro(String pesquisa, String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando pacientes por nome: {} na organização: {}", pesquisa, orgId);
-        return pacienteRepository.findByOrganizacaoIdAndNomeContaining(orgId, pesquisa);
+        log.debug("Buscando pacientes por nome: {} na organização: {} com filtro: {}", pesquisa, orgId, filtro);
+        
+        if ("ATIVO".equals(filtro)) {
+            return pacienteRepository.findByOrganizacaoIdAndNomeContainingWithFiltro(orgId, pesquisa, filtro, "ATIVO");
+        } else {
+            // ALL - usa consulta original
+            return pacienteRepository.findByOrganizacaoIdAndNomeContaining(orgId, pesquisa);
+        }
     }
     
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public List<Paciente> buscarListaPacientesPorCPF(String pesquisa) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando pacientes por CPF: {} na organização: {}", pesquisa, orgId);
-        return pacienteRepository.findByOrganizacaoIdAndCpfContaining(orgId, pesquisa);
-    }
+
     
     @RequiresTenant
     @Transactional(readOnly = true)
-    public List<Paciente> buscarListaPacientesPorRG(String pesquisa) {
+    public List<Paciente> buscarListaPacientesPorCPFComFiltro(String pesquisa, String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando pacientes por RG: {} na organização: {}", pesquisa, orgId);
-        return pacienteRepository.findByOrganizacaoIdAndRgContaining(orgId, pesquisa);
+        log.debug("Buscando pacientes por CPF: {} na organização: {} com filtro: {}", pesquisa, orgId, filtro);
+        
+        if ("ATIVO".equals(filtro)) {
+            return pacienteRepository.findByOrganizacaoIdAndCpfContainingWithFiltro(orgId, pesquisa, filtro, "ATIVO");
+        } else {
+            // ALL - usa consulta original
+            return pacienteRepository.findByOrganizacaoIdAndCpfContaining(orgId, pesquisa);
+        }
     }
+    
+
     
     @RequiresTenant
     @Transactional(readOnly = true)
-    public List<Paciente> buscarListaPacientesPorTelefone(String pesquisa) {
+    public List<Paciente> buscarListaPacientesPorRGComFiltro(String pesquisa, String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando pacientes por telefone: {} na organização: {}", pesquisa, orgId);
-        return pacienteRepository.findByOrganizacaoIdAndTelefoneContaining(orgId, pesquisa);
+        log.debug("Buscando pacientes por RG: {} na organização: {} com filtro: {}", pesquisa, orgId, filtro);
+        
+        if ("ATIVO".equals(filtro)) {
+            return pacienteRepository.findByOrganizacaoIdAndRgContainingWithFiltro(orgId, pesquisa, filtro, "ATIVO");
+        } else {
+            // ALL - usa consulta original
+            return pacienteRepository.findByOrganizacaoIdAndRgContaining(orgId, pesquisa);
+        }
     }
+    
+
     
     @RequiresTenant
     @Transactional(readOnly = true)
-    public List<Paciente> buscarTodosPacientes() {
+    public List<Paciente> buscarListaPacientesPorTelefoneComFiltro(String pesquisa, String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando todos os pacientes na organização: {}", orgId);
-        return pacienteRepository.findByOrganizacao_Id(orgId);
+        log.debug("Buscando pacientes por telefone: {} na organização: {} com filtro: {}", pesquisa, orgId, filtro);
+        
+        if ("ATIVO".equals(filtro)) {
+            return pacienteRepository.findByOrganizacaoIdAndTelefoneContainingWithFiltro(orgId, pesquisa, filtro, "ATIVO");
+        } else {
+            // ALL - usa consulta original
+            return pacienteRepository.findByOrganizacaoIdAndTelefoneContaining(orgId, pesquisa);
+        }
+    }
+
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<Paciente> buscarTodosPacientesComFiltro(String filtro) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.debug("Buscando todos os pacientes na organização: {} com filtro: {}", orgId, filtro);
+        
+        if ("ATIVO".equals(filtro)) {
+            return pacienteRepository.findByOrganizacao_IdWithFiltro(orgId, filtro, "ATIVO");
+        } else {
+            // ALL - usa consulta original
+            return pacienteRepository.findByOrganizacao_Id(orgId);
+        }
     }
 
 

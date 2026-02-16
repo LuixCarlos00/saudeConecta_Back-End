@@ -105,11 +105,13 @@ public class PacienteApiController {
         }
     }
 
-    // Métodos de busca para autocomplete
+    // Métodos de busca para autocomplete com filtro opcional
     @GetMapping("/buscar-por-nome")
-    public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPorNome(@RequestParam String nome) {
-        log.debug("Buscando pacientes por nome: {} no tenant", nome);
-        List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorNome(nome)
+    public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPorNome(
+            @RequestParam String nome, 
+            @RequestParam(required = false, defaultValue = "ALL") String filtro) {
+        log.debug("Buscando pacientes por nome: {} no tenant com filtro: {}", nome, filtro);
+        List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorNomeComFiltro(nome, filtro)
                 .stream()
                 .map(PacienteResponse::new)
                 .toList();
@@ -117,9 +119,11 @@ public class PacienteApiController {
     }
 
     @GetMapping("/buscar-por-cpf")
-    public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPorCPF(@RequestParam String cpf) {
-        log.debug("Buscando pacientes por CPF: {} no tenant", cpf);
-        List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorCPF(cpf)
+    public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPorCPF(
+            @RequestParam String cpf, 
+            @RequestParam(required = false, defaultValue = "ALL") String filtro) {
+        log.debug("Buscando pacientes por CPF: {} no tenant com filtro: {}", cpf, filtro);
+        List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorCPFComFiltro(cpf, filtro)
                 .stream()
                 .map(PacienteResponse::new)
                 .toList();
@@ -127,9 +131,11 @@ public class PacienteApiController {
     }
 
     @GetMapping("/buscar-por-rg")
-    public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPor_RG(@RequestParam String rg) {
-        log.debug("Buscando pacientes por RG: {} no tenant", rg);
-        List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorRG(rg)
+    public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPor_RG(
+            @RequestParam String rg, 
+            @RequestParam(required = false, defaultValue = "ALL") String filtro) {
+        log.debug("Buscando pacientes por RG: {} no tenant com filtro: {}", rg, filtro);
+        List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorRGComFiltro(rg, filtro)
                 .stream()
                 .map(PacienteResponse::new)
                 .toList();
@@ -137,9 +143,11 @@ public class PacienteApiController {
     }
 
     @GetMapping("/buscar-por-telefone")
-    public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPorTelefone(@RequestParam String telefone) {
-        log.debug("Buscando pacientes por telefone: {} no tenant", telefone);
-        List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorTelefone(telefone)
+    public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPorTelefone(
+            @RequestParam String telefone, 
+            @RequestParam(required = false, defaultValue = "ALL") String filtro) {
+        log.debug("Buscando pacientes por telefone: {} no tenant com filtro: {}", telefone, filtro);
+        List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorTelefoneComFiltro(telefone, filtro)
                 .stream()
                 .map(PacienteResponse::new)
                 .toList();
@@ -147,9 +155,10 @@ public class PacienteApiController {
     }
 
     @GetMapping("/buscar-todos")
-    public ResponseEntity<List<PacienteResponse>> buscarTodosPacientes() {
-        log.debug("Buscando todos os pacientes do tenant");
-        List<PacienteResponse> pacientes = pacienteService.buscarTodosPacientes()
+    public ResponseEntity<List<PacienteResponse>> buscarTodosPacientes(
+            @RequestParam(required = false, defaultValue = "ALL") String filtro) {
+        log.debug("Buscando todos os pacientes do tenant com filtro: {}", filtro);
+        List<PacienteResponse> pacientes = pacienteService.buscarTodosPacientesComFiltro(filtro)
                 .stream()
                 .map(PacienteResponse::new)
                 .toList();

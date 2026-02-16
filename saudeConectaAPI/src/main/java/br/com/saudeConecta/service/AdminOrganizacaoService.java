@@ -67,8 +67,6 @@ public class AdminOrganizacaoService {
     public AdminOrganizacao cadastrarAdminByOrg(CadastrarAdminRequest request, Long organizacaoId) {
         log.info("Cadastrando administrador: {} para organização ID: {}", request.nome(), organizacaoId);
 
-        // Verifica se CPF já existe como login
-        //Todo Colocar validação de CPF de login na tabela de usuários nao da entidade
         if (usuarioRepository.existsByLogin(request.cpf())) {
             log.warn("CPF já cadastrado como login: {}", request.cpf());
             throw new IllegalStateException("CPF já cadastrado no sistema");
