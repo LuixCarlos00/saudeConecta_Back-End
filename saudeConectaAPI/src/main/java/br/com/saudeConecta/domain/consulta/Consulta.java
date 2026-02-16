@@ -112,21 +112,13 @@ public class Consulta implements Serializable, TenantAware {
         return StatusConsulta.AGENDADA.equals(this.status);
     }
     
-    public boolean isConfirmada() {
-        return StatusConsulta.CONFIRMADA.equals(this.status);
-    }
-    
-    public boolean isCancelada() {
-        return StatusConsulta.CANCELADA.equals(this.status);
-    }
-    
+
+
     public boolean isRealizada() {
         return StatusConsulta.REALIZADA.equals(this.status);
     }
     
-    public boolean podeSerCancelada() {
-        return isAgendada() || isConfirmada();
-    }
+
     
     public LocalDateTime getDataHoraFim() {
         return this.dataHora.plusMinutes(this.duracaoMinutos != null ? this.duracaoMinutos : 30);

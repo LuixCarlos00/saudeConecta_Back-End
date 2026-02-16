@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -37,8 +38,11 @@ public record ProfissionalResponse(
 
         String formacao,
         String instituicao,
+
+        BigDecimal valorConsulta,
         Integer tempoConsultaMinutos,
         String status,
+
 
         @NotNull(message = "Especialidades são obrigatórias")
         List<EspecialidadeResumo> especialidades,
@@ -61,12 +65,14 @@ public record ProfissionalResponse(
                 p.getTelefone(),
                 p.getFormacao(),
                 p.getInstituicao(),
+                p.getValorConsulta(),
                 p.getTempoConsultaMinutos(),
                 p.getStatus() != null ? p.getStatus().name() : null,
                 p.getEspecialidades().stream()
                         .map(e -> new EspecialidadeResumo(e.getId(), e.getNome()))
                         .toList(),
                 p.getEndereco() != null ? new EnderecoResponse(p.getEndereco()) : null
+
         );
     }
 

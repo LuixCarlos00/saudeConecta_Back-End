@@ -22,7 +22,8 @@ public interface PacienteRepository extends JpaRepository<Paciente, Long> {
     List<Paciente> findByPaciNomeContainingIgnoreCase(String nome);
     
     // Métodos com tenant (multi-tenant)
-    List<Paciente> findByOrganizacao_Id(Long organizacaoId);
+    @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId")
+    List<Paciente> findByOrganizacao_Id(@Param("orgId") Long organizacaoId);
     
     Page<Paciente> findByOrganizacao_Id(Long organizacaoId, Pageable pageable);
 
@@ -34,10 +35,25 @@ public interface PacienteRepository extends JpaRepository<Paciente, Long> {
             @Param("orgId") Long orgId
     );
     
-    @Query("SELECT p FROM Paciente p WHERE p.organizacao.id = :orgId " +
+    @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
            "AND LOWER(p.paciNome) LIKE LOWER(CONCAT('%', :nome, '%'))")
     List<Paciente> findByOrganizacaoIdAndNomeContaining(
         @Param("orgId") Long orgId, @Param("nome") String nome);
+    
+    @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
+           "AND LOWER(p.paciCpf) LIKE LOWER(CONCAT('%', :cpf, '%'))")
+    List<Paciente> findByOrganizacaoIdAndCpfContaining(
+        @Param("orgId") Long orgId, @Param("cpf") String cpf);
+    
+    @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
+           "AND LOWER(p.paciRg) LIKE LOWER(CONCAT('%', :rg, '%'))")
+    List<Paciente> findByOrganizacaoIdAndRgContaining(
+        @Param("orgId") Long orgId, @Param("rg") String rg);
+    
+    @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
+           "AND LOWER(p.paciTelefone) LIKE LOWER(CONCAT('%', :telefone, '%'))")
+    List<Paciente> findByOrganizacaoIdAndTelefoneContaining(
+        @Param("orgId") Long orgId, @Param("telefone") String telefone);
     
     @Query("SELECT COUNT(p) FROM Paciente p WHERE p.organizacao.id = :orgId AND p.paciStatus = :status")
     Long countByOrganizacaoIdAndStatus(@Param("orgId") Long orgId, @Param("status") String status);

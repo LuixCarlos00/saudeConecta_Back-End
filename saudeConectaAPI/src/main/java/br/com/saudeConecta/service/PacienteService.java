@@ -10,7 +10,7 @@ import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepo
 import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
 import br.com.saudeConecta.presentation.dto.paciente.AtualizarPacienteRequest;
 import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteCompletoRequest;
- import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
   import org.springframework.stereotype.Service;
@@ -353,6 +353,48 @@ public class PacienteService  {
 //     * @param status 0 para inativo, 1 para ativo
 //     * @throws IllegalArgumentException se paciente não for encontrado
 //     */
+
+    // ========== MÉTODOS DE BUSCA PARA AUTOCOMPLETE ==========
+    
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<Paciente> buscarListaPacientesPorNome(String pesquisa) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.debug("Buscando pacientes por nome: {} na organização: {}", pesquisa, orgId);
+        return pacienteRepository.findByOrganizacaoIdAndNomeContaining(orgId, pesquisa);
+    }
+    
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<Paciente> buscarListaPacientesPorCPF(String pesquisa) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.debug("Buscando pacientes por CPF: {} na organização: {}", pesquisa, orgId);
+        return pacienteRepository.findByOrganizacaoIdAndCpfContaining(orgId, pesquisa);
+    }
+    
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<Paciente> buscarListaPacientesPorRG(String pesquisa) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.debug("Buscando pacientes por RG: {} na organização: {}", pesquisa, orgId);
+        return pacienteRepository.findByOrganizacaoIdAndRgContaining(orgId, pesquisa);
+    }
+    
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<Paciente> buscarListaPacientesPorTelefone(String pesquisa) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.debug("Buscando pacientes por telefone: {} na organização: {}", pesquisa, orgId);
+        return pacienteRepository.findByOrganizacaoIdAndTelefoneContaining(orgId, pesquisa);
+    }
+    
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<Paciente> buscarTodosPacientes() {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.debug("Buscando todos os pacientes na organização: {}", orgId);
+        return pacienteRepository.findByOrganizacao_Id(orgId);
+    }
 
 
 

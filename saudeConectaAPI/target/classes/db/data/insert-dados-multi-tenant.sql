@@ -118,9 +118,9 @@ INSERT INTO consulta (organizacao_id, profissional_id, paciente_id, especialidad
 -- Especialidades: 1=Cardiologia, 2=Dermatologia
 (1, 1, 1, 1, '2026-02-05 08:00:00', 30, 'Consulta de rotina cardiológica', 1, 250.00, 'AGENDADA', 5, NOW(), NOW()),
 (1, 1, 2, 1, '2026-02-05 08:30:00', 30, 'Avaliação de pressão arterial', 2, 250.00, 'AGENDADA', 5, NOW(), NOW()),
-(1, 1, 3, 1, '2026-02-05 09:00:00', 30, 'Retorno - arritmia', 1, 200.00, 'CONFIRMADA', 5, NOW(), NOW()),
+(1, 1, 3, 1, '2026-02-05 09:00:00', 30, 'Retorno - arritmia', 1, 200.00, 'AGENDADA', 5, NOW(), NOW()),
 (1, 2, 4, 2, '2026-02-05 09:00:00', 20, 'Avaliação dermatológica', 3, 180.00, 'AGENDADA', 5, NOW(), NOW()),
-(1, 2, 5, 2, '2026-02-05 09:20:00', 20, 'Procedimento estético', 1, 350.00, 'CONFIRMADA', 5, NOW(), NOW()),
+(1, 2, 5, 2, '2026-02-05 09:20:00', 20, 'Procedimento estético', 1, 350.00, 'AGENDADA', 5, NOW(), NOW()),
 (1, 1, 1, 1, '2026-02-06 08:00:00', 30, 'Retorno cardiologia', 1, 200.00, 'AGENDADA', 2, NOW(), NOW()),
 (1, 2, 2, 2, '2026-02-06 09:00:00', 20, 'Manchas na pele', 2, 180.00, 'AGENDADA', 2, NOW(), NOW()),
 -- Consultas passadas (realizadas/canceladas)
@@ -130,7 +130,7 @@ INSERT INTO consulta (organizacao_id, profissional_id, paciente_id, especialidad
 -- Org 2 - Consultório Dr. Silva (prof 3=Ortopedia, prof 4=Ortodontia - pacientes 6-10)
 -- Especialidades: 3=Ortopedia, 11=Ortodontia
 (2, 3, 6, 3, '2026-02-05 10:00:00', 40, 'Dor no joelho', 1, 200.00, 'AGENDADA', 9, NOW(), NOW()),
-(2, 3, 7, 3, '2026-02-05 10:40:00', 40, 'Lesão esportiva', 2, 200.00, 'CONFIRMADA', 9, NOW(), NOW()),
+(2, 3, 7, 3, '2026-02-05 10:40:00', 40, 'Lesão esportiva', 2, 200.00, 'AGENDADA', 9, NOW(), NOW()),
 (2, 4, 8, 11, '2026-02-05 14:00:00', 45, 'Limpeza dental', 1, 150.00, 'AGENDADA', 9, NOW(), NOW()),
 (2, 4, 9, 11, '2026-02-05 14:45:00', 45, 'Avaliação ortodôntica', 3, 200.00, 'AGENDADA', 9, NOW(), NOW()),
 (2, 3, 10, 3, '2026-02-06 10:00:00', 40, 'Retorno ortopedia', 1, 180.00, 'AGENDADA', 9, NOW(), NOW());
@@ -139,16 +139,9 @@ INSERT INTO consulta (organizacao_id, profissional_id, paciente_id, especialidad
 -- TABELA: consulta_historico
 -- ==========================================
 INSERT INTO consulta_historico (consulta_id, status_anterior, status_novo, observacao, alterado_por, created_at) VALUES
--- Histórico das consultas confirmadas
-(3, 'AGENDADA', 'CONFIRMADA', 'Paciente confirmou presença', 5, NOW()),
-(5, 'AGENDADA', 'CONFIRMADA', 'Confirmação por telefone', 5, NOW()),
-(12, 'AGENDADA', 'CONFIRMADA', 'Paciente confirmou via WhatsApp', 9, NOW()),
 -- Histórico das consultas realizadas
-(8, 'AGENDADA', 'CONFIRMADA', 'Paciente confirmou', 5, '2026-01-30 10:00:00'),
-(8, 'CONFIRMADA', 'EM_ANDAMENTO', 'Consulta iniciada', 3, '2026-02-01 08:00:00'),
-(8, 'EM_ANDAMENTO', 'REALIZADA', 'Consulta finalizada - paciente orientado', 3, '2026-02-01 08:30:00'),
-(9, 'AGENDADA', 'CONFIRMADA', 'Confirmação recebida', 5, '2026-01-30 11:00:00'),
-(9, 'CONFIRMADA', 'REALIZADA', 'Tratamento iniciado', 4, '2026-02-01 09:20:00'),
+(8, 'AGENDADA', 'REALIZADA', 'Consulta finalizada - paciente orientado', 3, '2026-02-01 08:30:00'),
+(9, 'AGENDADA', 'REALIZADA', 'Tratamento iniciado', 4, '2026-02-01 09:20:00'),
 -- Histórico da consulta cancelada
 (10, 'AGENDADA', 'CANCELADA', 'Paciente solicitou cancelamento - viagem', 5, '2026-02-01 07:00:00');
 

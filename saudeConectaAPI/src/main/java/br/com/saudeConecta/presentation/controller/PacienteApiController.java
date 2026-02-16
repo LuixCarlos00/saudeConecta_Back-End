@@ -14,6 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/pacientes")
 @RequiredArgsConstructor
@@ -101,6 +103,57 @@ public class PacienteApiController {
             log.error("Erro ao deletar paciente: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    // Métodos de busca para autocomplete
+    @GetMapping("/buscar-por-nome")
+    public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPorNome(@RequestParam String nome) {
+        log.debug("Buscando pacientes por nome: {} no tenant", nome);
+        List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorNome(nome)
+                .stream()
+                .map(PacienteResponse::new)
+                .toList();
+        return ResponseEntity.ok(pacientes);
+    }
+
+    @GetMapping("/buscar-por-cpf")
+    public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPorCPF(@RequestParam String cpf) {
+        log.debug("Buscando pacientes por CPF: {} no tenant", cpf);
+        List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorCPF(cpf)
+                .stream()
+                .map(PacienteResponse::new)
+                .toList();
+        return ResponseEntity.ok(pacientes);
+    }
+
+    @GetMapping("/buscar-por-rg")
+    public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPor_RG(@RequestParam String rg) {
+        log.debug("Buscando pacientes por RG: {} no tenant", rg);
+        List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorRG(rg)
+                .stream()
+                .map(PacienteResponse::new)
+                .toList();
+        return ResponseEntity.ok(pacientes);
+    }
+
+    @GetMapping("/buscar-por-telefone")
+    public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPorTelefone(@RequestParam String telefone) {
+        log.debug("Buscando pacientes por telefone: {} no tenant", telefone);
+        List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorTelefone(telefone)
+                .stream()
+                .map(PacienteResponse::new)
+                .toList();
+        return ResponseEntity.ok(pacientes);
+    }
+
+    @GetMapping("/buscar-todos")
+    public ResponseEntity<List<PacienteResponse>> buscarTodosPacientes() {
+        log.debug("Buscando todos os pacientes do tenant");
+        List<PacienteResponse> pacientes = pacienteService.buscarTodosPacientes()
+                .stream()
+                .map(PacienteResponse::new)
+                .toList();
+        return ResponseEntity.ok(pacientes);
     }
 
 
