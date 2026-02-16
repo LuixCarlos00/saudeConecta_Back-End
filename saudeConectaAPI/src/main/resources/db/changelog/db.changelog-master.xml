@@ -28,5 +28,8 @@
     
     <!-- Atualizar Status Usuario para VARCHAR -->
     <include file="db/changelog/changes/019-alterar-status-usuarios-varchar.xml"/>
+    
+    <!-- Configuração de Gráficos do Dashboard -->
+    <include file="db/changelog/changes/020-criar-tabela-configuracao-grafico-dashboard.xml"/>
 
 </databaseChangeLog>
