@@ -7,19 +7,15 @@ import jakarta.validation.constraints.Size;
 import java.sql.Date;
 
 public record CadastrarProntuarioRequest(
-        @NotBlank(message = "Altura não pode ser vazia")
         @Size(max = 10, message = "Altura deve ter no máximo 10 caracteres")
         String prontAltura,
         
-        @NotBlank(message = "Peso não pode ser vazio")
         @Size(max = 10, message = "Peso deve ter no máximo 10 caracteres")
         String prontPeso,
         
-        @NotBlank(message = "Temperatura não pode ser vazia")
         @Size(max = 10, message = "Temperatura deve ter no máximo 10 caracteres")
         String prontTemperatura,
         
-        @NotBlank(message = "Data de nascimento não pode ser vazia")
         @Size(max = 20, message = "Data de nascimento deve ter no máximo 20 caracteres")
         String prontDataNacimento,
         
@@ -90,9 +86,9 @@ public record CadastrarProntuarioRequest(
         String prontTempoDuracao,
         
         @NotNull(message = "ID do médico não pode ser nulo")
-        Long prontMedico,
+        Long prontCodigoMedico,
         
         @NotNull(message = "ID da consulta não pode ser nulo")
-        Long prontConsulta
+        Long consulta
 ) {
 }
