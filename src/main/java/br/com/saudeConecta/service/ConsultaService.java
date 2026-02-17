@@ -14,6 +14,8 @@ import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.presentation.dto.consulta.AgendarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.AtualizarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.CancelarConsultaRequest;
+import br.com.saudeConecta.presentation.dto.consulta.HistoricoConsultaPacienteResponse;
+import br.com.saudeConecta.domain.prontuario.Prontuario;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -39,6 +41,7 @@ public class ConsultaService {
     private final FormaPagamentoRepository formaPagamentoRepository;
     private final OrganizacaoRepository organizacaoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final ProntuarioRepository prontuarioRepository;
     private final TenantHelper tenantHelper;
     
     @RequiresTenant
@@ -709,5 +712,155 @@ public class ConsultaService {
             log.error("Erro ao verificar disponibilidade para profissional {} na data {} horário {}", medicoId, data, horario, e);
             return false;
         }
+    }
+
+    // ==========================================
+    // BUSCAR CONSULTAS POR MÉDICO E PERÍODO
+    // ==========================================
+
+    /**
+     * Busca consultas de um médico por período (diário, semanal, mensal, anual)
+     * Calcula automaticamente o intervalo de datas baseado no tipo de período
+     * 
+     * @param usuarioId ID do usuário do profissional
+     * @param tipoPeriodo Tipo do período: "diario", "semanal", "mensal", "anual"
+     * @return Lista de consultas do médico no período especificado
+     */
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<Consulta> buscarConsultasPorMedicoEPeriodo(Long usuarioId, String tipoPeriodo) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.debug("Buscando consultas para usuário {} com período {} na organização {}", 
+                  usuarioId, tipoPeriodo, orgId);
+
+        LocalDate hoje = LocalDate.now();
+        LocalDateTime inicio;
+        LocalDateTime fim;
+
+        switch (tipoPeriodo.toLowerCase()) {
+            case "diario":
+                // Hoje: 00:00:00 até 23:59:59
+                inicio = hoje.atStartOfDay();
+                fim = hoje.atTime(23, 59, 59);
+                break;
+
+            case "semanal":
+                // Semana atual: Segunda-feira até Domingo
+                LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
+                LocalDate fimSemana = inicioSemana.plusDays(6);
+                inicio = inicioSemana.atStartOfDay();
+                fim = fimSemana.atTime(23, 59, 59);
+                break;
+
+            case "mensal":
+                // Mês atual: Primeiro dia até último dia
+                LocalDate inicioMes = hoje.withDayOfMonth(1);
+                LocalDate fimMes = hoje.withDayOfMonth(hoje.lengthOfMonth());
+                inicio = inicioMes.atStartOfDay();
+                fim = fimMes.atTime(23, 59, 59);
+                break;
+
+            case "anual":
+                // Ano atual: 01/01 até 31/12
+                LocalDate inicioAno = hoje.withDayOfYear(1);
+                LocalDate fimAno = hoje.withDayOfYear(hoje.lengthOfYear());
+                inicio = inicioAno.atStartOfDay();
+                fim = fimAno.atTime(23, 59, 59);
+                break;
+
+            default:
+                log.warn("Tipo de período inválido: {}. Usando 'diario' como padrão.", tipoPeriodo);
+                inicio = hoje.atStartOfDay();
+                fim = hoje.atTime(23, 59, 59);
+        }
+
+        log.debug("Período calculado: {} até {}", inicio, fim);
+        return consultaRepository.findConsultasPorMedicoEPeriodo(orgId, usuarioId, inicio, fim);
+    }
+
+    /**
+     * Busca histórico completo de consultas de um paciente
+     * Inclui dados da consulta, paciente, profissional e prontuário (se existir)
+     * 
+     * @param pacienteId ID do paciente
+     * @return Lista de DTOs com histórico completo
+     */
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<HistoricoConsultaPacienteResponse> buscarHistoricoCompletoPaciente(Long pacienteId) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.info("Buscando histórico completo do paciente ID: {} na organização ID: {}", pacienteId, orgId);
+        
+        List<Consulta> consultas = consultaRepository.findHistoricoCompletoPaciente(pacienteId, orgId);
+        log.debug("Encontradas {} consultas para o paciente", consultas.size());
+        
+        return consultas.stream()
+            .map(consulta -> {
+                // Buscar prontuário associado à consulta
+                Prontuario prontuario = prontuarioRepository.findByConsulta_Id(consulta.getId());
+                
+                return mapearParaHistoricoResponse(consulta, prontuario);
+            })
+            .toList();
+    }
+    
+    /**
+     * Mapeia entidade Consulta e Prontuário para DTO de resposta
+     */
+    private HistoricoConsultaPacienteResponse mapearParaHistoricoResponse(Consulta consulta, Prontuario prontuario) {
+        HistoricoConsultaPacienteResponse.HistoricoConsultaPacienteResponseBuilder builder = 
+            HistoricoConsultaPacienteResponse.builder();
+        
+        // Dados da Consulta
+        builder.consultaId(consulta.getId())
+               .dataHora(consulta.getDataHora())
+               .duracaoMinutos(consulta.getDuracaoMinutos())
+               .observacoes(consulta.getObservacoes())
+               .valor(consulta.getValor())
+               .status(consulta.getStatus() != null ? consulta.getStatus().name() : null)
+               .motivoCancelamento(consulta.getMotivoCancelamento());
+        
+        // Dados do Paciente
+        if (consulta.getPaciente() != null) {
+            builder.pacienteId(consulta.getPaciente().getPaciCodigo())
+                   .pacienteNome(consulta.getPaciente().getPaciNome())
+                   .pacienteCpf(consulta.getPaciente().getPaciCpf())
+                   .pacienteDataNascimento(consulta.getPaciente().getPaciDataNacimento())
+                   .pacienteTelefone(consulta.getPaciente().getPaciTelefone());
+        }
+        
+        // Dados do Profissional
+        if (consulta.getProfissional() != null) {
+            builder.profissionalId(consulta.getProfissional().getId())
+                   .profissionalNome(consulta.getProfissional().getNome())
+                   .profissionalCrm(consulta.getProfissional().getRegistroConselho());
+            
+            // Especialidade do profissional
+            if (consulta.getEspecialidade() != null) {
+                builder.profissionalEspecialidade(consulta.getEspecialidade().getNome());
+            }
+        }
+        
+        // Dados do Prontuário (se existir)
+        if (prontuario != null) {
+            builder.prontuarioId(prontuario.getProntCodigoProntuario())
+                   .prontPeso(prontuario.getProntPeso())
+                   .prontAltura(prontuario.getProntAltura())
+                   .prontTemperatura(prontuario.getProntTemperatura())
+                   .prontSaturacao(prontuario.getProntSaturacao())
+                   .prontPressao(prontuario.getProntPressao())
+                   .prontFrequenciaRespiratoria(prontuario.getProntFrequenciaRespiratoria())
+                   .prontFrequenciaArterialSistolica(prontuario.getProntFrequenciaArterialSistolica())
+                   .prontFrequenciaArterialDiastolica(prontuario.getProntFrequenciaArterialDiastolica())
+                   .prontQueixaPrincipal(prontuario.getProntQueixaPricipal())
+                   .prontAnamnese(prontuario.getProntAnamnese())
+                   .prontDiagnostico(prontuario.getProntDiagnostico())
+                   .prontPrescricao(prontuario.getProntPrescricao())
+                   .prontExame(prontuario.getProntExame())
+                   .prontObservacao(prontuario.getProntObservacao())
+                   .prontTempoDuracao(prontuario.getProntTempoDuracao());
+        }
+        
+        return builder.build();
     }
 }

@@ -7,6 +7,7 @@ import br.com.saudeConecta.presentation.dto.consulta.AgendarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.AtualizarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.CancelarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.ConsultaResponse;
+import br.com.saudeConecta.presentation.dto.consulta.HistoricoConsultaPacienteResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -335,6 +336,26 @@ public class ConsultaController {
         return ResponseEntity.ok(consultaService.contarAgendadasHoje());
     }
 
+    /**
+     * Busca consultas de um médico por período (diário, semanal, mensal, anual)
+     * O backend calcula automaticamente o intervalo de datas baseado no tipo de período
+     * 
+     * @param usuarioId ID do usuário do profissional
+     * @param tipoPeriodo Tipo do período: "diario", "semanal", "mensal", "anual" (padrão: "diario")
+     * @return Lista de consultas do médico no período especificado
+     */
+    @GetMapping("/agenda-medico/{usuarioId}")
+    public ResponseEntity<List<ConsultaResponse>> buscarAgendaMedicoPorPeriodo(
+            @PathVariable Long usuarioId,
+            @RequestParam(defaultValue = "diario") String tipoPeriodo) {
+        log.debug("Buscando consultas para usuário {} com período {}", usuarioId, tipoPeriodo);
+        List<ConsultaResponse> response = consultaService.buscarConsultasPorMedicoEPeriodo(usuarioId, tipoPeriodo)
+                .stream()
+                .map(ConsultaResponse::fromEntity)
+                .toList();
+        return ResponseEntity.ok(response);
+    }
+
     // ==========================================
     // ESTATÍSTICAS POR ORGANIZAÇÃO
     // ==========================================
@@ -495,4 +516,31 @@ public class ConsultaController {
 
     // ========== ENDPOINT PARA BUSCAR HORÁRIOS OCUPADOS ==========
 
+    /**
+     * Busca histórico completo de consultas de um paciente
+     * Inclui dados da consulta, paciente, profissional e prontuário (se existir)
+     * 
+     * GET /consultas/BuscandoHistoricoDeConsultasDoPaciente/{pacienteId}
+     * 
+     * @param pacienteId ID do paciente
+     * @return Lista de histórico completo de consultas com prontuários
+     */
+    @GetMapping("/BuscandoHistoricoDeConsultasDoPaciente/{pacienteId}")
+    public ResponseEntity<List<HistoricoConsultaPacienteResponse>> buscarHistoricoCompletoPaciente(
+            @PathVariable Long pacienteId) {
+        
+        log.info("=== Requisição recebida: GET /consultas/BuscandoHistoricoDeConsultasDoPaciente/{} ===", pacienteId);
+        
+        try {
+            List<HistoricoConsultaPacienteResponse> historico = 
+                consultaService.buscarHistoricoCompletoPaciente(pacienteId);
+            
+            log.info("Histórico de consultas retornado com sucesso - {} registros", historico.size());
+            return ResponseEntity.ok(historico);
+            
+        } catch (Exception e) {
+            log.error("Erro ao buscar histórico de consultas do paciente {}: {}", pacienteId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 }
