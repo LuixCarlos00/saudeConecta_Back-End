@@ -77,7 +77,7 @@ public class ProntuarioService {
     @Transactional(readOnly = true)
     public Prontuario buscarProntuarioById(Long consultaId) {
         log.debug("Buscando prontuário por consulta ID: {}", consultaId);
-        Prontuario prontuario = prontuarioRepository.findByConsulta_Id(consultaId);
+        Prontuario prontuario = prontuarioRepository.findByConsulta_IdWithFetch(consultaId);
         
         if (prontuario == null) {
             log.warn("Prontuário não encontrado para consulta ID: {}", consultaId);
@@ -109,18 +109,5 @@ public class ProntuarioService {
         return prontuarioRepository.findByProfissional_Id(profissionalId);
     }
 
-    /**
-     * Busca prontuário por ID
-     * @param id ID do prontuário
-     * @return Prontuário encontrado
-     */
-    @Transactional(readOnly = true)
-    public Prontuario buscarPorId(Long id) {
-        log.debug("Buscando prontuário por ID: {}", id);
-        return prontuarioRepository.findById(id)
-                .orElseThrow(() -> {
-                    log.error("Prontuário não encontrado - ID: {}", id);
-                    return new EntityNotFoundException("Prontuário não encontrado com ID: " + id);
-                });
-    }
+
 }

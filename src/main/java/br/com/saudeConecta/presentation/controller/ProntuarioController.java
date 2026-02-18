@@ -2,6 +2,7 @@ package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.domain.prontuario.Prontuario;
 import br.com.saudeConecta.presentation.dto.prontuario.CadastrarProntuarioRequest;
+import br.com.saudeConecta.presentation.dto.prontuario.ProntuarioCompletoResponse;
 import br.com.saudeConecta.presentation.dto.prontuario.ProntuarioResponse;
 import br.com.saudeConecta.service.ProntuarioService;
 import jakarta.validation.Valid;
@@ -13,12 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * Controller responsável pelos endpoints de Prontuário Médico
- * 
- * @author Sistema SaúdeConecta
- * @version 1.0
- */
+
 @RestController
 @RequestMapping("/prontuario")
 @RequiredArgsConstructor
@@ -63,58 +59,19 @@ public class ProntuarioController {
      * @return Prontuário encontrado
      */
     @GetMapping("/buscarProntuarioById/{consultaId}")
-    public ResponseEntity<Prontuario> buscarProntuarioById(@PathVariable Long consultaId) {
+    public ResponseEntity<ProntuarioCompletoResponse> buscarProntuarioById(@PathVariable Long consultaId) {
         log.info("=== Requisição recebida: GET /prontuario/buscarProntuarioById/{} ===", consultaId);
         
         Prontuario prontuario = prontuarioService.buscarProntuarioById(consultaId);
-        return ResponseEntity.ok(prontuario);
+        
+        // Converter para DTO completo para evitar LazyInitializationException
+        ProntuarioCompletoResponse response = ProntuarioCompletoResponse.fromEntity(prontuario);
+        return ResponseEntity.ok(response);
     }
 
-    /**
-     * Endpoint para buscar todos os prontuários de um paciente
-     * 
-     * GET /prontuario/paciente/{pacienteId}
-     * 
-     * @param pacienteId ID do paciente
-     * @return Lista de prontuários do paciente
-     */
-    @GetMapping("/paciente/{pacienteId}")
-    public ResponseEntity<List<Prontuario>> buscarPorPaciente(@PathVariable Long pacienteId) {
-        log.info("=== Requisição recebida: GET /prontuario/paciente/{} ===", pacienteId);
-        
-        List<Prontuario> prontuarios = prontuarioService.buscarPorPaciente(pacienteId);
-        return ResponseEntity.ok(prontuarios);
-    }
 
-    /**
-     * Endpoint para buscar todos os prontuários de um profissional
-     * 
-     * GET /prontuario/profissional/{profissionalId}
-     * 
-     * @param profissionalId ID do profissional
-     * @return Lista de prontuários do profissional
-     */
-    @GetMapping("/profissional/{profissionalId}")
-    public ResponseEntity<List<Prontuario>> buscarPorProfissional(@PathVariable Long profissionalId) {
-        log.info("=== Requisição recebida: GET /prontuario/profissional/{} ===", profissionalId);
-        
-        List<Prontuario> prontuarios = prontuarioService.buscarPorProfissional(profissionalId);
-        return ResponseEntity.ok(prontuarios);
-    }
 
-    /**
-     * Endpoint para buscar prontuário por ID
-     * 
-     * GET /prontuario/{id}
-     * 
-     * @param id ID do prontuário
-     * @return Prontuário encontrado
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<Prontuario> buscarPorId(@PathVariable Long id) {
-        log.info("=== Requisição recebida: GET /prontuario/{} ===", id);
-        
-        Prontuario prontuario = prontuarioService.buscarPorId(id);
-        return ResponseEntity.ok(prontuario);
-    }
+
+
+
 }
