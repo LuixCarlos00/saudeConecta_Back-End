@@ -33,6 +33,8 @@ public record CadastrarClinicoRequest(
     
     Integer tempoConsultaMinutos,
     
+    String tipoProfissional,
+    
     String nacionalidade,
     String uf,
     String municipio,
