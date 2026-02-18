@@ -23,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.util.HashSet;
 import java.util.stream.Collectors;
@@ -85,8 +86,10 @@ public class ProfissionalService {
         Organizacao organizacao = organizacaoRepository.findById(orgId)
             .orElseThrow(() -> new IllegalStateException("Organização não encontrada"));
 
-        TipoProfissional tipoMedico = tipoProfissionalRepository.findByCodigo("MEDICO")
-            .orElseThrow(() -> new IllegalStateException("Tipo MEDICO não encontrado"));
+        // Determina o tipo profissional com base no request
+        String tipoCodigo = request.tipoProfissional() != null ? request.tipoProfissional() : "MEDICO";
+        TipoProfissional tipoProfissional = tipoProfissionalRepository.findByCodigo(tipoCodigo)
+            .orElseThrow(() -> new IllegalStateException("Tipo " + tipoCodigo + " não encontrado"));
 
         String senhaGerada = gerarSenhaAleatoria();
         String senhaCriptografada = passwordEncoder.encode(senhaGerada);
@@ -132,7 +135,7 @@ public class ProfissionalService {
 
         Profissional profissional = Profissional.builder()
             .organizacao(organizacao)
-            .tipoProfissional(tipoMedico)
+            .tipoProfissional(tipoProfissional)
             .nome(request.nome())
             .sexo(converterSexo(request.sexo()))
             .dataNascimento(request.dataNascimento() != null ? java.time.LocalDate.parse(request.dataNascimento()) : null)
@@ -146,6 +149,7 @@ public class ProfissionalService {
             .tempoConsultaMinutos(request.tempoConsultaMinutos() != null ? request.tempoConsultaMinutos() : 30)
             .usuario(usuarioSalvo)
             .endereco(endereco)
+            .valorConsulta(new BigDecimal("50.00"))
             .status(StatusProfissional.ATIVO)
             .especialidades(especialidades)
             .build();
