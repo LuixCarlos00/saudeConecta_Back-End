@@ -203,6 +203,24 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long> {
            "LEFT JOIN FETCH c.profissional p " +
            "LEFT JOIN FETCH p.tipoProfissional " +
            "LEFT JOIN FETCH c.paciente " +
+           "LEFT JOIN FETCH c.especialidade " +
+           "LEFT JOIN FETCH c.formaPagamento " +
+           "WHERE c.organizacao.id = :orgId " +
+           "AND c.profissional.id = :profissionalId " +
+           "AND (:status IS NULL OR c.status = :status) " +
+           "AND c.dataHora BETWEEN :inicio AND :fim " +
+           "ORDER BY c.dataHora")
+    List<Consulta> findByOrganizacaoIdAndProfissionalIdDirectAndStatusOptionalAndDataHoraBetween(
+        @Param("orgId") Long orgId,
+        @Param("profissionalId") Long profissionalId,
+        @Param("status") StatusConsulta status,
+        @Param("inicio") LocalDateTime inicio,
+        @Param("fim") LocalDateTime fim);
+
+    @Query("SELECT c FROM Consulta c " +
+           "LEFT JOIN FETCH c.profissional p " +
+           "LEFT JOIN FETCH p.tipoProfissional " +
+           "LEFT JOIN FETCH c.paciente " +
            "LEFT JOIN FETCH c.especialidade e " +
            "LEFT JOIN FETCH c.formaPagamento " +
            "WHERE c.organizacao.id = :orgId " +

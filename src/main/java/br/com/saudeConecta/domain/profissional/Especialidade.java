@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "especialidade", 
@@ -41,6 +43,10 @@ public class Especialidade implements Serializable {
     
     @Column(columnDefinition = "TINYINT DEFAULT 1")
     private Byte status = 1;
+    
+    @ManyToMany(mappedBy = "especialidades", fetch = FetchType.LAZY)
+    @JsonIgnore
+    private Set<Profissional> profissionais = new HashSet<>();
     
     public boolean isAtivo() {
         return status != null && status == 1;

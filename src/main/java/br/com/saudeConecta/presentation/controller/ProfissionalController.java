@@ -2,6 +2,7 @@ package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.service.ProfissionalService;
 import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.presentation.dto.profissional.AtualizarClinicoRequest;
 import br.com.saudeConecta.presentation.dto.profissional.CadastrarClinicoRequest;
 import br.com.saudeConecta.presentation.dto.profissional.ProfissionalResponse;
 import jakarta.validation.Valid;
@@ -26,10 +27,10 @@ public class ProfissionalController {
     @PutMapping("/atualizarClinicoIdByOrg/{id}")
     @Description("Atualiza médico/clínico por ID dentro da organização")
     public ResponseEntity<ProfissionalResponse> atualizarClinicoIdByOrg(@PathVariable Long id,
-                                                                     @Valid @RequestBody ProfissionalResponse profissional) {
+                                                                     @Valid @RequestBody AtualizarClinicoRequest request) {
         try {
-            log.info("Atualizando clínico: {}", profissional.nome());
-            Profissional atualizado = profissionalService.atualizarClinicoIdByOrg(id, profissional);
+            log.info("Atualizando clínico: {}", request.nome());
+            Profissional atualizado = profissionalService.atualizarClinicoIdByOrg(id, request);
             return ResponseEntity.ok(ProfissionalResponse.fromEntity(atualizado));
         } catch (IllegalArgumentException e) {
             log.warn("Erro ao atualizar profissional: {}", e.getMessage());

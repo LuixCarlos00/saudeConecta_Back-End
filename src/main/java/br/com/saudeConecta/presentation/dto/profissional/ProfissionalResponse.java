@@ -38,7 +38,6 @@ public record ProfissionalResponse(
 
         String formacao,
         String instituicao,
-
         BigDecimal valorConsulta,
         Integer tempoConsultaMinutos,
         String status,
@@ -54,7 +53,7 @@ public record ProfissionalResponse(
         return new ProfissionalResponse(
                 p.getId(),
                 p.getNome(),
-                p.getTipoProfissional() != null ? p.getTipoProfissional().getNome() : null,
+                p.getTipoProfissional() != null ? p.getTipoProfissional().getCodigo() : null,
                 p.getTipoProfissional() != null ? p.getTipoProfissional().getConselho() : null,
                 p.getRegistroConselho(),
                 p.getSexo() != null ? p.getSexo().name() : null,

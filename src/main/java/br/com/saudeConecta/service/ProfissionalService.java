@@ -14,6 +14,7 @@ import br.com.saudeConecta.email.EmailCadastroService;
 import br.com.saudeConecta.infra.tenant.RequiresTenant;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
+import br.com.saudeConecta.presentation.dto.profissional.AtualizarClinicoRequest;
 import br.com.saudeConecta.presentation.dto.profissional.CadastrarClinicoRequest;
 import br.com.saudeConecta.presentation.dto.profissional.ProfissionalResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -121,16 +122,26 @@ public class ProfissionalService {
         // Processa especialidades se fornecidas
         Set<Especialidade> especialidades = new HashSet<>();
         if (request.especialidade() != null && !request.especialidade().isEmpty()) {
-            // Assume que especialidade contém IDs separados por vírgula
-            String[] especialidadeIds = request.especialidade().split(",");
-            for (String especialidadeId : especialidadeIds) {
-                try {
-                    Long id = Long.parseLong(especialidadeId.trim());
-                    especialidadeRepository.findById(id).ifPresent(especialidades::add);
-                } catch (NumberFormatException e) {
-                    log.warn("ID de especialidade inválido: {}", especialidadeId);
-                }
-            }
+            // Busca especialidade pelo nome (enviado pelo frontend)
+            String nomeEspecialidade = request.especialidade().trim();
+            
+            // Busca especialidade ativa pelo nome e tipo profissional
+            especialidadeRepository.findByTipoProfissional_IdAndNome(tipoProfissional.getId(), nomeEspecialidade)
+                .ifPresentOrElse(
+                    especialidades::add,
+                    () -> {
+                        // Se não encontrar, cria nova especialidade
+                        log.info("Criando nova especialidade: {} para tipo: {}", nomeEspecialidade, tipoProfissional.getCodigo());
+                        Especialidade novaEspecialidade = Especialidade.builder()
+                            .tipoProfissional(tipoProfissional)
+                            .nome(nomeEspecialidade)
+                            .codigo(nomeEspecialidade.toUpperCase().replace(" ", "_"))
+                            .status((byte) 1)
+                            .build();
+                        especialidadeRepository.save(novaEspecialidade);
+                        especialidades.add(novaEspecialidade);
+                    }
+                );
         }
 
         Profissional profissional = Profissional.builder()
@@ -180,7 +191,7 @@ public class ProfissionalService {
 
     @RequiresTenant
     @Transactional
-    public Profissional atualizarClinicoIdByOrg(Long id, ProfissionalResponse dadosAtualizados) {
+    public Profissional atualizarClinicoIdByOrg(Long id, AtualizarClinicoRequest dadosAtualizados) {
         Long orgId = tenantHelper.getCurrentTenantId();
 
         Profissional profissional = profissionalRepository.buscarClinicoIdByOrg(id, orgId)
@@ -199,17 +210,46 @@ public class ProfissionalService {
         profissional.setTempoConsultaMinutos(dadosAtualizados.tempoConsultaMinutos());
         profissional.setDataNascimento(dadosAtualizados.dataNascimento());
 
-        // Atualiza especialidades se fornecidas
-        if (dadosAtualizados.especialidades() != null && !dadosAtualizados.especialidades().isEmpty()) {
-            Set<Especialidade> especialidades = dadosAtualizados.especialidades().stream()
-                    .map(especialidadeResumo -> especialidadeRepository.findById(especialidadeResumo.id())
-                            .orElseThrow(() -> new IllegalArgumentException("Especialidade não encontrada: " + especialidadeResumo.id())))
-                    .collect(Collectors.toSet());
-            profissional.setEspecialidades(especialidades);
+        // Atualiza tipo profissional se fornecido
+        if (dadosAtualizados.tipoProfissional() != null && !dadosAtualizados.tipoProfissional().isEmpty()) {
+            String tipoCodigo = dadosAtualizados.tipoProfissional();
+            TipoProfissional tipoProfissional = tipoProfissionalRepository.findByCodigo(tipoCodigo)
+                .orElseThrow(() -> new IllegalStateException("Tipo " + tipoCodigo + " não encontrado"));
+            profissional.setTipoProfissional(tipoProfissional);
+        }
+
+        // Atualiza especialidade se fornecida (recebe nome da especialidade)
+        if (dadosAtualizados.especialidade() != null && !dadosAtualizados.especialidade().isEmpty()) {
+            String nomeEspecialidade = dadosAtualizados.especialidade().trim();
+            TipoProfissional tipoProfissional = profissional.getTipoProfissional();
+            
+            // Busca especialidade pelo nome e tipo profissional
+            especialidadeRepository.findByTipoProfissional_IdAndNome(tipoProfissional.getId(), nomeEspecialidade)
+                .ifPresentOrElse(
+                    especialidade -> {
+                        Set<Especialidade> especialidades = new HashSet<>();
+                        especialidades.add(especialidade);
+                        profissional.setEspecialidades(especialidades);
+                    },
+                    () -> {
+                        // Se não encontrar, cria nova especialidade
+                        log.info("Criando nova especialidade: {} para tipo: {}", nomeEspecialidade, tipoProfissional.getCodigo());
+                        Especialidade novaEspecialidade = Especialidade.builder()
+                            .tipoProfissional(tipoProfissional)
+                            .nome(nomeEspecialidade)
+                            .codigo(nomeEspecialidade.toUpperCase().replace(" ", "_"))
+                            .status((byte) 1)
+                            .build();
+                        especialidadeRepository.save(novaEspecialidade);
+                        
+                        Set<Especialidade> especialidades = new HashSet<>();
+                        especialidades.add(novaEspecialidade);
+                        profissional.setEspecialidades(especialidades);
+                    }
+                );
         }
 
         // Atualiza endereço se fornecido
-        // Atualiza endereço usando o método helper
         if (dadosAtualizados.endereco() != null) {
             Endereco endereco = profissional.getEndereco();
 

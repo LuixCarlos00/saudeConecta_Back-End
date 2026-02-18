@@ -439,29 +439,29 @@ public class ConsultaService {
 
     @RequiresTenant
     @Transactional(readOnly = true)
-    public List<Consulta> pesquisarClinicasEmIntervaloDeDatas(Long usuarioId, LocalDate dataInicio, LocalDate dataFim, String status) {
+    public List<Consulta> pesquisarClinicasEmIntervaloDeDatas(Long profissionalId, LocalDate dataInicio, LocalDate dataFim, String status) {
         Long orgId = tenantHelper.getCurrentTenantId();
 
         log.debug("Pesquisando consultas - OrgId: {}, UsuarioId: {}, Início: {}, Fim: {}, Status: {}", 
-                  orgId, usuarioId, dataInicio, dataFim, status);
+                  orgId, profissionalId, dataInicio, dataFim, status);
 
         if (status != null && status.trim().equalsIgnoreCase("ALL")) {
             return consultaRepository.findByOrganizacaoIdAndProfissionalIdAndDataHoraBetweenWithRelations(
                 orgId,
-                usuarioId,
+                    profissionalId,
                 dataInicio.atStartOfDay(),
                 dataFim.plusDays(1).atStartOfDay()
             );
         }
 
         StatusConsulta statusEnum = null;
-        if (status != null && !status.isBlank()) {
+        if (status != null && !status.isBlank() && !status.trim().equalsIgnoreCase("ALL")) {
             statusEnum = StatusConsulta.valueOf(status.trim().toUpperCase());
         }
 
-        return consultaRepository.findByOrganizacaoIdAndProfissionalIdAndStatusOptionalAndDataHoraBetweenWithRelations(
+        return consultaRepository.findByOrganizacaoIdAndProfissionalIdDirectAndStatusOptionalAndDataHoraBetween(
             orgId,
-            usuarioId,
+            profissionalId,
             statusEnum,
             dataInicio.atStartOfDay(),
             dataFim.plusDays(1).atStartOfDay()
