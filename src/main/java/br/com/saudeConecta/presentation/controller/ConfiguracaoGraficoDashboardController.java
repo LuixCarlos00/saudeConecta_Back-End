@@ -60,4 +60,12 @@ public class ConfiguracaoGraficoDashboardController {
         configuracaoService.resetarConfiguracoesParaPadrao();
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/inicializar")
+    @PreAuthorize("hasRole('ADMIN_ORG')")
+    public ResponseEntity<List<ConfiguracaoGraficoResponse>> inicializarConfiguracoes() {
+        log.info("Inicializando configurações de gráficos para primeira utilização");
+        List<ConfiguracaoGraficoResponse> configuracoes = configuracaoService.inicializarConfiguracoesPrimeiroAcesso();
+        return ResponseEntity.ok(configuracoes);
+    }
 }
