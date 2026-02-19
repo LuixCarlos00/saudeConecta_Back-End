@@ -25,8 +25,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.text.SimpleDateFormat;
+import java.text.ParseException;
 
 @Service
 @RequiredArgsConstructor
@@ -798,7 +801,6 @@ public class ConsultaService {
             .map(consulta -> {
                 // Buscar prontuário associado à consulta
                 Prontuario prontuario = prontuarioRepository.findByConsulta_Id(consulta.getId());
-                
                 return mapearParaHistoricoResponse(consulta, prontuario);
             })
             .toList();
@@ -844,23 +846,81 @@ public class ConsultaService {
         // Dados do Prontuário (se existir)
         if (prontuario != null) {
             builder.prontuarioId(prontuario.getProntCodigoProntuario())
-                   .prontPeso(prontuario.getProntPeso())
-                   .prontAltura(prontuario.getProntAltura())
-                   .prontTemperatura(prontuario.getProntTemperatura())
-                   .prontSaturacao(prontuario.getProntSaturacao())
-                   .prontPressao(prontuario.getProntPressao())
-                   .prontFrequenciaRespiratoria(prontuario.getProntFrequenciaRespiratoria())
-                   .prontFrequenciaArterialSistolica(prontuario.getProntFrequenciaArterialSistolica())
-                   .prontFrequenciaArterialDiastolica(prontuario.getProntFrequenciaArterialDiastolica())
-                   .prontQueixaPrincipal(prontuario.getProntQueixaPricipal())
-                   .prontAnamnese(prontuario.getProntAnamnese())
-                   .prontDiagnostico(prontuario.getProntDiagnostico())
-                   .prontPrescricao(prontuario.getProntPrescricao())
-                   .prontExame(prontuario.getProntExame())
-                   .prontObservacao(prontuario.getProntObservacao())
-                   .prontTempoDuracao(prontuario.getProntTempoDuracao());
+                   
+                   // Dados Vitais e Antropométricos
+                   .peso(prontuario.getProntPeso())
+                   .altura(prontuario.getProntAltura())
+                   .temperatura(prontuario.getProntTemperatura())
+                   .saturacao(prontuario.getProntSaturacao())
+                   .pressao(prontuario.getProntPressao())
+                   .frequenciaRespiratoria(prontuario.getProntFrequenciaRespiratoria())
+                   .frequenciaArterialSistolica(prontuario.getProntFrequenciaArterialSistolica())
+                   .frequenciaArterialDiastolica(prontuario.getProntFrequenciaArterialDiastolica())
+                   .hemoglobina(prontuario.getProntHemoglobina())
+                   
+                   // Dados Demográficos
+                   .dataNascimento(this.parseStringToDate(prontuario.getProntDataNacimento()))
+                   .sexo(prontuario.getProntSexo())
+                   
+                   // Anamnese e Avaliação
+                   .queixaPrincipal(prontuario.getProntQueixaPricipal())
+                   .anamnese(prontuario.getProntAnamnese())
+                   .conduta(prontuario.getProntCondulta())
+                   .observacao(prontuario.getProntObservacao())
+                   .diagnostico(prontuario.getProntDiagnostico())
+                   
+                   // Prescrição Médica
+                   .modeloPrescricao(prontuario.getProntModeloPrescricao())
+                   .tituloPrescricao(prontuario.getProntTituloPrescricao())
+                   .dataPrescricao(this.parseStringToDate(prontuario.getProntDataPrescricao()))
+                   .prescricao(prontuario.getProntPrescricao())
+                   
+                   // Exames
+                   .modeloExame(prontuario.getProntModeloExame())
+                   .tituloExame(prontuario.getProntTituloExame())
+                   .dataExame(this.parseStringToDate(prontuario.getProntDataExame()))
+                   .exame(prontuario.getProntExame())
+                   .tempoDuracao(prontuario.getProntTempoDuracao())
+                   
+                   // Dados de Controle
+                   .dataFinalizado(prontuario.getProntDataFinalizado())
+                   .codigoProntuario(prontuario.getProntCodigoProntuario().toString());
         }
         
         return builder.build();
+    }
+    
+    /**
+     * Converte uma String de data para o tipo Date
+     * @param dataString String no formato "yyyy-MM-dd" ou "dd/MM/yyyy"
+     * @return Date ou null se a string for nula ou vazia
+     */
+    private Date parseStringToDate(String dataString) {
+        if (dataString == null || dataString.trim().isEmpty()) {
+            return null;
+        }
+        
+        try {
+            // Tenta diferentes formatos de data
+            SimpleDateFormat[] formatos = {
+                new SimpleDateFormat("yyyy-MM-dd"),
+                new SimpleDateFormat("dd/MM/yyyy"),
+                new SimpleDateFormat("dd-MM-yyyy")
+            };
+            
+            for (SimpleDateFormat formato : formatos) {
+                try {
+                    return formato.parse(dataString.trim());
+                } catch (ParseException e) {
+                    // Continua para o próximo formato
+                }
+            }
+            
+            log.warn("Formato de data não reconhecido: {}", dataString);
+            return null;
+        } catch (Exception e) {
+            log.error("Erro ao converter data: {}", dataString, e);
+            return null;
+        }
     }
 }

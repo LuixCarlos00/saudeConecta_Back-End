@@ -77,17 +77,17 @@ INSERT INTO profissional (organizacao_id, tipo_profissional_id, nome, sexo, data
 
 -- ==========================================
 -- TABELA: profissional_especialidade (N:N)
--- Especialidades Médicas: 1-Cardiologia, 2-Dermatologia, 3-Ortopedia, 4-Pediatria, 5-Ginecologia, 6-Neurologia, 7-Psiquiatria, 8-Oftalmologia, 9-Urologia, 10-Gastroenterologia
--- Especialidades Odonto: 11-Ortodontia, 12-Endodontia, 13-Periodontia, 14-Implantodontia, 15-Odontopediatria, 16-Cirurgia Buco, 17-Prótese, 18-Clínico Geral
+-- Especialidades da Migration 021:
+-- IDs conforme inserts: 1-Clínico Geral, 2-Cardiologia, 3-Pediatria, 4-Ginecologia, 5-Ortopedia, 6-Dermatologia, 7-Psiquiatria, 8-Endocrinologia, 9-Neurologia, 10-Oftalmologia, 11-Otorrino, 12-Urologia, 13-Gastro, 14-Pneumo, 15-Reuma, 16-Nefro, 17-Infecto, 18-Hemato, 19-Oncologia, 20-Anestesia
 -- ==========================================
 INSERT INTO profissional_especialidade (profissional_id, especialidade_id, principal) VALUES
--- Dr. Carlos (Cardiologista) - especialidade 1 (Cardiologia)
-(1, 1, 1),
--- Dra. Maria (Dermatologista) - especialidade 2 (Dermatologia)
-(2, 2, 1),
--- Dr. Pedro (Ortopedista) - especialidade 3 (Ortopedia)
-(3, 3, 1),
--- Dra. Ana (Dentista/Ortodontista) - especialidade 11 (Ortodontia)
+-- Dr. Carlos (Cardiologista) - especialidade 2 (Cardiologia)
+(1, 2, 1),
+-- Dra. Maria (Dermatologista) - especialidade 6 (Dermatologia)
+(2, 6, 1),
+-- Dr. Pedro (Ortopedista) - especialidade 5 (Ortopedia)
+(3, 5, 1),
+-- Dra. Ana (Dentista/Ortodontista) - especialidade 11 (Otorrinolaringologia - temporário, aguardando especialidades odontológicas)
 (4, 11, 1);
 
 -- ==========================================
@@ -115,25 +115,25 @@ INSERT INTO paciente (organizacao_id, PaciNome, PaciSexo, PaciDataNacimento, Pac
 -- ==========================================
 INSERT INTO consulta (organizacao_id, profissional_id, paciente_id, especialidade_id, data_hora, duracao_minutos, observacoes, forma_pagamento_id, valor, status, criado_por, created_at, updated_at) VALUES
 -- Org 1 - Clínica Saúde Total (prof 1=Cardio, prof 2=Dermato - pacientes 1-5)
--- Especialidades: 1=Cardiologia, 2=Dermatologia
-(1, 1, 1, 1, '2026-02-05 08:00:00', 30, 'Consulta de rotina cardiológica', 1, 250.00, 'AGENDADA', 5, NOW(), NOW()),
-(1, 1, 2, 1, '2026-02-05 08:30:00', 30, 'Avaliação de pressão arterial', 2, 250.00, 'AGENDADA', 5, NOW(), NOW()),
-(1, 1, 3, 1, '2026-02-05 09:00:00', 30, 'Retorno - arritmia', 1, 200.00, 'AGENDADA', 5, NOW(), NOW()),
-(1, 2, 4, 2, '2026-02-05 09:00:00', 20, 'Avaliação dermatológica', 3, 180.00, 'AGENDADA', 5, NOW(), NOW()),
-(1, 2, 5, 2, '2026-02-05 09:20:00', 20, 'Procedimento estético', 1, 350.00, 'AGENDADA', 5, NOW(), NOW()),
-(1, 1, 1, 1, '2026-02-06 08:00:00', 30, 'Retorno cardiologia', 1, 200.00, 'AGENDADA', 2, NOW(), NOW()),
-(1, 2, 2, 2, '2026-02-06 09:00:00', 20, 'Manchas na pele', 2, 180.00, 'AGENDADA', 2, NOW(), NOW()),
+-- Especialidades: 2=Cardiologia, 6=Dermatologia
+(1, 1, 1, 2, '2026-02-05 08:00:00', 30, 'Consulta de rotina cardiológica', 1, 250.00, 'AGENDADA', 5, NOW(), NOW()),
+(1, 1, 2, 2, '2026-02-05 08:30:00', 30, 'Avaliação de pressão arterial', 2, 250.00, 'AGENDADA', 5, NOW(), NOW()),
+(1, 1, 3, 2, '2026-02-05 09:00:00', 30, 'Retorno - arritmia', 1, 200.00, 'AGENDADA', 5, NOW(), NOW()),
+(1, 2, 4, 6, '2026-02-05 09:00:00', 20, 'Avaliação dermatológica', 3, 180.00, 'AGENDADA', 5, NOW(), NOW()),
+(1, 2, 5, 6, '2026-02-05 09:20:00', 20, 'Procedimento estético', 1, 350.00, 'AGENDADA', 5, NOW(), NOW()),
+(1, 1, 1, 2, '2026-02-06 08:00:00', 30, 'Retorno cardiologia', 1, 200.00, 'AGENDADA', 2, NOW(), NOW()),
+(1, 2, 2, 6, '2026-02-06 09:00:00', 20, 'Manchas na pele', 2, 180.00, 'AGENDADA', 2, NOW(), NOW()),
 -- Consultas passadas (realizadas/canceladas)
-(1, 1, 3, 1, '2026-02-01 08:00:00', 30, 'Check-up cardíaco anual', 1, 250.00, 'REALIZADA', 5, '2026-01-25 10:00:00', NOW()),
-(1, 2, 4, 2, '2026-02-01 09:00:00', 20, 'Acne facial', 3, 180.00, 'REALIZADA', 5, '2026-01-25 11:00:00', NOW()),
-(1, 1, 5, 1, '2026-02-02 08:00:00', 30, 'Dor no peito - URGENTE', 1, 300.00, 'CANCELADA', 5, '2026-01-26 09:00:00', NOW()),
+(1, 1, 3, 2, '2026-02-01 08:00:00', 30, 'Check-up cardíaco anual', 1, 250.00, 'REALIZADA', 5, '2026-01-25 10:00:00', NOW()),
+(1, 2, 4, 6, '2026-02-01 09:00:00', 20, 'Acne facial', 3, 180.00, 'REALIZADA', 5, '2026-01-25 11:00:00', NOW()),
+(1, 1, 5, 2, '2026-02-02 08:00:00', 30, 'Dor no peito - URGENTE', 1, 300.00, 'CANCELADA', 5, '2026-01-26 09:00:00', NOW()),
 -- Org 2 - Consultório Dr. Silva (prof 3=Ortopedia, prof 4=Ortodontia - pacientes 6-10)
--- Especialidades: 3=Ortopedia, 11=Ortodontia
-(2, 3, 6, 3, '2026-02-05 10:00:00', 40, 'Dor no joelho', 1, 200.00, 'AGENDADA', 9, NOW(), NOW()),
-(2, 3, 7, 3, '2026-02-05 10:40:00', 40, 'Lesão esportiva', 2, 200.00, 'AGENDADA', 9, NOW(), NOW()),
+-- Especialidades: 5=Ortopedia, 11=Otorrinolaringologia (temporário)
+(2, 3, 6, 5, '2026-02-05 10:00:00', 40, 'Dor no joelho', 1, 200.00, 'AGENDADA', 9, NOW(), NOW()),
+(2, 3, 7, 5, '2026-02-05 10:40:00', 40, 'Lesão esportiva', 2, 200.00, 'AGENDADA', 9, NOW(), NOW()),
 (2, 4, 8, 11, '2026-02-05 14:00:00', 45, 'Limpeza dental', 1, 150.00, 'AGENDADA', 9, NOW(), NOW()),
 (2, 4, 9, 11, '2026-02-05 14:45:00', 45, 'Avaliação ortodôntica', 3, 200.00, 'AGENDADA', 9, NOW(), NOW()),
-(2, 3, 10, 3, '2026-02-06 10:00:00', 40, 'Retorno ortopedia', 1, 180.00, 'AGENDADA', 9, NOW(), NOW());
+(2, 3, 10, 5, '2026-02-06 10:00:00', 40, 'Retorno ortopedia', 1, 180.00, 'AGENDADA', 9, NOW(), NOW());
 
 -- ==========================================
 -- TABELA: consulta_historico

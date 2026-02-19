@@ -87,7 +87,7 @@
             <column name="nome" type="VARCHAR(100)">
                 <constraints nullable="false"/>
             </column>
-            <column name="codigo" type="VARCHAR(20)"/>
+            <column name="codigo" type="VARCHAR(100)"/>
             <column name="status" type="TINYINT" defaultValue="1"/>
         </createTable>
         

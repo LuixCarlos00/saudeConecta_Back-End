@@ -516,15 +516,7 @@ public class ConsultaController {
 
     // ========== ENDPOINT PARA BUSCAR HORÁRIOS OCUPADOS ==========
 
-    /**
-     * Busca histórico completo de consultas de um paciente
-     * Inclui dados da consulta, paciente, profissional e prontuário (se existir)
-     * 
-     * GET /consultas/BuscandoHistoricoDeConsultasDoPaciente/{pacienteId}
-     * 
-     * @param pacienteId ID do paciente
-     * @return Lista de histórico completo de consultas com prontuários
-     */
+
     @GetMapping("/BuscandoHistoricoDeConsultasDoPaciente/{pacienteId}")
     public ResponseEntity<List<HistoricoConsultaPacienteResponse>> buscarHistoricoCompletoPaciente(
             @PathVariable Long pacienteId) {
