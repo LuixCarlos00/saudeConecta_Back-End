@@ -169,12 +169,15 @@ public class ProfissionalService {
         log.info("Clínico cadastrado com sucesso. ID: {}", salvo.getId());
 
         // Enviar email de credenciais de forma assíncrona
+        // Em caso de falha, o EmailCadastroService registrará na tabela de mensageria
         emailCadastroService.enviarCredenciaisClinicoAsync(
             request.email(),
             request.nome(),
             cpfLimpo,
             senhaGerada,
-            organizacao.getNome()
+            organizacao.getNome(),
+            orgId,
+            salvo.getId()
         );
 
         return salvo;

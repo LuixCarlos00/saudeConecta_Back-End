@@ -32,4 +32,7 @@
     <!-- Configuração de Gráficos do Dashboard -->
     <include file="db/changelog/changes/020-criar-tabela-configuracao-grafico-dashboard.xml"/>
 
+    <!-- Sistema de Mensageria -->
+    <include file="db/changelog/changes/021-criar-tabela-mensageria.xml"/>
+
 </databaseChangeLog>

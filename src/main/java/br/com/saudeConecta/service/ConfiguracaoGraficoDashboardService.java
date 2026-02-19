@@ -138,6 +138,33 @@ public class ConfiguracaoGraficoDashboardService {
         }
     }
 
+    @Transactional
+    public List<ConfiguracaoGraficoResponse> inicializarConfiguracoesPrimeiroAcesso() {
+        Long organizacaoId = tenantHelper.getCurrentTenantId();
+        log.info("Inicializando configurações de gráficos para primeiro acesso - organização: {}", organizacaoId);
+        
+        Organizacao organizacao = organizacaoRepository.findById(organizacaoId)
+            .orElseThrow(() -> new EntityNotFoundException("Organização não encontrada"));
+        
+        int ordem = 1;
+        for (TipoGraficoDashboard tipo : TipoGraficoDashboard.values()) {
+            if (!configuracaoRepository.existsByOrganizacaoIdAndTipoGrafico(organizacaoId, tipo)) {
+                ConfiguracaoGraficoDashboard config = ConfiguracaoGraficoDashboard.builder()
+                    .organizacao(organizacao)
+                    .tipoGrafico(tipo)
+                    .ativo(false) // Inicia desativado para o usuário ativar
+                    .ordemExibicao(ordem++)
+                    .build();
+                
+                configuracaoRepository.save(config);
+                log.debug("Configuração criada (desativada) para tipo: {}", tipo);
+            }
+        }
+        
+        // Retorna todas as configurações criadas
+        return listarConfiguracoes();
+    }
+
     private ConfiguracaoGraficoResponse toResponse(ConfiguracaoGraficoDashboard config) {
         return new ConfiguracaoGraficoResponse(
             config.getId(),
