@@ -38,7 +38,7 @@ public class Especialidade implements Serializable {
     @Column(nullable = false, length = 100)
     private String nome;
     
-    @Column(length = 20)
+    @Column(length = 100)
     private String codigo;
     
     @Column(columnDefinition = "TINYINT DEFAULT 1")

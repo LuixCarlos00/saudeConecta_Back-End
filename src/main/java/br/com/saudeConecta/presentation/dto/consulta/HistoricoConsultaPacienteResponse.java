@@ -43,19 +43,43 @@ public class HistoricoConsultaPacienteResponse {
     
     // Dados do Prontuário (se existir)
     private Long prontuarioId;
-    private String prontPeso;
-    private String prontAltura;
-    private String prontTemperatura;
-    private String prontSaturacao;
-    private String prontPressao;
-    private String prontFrequenciaRespiratoria;
-    private String prontFrequenciaArterialSistolica;
-    private String prontFrequenciaArterialDiastolica;
-    private String prontQueixaPrincipal;
-    private String prontAnamnese;
-    private String prontDiagnostico;
-    private String prontPrescricao;
-    private String prontExame;
-    private String prontObservacao;
-    private String prontTempoDuracao;
+    
+    // Dados Vitais e Antropométricos
+    private String peso;
+    private String altura;
+    private String temperatura;
+    private String saturacao;
+    private String pressao;
+    private String frequenciaRespiratoria;
+    private String frequenciaArterialSistolica;
+    private String frequenciaArterialDiastolica;
+    private String hemoglobina;
+    
+    // Dados Demográficos
+    private Date dataNascimento;
+    private String sexo;
+    
+    // Anamnese e Avaliação
+    private String queixaPrincipal;
+    private String anamnese;
+    private String conduta;
+    private String observacao;
+    private String diagnostico;
+    
+    // Prescrição Médica
+    private String modeloPrescricao;
+    private String tituloPrescricao;
+    private Date dataPrescricao;
+    private String prescricao;
+    
+    // Exames
+    private String modeloExame;
+    private String tituloExame;
+    private Date dataExame;
+    private String exame;
+    private String tempoDuracao;
+    
+    // Dados de Controle
+    private Date dataFinalizado;
+    private String codigoProntuario;
 }
