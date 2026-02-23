@@ -15,7 +15,9 @@ import br.com.saudeConecta.presentation.dto.consulta.AgendarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.AtualizarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.CancelarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.HistoricoConsultaPacienteResponse;
+import br.com.saudeConecta.presentation.dto.consulta.HistoricoConsultaDentistaResponse;
 import br.com.saudeConecta.domain.prontuario.Prontuario;
+import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -45,6 +47,7 @@ public class ConsultaService {
     private final OrganizacaoRepository organizacaoRepository;
     private final UsuarioRepository usuarioRepository;
     private final ProntuarioRepository prontuarioRepository;
+    private final ProntuarioDentistaRepository prontuarioDentistaRepository;
     private final TenantHelper tenantHelper;
     
     @RequiresTenant
@@ -236,6 +239,50 @@ public class ConsultaService {
     
 
 
+    /**
+     * Atualiza o status de uma consulta AGENDADA para CONFIRMADA ou CANCELADA.
+     *
+     * @param id             ID da consulta
+     * @param novoStatus     CONFIRMADA ou CANCELADA
+     * @param motivo         Motivo (obrigatório apenas para CANCELADA)
+     * @return Consulta atualizada
+     */
+    @RequiresTenant
+    @Transactional
+    public Consulta atualizarStatus(Long id, StatusConsulta novoStatus, String motivo) {
+        Consulta consulta = buscarPorId(id)
+            .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada com ID: " + id));
+
+        if (!StatusConsulta.AGENDADA.equals(consulta.getStatus()) &&
+            !StatusConsulta.CONFIRMADA.equals(consulta.getStatus())) {
+            throw new IllegalStateException(
+                "Apenas consultas AGENDADAS ou CONFIRMADAS podem ter o status alterado. Status atual: " + consulta.getStatus());
+        }
+
+        if (StatusConsulta.CANCELADA.equals(novoStatus) &&
+            (motivo == null || motivo.isBlank())) {
+            throw new IllegalArgumentException("Motivo é obrigatório ao cancelar uma consulta");
+        }
+
+        StatusConsulta statusAnterior = consulta.getStatus();
+        consulta.setStatus(novoStatus);
+
+        if (StatusConsulta.CANCELADA.equals(novoStatus)) {
+            consulta.setMotivoCancelamento(motivo);
+        }
+
+        Consulta salva = consultaRepository.save(consulta);
+
+        String descricao = StatusConsulta.CONFIRMADA.equals(novoStatus)
+            ? "Consulta confirmada"
+            : "Consulta cancelada: " + motivo;
+        registrarHistorico(salva, statusAnterior, novoStatus, descricao, getUsuarioAtual());
+
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return consultaRepository.findByIdAndOrganizacao_IdWithRelations(salva.getId(), orgId)
+            .orElse(salva);
+    }
+
     @RequiresTenant
     @Transactional
     public Consulta atualizarConsultaByOrg(Long id, AtualizarConsultaRequest request) {
@@ -298,6 +345,61 @@ public class ConsultaService {
     
     public List<ConsultaHistorico> buscarHistorico(Long consultaId) {
         return historicoRepository.findByConsulta_IdOrderByCreatedAtDesc(consultaId);
+    }
+
+    // ==========================================
+    // ESTATÍSTICAS POR PROFISSIONAL (usuarioId + orgId) - HOJE
+    // ==========================================
+
+    /**
+     * Conta todas as consultas de hoje de um profissional específico na organização
+     *
+     * @param organizacaoId ID da organização
+     * @param usuarioId ID do usuário logado (profissional)
+     * @return Quantidade de consultas hoje
+     */
+    public Long contarConsultasHojePorUsuarioEOrg(Long organizacaoId, Long usuarioId) {
+        LocalDate hoje = LocalDate.now();
+        return consultaRepository.countConsultasHojePorUsuarioEOrg(
+            organizacaoId,
+            usuarioId,
+            hoje.atStartOfDay(),
+            hoje.plusDays(1).atStartOfDay()
+        );
+    }
+
+    /**
+     * Conta consultas REALIZADAS hoje de um profissional específico na organização
+     *
+     * @param organizacaoId ID da organização
+     * @param usuarioId ID do usuário logado (profissional)
+     * @return Quantidade de consultas realizadas hoje
+     */
+    public Long contarConsultasRealizadasHojePorUsuarioEOrg(Long organizacaoId, Long usuarioId) {
+        LocalDate hoje = LocalDate.now();
+        return consultaRepository.countConsultasRealizadasHojePorUsuarioEOrg(
+            organizacaoId,
+            usuarioId,
+            hoje.atStartOfDay(),
+            hoje.plusDays(1).atStartOfDay()
+        );
+    }
+
+    /**
+     * Conta consultas AGENDADAS hoje de um profissional específico na organização
+     *
+     * @param organizacaoId ID da organização
+     * @param usuarioId ID do usuário logado (profissional)
+     * @return Quantidade de consultas agendadas hoje
+     */
+    public Long contarConsultasAgendadasHojePorUsuarioEOrg(Long organizacaoId, Long usuarioId) {
+        LocalDate hoje = LocalDate.now();
+        return consultaRepository.countConsultasAgendadasHojePorUsuarioEOrg(
+            organizacaoId,
+            usuarioId,
+            hoje.atStartOfDay(),
+            hoje.plusDays(1).atStartOfDay()
+        );
     }
 
     // ==========================================
@@ -889,6 +991,98 @@ public class ConsultaService {
         return builder.build();
     }
     
+    /**
+     * Busca histórico completo de consultas odontológicas de um paciente
+     * Inclui dados da consulta, paciente, profissional e prontuário dentista (se existir)
+     *
+     * @param pacienteId ID do paciente
+     * @return Lista de DTOs com histórico odontológico completo
+     */
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<HistoricoConsultaDentistaResponse> buscarHistoricoCompletoPacienteDentista(Long pacienteId) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        log.info("Buscando histórico odontológico do paciente ID: {} na organização ID: {}", pacienteId, orgId);
+
+        List<Consulta> consultas = consultaRepository.findHistoricoCompletoPacienteDentista(pacienteId, orgId);
+        log.debug("Encontradas {} consultas odontológicas para o paciente", consultas.size());
+
+        return consultas.stream()
+            .map(consulta -> {
+                List<ProntuarioDentista> prontuarios = prontuarioDentistaRepository.findByConsultaId(consulta.getId());
+                ProntuarioDentista prontuario = prontuarios.isEmpty() ? null : prontuarios.get(0);
+                return mapearParaHistoricoDentistaResponse(consulta, prontuario);
+            })
+            .toList();
+    }
+
+    /**
+     * Mapeia entidade Consulta e ProntuarioDentista para DTO de resposta odontológica
+     */
+    private HistoricoConsultaDentistaResponse mapearParaHistoricoDentistaResponse(Consulta consulta, ProntuarioDentista prontuario) {
+        HistoricoConsultaDentistaResponse.HistoricoConsultaDentistaResponseBuilder builder =
+            HistoricoConsultaDentistaResponse.builder();
+
+        builder.consultaId(consulta.getId())
+               .dataHora(consulta.getDataHora())
+               .duracaoMinutos(consulta.getDuracaoMinutos())
+               .observacoes(consulta.getObservacoes())
+               .valor(consulta.getValor())
+               .status(consulta.getStatus() != null ? consulta.getStatus().name() : null)
+               .motivoCancelamento(consulta.getMotivoCancelamento());
+
+        if (consulta.getPaciente() != null) {
+            builder.pacienteId(consulta.getPaciente().getPaciCodigo())
+                   .pacienteNome(consulta.getPaciente().getPaciNome())
+                   .pacienteCpf(consulta.getPaciente().getPaciCpf())
+                   .pacienteDataNascimento(consulta.getPaciente().getPaciDataNacimento())
+                   .pacienteTelefone(consulta.getPaciente().getPaciTelefone());
+        }
+
+        if (consulta.getProfissional() != null) {
+            builder.profissionalId(consulta.getProfissional().getId())
+                   .profissionalNome(consulta.getProfissional().getNome())
+                   .profissionalCrm(consulta.getProfissional().getRegistroConselho());
+            if (consulta.getEspecialidade() != null) {
+                builder.profissionalEspecialidade(consulta.getEspecialidade().getNome());
+            }
+        }
+
+        if (prontuario != null) {
+            builder.prontuarioId(prontuario.getCodigo())
+                   .queixaPrincipal(prontuario.getQueixaPrincipal())
+                   .anamnese(prontuario.getAnamnese())
+                   .observacao(prontuario.getObservacao())
+                   .diagnostico(prontuario.getDiagnostico())
+                   .higieneBucal(prontuario.getHigieneBucal())
+                   .condicaoGengival(prontuario.getCondicaoGengival())
+                   .oclusal(prontuario.getOclusal())
+                   .atm(prontuario.getAtm())
+                   .planoTratamento(prontuario.getPlanoTratamento())
+                   .procedimentos(prontuario.getProcedimentos())
+                   .orientacoes(prontuario.getOrientacoes())
+                   .tituloPrescricao(prontuario.getTituloPrescricao())
+                   .dataPrescricao(prontuario.getDataPrescricao())
+                   .prescricao(prontuario.getPrescricao())
+                   .tituloExame(prontuario.getTituloExame())
+                   .dataExame(prontuario.getDataExame())
+                   .tempoDuracao(prontuario.getTempoDuracao())
+                   .dataFinalizado(prontuario.getDataFinalizado() != null ?
+                       java.sql.Date.valueOf(prontuario.getDataFinalizado()) : null)
+                   .dentes(prontuario.getDentes() != null ?
+                       prontuario.getDentes().stream()
+                           .map(d -> HistoricoConsultaDentistaResponse.DenteResponse.builder()
+                               .codigo(d.getCodigo())
+                               .numeroFdi(d.getNumeroFdi())
+                               .status(d.getStatus())
+                               .observacao(d.getObservacao())
+                               .build())
+                           .toList() : java.util.List.of());
+        }
+
+        return builder.build();
+    }
+
     /**
      * Converte uma String de data para o tipo Date
      * @param dataString String no formato "yyyy-MM-dd" ou "dd/MM/yyyy"

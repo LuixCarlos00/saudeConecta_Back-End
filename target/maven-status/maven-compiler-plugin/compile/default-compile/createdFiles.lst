@@ -1,9 +1,13 @@
+br/com/saudeConecta/presentation/dto/consulta/HistoricoConsultaDentistaResponse$DenteResponse.class
 br/com/saudeConecta/domain/dashboard/ConfiguracaoGraficoDashboard.class
 br/com/saudeConecta/presentation/controller/ConfiguracaoGraficoDashboardController.class
-br/com/saudeConecta/presentation/dto/dashboard/AtualizarConfiguracaoGraficoRequest.class
 br/com/saudeConecta/presentation/dto/dashboard/ConfiguracaoGraficoResponse.class
 br/com/saudeConecta/domain/dashboard/ConfiguracaoGraficoDashboard$ConfiguracaoGraficoDashboardBuilder.class
+br/com/saudeConecta/presentation/dto/consulta/HistoricoConsultaDentistaResponse$DenteResponse$DenteResponseBuilder.class
 br/com/saudeConecta/service/ConfiguracaoGraficoDashboardService.class
-br/com/saudeConecta/domain/dashboard/TipoGraficoDashboard.class
 br/com/saudeConecta/presentation/dto/usuario/UsuarioPerfilCompletoResponse$SecretariaResumo.class
+br/com/saudeConecta/presentation/dto/consulta/HistoricoConsultaDentistaResponse$HistoricoConsultaDentistaResponseBuilder.class
+br/com/saudeConecta/presentation/dto/dashboard/AtualizarConfiguracaoGraficoRequest.class
+br/com/saudeConecta/domain/dashboard/TipoGraficoDashboard.class
+br/com/saudeConecta/presentation/dto/consulta/HistoricoConsultaDentistaResponse.class
 br/com/saudeConecta/infrastructure/persistence/repository/ConfiguracaoGraficoDashboardRepository.class

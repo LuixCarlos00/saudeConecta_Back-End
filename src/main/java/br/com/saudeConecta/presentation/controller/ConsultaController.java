@@ -2,12 +2,14 @@ package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.service.ConsultaService;
 import br.com.saudeConecta.domain.consulta.Consulta;
+import br.com.saudeConecta.domain.consulta.StatusConsulta;
 import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.presentation.dto.consulta.AgendarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.AtualizarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.CancelarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.ConsultaResponse;
 import br.com.saudeConecta.presentation.dto.consulta.HistoricoConsultaPacienteResponse;
+import br.com.saudeConecta.presentation.dto.consulta.HistoricoConsultaDentistaResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -95,6 +97,35 @@ public class ConsultaController {
         return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
     }
 
+    /**
+     * Atualiza o status de uma consulta para CONFIRMADA ou CANCELADA.
+     *
+     * @param id     ID da consulta
+     * @param status Novo status: CONFIRMADA ou CANCELADA
+     * @param motivo Motivo (obrigatório apenas para CANCELADA)
+     * @return Consulta atualizada
+     */
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ConsultaResponse> atualizarStatus(
+            @PathVariable Long id,
+            @RequestParam String status,
+            @RequestParam(required = false) String motivo) {
+        log.info("Atualizando status da consulta {} para {}", id, status);
+        try {
+            StatusConsulta novoStatus = StatusConsulta.valueOf(status.toUpperCase());
+            if (novoStatus != StatusConsulta.CONFIRMADA && novoStatus != StatusConsulta.CANCELADA) {
+                return ResponseEntity.badRequest().build();
+            }
+            Consulta consulta = consultaService.atualizarStatus(id, novoStatus, motivo);
+            return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
+        } catch (IllegalArgumentException e) {
+            log.warn("Status inválido ou consulta não encontrada: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (IllegalStateException e) {
+            log.warn("Transição de status inválida: {}", e.getMessage());
+            return ResponseEntity.unprocessableEntity().build();
+        }
+    }
 
     @GetMapping("/horarios-ocupados")
     public ResponseEntity<List<String>> buscarHorariosOcupados(
@@ -389,6 +420,61 @@ public class ConsultaController {
     }
 
     // ==========================================
+    // ESTATÍSTICAS POR PROFISSIONAL (usuarioId + orgId) - HOJE
+    // ==========================================
+
+    /**
+     * Conta todas as consultas de hoje do profissional logado
+     * Filtra por usuarioId (via JOIN com profissional) + organizacaoId do TenantContext
+     *
+     * @param usuarioId ID do usuário logado (profissional)
+     * @return Quantidade de consultas hoje
+     */
+    @GetMapping("/estatisticas/profissional/{usuarioId}/consultas-hoje")
+    public ResponseEntity<Long> contarConsultasHojePorProfissional(@PathVariable Long usuarioId) {
+        Long organizacaoId = TenantContext.getCurrentTenant();
+        if (organizacaoId == null) {
+            log.error("Organização não identificada no contexto");
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(consultaService.contarConsultasHojePorUsuarioEOrg(organizacaoId, usuarioId));
+    }
+
+    /**
+     * Conta consultas REALIZADAS hoje do profissional logado
+     * Filtra por usuarioId (via JOIN com profissional) + organizacaoId do TenantContext
+     *
+     * @param usuarioId ID do usuário logado (profissional)
+     * @return Quantidade de consultas realizadas hoje
+     */
+    @GetMapping("/estatisticas/profissional/{usuarioId}/consultas-realizadas-hoje")
+    public ResponseEntity<Long> contarConsultasRealizadasHojePorProfissional(@PathVariable Long usuarioId) {
+        Long organizacaoId = TenantContext.getCurrentTenant();
+        if (organizacaoId == null) {
+            log.error("Organização não identificada no contexto");
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(consultaService.contarConsultasRealizadasHojePorUsuarioEOrg(organizacaoId, usuarioId));
+    }
+
+    /**
+     * Conta consultas AGENDADAS hoje do profissional logado
+     * Filtra por usuarioId (via JOIN com profissional) + organizacaoId do TenantContext
+     *
+     * @param usuarioId ID do usuário logado (profissional)
+     * @return Quantidade de consultas agendadas hoje
+     */
+    @GetMapping("/estatisticas/profissional/{usuarioId}/consultas-agendadas-hoje")
+    public ResponseEntity<Long> contarConsultasAgendadasHojePorProfissional(@PathVariable Long usuarioId) {
+        Long organizacaoId = TenantContext.getCurrentTenant();
+        if (organizacaoId == null) {
+            log.error("Organização não identificada no contexto");
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(consultaService.contarConsultasAgendadasHojePorUsuarioEOrg(organizacaoId, usuarioId));
+    }
+
+    // ==========================================
     // ESTATÍSTICAS GLOBAIS (SUPER ADMIN)
     // ==========================================
 
@@ -532,6 +618,32 @@ public class ConsultaController {
             
         } catch (Exception e) {
             log.error("Erro ao buscar histórico de consultas do paciente {}: {}", pacienteId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Busca histórico completo de consultas odontológicas de um paciente
+     * Retorna consultas REALIZADAS que possuem prontuário dentista
+     *
+     * @param pacienteId ID do paciente
+     * @return Lista com histórico odontológico completo
+     */
+    @GetMapping("/BuscandoHistoricoDeConsultasDoPaciente_dentista/{pacienteId}")
+    public ResponseEntity<List<HistoricoConsultaDentistaResponse>> buscarHistoricoCompletoPacienteDentista(
+            @PathVariable Long pacienteId) {
+
+        log.info("=== Requisição recebida: GET /consultas/BuscandoHistoricoDeConsultasDoPaciente_dentista/{} ===", pacienteId);
+
+        try {
+            List<HistoricoConsultaDentistaResponse> historico =
+                consultaService.buscarHistoricoCompletoPacienteDentista(pacienteId);
+
+            log.info("Histórico odontológico retornado com sucesso - {} registros", historico.size());
+            return ResponseEntity.ok(historico);
+
+        } catch (Exception e) {
+            log.error("Erro ao buscar histórico odontológico do paciente {}: {}", pacienteId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

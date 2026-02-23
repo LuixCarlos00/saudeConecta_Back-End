@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ================================================================== -->
+    <!-- Tabela principal — prontuário odontológico                          -->
+    <!-- ================================================================== -->
+    <changeSet id="011-create-table-prontuario-dentista" author="saudeConecta">
+        <createTable tableName="prontuario_dentista">
+
+            <column name="prontdent_codigo" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- ── Anamnese ── -->
+            <column name="prontdent_queixa_principal" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="prontdent_anamnese" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="prontdent_observacao" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+
+            <!-- ── Exame Clínico (higiene + gengival + oclusal + ATM) ── -->
+            <!-- O odontograma agora fica em tabela própria               -->
+            <column name="prontdent_higiene_bucal" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="prontdent_condicao_gengival" type="VARCHAR(100)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="prontdent_oclusal" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="prontdent_atm" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+
+            <!-- ── Diagnóstico e Tratamento ── -->
+            <column name="prontdent_diagnostico" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="prontdent_plano_tratamento" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+
+            <!-- ── Prescrição ── -->
+            <column name="prontdent_titulo_prescricao" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="prontdent_data_prescricao" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="prontdent_prescricao" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+
+            <!-- ── Procedimentos / Exame ── -->
+            <column name="prontdent_titulo_exame" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="prontdent_data_exame" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="prontdent_procedimentos" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="prontdent_orientacoes" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+
+            <!-- ── Controle ── -->
+            <column name="prontdent_data_finalizado" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="prontdent_tempo_duracao" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+
+            <!-- ── Relacionamentos ── -->
+            <column name="prontdent_codigo_medico" type="BIGINT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="prontdent_consulta" type="BIGINT">
+                <constraints nullable="true"/>
+            </column>
+
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="prontuario_dentista"
+                baseColumnNames="prontdent_codigo_medico"
+                referencedTableName="profissional"
+                referencedColumnNames="id"
+                constraintName="fk_prontuario_dentista_profissional"/>
+
+        <addForeignKeyConstraint
+                baseTableName="prontuario_dentista"
+                baseColumnNames="prontdent_consulta"
+                referencedTableName="consulta"
+                referencedColumnNames="id"
+                constraintName="fk_prontuario_dentista_consulta"/>
+
+    </changeSet>
+
+    <!-- ================================================================== -->
+    <!-- Tabela de dentes — odontograma estruturado (1 linha por dente)      -->
+    <!-- ================================================================== -->
+    <changeSet id="012-create-table-prontuario-dentista-dente" author="saudeConecta">
+        <createTable tableName="prontuario_dentista_dente">
+
+            <column name="prontdentd_codigo" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- FK para o prontuário odontológico -->
+            <column name="prontdentd_prontuario" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Número FDI do dente: 11–18, 21–28, 31–38, 41–48 -->
+            <column name="prontdentd_numero_fdi" type="INT">
+                <constraints nullable="false"/>
+            </column>
+
+            <!--
+                Status do dente:
+                sadio | cariado | obturado | ausente | protese | canal | fratura | implante
+            -->
+            <column name="prontdentd_status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Observação livre sobre o dente -->
+            <column name="prontdentd_observacao" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+
+        </createTable>
+
+        <!-- Garante que cada dente apareça apenas uma vez por prontuário -->
+        <addUniqueConstraint
+                tableName="prontuario_dentista_dente"
+                columnNames="prontdentd_prontuario, prontdentd_numero_fdi"
+                constraintName="uq_prontuario_dente"/>
+
+        <addForeignKeyConstraint
+                baseTableName="prontuario_dentista_dente"
+                baseColumnNames="prontdentd_prontuario"
+                referencedTableName="prontuario_dentista"
+                referencedColumnNames="prontdent_codigo"
+                constraintName="fk_prontuario_dente_prontuario"
+                onDelete="CASCADE"/>
+
+    </changeSet>
+
+</databaseChangeLog>
