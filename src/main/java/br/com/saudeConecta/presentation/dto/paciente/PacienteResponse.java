@@ -11,7 +11,7 @@ public record PacienteResponse(
         String nome,
         String sexo,
         @JsonFormat(pattern = "dd/MM/yyyy")
-        LocalDate dataNacimento,
+        LocalDate dataNascimento,
         String cpf,
         String rg,
         String email,

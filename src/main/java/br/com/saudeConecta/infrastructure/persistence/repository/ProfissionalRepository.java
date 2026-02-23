@@ -77,6 +77,7 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
     @Query("SELECT p FROM Profissional p WHERE p.usuario.id = :usuarioId AND p.organizacao.id = :organizacaoId")
     Optional<Profissional> findByUsuarioAndOrganizacao_Id(@Param("usuarioId") Long usuarioId, @Param("organizacaoId") Long organizacaoId);
 
+    Optional<Profissional> findByEmail(String email);
 
 
     @Query("SELECT p FROM Profissional p " +

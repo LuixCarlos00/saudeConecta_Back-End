@@ -4,15 +4,16 @@ import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.infra.tenant.TenantAware;
 import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteRequest;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.persistence.*;
+ import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
 import java.sql.Date;
 
-@Entity
+
+ @Entity
 @Getter
 @Setter
 @NoArgsConstructor

@@ -35,8 +35,6 @@ public class Prontuario implements Serializable {
     @Column(name = "prontTemperatura")
     private String prontTemperatura;
 
-    @Column(name = "prontDataNacimento", nullable = false)
-    private String prontDataNacimento;
 
     @Column(name = "prontSexo")
     private String prontSexo;
@@ -117,34 +115,33 @@ public class Prontuario implements Serializable {
 
 
     public Prontuario(@NotNull CadastrarProntuarioRequest dados, Profissional profissional, Consulta consulta) {
-        this.prontAltura = dados.prontAltura();
-        this.prontPeso = dados.prontPeso();
-        this.prontTemperatura = dados.prontTemperatura();
-        this.prontDataNacimento = dados.prontDataNacimento();
-        this.prontSexo = dados.prontSexo();
-        this.prontSaturacao = dados.prontSaturacao();
-        this.prontHemoglobina = dados.prontHemoglobina();
-        this.prontPressao = dados.prontPressao();
-        this.prontFrequenciaRespiratoria = dados.prontFrequenciaRespiratoria();
-        this.prontFrequenciaArterialSistolica = dados.prontFrequenciaArterialSistolica();
-        this.prontFrequenciaArterialDiastolica = dados.prontFrequenciaArterialDiastolica();
-        this.prontObservacao = dados.prontObservacao();
-        this.prontCondulta = dados.prontCondulta();
-        this.prontAnamnese = dados.prontAnamnese();
-        this.prontQueixaPricipal = dados.prontQueixaPricipal();
-        this.prontDiagnostico = dados.prontDiagnostico();
-        this.prontModeloPrescricao = dados.prontModeloPrescricao();
-        this.prontTituloPrescricao = dados.prontTituloPrescricao();
-        this.prontDataPrescricao = dados.prontDataPrescricao();
-        this.prontPrescricao = dados.prontPrescricao();
-        this.prontDataFinalizado = dados.prontDataFinalizado();
+        this.prontAltura = dados.altura();
+        this.prontPeso = dados.peso();
+        this.prontTemperatura = dados.temperatura();
+        this.prontSexo = dados.sexo();
+        this.prontSaturacao = dados.saturacao();
+        this.prontHemoglobina = dados.hemoglobina();
+        this.prontPressao = dados.pressao();
+        this.prontFrequenciaRespiratoria = dados.frequenciaRespiratoria();
+        this.prontFrequenciaArterialSistolica = dados.frequenciaArterialSistolica();
+        this.prontFrequenciaArterialDiastolica = dados.frequenciaArterialDiastolica();
+        this.prontObservacao = dados.observacao();
+        this.prontCondulta = dados.conduta();
+        this.prontAnamnese = dados.anamnese();
+        this.prontQueixaPricipal = dados.queixaPrincipal();
+        this.prontDiagnostico = dados.diagnostico();
+        this.prontModeloPrescricao = dados.modeloPrescricao();
+        this.prontTituloPrescricao = dados.tituloPrescricao();
+        this.prontDataPrescricao = dados.dataPrescricao();
+        this.prontPrescricao = dados.prescricao();
+        this.prontDataFinalizado = dados.dataFinalizado();
         this.profissional = profissional;
         this.consulta = consulta;
-        this.prontTituloExame = dados.prontTituloExame();
-        this.prontDataExame = dados.prontDataExame();
-        this.prontExame = dados.prontExame();
-        this.prontModeloExame = dados.prontModeloExame();
-        this.prontTempoDuracao = dados.prontTempoDuracao();
+        this.prontTituloExame = dados.tituloExame();
+        this.prontDataExame = dados.dataExame();
+        this.prontExame = dados.exame();
+        this.prontModeloExame = dados.modeloExame();
+        this.prontTempoDuracao = dados.tempoDuracao();
     }
 }
 

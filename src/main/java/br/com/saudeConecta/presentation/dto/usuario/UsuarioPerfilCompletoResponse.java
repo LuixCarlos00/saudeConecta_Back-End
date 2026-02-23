@@ -66,7 +66,7 @@ public record UsuarioPerfilCompletoResponse(
             return new ProfissionalResumo(
                 p.getId(),
                 p.getNome(),
-                p.getTipoProfissional() != null ? p.getTipoProfissional().getNome() : null,
+                p.getTipoProfissional() != null ? p.getTipoProfissional().getCodigo() : null,
                 p.getTipoProfissional() != null ? p.getTipoProfissional().getConselho() : null,
                 p.getRegistroConselho(),
                 p.getRegistroConselho(),

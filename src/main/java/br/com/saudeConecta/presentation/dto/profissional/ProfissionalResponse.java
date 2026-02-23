@@ -22,8 +22,12 @@ public record ProfissionalResponse(
         @NotBlank(message = "Registro do conselho é obrigatório")
         String registroConselho,
 
+        @NotNull(message = "Sexo é obrigatório")
         String sexo,
+
         String rg,
+
+        @NotNull(message = "Data de nascimento é obrigatória")
         LocalDate dataNascimento,
 
         @NotBlank(message = "CPF é obrigatório")
@@ -33,7 +37,6 @@ public record ProfissionalResponse(
         @Email(message = "Email inválido")
         String email,
 
-        @NotBlank(message = "Telefone é obrigatório")
         String telefone,
 
         String formacao,
@@ -41,7 +44,6 @@ public record ProfissionalResponse(
         BigDecimal valorConsulta,
         Integer tempoConsultaMinutos,
         String status,
-
 
         @NotNull(message = "Especialidades são obrigatórias")
         List<EspecialidadeResumo> especialidades,

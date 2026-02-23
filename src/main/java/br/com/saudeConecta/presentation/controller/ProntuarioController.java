@@ -35,7 +35,7 @@ public class ProntuarioController {
     @PostMapping("/cadastrarProntuarioMedico")
     public ResponseEntity<ProntuarioResponse> cadastrarProntuarioMedico(@Valid @RequestBody CadastrarProntuarioRequest request) {
         log.info("=== Requisição recebida: POST /prontuario/cadastrarProntuarioMedico ===");
-        log.debug("Dados recebidos - Médico ID: {}, Consulta ID: {}", request.prontCodigoMedico(), request.consulta());
+        log.debug("Dados recebidos - Médico ID: {}, Consulta ID: {}", request.codigoMedico(), request.consulta());
         
         try {
             Prontuario prontuario = prontuarioService.cadastrarProntuarioMedico(request);

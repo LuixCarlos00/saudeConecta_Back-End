@@ -20,8 +20,7 @@ public class ProntuarioResponse {
     private String prontPeso;
     private String prontAltura;
     private String prontTemperatura;
-    private String prontDataNacimento;
-    private String prontSexo;
+     private String prontSexo;
     private String prontSaturacao;
     private String prontHemoglobina;
     private String prontPressao;
@@ -60,8 +59,7 @@ public class ProntuarioResponse {
         response.setProntPeso(prontuario.getProntPeso());
         response.setProntAltura(prontuario.getProntAltura());
         response.setProntTemperatura(prontuario.getProntTemperatura());
-        response.setProntDataNacimento(prontuario.getProntDataNacimento());
-        response.setProntSexo(prontuario.getProntSexo());
+         response.setProntSexo(prontuario.getProntSexo());
         response.setProntSaturacao(prontuario.getProntSaturacao());
         response.setProntHemoglobina(prontuario.getProntHemoglobina());
         response.setProntPressao(prontuario.getProntPressao());

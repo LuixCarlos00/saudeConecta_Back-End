@@ -19,9 +19,6 @@
             <column name="prontTemperatura" type="VARCHAR(50)">
                 <constraints nullable="true"/>
             </column>
-            <column name="prontDataNacimento" type="VARCHAR(50)">
-                <constraints nullable="false"/>
-            </column>
             <column name="prontSexo" type="VARCHAR(20)">
                 <constraints nullable="true"/>
             </column>

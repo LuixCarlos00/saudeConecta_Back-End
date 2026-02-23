@@ -2,6 +2,7 @@ package br.com.saudeConecta.service;
 
 import br.com.saudeConecta.domain.common.Sexo;
 import br.com.saudeConecta.domain.endereco.Endereco;
+import br.com.saudeConecta.domain.historicodadospessoais.EntidadeTipo;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.profissional.Especialidade;
 import br.com.saudeConecta.domain.profissional.Profissional;
@@ -17,6 +18,8 @@ import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.presentation.dto.profissional.AtualizarClinicoRequest;
 import br.com.saudeConecta.presentation.dto.profissional.CadastrarClinicoRequest;
 import br.com.saudeConecta.presentation.dto.profissional.ProfissionalResponse;
+import br.com.saudeConecta.util.EmailUnicoService;
+import br.com.saudeConecta.util.SnapshotUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -45,7 +48,10 @@ public class ProfissionalService {
     private final PasswordEncoder passwordEncoder;
     private final TenantHelper tenantHelper;
     private final EmailCadastroService emailCadastroService;
-    
+    private final EmailUnicoService emailUnicoService;
+    private final HistoricoDadosPessoaisService historicoDadosPessoaisService;
+
+
     private static final String CARACTERES_SENHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*";
 
     public ProfissionalService(
@@ -57,7 +63,10 @@ public class ProfissionalService {
             EnderecoRepository enderecoRepository,
             PasswordEncoder passwordEncoder,
             TenantHelper tenantHelper,
-            EmailCadastroService emailCadastroService) {
+            EmailCadastroService emailCadastroService,
+            EmailUnicoService emailUnicoService,
+            HistoricoDadosPessoaisService historicoDadosPessoaisService
+    ) {
         this.profissionalRepository = profissionalRepository;
         this.tipoProfissionalRepository = tipoProfissionalRepository;
         this.especialidadeRepository = especialidadeRepository;
@@ -67,6 +76,8 @@ public class ProfissionalService {
         this.passwordEncoder = passwordEncoder;
         this.tenantHelper = tenantHelper;
         this.emailCadastroService = emailCadastroService;
+        this.emailUnicoService = emailUnicoService;
+        this.historicoDadosPessoaisService = historicoDadosPessoaisService;
     }
 
 
@@ -80,8 +91,14 @@ public class ProfissionalService {
 
         String cpfLimpo = limparCpf(request.cpf());
 
-        if (cpfLimpo != null && profissionalRepository.existsByCpfAndOrganizacao_Id(cpfLimpo, orgId)) {
+        if (usuarioRepository.existsByLogin(request.cpf())) {
             throw new IllegalStateException("CPF já cadastrado no sistema");
+        }
+
+        // Verificar se o email já existe em qualquer tabela
+        if (emailUnicoService.emailJaExiste(request.email())) {
+            String tabela = emailUnicoService.ondeEmailFoiEncontrado(request.email());
+            throw new IllegalStateException("Email já cadastrado no sistema como " + tabela);
         }
 
         Organizacao organizacao = organizacaoRepository.findById(orgId)
@@ -197,34 +214,36 @@ public class ProfissionalService {
     public Profissional atualizarClinicoIdByOrg(Long id, AtualizarClinicoRequest dadosAtualizados) {
         Long orgId = tenantHelper.getCurrentTenantId();
 
-        Profissional profissional = profissionalRepository.buscarClinicoIdByOrg(id, orgId)
+        Profissional antes = profissionalRepository.buscarClinicoIdByOrg(id, orgId)
                 .orElseThrow(() -> new IllegalArgumentException("Profissional não encontrado"));
 
+        Profissional snapshot = SnapshotUtil.copiarSnapshot(antes);
+
         // Atualiza campos básicos
-        profissional.setNome(dadosAtualizados.nome());
-        profissional.setCpf(dadosAtualizados.cpf());
-        profissional.setRg(dadosAtualizados.rg());
-        profissional.setRegistroConselho(dadosAtualizados.registroConselho());
-        profissional.setTelefone(dadosAtualizados.telefone());
-        profissional.setEmail(dadosAtualizados.email());
-        profissional.setFormacao(dadosAtualizados.formacao());
-        profissional.setInstituicao(dadosAtualizados.instituicao());
-        profissional.setValorConsulta(dadosAtualizados.valorConsulta());
-        profissional.setTempoConsultaMinutos(dadosAtualizados.tempoConsultaMinutos());
-        profissional.setDataNascimento(dadosAtualizados.dataNascimento());
+        antes.setNome(dadosAtualizados.nome());
+        antes.setCpf(dadosAtualizados.cpf());
+        antes.setRg(dadosAtualizados.rg());
+        antes.setRegistroConselho(dadosAtualizados.registroConselho());
+        antes.setTelefone(dadosAtualizados.telefone());
+        antes.setEmail(dadosAtualizados.email());
+        antes.setFormacao(dadosAtualizados.formacao());
+        antes.setInstituicao(dadosAtualizados.instituicao());
+        antes.setValorConsulta(dadosAtualizados.valorConsulta());
+        antes.setTempoConsultaMinutos(dadosAtualizados.tempoConsultaMinutos());
+        antes.setDataNascimento(dadosAtualizados.dataNascimento());
 
         // Atualiza tipo profissional se fornecido
         if (dadosAtualizados.tipoProfissional() != null && !dadosAtualizados.tipoProfissional().isEmpty()) {
             String tipoCodigo = dadosAtualizados.tipoProfissional();
             TipoProfissional tipoProfissional = tipoProfissionalRepository.findByCodigo(tipoCodigo)
                 .orElseThrow(() -> new IllegalStateException("Tipo " + tipoCodigo + " não encontrado"));
-            profissional.setTipoProfissional(tipoProfissional);
+            antes.setTipoProfissional(tipoProfissional);
         }
 
         // Atualiza especialidade se fornecida (recebe nome da especialidade)
         if (dadosAtualizados.especialidade() != null && !dadosAtualizados.especialidade().isEmpty()) {
             String nomeEspecialidade = dadosAtualizados.especialidade().trim();
-            TipoProfissional tipoProfissional = profissional.getTipoProfissional();
+            TipoProfissional tipoProfissional = antes.getTipoProfissional();
             
             // Busca especialidade pelo nome e tipo profissional
             especialidadeRepository.findByTipoProfissional_IdAndNome(tipoProfissional.getId(), nomeEspecialidade)
@@ -232,7 +251,7 @@ public class ProfissionalService {
                     especialidade -> {
                         Set<Especialidade> especialidades = new HashSet<>();
                         especialidades.add(especialidade);
-                        profissional.setEspecialidades(especialidades);
+                        antes.setEspecialidades(especialidades);
                     },
                     () -> {
                         // Se não encontrar, cria nova especialidade
@@ -247,14 +266,14 @@ public class ProfissionalService {
                         
                         Set<Especialidade> especialidades = new HashSet<>();
                         especialidades.add(novaEspecialidade);
-                        profissional.setEspecialidades(especialidades);
+                        antes.setEspecialidades(especialidades);
                     }
                 );
         }
 
         // Atualiza endereço se fornecido
         if (dadosAtualizados.endereco() != null) {
-            Endereco endereco = profissional.getEndereco();
+            Endereco endereco = antes.getEndereco();
 
             if (endereco == null) {
                 // Cria novo endereço
@@ -265,11 +284,21 @@ public class ProfissionalService {
                 dadosAtualizados.endereco().updateEntity(endereco);
             }
 
-            profissional.setEndereco(endereco);
+            antes.setEndereco(endereco);
         }
 
-        log.info("Profissional atualizado: {}", profissional);
-        return profissionalRepository.save(profissional);
+
+        Profissional resultado =  profissionalRepository.save(antes);
+        log.info("Profissional atualizado: {}", resultado);
+
+        historicoDadosPessoaisService.registrarAlteracoesDeObjeto(
+                EntidadeTipo.PROFISSIONAL,
+                resultado.getId(),
+                tenantHelper.getCurrentUserId(),
+                snapshot,
+                resultado
+        );
+return resultado ;
     }
 
 

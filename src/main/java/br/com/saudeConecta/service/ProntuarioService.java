@@ -33,13 +33,13 @@ public class ProntuarioService {
     @Transactional
     public Prontuario cadastrarProntuarioMedico(CadastrarProntuarioRequest request) {
         log.info("Iniciando cadastro de prontuário - Médico ID: {}, Consulta ID: {}", 
-                request.prontCodigoMedico(), request.consulta());
+                request.codigoMedico(), request.consulta());
 
         // Buscar profissional
-        Profissional profissional = profissionalRepository.findById(request.prontCodigoMedico())
+        Profissional profissional = profissionalRepository.findById(request.codigoMedico())
                 .orElseThrow(() -> {
-                    log.error("Profissional não encontrado - ID: {}", request.prontCodigoMedico());
-                    return new EntityNotFoundException("Profissional não encontrado com ID: " + request.prontCodigoMedico());
+                    log.error("Profissional não encontrado - ID: {}", request.codigoMedico());
+                    return new EntityNotFoundException("Profissional não encontrado com ID: " + request.codigoMedico());
                 });
 
         // Buscar consulta

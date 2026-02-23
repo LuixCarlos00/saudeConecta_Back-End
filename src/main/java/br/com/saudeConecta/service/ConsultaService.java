@@ -859,8 +859,7 @@ public class ConsultaService {
                    .hemoglobina(prontuario.getProntHemoglobina())
                    
                    // Dados Demográficos
-                   .dataNascimento(this.parseStringToDate(prontuario.getProntDataNacimento()))
-                   .sexo(prontuario.getProntSexo())
+                    .sexo(prontuario.getProntSexo())
                    
                    // Anamnese e Avaliação
                    .queixaPrincipal(prontuario.getProntQueixaPricipal())

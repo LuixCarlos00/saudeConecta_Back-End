@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog
-    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
-    <changeSet id="021-001-criar-tabela-mensageria" author="equipe-sentinela">
+    <changeSet id="021-criar-tabela-mensageria" author="equipe-sentinela">
         <createTable tableName="mensageria">
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
@@ -52,18 +52,18 @@
         </createTable>
 
         <addForeignKeyConstraint
-            baseTableName="mensageria"
-            baseColumnNames="organizacao_id"
-            constraintName="fk_mensageria_organizacao"
-            referencedTableName="organizacao"
-            referencedColumnNames="id"/>
+                baseTableName="mensageria"
+                baseColumnNames="organizacao_id"
+                constraintName="fk_mensageria_organizacao"
+                referencedTableName="organizacao"
+                referencedColumnNames="id"/>
 
         <addForeignKeyConstraint
-            baseTableName="mensageria"
-            baseColumnNames="destinatario_profissional_id"
-            constraintName="fk_mensageria_profissional"
-            referencedTableName="profissional"
-            referencedColumnNames="id"/>
+                baseTableName="mensageria"
+                baseColumnNames="destinatario_profissional_id"
+                constraintName="fk_mensageria_profissional"
+                referencedTableName="profissional"
+                referencedColumnNames="id"/>
 
         <createIndex tableName="mensageria" indexName="idx_mensageria_organizacao">
             <column name="organizacao_id"/>

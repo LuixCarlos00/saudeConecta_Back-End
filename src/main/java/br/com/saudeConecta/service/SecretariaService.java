@@ -1,6 +1,8 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.domain.historicodadospessoais.EntidadeTipo;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
+import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.domain.secretaria.StatusSecretaria;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
@@ -14,6 +16,8 @@ import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepo
 import br.com.saudeConecta.infrastructure.persistence.repository.SecretariaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
 import br.com.saudeConecta.presentation.dto.secretaria.CadastrarSecretariaRequest;
+import br.com.saudeConecta.util.EmailUnicoService;
+import br.com.saudeConecta.util.SnapshotUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -39,6 +43,9 @@ public class SecretariaService {
     private final TenantHelper tenantHelper;
     private final EmailCadastroService emailCadastroService;
     private final Executor emailTaskExecutor;
+    private final EmailUnicoService emailUnicoService;
+    private final HistoricoDadosPessoaisService historicoDadosPessoaisService;
+
 
     public SecretariaService(
             SecretariaRepository secretariaRepository,
@@ -47,7 +54,9 @@ public class SecretariaService {
             PasswordEncoder passwordEncoder,
             TenantHelper tenantHelper,
             EmailCadastroService emailCadastroService,
-            @Qualifier("emailTaskExecutor") Executor emailTaskExecutor) {
+            @Qualifier("emailTaskExecutor") Executor emailTaskExecutor,
+            EmailUnicoService emailUnicoService,
+            HistoricoDadosPessoaisService historicoDadosPessoaisService) {
         this.secretariaRepository = secretariaRepository;
         this.usuarioRepository = usuarioRepository;
         this.organizacaoRepository = organizacaoRepository;
@@ -55,6 +64,8 @@ public class SecretariaService {
         this.tenantHelper = tenantHelper;
         this.emailCadastroService = emailCadastroService;
         this.emailTaskExecutor = emailTaskExecutor;
+        this.emailUnicoService = emailUnicoService;
+        this.historicoDadosPessoaisService = historicoDadosPessoaisService;
     }
 
 
@@ -71,17 +82,31 @@ public class SecretariaService {
     public Secretaria atualizarSecretariaIdByOrg(Long id, Secretaria dadosAtualizados) {
         Long orgId = tenantHelper.getCurrentTenantId();
         
-        Secretaria secretaria = secretariaRepository.findByIdAndOrganizacao_Id(id, orgId)
+        Secretaria antes = secretariaRepository.findByIdAndOrganizacao_Id(id, orgId)
             .orElseThrow(() -> new IllegalArgumentException("Secretária não encontrada"));
+
+        Secretaria snapshot = SnapshotUtil.copiarSnapshot(antes);
+
 
         // Atualiza apenas os campos permitidos (nome e email)
         if (dadosAtualizados.getNome() != null) {
-            secretaria.setNome(dadosAtualizados.getNome());
+            antes.setNome(dadosAtualizados.getNome());
         }
         if (dadosAtualizados.getEmail() != null) {
-            secretaria.setEmail(dadosAtualizados.getEmail());
+            antes.setEmail(dadosAtualizados.getEmail());
         }
-         return secretariaRepository.save(secretaria);
+       Secretaria resultado = secretariaRepository.save(antes);
+        log.info("Secretária atualizada com sucesso. ID: {}", antes.getId());
+
+        historicoDadosPessoaisService.registrarAlteracoesDeObjeto(
+                EntidadeTipo.PROFISSIONAL,
+                resultado.getId(),
+                tenantHelper.getCurrentUserId(),
+                snapshot,
+                resultado
+        );
+
+        return resultado;
     }
 
     @RequiresTenant
@@ -92,8 +117,15 @@ public class SecretariaService {
 
         String cpfLimpo = limparCpf(request.cpf());
 
+
         if (usuarioRepository.existsByLogin(cpfLimpo)) {
             throw new IllegalStateException("CPF já cadastrado no sistema");
+        }
+
+        // Verificar se o email já existe em qualquer tabela
+        if (emailUnicoService.emailJaExiste(request.email())) {
+            String tabela = emailUnicoService.ondeEmailFoiEncontrado(request.email());
+            throw new IllegalStateException("Email já cadastrado no sistema como " + tabela);
         }
 
         Organizacao organizacao = organizacaoRepository.findById(orgId)

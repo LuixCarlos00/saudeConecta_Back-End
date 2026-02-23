@@ -15,6 +15,7 @@ USE office;
 
 -- ==========================================
 -- TABELA: organizacao (2 organizações)
+-- TABELA: organizacao (2 organizações)
 -- ==========================================
 INSERT INTO organizacao (nome, razao_social, cnpj, tipo, telefone, email, status, created_at) VALUES
 ('Clínica Saúde Total', 'Clínica Saúde Total LTDA', '12.345.678/0001-90', 'CLINICA', '(11) 3333-4444', 'contato@saudetotal.com.br', 'ATIVA', NOW()),
