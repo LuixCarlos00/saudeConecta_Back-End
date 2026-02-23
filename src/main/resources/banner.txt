@@ -7,7 +7,7 @@
  |_____/  \__,_| \__,_|\__,_| \___| \_____|\___/ |_| |_| \___| \___|  \__|\__,_|
 
   ${AnsiColor.CYAN}==========================================================${AnsiColor.DEFAULT}
-  ${AnsiColor.GREEN}::${AnsiColor.DEFAULT} ${AnsiColor.CYAN}SAUDE CONECTA API${AnsiColor.DEFAULT} ${AnsiColor.GREEN}::${AnsiColor.DEFAULT}  v${application.version:1.0.05}
+  ${AnsiColor.GREEN}::${AnsiColor.DEFAULT} ${AnsiColor.CYAN}SAUDE CONECTA API${AnsiColor.DEFAULT} ${AnsiColor.GREEN}::${AnsiColor.DEFAULT}  v${application.version:1.0.06}
   ${AnsiColor.CYAN}==========================================================${AnsiColor.DEFAULT}
   
   ${AnsiColor.YELLOW}Spring Boot${AnsiColor.DEFAULT}  : ${spring-boot.version}
