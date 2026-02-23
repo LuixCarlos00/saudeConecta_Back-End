@@ -1,121 +1,138 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog
-    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
-    <!-- ========================================== -->
-    <!-- TABELA: CONFIGURACAO_GRAFICO_DASHBOARD     -->
-    <!-- ========================================== -->
+    <!-- ================================================================ -->
+    <!-- TABELA: CONFIGURACAO_GRAFICO_DASHBOARD                            -->
+    <!-- Cada usuário tem suas próprias configurações de gráficos,         -->
+    <!-- filtradas pelo perfil (ADMIN/SUPER_ADMIN vs MEDICO/DENTISTA)      -->
+    <!-- ================================================================ -->
     <changeSet id="020-001-criar-tabela-configuracao-grafico-dashboard" author="equipe-sentinela">
+
         <createTable tableName="configuracao_grafico_dashboard">
+
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
+
             <column name="organizacao_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
+
+            <column name="usuario_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+
             <column name="tipo_grafico" type="VARCHAR(50)">
                 <constraints nullable="false"/>
             </column>
+
             <column name="ativo" type="BOOLEAN" defaultValueBoolean="true">
                 <constraints nullable="false"/>
             </column>
+
             <column name="ordem_exibicao" type="INT"/>
+
             <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
+
             <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
+
         </createTable>
-        
-        <addForeignKeyConstraint 
-            baseTableName="configuracao_grafico_dashboard" 
-            baseColumnNames="organizacao_id"
-            constraintName="fk_config_grafico_organizacao"
-            referencedTableName="organizacao"
-            referencedColumnNames="id"
-            onDelete="CASCADE"/>
-            
-        <createIndex tableName="configuracao_grafico_dashboard" indexName="idx_config_grafico_organizacao">
+
+        <!-- FKs -->
+        <addForeignKeyConstraint
+                baseTableName="configuracao_grafico_dashboard"
+                baseColumnNames="organizacao_id"
+                constraintName="fk_config_grafico_organizacao"
+                referencedTableName="organizacao"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="configuracao_grafico_dashboard"
+                baseColumnNames="usuario_id"
+                constraintName="fk_config_grafico_usuario"
+                referencedTableName="usuarios"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <!-- Índices -->
+        <createIndex tableName="configuracao_grafico_dashboard"
+                     indexName="idx_config_grafico_usuario">
+            <column name="usuario_id"/>
+        </createIndex>
+
+        <createIndex tableName="configuracao_grafico_dashboard"
+                     indexName="idx_config_grafico_organizacao">
             <column name="organizacao_id"/>
         </createIndex>
-        
-        <createIndex tableName="configuracao_grafico_dashboard" indexName="idx_config_grafico_tipo">
+
+        <createIndex tableName="configuracao_grafico_dashboard"
+                     indexName="idx_config_grafico_tipo">
             <column name="tipo_grafico"/>
         </createIndex>
-        
-        <addUniqueConstraint 
-            tableName="configuracao_grafico_dashboard"
-            columnNames="organizacao_id, tipo_grafico"
-            constraintName="uk_organizacao_tipo_grafico"/>
+
+        <!-- Unique: cada usuário só pode ter uma config por tipo de gráfico -->
+        <addUniqueConstraint
+                tableName="configuracao_grafico_dashboard"
+                columnNames="usuario_id, tipo_grafico"
+                constraintName="uk_usuario_tipo_grafico"/>
+
     </changeSet>
 
-    <!-- ========================================== -->
-    <!-- DADOS INICIAIS: CONFIGURAÇÕES PADRÃO       -->
-    <!-- ========================================== -->
-    <changeSet id="020-002-inserir-configuracoes-padrao" author="equipe-sentinela">
-        <comment>Insere configurações padrão de gráficos para todas as organizações existentes</comment>
-        
+    <!-- ================================================================ -->
+    <!-- DADOS INICIAIS: configs por usuário conforme perfil               -->
+    <!--                                                                   -->
+    <!-- ADMIN / SUPER_ADMIN → 4 gráficos administrativos                 -->
+    <!-- MEDICO / DENTISTA   → 2 gráficos do profissional                 -->
+    <!-- ================================================================ -->
+    <changeSet id="020-002-inserir-configuracoes-por-usuario" author="equipe-sentinela">
+        <comment>
+            Gera configurações individuais ativas para cada usuário existente,
+            respeitando os gráficos permitidos por perfil.
+        </comment>
+
         <sql>
-            INSERT INTO configuracao_grafico_dashboard (organizacao_id, tipo_grafico, ativo, ordem_exibicao, created_at, updated_at)
-            SELECT 
-                o.id,
-                'CONSULTAS_POR_PERIODO',
-                true,
-                1,
-                CURRENT_TIMESTAMP,
-                CURRENT_TIMESTAMP
-            FROM organizacao o
-            WHERE NOT EXISTS (
-                SELECT 1 FROM configuracao_grafico_dashboard cgd 
-                WHERE cgd.organizacao_id = o.id AND cgd.tipo_grafico = 'CONSULTAS_POR_PERIODO'
+            /* ── Gráficos ADMINISTRATIVOS para SUPER_ADMIN, ADMIN_ORG e GERENTE ── */
+            INSERT INTO configuracao_grafico_dashboard
+            (organizacao_id, usuario_id, tipo_grafico, ativo, ordem_exibicao, created_at, updated_at)
+            SELECT u.organizacao_id, u.id, t.tipo, true, t.ordem, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            FROM usuarios u
+            CROSS JOIN (
+            SELECT 'CONSULTAS_POR_PERIODO'     AS tipo, 1 AS ordem UNION ALL
+            SELECT 'AGENDAMENTOS_DIAS_SEMANA'  AS tipo, 2 AS ordem UNION ALL
+            SELECT 'SALDO_FINANCEIRO'           AS tipo, 3 AS ordem UNION ALL
+            SELECT 'MEDICOS_POR_ESPECIALIDADE'  AS tipo, 4 AS ordem
+            ) AS t
+            WHERE u.tipo_usuario_novo IN ('SUPER_ADMIN', 'ADMIN_ORG', 'GERENTE')
+            AND NOT EXISTS (
+            SELECT 1 FROM configuracao_grafico_dashboard cgd
+            WHERE cgd.usuario_id = u.id AND cgd.tipo_grafico = t.tipo
             );
-            
-            INSERT INTO configuracao_grafico_dashboard (organizacao_id, tipo_grafico, ativo, ordem_exibicao, created_at, updated_at)
-            SELECT 
-                o.id,
-                'AGENDAMENTOS_DIAS_SEMANA',
-                true,
-                2,
-                CURRENT_TIMESTAMP,
-                CURRENT_TIMESTAMP
-            FROM organizacao o
-            WHERE NOT EXISTS (
-                SELECT 1 FROM configuracao_grafico_dashboard cgd 
-                WHERE cgd.organizacao_id = o.id AND cgd.tipo_grafico = 'AGENDAMENTOS_DIAS_SEMANA'
-            );
-            
-            INSERT INTO configuracao_grafico_dashboard (organizacao_id, tipo_grafico, ativo, ordem_exibicao, created_at, updated_at)
-            SELECT 
-                o.id,
-                'SALDO_FINANCEIRO',
-                true,
-                3,
-                CURRENT_TIMESTAMP,
-                CURRENT_TIMESTAMP
-            FROM organizacao o
-            WHERE NOT EXISTS (
-                SELECT 1 FROM configuracao_grafico_dashboard cgd 
-                WHERE cgd.organizacao_id = o.id AND cgd.tipo_grafico = 'SALDO_FINANCEIRO'
-            );
-            
-            INSERT INTO configuracao_grafico_dashboard (organizacao_id, tipo_grafico, ativo, ordem_exibicao, created_at, updated_at)
-            SELECT 
-                o.id,
-                'MEDICOS_POR_ESPECIALIDADE',
-                true,
-                4,
-                CURRENT_TIMESTAMP,
-                CURRENT_TIMESTAMP
-            FROM organizacao o
-            WHERE NOT EXISTS (
-                SELECT 1 FROM configuracao_grafico_dashboard cgd 
-                WHERE cgd.organizacao_id = o.id AND cgd.tipo_grafico = 'MEDICOS_POR_ESPECIALIDADE'
+
+            /* ── Gráficos PROFISSIONAL (médicos e dentistas) ── */
+            INSERT INTO configuracao_grafico_dashboard
+            (organizacao_id, usuario_id, tipo_grafico, ativo, ordem_exibicao, created_at, updated_at)
+            SELECT u.organizacao_id, u.id, t.tipo, true, t.ordem, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            FROM usuarios u
+            CROSS JOIN (
+            SELECT 'MEDIA_TEMPO_CONSULTA'        AS tipo, 1 AS ordem UNION ALL
+            SELECT 'AGENDAMENTOS_MEDICO_PERIODO'  AS tipo, 2 AS ordem
+            ) AS t
+            WHERE u.tipo_usuario_novo = 'PROFISSIONAL'
+            AND NOT EXISTS (
+            SELECT 1 FROM configuracao_grafico_dashboard cgd
+            WHERE cgd.usuario_id = u.id AND cgd.tipo_grafico = t.tipo
             );
         </sql>
+
     </changeSet>
 
 </databaseChangeLog>

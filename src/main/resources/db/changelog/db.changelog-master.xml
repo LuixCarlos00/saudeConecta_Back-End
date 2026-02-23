@@ -33,6 +33,12 @@
     <include file="db/changelog/changes/020-criar-tabela-configuracao-grafico-dashboard.xml"/>
 
     <!-- Sistema de Mensageria -->
-    <include file="db/changelog/changes/021-criar-tabela-mensageria.xml"/>
+     <include file="db/changelog/changes/021-criar-tabela-mensageria.xml"/>
+
+    <!-- Histórico de Dados Pessoais -->
+    <include file="db/changelog/changes/022-create-historico-dados-pessoais.xml"/>
+
+    <!-- Prontuario Dentista -->
+    <include file="db/changelog/changes/023-create-prontuario-dentista.xml"/>
 
 </databaseChangeLog>

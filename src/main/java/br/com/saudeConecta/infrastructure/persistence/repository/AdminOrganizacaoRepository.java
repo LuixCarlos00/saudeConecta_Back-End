@@ -29,4 +29,7 @@ public interface AdminOrganizacaoRepository extends JpaRepository<AdminOrganizac
     Optional<AdminOrganizacao> findByUsuarioIdWithRelations(@Param("usuarioId") Long usuarioId);
 
     Optional<AdminOrganizacao> findByIdAndOrganizacao_Id(Long id, Long organizacaoId);
+
+    Optional<AdminOrganizacao> findByEmail(String email);
+
 }

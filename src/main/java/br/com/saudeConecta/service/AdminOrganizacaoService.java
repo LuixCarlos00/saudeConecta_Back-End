@@ -1,7 +1,9 @@
 package br.com.saudeConecta.service;
 
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
+import br.com.saudeConecta.domain.historicodadospessoais.EntidadeTipo;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
+import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.domain.usuario.StatusUsuario;
@@ -12,6 +14,8 @@ import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizaca
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
 import br.com.saudeConecta.presentation.dto.admin.CadastrarAdminRequest;
+import br.com.saudeConecta.util.EmailUnicoService;
+import br.com.saudeConecta.util.SnapshotUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,6 +41,9 @@ public class AdminOrganizacaoService {
     private final EmailCadastroService emailCadastroService;
     private final Executor emailTaskExecutor;
     private final TenantHelper tenantHelper;
+    private final EmailUnicoService emailUnicoService;
+    private final HistoricoDadosPessoaisService historicoDadosPessoaisService;
+
 
 
     public AdminOrganizacaoService(
@@ -46,7 +53,9 @@ public class AdminOrganizacaoService {
             PasswordEncoder passwordEncoder,
             TenantHelper tenantHelper,
             EmailCadastroService emailCadastroService,
-            @Qualifier("emailTaskExecutor") Executor emailTaskExecutor) {
+            @Qualifier("emailTaskExecutor") Executor emailTaskExecutor,
+            EmailUnicoService emailUnicoService,
+            HistoricoDadosPessoaisService historicoDadosPessoaisService) {
         this.adminOrganizacaoRepository = adminOrganizacaoRepository;
         this.usuarioRepository = usuarioRepository;
         this.organizacaoRepository = organizacaoRepository;
@@ -54,6 +63,8 @@ public class AdminOrganizacaoService {
         this.tenantHelper = tenantHelper;
         this.emailCadastroService = emailCadastroService;
         this.emailTaskExecutor = emailTaskExecutor;
+        this.emailUnicoService = emailUnicoService;
+        this.historicoDadosPessoaisService = historicoDadosPessoaisService;
     }
 
     @Transactional(readOnly = true)
@@ -70,6 +81,12 @@ public class AdminOrganizacaoService {
         if (usuarioRepository.existsByLogin(request.cpf())) {
             log.warn("CPF já cadastrado como login: {}", request.cpf());
             throw new IllegalStateException("CPF já cadastrado no sistema");
+        }
+
+        // Verificar se o email já existe em qualquer tabela
+        if (emailUnicoService.emailJaExiste(request.email())) {
+            String tabela = emailUnicoService.ondeEmailFoiEncontrado(request.email());
+            throw new IllegalStateException("Email já cadastrado no sistema como " + tabela);
         }
 
         // Busca a organização
@@ -125,21 +142,33 @@ public class AdminOrganizacaoService {
     @Transactional
     public AdminOrganizacao atualizarAdmByOrg(Long id, String nome, String email) {
         log.info("Atualizando administrador ID: {}", id);
+        Long orgId = tenantHelper.getCurrentTenantId();
 
-        AdminOrganizacao admin = adminOrganizacaoRepository.findById(id)
+
+        AdminOrganizacao antes = adminOrganizacaoRepository.findById(id )
             .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
 
+
+        AdminOrganizacao snapshot = SnapshotUtil.copiarSnapshot(antes);
+
         if (nome != null && !nome.isBlank()) {
-            admin.setNome(nome);
+            antes.setNome(nome);
         }
         if (email != null && !email.isBlank()) {
-            admin.setEmail(email);
+            antes.setEmail(email);
         }
 
-        admin = adminOrganizacaoRepository.save(admin);
-        log.info("Administrador atualizado com sucesso. ID: {}", admin.getId());
+        AdminOrganizacao  resultado = adminOrganizacaoRepository.save(antes);
+        log.info("Administrador atualizado com sucesso. ID: {}", resultado.getId());
 
-        return admin;
+        historicoDadosPessoaisService.registrarAlteracoesDeObjeto(
+                EntidadeTipo.PROFISSIONAL,
+                resultado.getId(),
+                tenantHelper.getCurrentUserId(),
+                snapshot,
+                resultado
+        );
+        return antes;
     }
 
  

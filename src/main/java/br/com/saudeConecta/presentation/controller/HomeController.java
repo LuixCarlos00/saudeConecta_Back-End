@@ -43,14 +43,15 @@ public class HomeController {
     public ResponseEntity<DadosTokenJWT> autenticar(@RequestBody @NotNull DadosLoginUsuario dados) {
         var authenticatetoken = new UsernamePasswordAuthenticationToken(dados.login(), dados.senha());
         var authentication = authenticationManager.authenticate(authenticatetoken);
-        
+
         Usuario usuario = (Usuario) authentication.getPrincipal();
         Long organizacaoId = usuario.getOrganizacaoId();
-        
+
         // Obter nome do usuário baseado no tipo
         String nomeUsuario = getNomeUsuario(usuario);
-        
-        String tokenJWT = tokenService.gerarToken(usuario, organizacaoId, nomeUsuario);
+        String perfil = getProfissional(usuario);
+
+        String tokenJWT = tokenService.gerarToken(usuario, organizacaoId, nomeUsuario,perfil);
         log.info("Login realizado: {} | Org: {} | Nome: {}", usuario.getLogin(), organizacaoId, nomeUsuario);
 
         return ResponseEntity.ok(new DadosTokenJWT(tokenJWT));
@@ -90,7 +91,41 @@ public class HomeController {
         } catch (Exception e) {
             log.warn("Erro ao obter nome do usuário ID: {}", usuario.getId(), e);
         }
-        
+
         return "Usuário"; // Default fallback
     }
+
+    private String getProfissional(Usuario usuario) {
+        try {
+            if (usuario.isProfissional()) {
+                Optional<Profissional> profissional = profissionalRepository.findByUsuarioIdWithRelations(usuario.getId());
+                return profissional.map(p -> {
+                    if (p.getTipoProfissional() != null) {
+                        if (p.getTipoProfissional().isMedico()) {
+                            return "MEDICO";
+                        } else if (p.getTipoProfissional().isDentista()) {
+                            return "DENTISTA";
+                        } else {
+                            return p.getTipoProfissional().getCodigo();
+                        }
+                    }
+                    return "Profissional";
+                }).orElse("Profissional");
+            }
+            if (usuario.isAdminOrganizacao()) {
+                Optional<AdminOrganizacao> admin = adminOrganizacaoRepository.findByUsuario_Id(usuario.getId());
+                return admin.isPresent() ? "Administrador" : "null";
+            }
+            if (usuario.getTipoUsuario() != null && usuario.getTipoUsuario() == 3) { // Secretaria
+                Optional<Secretaria> secretaria = secretariaRepository.findByUsuario_Id(usuario.getId());
+                return secretaria.map(Secretaria::getNome).orElse("Secretária");
+            }
+        } catch (Exception e) {
+            log.warn("Erro ao obter profissional do usuário ID: {}", usuario.getId(), e);
+        }
+
+        return "false"; // Default fallback
+    }
+
+
 }

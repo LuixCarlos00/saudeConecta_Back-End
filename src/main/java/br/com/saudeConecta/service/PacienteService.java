@@ -1,7 +1,8 @@
 package br.com.saudeConecta.service;
 
  import br.com.saudeConecta.domain.endereco.Endereco;
-import br.com.saudeConecta.domain.organizacao.Organizacao;
+ import br.com.saudeConecta.domain.historicodadospessoais.EntidadeTipo;
+ import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.infra.tenant.RequiresTenant;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
@@ -10,14 +11,17 @@ import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepo
 import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
 import br.com.saudeConecta.presentation.dto.paciente.AtualizarPacienteRequest;
 import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteCompletoRequest;
-import org.springframework.transaction.annotation.Transactional;
+ import br.com.saudeConecta.util.SnapshotUtil;
+ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
   import org.springframework.stereotype.Service;
 
 import java.sql.Date;
-import java.util.List;
-import java.util.Optional;
+ import java.util.LinkedHashMap;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +32,7 @@ public class PacienteService  {
     private final EnderecoRepository enderecoRepository;
     private final OrganizacaoRepository organizacaoRepository;
     private final TenantHelper tenantHelper;
+    private final HistoricoDadosPessoaisService historicoDadosPessoaisService;
 
     // ========== MÉTODOS COM TENANT ==========
 
@@ -98,33 +103,35 @@ public class PacienteService  {
         log.info("Atualizando paciente ID: {}", id);
 
         // Busca o paciente existente
-        Paciente pacienteExistente = buscarrPacientebyOrg(id)
+        Paciente antes  = buscarrPacientebyOrg(id)
                 .orElseThrow(() -> {
                     log.warn("Paciente não encontrado para atualização: {}", id);
                     return new IllegalArgumentException("Paciente não encontrado");
                 });
+        Paciente snapshot = SnapshotUtil.copiarSnapshot(antes);
+
 
         // Atualiza o endereço se existir
         Endereco enderecoAtualizado = null;
-        if (pacienteExistente.getEndereco() != null) {
+        if (antes .getEndereco() != null) {
             enderecoAtualizado = Endereco.builder()
-                    .endCodigo(pacienteExistente.getEndereco().getEndCodigo())
+                    .endCodigo(antes .getEndereco().getEndCodigo())
                     .endNacionalidade(dados.nacionalidade() != null ?
-                            dados.nacionalidade() : pacienteExistente.getEndereco().getEndNacionalidade())
+                            dados.nacionalidade() : antes .getEndereco().getEndNacionalidade())
                     .endUF(dados.uf() != null ?
-                            dados.uf() : pacienteExistente.getEndereco().getEndUF())
+                            dados.uf() : antes .getEndereco().getEndUF())
                     .endMunicipio(dados.municipio() != null ?
-                            dados.municipio() : pacienteExistente.getEndereco().getEndMunicipio())
+                            dados.municipio() : antes .getEndereco().getEndMunicipio())
                     .endBairro(dados.bairro() != null ?
-                            dados.bairro() : pacienteExistente.getEndereco().getEndBairro())
+                            dados.bairro() : antes .getEndereco().getEndBairro())
                     .endCep(dados.cep() != null ?
-                            dados.cep() : pacienteExistente.getEndereco().getEndCep())
+                            dados.cep() : antes .getEndereco().getEndCep())
                     .endRua(dados.rua() != null ?
-                            dados.rua() : pacienteExistente.getEndereco().getEndRua())
+                            dados.rua() : antes .getEndereco().getEndRua())
                     .endNumero(dados.numero() != null ?
-                            dados.numero().longValue() : pacienteExistente.getEndereco().getEndNumero())
+                            dados.numero().longValue() : antes .getEndereco().getEndNumero())
                     .endComplemento(dados.complemento() != null ?
-                            dados.complemento() : pacienteExistente.getEndereco().getEndComplemento())
+                            dados.complemento() : antes .getEndereco().getEndComplemento())
                     .build();
 
             // Salva o endereço atualizado
@@ -133,23 +140,31 @@ public class PacienteService  {
 
         // Reconstrói o paciente com os dados atualizados
         Paciente pacienteAtualizado = Paciente.builder()
-                .paciCodigo(pacienteExistente.getPaciCodigo())
-                .organizacao(pacienteExistente.getOrganizacao())
-                .paciNome(dados.nome() != null ? dados.nome() : pacienteExistente.getPaciNome())
-                .paciSexo(dados.sexo() != null ? dados.sexo() : pacienteExistente.getPaciSexo())
-                .paciDataNacimento(dados.dataNacimento() != null ?
-                        Date.valueOf(dados.dataNacimento()) : pacienteExistente.getPaciDataNacimento())
-                .paciCpf(dados.cpf() != null ? dados.cpf() : pacienteExistente.getPaciCpf())
-                .paciRg(dados.rg() != null ? dados.rg() : pacienteExistente.getPaciRg())
-                .paciEmail(dados.email() != null ? dados.email() : pacienteExistente.getPaciEmail())
-                .paciTelefone(dados.telefone() != null ? dados.telefone() : pacienteExistente.getPaciTelefone())
+                .paciCodigo(antes .getPaciCodigo())
+                .organizacao(antes .getOrganizacao())
+                .paciNome(dados.nome() != null ? dados.nome() : antes .getPaciNome())
+                .paciSexo(dados.sexo() != null ? dados.sexo() : antes .getPaciSexo())
+                .paciDataNacimento(dados.dataNascimento () != null ?
+                        Date.valueOf(dados.dataNascimento ()) : antes .getPaciDataNacimento())
+                .paciCpf(dados.cpf() != null ? dados.cpf() : antes .getPaciCpf())
+                .paciRg(dados.rg() != null ? dados.rg() : antes .getPaciRg())
+                .paciEmail(dados.email() != null ? dados.email() : antes .getPaciEmail())
+                .paciTelefone(dados.telefone() != null ? dados.telefone() : antes .getPaciTelefone())
                 .endereco(enderecoAtualizado)
-                .paciStatus(pacienteExistente.getPaciStatus())
+                .paciStatus(antes .getPaciStatus())
                 .build();
 
         // Salva o paciente atualizado
         Paciente resultado = pacienteRepository.save(pacienteAtualizado);
         log.info("Paciente ID: {} atualizado com sucesso", id);
+
+        historicoDadosPessoaisService.registrarAlteracoesDeObjeto(
+                EntidadeTipo.PROFISSIONAL,
+                resultado.getPaciCodigo(),
+                tenantHelper.getCurrentUserId(),
+                snapshot,
+                resultado
+        );
 
         return resultado;
     }

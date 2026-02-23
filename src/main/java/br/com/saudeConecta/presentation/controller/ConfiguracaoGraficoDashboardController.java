@@ -1,5 +1,6 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.presentation.dto.dashboard.AtualizarConfiguracaoGraficoRequest;
 import br.com.saudeConecta.presentation.dto.dashboard.ConfiguracaoGraficoResponse;
 import br.com.saudeConecta.service.ConfiguracaoGraficoDashboardService;
@@ -7,7 +8,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,53 +19,45 @@ import java.util.List;
 public class ConfiguracaoGraficoDashboardController {
 
     private final ConfiguracaoGraficoDashboardService configuracaoService;
+    private final TenantHelper tenantHelper;
 
     @GetMapping
     public ResponseEntity<List<ConfiguracaoGraficoResponse>> listarConfiguracoes() {
-        log.debug("Listando todas as configurações de gráficos");
-        List<ConfiguracaoGraficoResponse> configuracoes = configuracaoService.listarConfiguracoes();
-        return ResponseEntity.ok(configuracoes);
+        Long usuarioId = tenantHelper.getCurrentUserId();
+        return ResponseEntity.ok(configuracaoService.listarConfiguracoes(usuarioId));
     }
 
     @GetMapping("/ativos")
     public ResponseEntity<List<ConfiguracaoGraficoResponse>> listarGraficosAtivos() {
-        log.debug("Listando gráficos ativos");
-        List<ConfiguracaoGraficoResponse> graficosAtivos = configuracaoService.listarGraficosAtivos();
-        return ResponseEntity.ok(graficosAtivos);
+        Long usuarioId = tenantHelper.getCurrentUserId();
+        return ResponseEntity.ok(configuracaoService.listarGraficosAtivos(usuarioId));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN_ORG')")
     public ResponseEntity<ConfiguracaoGraficoResponse> atualizarConfiguracao(
             @PathVariable Long id,
             @Valid @RequestBody AtualizarConfiguracaoGraficoRequest request) {
-        log.info("Atualizando configuração de gráfico ID: {}", id);
-        ConfiguracaoGraficoResponse response = configuracaoService.atualizarConfiguracao(id, request);
-        return ResponseEntity.ok(response);
+        Long usuarioId = tenantHelper.getCurrentUserId();
+        return ResponseEntity.ok(configuracaoService.atualizarConfiguracao(id, request, usuarioId));
     }
 
     @PutMapping("/batch")
-    @PreAuthorize("hasRole('ADMIN_ORG')")
     public ResponseEntity<List<ConfiguracaoGraficoResponse>> atualizarMultiplasConfiguracoes(
             @Valid @RequestBody List<AtualizarConfiguracaoGraficoRequest> requests) {
-        log.info("Atualizando múltiplas configurações de gráficos");
-        List<ConfiguracaoGraficoResponse> responses = configuracaoService.atualizarMultiplasConfiguracoes(requests);
-        return ResponseEntity.ok(responses);
+        Long usuarioId = tenantHelper.getCurrentUserId();
+        return ResponseEntity.ok(configuracaoService.atualizarMultiplasConfiguracoes(requests, usuarioId));
     }
 
     @PostMapping("/resetar")
-    @PreAuthorize("hasRole('ADMIN_ORG')")
     public ResponseEntity<Void> resetarConfiguracoesParaPadrao() {
-        log.info("Resetando configurações para padrão");
-        configuracaoService.resetarConfiguracoesParaPadrao();
+        Long usuarioId = tenantHelper.getCurrentUserId();
+        configuracaoService.resetarConfiguracoesParaPadrao(usuarioId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/inicializar")
-    @PreAuthorize("hasRole('ADMIN_ORG')")
     public ResponseEntity<List<ConfiguracaoGraficoResponse>> inicializarConfiguracoes() {
-        log.info("Inicializando configurações de gráficos para primeira utilização");
-        List<ConfiguracaoGraficoResponse> configuracoes = configuracaoService.inicializarConfiguracoesPrimeiroAcesso();
-        return ResponseEntity.ok(configuracoes);
+        Long usuarioId = tenantHelper.getCurrentUserId();
+        return ResponseEntity.ok(configuracaoService.inicializarConfiguracoesPrimeiroAcesso(usuarioId));
     }
 }

@@ -25,6 +25,8 @@ public interface SecretariaRepository extends JpaRepository<Secretaria, Long> {
     Optional<Secretaria> findByCpf(String cpf);
 
     boolean existsByCpf(String cpf);
+    
+    Optional<Secretaria> findByEmail(String email);
 
     Optional<Secretaria> findByUsuario_Id(Long usuarioId);
 

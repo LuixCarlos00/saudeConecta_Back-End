@@ -1,9 +1,13 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.email.EmailRecuperacaoSenhaService;
+import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.SecretariaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -22,6 +26,8 @@ public class HomeService {
 
     private final ProfissionalRepository profissionalRepository;
     private final UsuarioRepository usuarioRepository;
+    private final SecretariaRepository secretariaRepository;
+    private final AdminOrganizacaoRepository adminOrganizacaoRepository;
     private final EmailRecuperacaoSenhaService emailRecuperacaoSenhaService;
     private final PasswordEncoder passwordEncoder;
     private final Executor emailTaskExecutor;
@@ -29,11 +35,15 @@ public class HomeService {
     public HomeService(
             ProfissionalRepository profissionalRepository,
             UsuarioRepository usuarioRepository,
+            SecretariaRepository secretariaRepository,
+            AdminOrganizacaoRepository adminOrganizacaoRepository,
             EmailRecuperacaoSenhaService emailRecuperacaoSenhaService,
             PasswordEncoder passwordEncoder,
             @Qualifier("emailTaskExecutor") Executor emailTaskExecutor) {
         this.profissionalRepository = profissionalRepository;
         this.usuarioRepository = usuarioRepository;
+        this.secretariaRepository = secretariaRepository;
+        this.adminOrganizacaoRepository = adminOrganizacaoRepository;
         this.emailRecuperacaoSenhaService = emailRecuperacaoSenhaService;
         this.passwordEncoder = passwordEncoder;
         this.emailTaskExecutor = emailTaskExecutor;
@@ -43,10 +53,35 @@ public class HomeService {
     public void recuperarSenhaPorEmail(String email) {
         log.info("Iniciando recuperação de senha para email: {}", email);
 
-        // Busca usuário pelo login (email)
-        Usuario usuario = usuarioRepository.findUsuarioByLogin(email);
+        Usuario usuario = null;
+        String nome = null;
+
+        // Busca em Profissional
+        Optional<Profissional> profissionalOpt = profissionalRepository.findByEmail(email);
+        if (profissionalOpt.isPresent()) {
+            Profissional profissional = profissionalOpt.get();
+            usuario = profissional.getUsuario();
+            nome = profissional.getNome();
+        } else {
+            // Busca em Secretaria
+            Optional<Secretaria> secretariaOpt = secretariaRepository.findByEmail(email);
+            if (secretariaOpt.isPresent()) {
+                Secretaria secretaria = secretariaOpt.get();
+                usuario = secretaria.getUsuario();
+                nome = secretaria.getNome();
+            } else {
+                // Busca em AdminOrganizacao
+                Optional<AdminOrganizacao> adminOpt = adminOrganizacaoRepository.findByEmail(email);
+                if (adminOpt.isPresent()) {
+                    AdminOrganizacao admin = adminOpt.get();
+                    usuario = admin.getUsuario();
+                    nome = admin.getNome();
+                }
+            }
+        }
+
         if (usuario != null) {
-            processarRecuperacaoUsuario(usuario, email);
+            processarRecuperacaoUsuario(usuario, nome, email);
             return;
         }
 
@@ -54,14 +89,10 @@ public class HomeService {
         throw new EmailNaoEncontradoException("Email não encontrado no sistema");
     }
 
-    private void processarRecuperacaoUsuario(Usuario usuario, String email) {
+    private void processarRecuperacaoUsuario(Usuario usuario, String nome, String email) {
         String novaSenha = gerarSenhaAleatoria();
         usuario.setSenha(passwordEncoder.encode(novaSenha));
         usuarioRepository.save(usuario);
-
-        // Busca nome do profissional se existir
-        Optional<Profissional> profissionalOpt = profissionalRepository.findByUsuario_Id(usuario.getId());
-        String nome = profissionalOpt.map(Profissional::getNome).orElse("Usuário");
 
         // Envio de email assíncrono
         CompletableFuture.runAsync(() -> {

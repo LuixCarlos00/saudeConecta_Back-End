@@ -25,6 +25,7 @@ public class TokenService {
     private static final String CLAIM_ORGANIZACAO_ID = "organizacaoId";
     private static final String CLAIM_TIPO_USUARIO = "tipoUsuario";
     private static final String CLAIM_NOME = "nome";
+    private static final String CLAIM_PERFIL = "perfil";
 
     @Value("${api.security.token.secret}")
     private String secret;
@@ -40,7 +41,7 @@ public class TokenService {
                 .sign(Algorithm.HMAC256(secret));
     }
 
-    public String gerarToken(@NotNull Usuario usuario, Long organizacaoId, String nome) {
+    public String gerarToken(@NotNull Usuario usuario, Long organizacaoId, String nome, String perfil) {
         String autorizacao = usuario.getAuthorities().toString();
         return JWT.create()
                 .withIssuer(ISSUER)
@@ -49,6 +50,7 @@ public class TokenService {
                 .withClaim(CLAIM_ORGANIZACAO_ID, organizacaoId)
                 .withClaim(CLAIM_TIPO_USUARIO, usuario.getTipoUsuario().intValue())
                 .withClaim(CLAIM_NOME, nome)
+                .withClaim(CLAIM_PERFIL, perfil)
                 .withAudience(autorizacao)
                 .withExpiresAt(calcularDataExpiracao())
                 .sign(Algorithm.HMAC256(secret));

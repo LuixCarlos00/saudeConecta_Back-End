@@ -400,6 +400,45 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long> {
     //Todo tirar o 'realizando'
 
     // ==========================================
+    // ESTATÍSTICAS POR PROFISSIONAL (usuarioId + orgId) - HOJE
+    // ==========================================
+
+    @Query("SELECT COUNT(c) FROM Consulta c " +
+           "JOIN c.profissional p " +
+           "WHERE c.organizacao.id = :orgId " +
+           "AND p.usuario.id = :usuarioId " +
+           "AND c.dataHora BETWEEN :inicio AND :fim")
+    Long countConsultasHojePorUsuarioEOrg(
+        @Param("orgId") Long organizacaoId,
+        @Param("usuarioId") Long usuarioId,
+        @Param("inicio") LocalDateTime inicio,
+        @Param("fim") LocalDateTime fim);
+
+    @Query("SELECT COUNT(c) FROM Consulta c " +
+           "JOIN c.profissional p " +
+           "WHERE c.organizacao.id = :orgId " +
+           "AND p.usuario.id = :usuarioId " +
+           "AND c.status = br.com.saudeConecta.domain.consulta.StatusConsulta.REALIZADA " +
+           "AND c.dataHora BETWEEN :inicio AND :fim")
+    Long countConsultasRealizadasHojePorUsuarioEOrg(
+        @Param("orgId") Long organizacaoId,
+        @Param("usuarioId") Long usuarioId,
+        @Param("inicio") LocalDateTime inicio,
+        @Param("fim") LocalDateTime fim);
+
+    @Query("SELECT COUNT(c) FROM Consulta c " +
+           "JOIN c.profissional p " +
+           "WHERE c.organizacao.id = :orgId " +
+           "AND p.usuario.id = :usuarioId " +
+           "AND c.status = br.com.saudeConecta.domain.consulta.StatusConsulta.AGENDADA " +
+           "AND c.dataHora BETWEEN :inicio AND :fim")
+    Long countConsultasAgendadasHojePorUsuarioEOrg(
+        @Param("orgId") Long organizacaoId,
+        @Param("usuarioId") Long usuarioId,
+        @Param("inicio") LocalDateTime inicio,
+        @Param("fim") LocalDateTime fim);
+
+    // ==========================================
     // ESTATÍSTICAS POR MÉDICO E INTERVALO
     // ==========================================
 
@@ -417,12 +456,13 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long> {
         @Param("fim") LocalDateTime fim);
 
     @Query("SELECT COUNT(c) FROM Consulta c " +
+           "LEFT JOIN c.profissional p " +
            "WHERE c.organizacao.id = :orgId " +
-           "AND (:profissionalId IS NULL OR c.profissional.id = :profissionalId) " +
+           "AND (:usuarioId IS NULL OR p.usuario.id = :usuarioId) " +
            "AND c.dataHora BETWEEN :inicio AND :fim")
     Long countConsultasPorMedicoEIntervalo(
         @Param("orgId") Long organizacaoId,
-        @Param("profissionalId") Long profissionalId,
+        @Param("usuarioId") Long usuarioId,
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
 
@@ -491,6 +531,29 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long> {
            "AND c.status = 'REALIZADA' " +
            "ORDER BY c.dataHora DESC")
     List<Consulta> findHistoricoCompletoPaciente(
+        @Param("pacienteId") Long pacienteId,
+        @Param("organizacaoId") Long organizacaoId);
+
+    /**
+     * Busca histórico completo de consultas REALIZADAS de um paciente que POSSUEM prontuário odontológico
+     * Usa INNER JOIN com ProntuarioDentista para garantir que apenas consultas com prontuário dental sejam retornadas
+     *
+     * @param pacienteId ID do paciente
+     * @param organizacaoId ID da organização
+     * @return Lista de consultas REALIZADAS com prontuário dentista, ordenadas por data/hora (mais recente primeiro)
+     */
+    @Query("SELECT DISTINCT c FROM Consulta c " +
+           "INNER JOIN ProntuarioDentista pd ON pd.consulta.id = c.id " +
+           "LEFT JOIN FETCH c.profissional p " +
+           "LEFT JOIN FETCH p.tipoProfissional " +
+           "LEFT JOIN FETCH p.especialidades " +
+           "LEFT JOIN FETCH c.paciente pac " +
+           "LEFT JOIN FETCH c.especialidade " +
+           "WHERE c.organizacao.id = :organizacaoId " +
+           "AND c.paciente.paciCodigo = :pacienteId " +
+           "AND c.status = 'REALIZADA' " +
+           "ORDER BY c.dataHora DESC")
+    List<Consulta> findHistoricoCompletoPacienteDentista(
         @Param("pacienteId") Long pacienteId,
         @Param("organizacaoId") Long organizacaoId);
 }
