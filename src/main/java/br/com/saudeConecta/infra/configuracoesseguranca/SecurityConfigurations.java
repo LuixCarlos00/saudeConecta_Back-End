@@ -40,7 +40,7 @@ public class SecurityConfigurations {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http.cors(cors -> cors.configurationSource(request -> {
                     org.springframework.web.cors.CorsConfiguration config = new org.springframework.web.cors.CorsConfiguration();
-                    config.setAllowedOrigins(java.util.List.of(urlFrontEnd, "http://localhost:4200"));
+                    config.setAllowedOrigins(java.util.List.of(urlFrontEnd, "http://localhost:4200", "https://saude-conecta-frontend.vercel.app"));
                     config.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
                     config.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "ngrok-skip-browser-warning"));
                     config.setExposedHeaders(java.util.List.of("Authorization"));
@@ -83,7 +83,7 @@ public class SecurityConfigurations {
             @Override
             public void addCorsMappings(@NotNull CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins(urlBackEnd, urlFrontEnd, "http://localhost:4200")
+                        .allowedOrigins(urlBackEnd, urlFrontEnd, "http://localhost:4200", "https://saude-conecta-frontend.vercel.app")
                         .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                         .allowedHeaders("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "ngrok-skip-browser-warning")
                         .exposedHeaders("Authorization")
