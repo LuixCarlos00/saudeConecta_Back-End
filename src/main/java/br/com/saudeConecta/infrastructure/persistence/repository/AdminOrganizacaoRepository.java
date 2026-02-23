@@ -32,4 +32,7 @@ public interface AdminOrganizacaoRepository extends JpaRepository<AdminOrganizac
 
     Optional<AdminOrganizacao> findByEmail(String email);
 
+    @Query("SELECT a FROM AdminOrganizacao a LEFT JOIN FETCH a.usuario LEFT JOIN FETCH a.organizacao")
+    List<AdminOrganizacao> findAllWithRelations();
+
 }

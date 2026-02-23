@@ -4,7 +4,11 @@ public enum TipoOrganizacao {
     CLINICA_MEDICA("Clínica Médica"),
     CLINICA_ODONTOLOGICA("Clínica Odontológica"),
     MISTA("Clínica Mista"),
-    CLINICA("CLINICA");
+    CLINICA("Clínica"),
+    CONSULTORIO("Consultório"),
+    HOSPITAL("Hospital"),
+    LABORATORIO("Laboratório"),
+    UPA("UPA");
     
     private final String descricao;
     

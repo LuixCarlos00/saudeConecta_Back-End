@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Usuário super admin inicial sem organização -->
+    <!-- Senha: 123 (BCrypt $2a$) -->
+    <changeSet id="024-001-inserir-usuario-super-admin" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM usuarios WHERE login = 'luiz'</sqlCheck>
+        </preConditions>
+        <insert tableName="usuarios">
+            <column name="login" value="luiz"/>
+            <column name="senha" value="$2a$10$B.1VNbnkKMDAxhUeio5o7ezAgJeGqUI43PALY4ucn37Ko9H/c8cEW"/>
+            <column name="TipoUsuario" valueNumeric="1"/>
+            <column name="status" value="ATIVO"/>
+            <column name="tipo_usuario_novo" value="SUPER_ADMIN"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

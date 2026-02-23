@@ -142,6 +142,16 @@ public class UsuarioService   {
     }
 
     @Transactional(readOnly = true)
+    public TodosUsuariosAgrupadosResponse buscarTodosAdminOrgsSuperAdmin() {
+        log.debug("SUPER_ADMIN: buscando todos os AdminOrgs do sistema");
+        var administradores = adminOrganizacaoRepository.findAllWithRelations().stream()
+                .map(TodosUsuariosAgrupadosResponse.AdminResumo::fromEntity)
+                .toList();
+        return new TodosUsuariosAgrupadosResponse(
+                java.util.List.of(), java.util.List.of(), java.util.List.of(), administradores);
+    }
+
+    @Transactional(readOnly = true)
     public TodosUsuariosAgrupadosResponse buscarTodosAgrupados(Long organizacaoId) {
         log.debug("Buscando todos os usuários agrupados para organização ID: {}", organizacaoId);
 

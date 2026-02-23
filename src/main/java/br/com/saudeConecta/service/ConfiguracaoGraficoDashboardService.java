@@ -45,9 +45,23 @@ public class ConfiguracaoGraficoDashboardService {
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
+    @Transactional
     public List<ConfiguracaoGraficoResponse> listarGraficosAtivos(Long usuarioId) {
-        return configuracaoRepository.findByUsuarioIdAndAtivoTrueOrderByOrdemExibicaoAsc(usuarioId)
-                .stream().map(this::toResponse).collect(Collectors.toList());
+        var todasConfigs = configuracaoRepository.findByUsuarioIdOrderByOrdemExibicaoAsc(usuarioId);
+        if (todasConfigs.isEmpty()) {
+            log.info("Usuário {} sem configurações de gráfico — inicializando automaticamente", usuarioId);
+            Usuario usuario = usuarioRepository.findById(usuarioId)
+                    .orElse(null);
+            if (usuario != null) {
+                inicializarParaNovoUsuario(usuario);
+            }
+            return configuracaoRepository.findByUsuarioIdAndAtivoTrueOrderByOrdemExibicaoAsc(usuarioId)
+                    .stream().map(this::toResponse).collect(Collectors.toList());
+        }
+        return todasConfigs.stream()
+                .filter(c -> Boolean.TRUE.equals(c.getAtivo()))
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     // ── Atualização ──────────────────────────────────────────────────────────

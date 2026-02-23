@@ -51,8 +51,8 @@ public class UsuarioController {
         Long organizacaoId = TenantContext.getCurrentTenant();
 
         if (organizacaoId == null) {
-            log.warn("Organização não encontrada no contexto");
-            return ResponseEntity.badRequest().build();
+            log.info("SUPER_ADMIN sem organização — buscando todos os AdminOrgs do sistema");
+            return ResponseEntity.ok(usuarioService.buscarTodosAdminOrgsSuperAdmin());
         }
 
         return ResponseEntity.ok(usuarioService.buscarTodosAgrupados(organizacaoId));

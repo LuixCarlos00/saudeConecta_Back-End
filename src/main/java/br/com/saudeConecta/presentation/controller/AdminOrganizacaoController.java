@@ -4,6 +4,7 @@ import br.com.saudeConecta.service.AdminOrganizacaoService;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.presentation.dto.admin.AtualizarAdminRequest;
+import br.com.saudeConecta.presentation.dto.admin.CadastrarAdminOrgCompletoRequest;
 import br.com.saudeConecta.presentation.dto.admin.CadastrarAdminRequest;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -74,7 +75,24 @@ public class AdminOrganizacaoController {
     }
 
 
-@DeleteMapping("/deletarAdmByOrg/{id}")
+    @PostMapping("/cadastrarAdminOrgCompleto")
+    @Transactional
+    @Description("Cadastra Admin de Organização completo (com organização e endereço). Exclusivo para SUPER_ADMIN.")
+    public ResponseEntity<?> cadastrarAdminOrgCompleto(@RequestBody @Valid CadastrarAdminOrgCompletoRequest request) {
+        log.info("Cadastrando Admin Org completo: {}", request.nomeClinica());
+        try {
+            AdminOrganizacao admin = adminOrganizacaoService.cadastrarAdminOrgCompleto(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(admin);
+        } catch (IllegalStateException e) {
+            log.warn("Conflito ao cadastrar Admin Org: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            log.warn("Erro de validação ao cadastrar Admin Org: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/deletarAdmByOrg/{id}")
     @Transactional
     @Description("Deleta administrador por ID")
     public ResponseEntity<?> deletarAdmByOrg(@PathVariable Long id) {

@@ -1,6 +1,7 @@
 br/com/saudeConecta/presentation/dto/consulta/HistoricoConsultaDentistaResponse$DenteResponse.class
 br/com/saudeConecta/infrastructure/persistence/repository/ConsultaRepository.class
 br/com/saudeConecta/presentation/dto/secretaria/CadastrarSecretariaRequest.class
+br/com/saudeConecta/presentation/dto/admin/CadastrarAdminOrgCompletoRequest.class
 br/com/saudeConecta/domain/dashboard/ConfiguracaoGraficoDashboard.class
 br/com/saudeConecta/domain/prontuario/ProntuarioDentista$ProntuarioDentistaBuilder.class
 br/com/saudeConecta/presentation/dto/paciente/PacienteResponse.class

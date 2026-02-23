@@ -95,7 +95,8 @@ public record TodosUsuariosAgrupadosResponse(
         Boolean isOwner,
         String status,
         Long usuarioId,
-        String usuarioLogin
+        String usuarioLogin,
+        String nomeOrganizacao
     ) {
         public static AdminResumo fromEntity(AdminOrganizacao a) {
             return new AdminResumo(
@@ -106,7 +107,8 @@ public record TodosUsuariosAgrupadosResponse(
                 a.getIsOwner(),
                 a.getStatus() != null ? a.getStatus().name() : null,
                 a.getUsuario() != null ? a.getUsuario().getId() : null,
-                a.getUsuario() != null ? a.getUsuario().getLogin() : null
+                a.getUsuario() != null ? a.getUsuario().getLogin() : null,
+                a.getOrganizacao() != null ? a.getOrganizacao().getNome() : null
             );
         }
     }
