@@ -41,4 +41,7 @@
     <!-- Prontuario Dentista -->
     <include file="db/changelog/changes/023-create-prontuario-dentista.xml"/>
 
+    <!-- Dados iniciais de produção -->
+    <include file="db/changelog/changes/024-dados-iniciais-producao.xml"/>
+
 </databaseChangeLog>
