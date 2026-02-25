@@ -8,6 +8,7 @@ import br.com.saudeConecta.presentation.dto.consulta.AgendarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.AtualizarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.CancelarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.ConsultaResponse;
+import br.com.saudeConecta.presentation.dto.consulta.EstatisticasDashboardAdminOrgResponse;
 import br.com.saudeConecta.presentation.dto.consulta.HistoricoConsultaPacienteResponse;
 import br.com.saudeConecta.presentation.dto.consulta.HistoricoConsultaDentistaResponse;
 import jakarta.validation.Valid;
@@ -387,25 +388,97 @@ public class ConsultaController {
         return ResponseEntity.ok(response);
     }
 
-    // ==========================================
-    // ESTATÍSTICAS POR ORGANIZAÇÃO
-    // ==========================================
+    // ===============================================================
+    // BUSCAS DE ESTATISTICAS - Dashboard - Admin_ORGANIZACAO
+    // ===============================================================
+
+    /**
+     * Endpoint único que retorna todas as estatísticas do dashboard para AdminOrg.
+     * Realiza uma única query ao banco agrupando por status e período (hoje vs semana).
+     *
+     * @param organizacaoId ID da organização
+     * @return DTO com consultasHoje, consultasAguardando, consultasAtendidas,
+     *         consultasSemana, canceladosSemana e confirmadosSemana
+     */
+    @GetMapping("/estatisticas/organizacao/{organizacaoId}/dashboard")
+    public ResponseEntity<EstatisticasDashboardAdminOrgResponse> getEstatisticasDashboardAdminOrg(
+            @PathVariable Long organizacaoId) {
+
+        log.debug("Buscando estatísticas de dashboard para organização {}", organizacaoId);
+
+        EstatisticasDashboardAdminOrgResponse response =
+            consultaService.getEstatisticasDashboardAdminOrg(organizacaoId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    // ===============================================================
+    // BUSCAS DE ESTATISTICAS - Dashboard - PROFISSIONAL
+    // ===============================================================
+
+    /**
+     * Endpoint único que retorna todas as estatísticas do dashboard para o Profissional.
+     * Filtra por usuario.id via JOIN — o profissional vê apenas seus próprios dados.
+     *
+     * @param usuarioId ID do usuário logado
+     * @return DTO com consultasHoje, consultasAguardando, consultasAtendidas,
+     *         consultasSemana, canceladosSemana e confirmadosSemana
+     */
+    @GetMapping("/estatisticas/dashboard/profissional")
+    public ResponseEntity<EstatisticasDashboardAdminOrgResponse> getEstatisticasDashboardProfissional(
+            @RequestParam Long usuarioId) {
+        log.debug("Buscando estatísticas de dashboard para profissional usuarioId={}", usuarioId);
+        return ResponseEntity.ok(consultaService.getEstatisticasDashboardProfissional(usuarioId));
+    }
+
+    // ===============================================================
+    // BUSCAS DE ESTATISTICAS - Dashboard - SUPER_ADMIN (global)
+    // ===============================================================
+
+    /**
+     * Endpoint único que retorna todas as estatísticas do dashboard para SuperAdmin.
+     * Sem filtro de organização — cobre todas as consultas do sistema.
+     *
+     * @return DTO com consultasHoje, consultasAguardando, consultasAtendidas,
+     *         consultasSemana, canceladosSemana e confirmadosSemana
+     */
+    @GetMapping("/estatisticas/dashboard/super-admin")
+    public ResponseEntity<EstatisticasDashboardAdminOrgResponse> getEstatisticasDashboardSuperAdmin() {
+        log.debug("Buscando estatísticas de dashboard global para SuperAdmin");
+        return ResponseEntity.ok(consultaService.getEstatisticasDashboardSuperAdmin());
+    }
 
     @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-hoje")
-    public ResponseEntity<Long> contarConsultasHojePorOrganizacao(@PathVariable Long organizacaoId) {
-        return ResponseEntity.ok(consultaService.contarConsultasHojePorOrganizacao(organizacaoId));
+    public ResponseEntity<Long> getEstatisticaConsultasHojeByAdmiOrg(@PathVariable Long organizacaoId) {
+        return ResponseEntity.ok(consultaService.getEstatisticaConsultasHojeByAdmiOrg(organizacaoId));
     }
 
 
-    @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-realizadas-hoje")
-    public ResponseEntity<Long> contarRealizadasHojePorOrganizacao(@PathVariable Long organizacaoId) {
-        return ResponseEntity.ok(consultaService.contarConsultasRealizadasHojePorOrganizacao(organizacaoId));
+    @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-atendidas-hoje")
+    public ResponseEntity<Long> getEstatisticaConsultasAtendidasByAdmiOrg(@PathVariable Long organizacaoId) {
+        return ResponseEntity.ok(consultaService.getEstatisticaConsultasAtendidasByAdmiOrg(organizacaoId));
     }
 
     @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-agendadas-hoje")
-    public ResponseEntity<Long> contarAgendadasHojePorOrganizacao(@PathVariable Long organizacaoId) {
-        return ResponseEntity.ok(consultaService.contarConsultasAgendadasHojePorOrganizacao(organizacaoId));
+    public ResponseEntity<Long> getEstatisticasConsultaAgendadasHojeByOrd(@PathVariable Long organizacaoId) {
+        return ResponseEntity.ok(consultaService.getEstatisticasConsultaAgendadasHojeByOrd(organizacaoId));
     }
+
+
+    @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-semana")
+    public ResponseEntity<Long> getEstatisticasSemanaPorOrganizacao(
+            @PathVariable Long organizacaoId) {
+
+        log.debug("Contando consultas da semana para organização {}", organizacaoId);
+
+        Long quantidade = consultaService.getEstatisticasSemanaPorOrganizacao(organizacaoId);
+
+        return ResponseEntity.ok(quantidade);
+    }
+
+
+    //==================================FIM=============================================
+
 
     @GetMapping("/organizacao/{organizacaoId}/intervalo")
     public ResponseEntity<List<ConsultaResponse>> buscarPorOrganizacaoEIntervalo(
@@ -539,28 +612,53 @@ public class ConsultaController {
     }
 
     /**
-     * Conta consultas da semana atual
+     * Conta consultas da semana atual para o profissional logado (filtra por orgId + medicoId)
      * Se medicoId for fornecido, conta apenas consultas desse médico
      * Caso contrário, conta todas as consultas da organização
-     * 
+     *
      * @param medicoId ID do médico/profissional (opcional)
      * @return Quantidade de consultas da semana
      */
     @GetMapping("/estatisticas/consultas-semana")
     public ResponseEntity<Long> contarConsultasSemana(
             @RequestParam(required = false) Long medicoId) {
-        
+
         log.debug("Contando consultas da semana - MedicoId: {}", medicoId);
-        
+
         Long organizacaoId = TenantContext.getCurrentTenant();
-        
+
         if (organizacaoId == null) {
             log.error("Organização não identificada no contexto");
             return ResponseEntity.badRequest().build();
         }
-        
+
         Long quantidade = consultaService.contarConsultasSemana(organizacaoId, medicoId);
-        
+
+        return ResponseEntity.ok(quantidade);
+    }
+
+    /**
+     * Conta consultas da semana atual de uma organização específica (AdminOrg)
+     * Retorna total de consultas da organização na semana de segunda a domingo
+     *
+     * @param organizacaoId ID da organização
+     * @return Quantidade de consultas da semana
+     */
+
+
+    /**
+     * Conta consultas da semana atual de todas as organizações (SuperAdmin)
+     * Retorna total global de consultas na semana de segunda a domingo
+     *
+     * @return Quantidade total de consultas da semana
+     */
+    @GetMapping("/estatisticas/consultas-semana-global")
+    public ResponseEntity<Long> contarConsultasSemanaGlobal() {
+
+        log.debug("Contando consultas da semana globalmente");
+
+        Long quantidade = consultaService.contarConsultasSemanaGlobal();
+
         return ResponseEntity.ok(quantidade);
     }
 

@@ -14,6 +14,7 @@ import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.presentation.dto.consulta.AgendarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.AtualizarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.CancelarConsultaRequest;
+import br.com.saudeConecta.presentation.dto.consulta.EstatisticasDashboardAdminOrgResponse;
 import br.com.saudeConecta.presentation.dto.consulta.HistoricoConsultaPacienteResponse;
 import br.com.saudeConecta.presentation.dto.consulta.HistoricoConsultaDentistaResponse;
 import br.com.saudeConecta.domain.prontuario.Prontuario;
@@ -402,11 +403,220 @@ public class ConsultaService {
         );
     }
 
-    // ==========================================
-    // ESTATÍSTICAS POR ORGANIZAÇÃO
-    // ==========================================
+    // ===============================================================
+    // BUSCAS DE ESTATISTICAS - Dashboard - Admin_ORGANIZACAO
+    // ===============================================================
 
-    public Long contarConsultasHojePorOrganizacao(Long organizacaoId) {
+    /**
+     * Retorna todas as estatísticas do dashboard para AdminOrg em uma única query.
+     * Calcula a semana atual (segunda a domingo) e o dia atual, agrupando por status.
+     *
+     * @param organizacaoId ID da organização
+     * @return DTO com consultasHoje, consultasAguardando, consultasAtendidas,
+     *         consultasSemana, canceladosSemana e confirmadosSemana
+     */
+    @Transactional(readOnly = true)
+    public EstatisticasDashboardAdminOrgResponse getEstatisticasDashboardAdminOrg(Long organizacaoId) {
+        LocalDate hoje = LocalDate.now();
+        LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
+        LocalDate fimSemana = inicioSemana.plusDays(6);
+
+        LocalDateTime inicioSemanaLdt = inicioSemana.atStartOfDay();
+        LocalDateTime fimSemanaLdt = fimSemana.atTime(23, 59, 59);
+        LocalDateTime inicioDiaLdt = hoje.atStartOfDay();
+        LocalDateTime fimDiaLdt = hoje.atTime(23, 59, 59);
+
+        log.debug("Buscando estatísticas dashboard AdminOrg - OrgId: {}, Semana: {} a {}, Hoje: {}",
+                  organizacaoId, inicioSemana, fimSemana, hoje);
+
+        List<Object[]> rows = consultaRepository.findEstatisticasDashboardByOrganizacao(
+            organizacaoId, inicioSemanaLdt, fimSemanaLdt, inicioDiaLdt, fimDiaLdt
+        );
+
+        long consultasHoje = 0L;
+        long consultasAguardando = 0L;
+        long consultasAtendidas = 0L;
+        long consultasSemana = 0L;
+        long canceladosSemana = 0L;
+        long confirmadosSemana = 0L;
+
+        for (Object[] row : rows) {
+            StatusConsulta status = (StatusConsulta) row[0];
+            String periodo = (String) row[1];
+            long quantidade = ((Number) row[2]).longValue();
+
+            consultasSemana += quantidade;
+
+            boolean isHoje = "HOJE".equals(periodo);
+
+            if (isHoje) {
+                consultasHoje += quantidade;
+                if (status == StatusConsulta.AGENDADA || status == StatusConsulta.CONFIRMADA) {
+                    consultasAguardando += quantidade;
+                }
+                if (status == StatusConsulta.REALIZADA) {
+                    consultasAtendidas += quantidade;
+                }
+            }
+
+            if (status == StatusConsulta.CANCELADA) {
+                canceladosSemana += quantidade;
+            }
+            if (status == StatusConsulta.CONFIRMADA) {
+                confirmadosSemana += quantidade;
+            }
+        }
+
+        return EstatisticasDashboardAdminOrgResponse.builder()
+            .consultasHoje(consultasHoje)
+            .consultasAguardando(consultasAguardando)
+            .consultasAtendidas(consultasAtendidas)
+            .consultasSemana(consultasSemana)
+            .canceladosSemana(canceladosSemana)
+            .confirmadosSemana(confirmadosSemana)
+            .build();
+    }
+
+    // ===============================================================
+    // BUSCAS DE ESTATISTICAS - Dashboard - PROFISSIONAL
+    // ===============================================================
+
+    /**
+     * Retorna todas as estatísticas do dashboard para o Profissional em uma única query.
+     * Filtra por usuario.id via JOIN com profissional — o profissional vê apenas seus próprios dados.
+     *
+     * @param usuarioId ID do usuário logado
+     * @return DTO com consultasHoje, consultasAguardando, consultasAtendidas,
+     *         consultasSemana, canceladosSemana e confirmadosSemana
+     */
+    @Transactional(readOnly = true)
+    public EstatisticasDashboardAdminOrgResponse getEstatisticasDashboardProfissional(Long usuarioId) {
+        LocalDate hoje = LocalDate.now();
+        LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
+        LocalDate fimSemana = inicioSemana.plusDays(6);
+
+        LocalDateTime inicioSemanaLdt = inicioSemana.atStartOfDay();
+        LocalDateTime fimSemanaLdt    = fimSemana.atTime(23, 59, 59);
+        LocalDateTime inicioDiaLdt    = hoje.atStartOfDay();
+        LocalDateTime fimDiaLdt       = hoje.atTime(23, 59, 59);
+
+        log.debug("Buscando estatísticas dashboard Profissional - UsuarioId: {}, Semana: {} a {}, Hoje: {}",
+                  usuarioId, inicioSemana, fimSemana, hoje);
+
+        List<Object[]> rows = consultaRepository.findEstatisticasDashboardByProfissional(
+            usuarioId, inicioSemanaLdt, fimSemanaLdt, inicioDiaLdt, fimDiaLdt
+        );
+
+        long consultasHoje       = 0L;
+        long consultasAguardando = 0L;
+        long consultasAtendidas  = 0L;
+        long consultasSemana     = 0L;
+        long canceladosSemana    = 0L;
+        long confirmadosSemana   = 0L;
+
+        for (Object[] row : rows) {
+            StatusConsulta status = (StatusConsulta) row[0];
+            String periodo        = (String) row[1];
+            long quantidade       = ((Number) row[2]).longValue();
+
+            consultasSemana += quantidade;
+
+            boolean isHoje = "HOJE".equals(periodo);
+
+            if (isHoje) {
+                consultasHoje += quantidade;
+                if (status == StatusConsulta.AGENDADA || status == StatusConsulta.CONFIRMADA) {
+                    consultasAguardando += quantidade;
+                }
+                if (status == StatusConsulta.REALIZADA) {
+                    consultasAtendidas += quantidade;
+                }
+            }
+
+            if (status == StatusConsulta.CANCELADA)  { canceladosSemana  += quantidade; }
+            if (status == StatusConsulta.CONFIRMADA) { confirmadosSemana += quantidade; }
+        }
+
+        return EstatisticasDashboardAdminOrgResponse.builder()
+            .consultasHoje(consultasHoje)
+            .consultasAguardando(consultasAguardando)
+            .consultasAtendidas(consultasAtendidas)
+            .consultasSemana(consultasSemana)
+            .canceladosSemana(canceladosSemana)
+            .confirmadosSemana(confirmadosSemana)
+            .build();
+    }
+
+    // ===============================================================
+    // BUSCAS DE ESTATISTICAS - Dashboard - SUPER_ADMIN (global)
+    // ===============================================================
+
+    /**
+     * Retorna todas as estatísticas do dashboard para SuperAdmin em uma única query global.
+     * Sem filtro de organização — abrange todas as consultas do sistema.
+     *
+     * @return DTO com consultasHoje, consultasAguardando, consultasAtendidas,
+     *         consultasSemana, canceladosSemana e confirmadosSemana
+     */
+    @Transactional(readOnly = true)
+    public EstatisticasDashboardAdminOrgResponse getEstatisticasDashboardSuperAdmin() {
+        LocalDate hoje = LocalDate.now();
+        LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
+        LocalDate fimSemana = inicioSemana.plusDays(6);
+
+        LocalDateTime inicioSemanaLdt = inicioSemana.atStartOfDay();
+        LocalDateTime fimSemanaLdt    = fimSemana.atTime(23, 59, 59);
+        LocalDateTime inicioDiaLdt    = hoje.atStartOfDay();
+        LocalDateTime fimDiaLdt       = hoje.atTime(23, 59, 59);
+
+        log.debug("Buscando estatísticas dashboard SuperAdmin - Semana: {} a {}, Hoje: {}",
+                  inicioSemana, fimSemana, hoje);
+
+        List<Object[]> rows = consultaRepository.findEstatisticasDashboardGlobal(
+            inicioSemanaLdt, fimSemanaLdt, inicioDiaLdt, fimDiaLdt
+        );
+
+        long consultasHoje      = 0L;
+        long consultasAguardando = 0L;
+        long consultasAtendidas  = 0L;
+        long consultasSemana    = 0L;
+        long canceladosSemana   = 0L;
+        long confirmadosSemana  = 0L;
+
+        for (Object[] row : rows) {
+            StatusConsulta status  = (StatusConsulta) row[0];
+            String periodo         = (String) row[1];
+            long quantidade        = ((Number) row[2]).longValue();
+
+            consultasSemana += quantidade;
+
+            boolean isHoje = "HOJE".equals(periodo);
+
+            if (isHoje) {
+                consultasHoje += quantidade;
+                if (status == StatusConsulta.AGENDADA || status == StatusConsulta.CONFIRMADA) {
+                    consultasAguardando += quantidade;
+                }
+                if (status == StatusConsulta.REALIZADA) {
+                    consultasAtendidas += quantidade;
+                }
+            }
+
+            if (status == StatusConsulta.CANCELADA)  { canceladosSemana  += quantidade; }
+            if (status == StatusConsulta.CONFIRMADA) { confirmadosSemana += quantidade; }
+        }
+
+        return EstatisticasDashboardAdminOrgResponse.builder()
+            .consultasHoje(consultasHoje)
+            .consultasAguardando(consultasAguardando)
+            .consultasAtendidas(consultasAtendidas)
+            .consultasSemana(consultasSemana)
+            .canceladosSemana(canceladosSemana)
+            .confirmadosSemana(confirmadosSemana)
+            .build();
+    }
+
+    public Long getEstatisticaConsultasHojeByAdmiOrg(Long organizacaoId) {
         LocalDate hoje = LocalDate.now();
         return consultaRepository.countByOrganizacao_IdAndDataHoraBetween(
             organizacaoId, 
@@ -417,7 +627,7 @@ public class ConsultaService {
 
 
 
-    public Long contarConsultasRealizadasHojePorOrganizacao(Long organizacaoId) {
+    public Long getEstatisticaConsultasAtendidasByAdmiOrg(Long organizacaoId) {
         LocalDate hoje = LocalDate.now();
         return consultaRepository.countByOrganizacao_IdAndStatusAndDataHoraBetween(
             organizacaoId,
@@ -427,7 +637,7 @@ public class ConsultaService {
         );
     }
 
-    public Long contarConsultasAgendadasHojePorOrganizacao(Long organizacaoId) {
+    public Long getEstatisticasConsultaAgendadasHojeByOrd(Long organizacaoId) {
         LocalDate hoje = LocalDate.now();
         return consultaRepository.countByOrganizacao_IdAndStatusAndDataHoraBetween(
             organizacaoId,
@@ -445,6 +655,27 @@ public class ConsultaService {
             dataFim.plusDays(1).atStartOfDay()
         );
     }
+
+
+
+    @Transactional(readOnly = true)
+    public Long getEstatisticasSemanaPorOrganizacao(Long organizacaoId) {
+        LocalDate hoje = LocalDate.now();
+        LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
+        LocalDate fimSemana = inicioSemana.plusDays(6);
+
+        log.debug("Contando consultas da semana por organização - OrgId: {}, Início: {}, Fim: {}",
+                organizacaoId, inicioSemana, fimSemana);
+
+        return consultaRepository.countConsultasSemanaByOrganizacao(
+                organizacaoId,
+                inicioSemana.atStartOfDay(),
+                fimSemana.atTime(23, 59, 59)
+        );
+    }
+
+
+    //==========================================FIM=========================================
 
     /**
      * Busca estatísticas de consultas por médico e intervalo de datas
@@ -496,6 +727,28 @@ public class ConsultaService {
         return consultaRepository.countConsultasPorMedicoEIntervalo(
             organizacaoId,
             profissionalId,
+            inicioSemana.atStartOfDay(),
+            fimSemana.atTime(23, 59, 59)
+        );
+    }
+
+
+
+    /**
+     * Conta consultas da semana atual de todas as organizações (SuperAdmin)
+     *
+     * @return Quantidade total de consultas da semana
+     */
+    @Transactional(readOnly = true)
+    public Long contarConsultasSemanaGlobal() {
+        LocalDate hoje = LocalDate.now();
+        LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
+        LocalDate fimSemana = inicioSemana.plusDays(6);
+
+        log.debug("Contando consultas da semana globalmente - Início: {}, Fim: {}",
+                  inicioSemana, fimSemana);
+
+        return consultaRepository.countConsultasSemanaGlobal(
             inicioSemana.atStartOfDay(),
             fimSemana.atTime(23, 59, 59)
         );

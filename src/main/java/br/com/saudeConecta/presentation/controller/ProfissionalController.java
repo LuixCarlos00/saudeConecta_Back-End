@@ -91,6 +91,12 @@ public class ProfissionalController {
     }
 
 
+    @GetMapping("/estatisticas/medicos-ativos")
+    public ResponseEntity<Long> getEstatisticasMedicosAtivosByOrg() {
+        return ResponseEntity.ok(profissionalService.getEstatisticasMedicosAtivosByOrg());
+    }
+
+
 
     // ==========================================
     // ESTATÍSTICAS POR ORGANIZAÇÃO

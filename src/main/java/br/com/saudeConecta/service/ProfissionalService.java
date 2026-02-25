@@ -368,6 +368,15 @@ return resultado ;
         return profissionalRepository.countAtivosByOrganizacaoId(organizacaoId);
     }
 
+    /**
+     * Conta todos os profissionais ativos em todas as organizações (SuperAdmin)
+     *
+     * @return Quantidade total de profissionais ativos
+     */
+    public Long getEstatisticasMedicosAtivosByOrg() {
+        return profissionalRepository.countTodosAtivos();
+    }
+
 
     @Transactional(readOnly = true)
     public List<Profissional> buscarPorOrganizacao(Long organizacaoId) {

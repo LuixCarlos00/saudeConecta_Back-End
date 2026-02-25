@@ -466,6 +466,79 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long> {
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
 
+    @Query("SELECT COUNT(c) FROM Consulta c " +
+           "WHERE c.organizacao.id = :orgId " +
+           "AND c.dataHora BETWEEN :inicio AND :fim")
+    Long countConsultasSemanaByOrganizacao(
+        @Param("orgId") Long organizacaoId,
+        @Param("inicio") LocalDateTime inicio,
+        @Param("fim") LocalDateTime fim);
+
+    /**
+     * Retorna contagens agrupadas por status e por se é hoje ou semana,
+     * para o dashboard do AdminOrg. Uma única query cobre todos os campos necessários.
+     * Resultado: [status (String), inicioDia (LocalDateTime), quantidade (Long)]
+     */
+    @Query("SELECT c.status, " +
+           "CASE WHEN c.dataHora >= :inicioDia AND c.dataHora < :fimDia THEN 'HOJE' ELSE 'SEMANA' END, " +
+           "COUNT(c) " +
+           "FROM Consulta c " +
+           "WHERE c.organizacao.id = :orgId " +
+           "AND c.dataHora BETWEEN :inicioSemana AND :fimSemana " +
+           "GROUP BY c.status, " +
+           "CASE WHEN c.dataHora >= :inicioDia AND c.dataHora < :fimDia THEN 'HOJE' ELSE 'SEMANA' END")
+    List<Object[]> findEstatisticasDashboardByOrganizacao(
+        @Param("orgId") Long organizacaoId,
+        @Param("inicioSemana") LocalDateTime inicioSemana,
+        @Param("fimSemana") LocalDateTime fimSemana,
+        @Param("inicioDia") LocalDateTime inicioDia,
+        @Param("fimDia") LocalDateTime fimDia);
+
+    @Query("SELECT COUNT(c) FROM Consulta c " +
+           "WHERE c.dataHora BETWEEN :inicio AND :fim")
+    Long countConsultasSemanaGlobal(
+        @Param("inicio") LocalDateTime inicio,
+        @Param("fim") LocalDateTime fim);
+
+    /**
+     * Retorna contagens agrupadas por status e período (hoje vs semana) para o SuperAdmin.
+     * Sem filtro de organização — abrange todas as consultas do sistema.
+     * Resultado: [status (StatusConsulta), periodo (String "HOJE"|"SEMANA"), quantidade (Long)]
+     */
+    @Query("SELECT c.status, " +
+           "CASE WHEN c.dataHora >= :inicioDia AND c.dataHora < :fimDia THEN 'HOJE' ELSE 'SEMANA' END, " +
+           "COUNT(c) " +
+           "FROM Consulta c " +
+           "WHERE c.dataHora BETWEEN :inicioSemana AND :fimSemana " +
+           "GROUP BY c.status, " +
+           "CASE WHEN c.dataHora >= :inicioDia AND c.dataHora < :fimDia THEN 'HOJE' ELSE 'SEMANA' END")
+    List<Object[]> findEstatisticasDashboardGlobal(
+        @Param("inicioSemana") LocalDateTime inicioSemana,
+        @Param("fimSemana") LocalDateTime fimSemana,
+        @Param("inicioDia") LocalDateTime inicioDia,
+        @Param("fimDia") LocalDateTime fimDia);
+
+    /**
+     * Retorna contagens agrupadas por status e período (hoje vs semana) para o Profissional.
+     * Filtra por usuario.id via JOIN com profissional — garante que o profissional veja apenas seus dados.
+     * Resultado: [status (StatusConsulta), periodo (String "HOJE"|"SEMANA"), quantidade (Long)]
+     */
+    @Query("SELECT c.status, " +
+           "CASE WHEN c.dataHora >= :inicioDia AND c.dataHora < :fimDia THEN 'HOJE' ELSE 'SEMANA' END, " +
+           "COUNT(c) " +
+           "FROM Consulta c " +
+           "JOIN c.profissional p " +
+           "WHERE p.usuario.id = :usuarioId " +
+           "AND c.dataHora BETWEEN :inicioSemana AND :fimSemana " +
+           "GROUP BY c.status, " +
+           "CASE WHEN c.dataHora >= :inicioDia AND c.dataHora < :fimDia THEN 'HOJE' ELSE 'SEMANA' END")
+    List<Object[]> findEstatisticasDashboardByProfissional(
+        @Param("usuarioId") Long usuarioId,
+        @Param("inicioSemana") LocalDateTime inicioSemana,
+        @Param("fimSemana") LocalDateTime fimSemana,
+        @Param("inicioDia") LocalDateTime inicioDia,
+        @Param("fimDia") LocalDateTime fimDia);
+
     @Query("SELECT c.duracaoMinutos FROM Consulta c " +
            "JOIN c.profissional p " +
            "WHERE c.organizacao.id = :orgId " +

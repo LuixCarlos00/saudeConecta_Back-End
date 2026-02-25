@@ -41,22 +41,38 @@ public class ConfiguracaoGraficoDashboardService {
     // ── Listagem ─────────────────────────────────────────────────────────────
 
     public List<ConfiguracaoGraficoResponse> listarConfiguracoes(Long usuarioId) {
+        Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
+        Set<TipoGraficoDashboard> tiposPermitidos = resolverTiposPermitidos(
+                usuario != null ? usuario.getTipoUsuarioNovo() : null);
+
         return configuracaoRepository.findByUsuarioIdOrderByOrdemExibicaoAsc(usuarioId)
-                .stream().map(this::toResponse).collect(Collectors.toList());
+                .stream()
+                .filter(c -> tiposPermitidos.contains(c.getTipoGrafico()))
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Transactional
     public List<ConfiguracaoGraficoResponse> listarGraficosAtivos(Long usuarioId) {
-        var todasConfigs = configuracaoRepository.findByUsuarioIdOrderByOrdemExibicaoAsc(usuarioId);
+        Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
+        Set<TipoGraficoDashboard> tiposPermitidos = resolverTiposPermitidos(
+                usuario != null ? usuario.getTipoUsuarioNovo() : null);
+
+        var todasConfigs = configuracaoRepository.findByUsuarioIdOrderByOrdemExibicaoAsc(usuarioId)
+                .stream()
+                .filter(c -> tiposPermitidos.contains(c.getTipoGrafico()))
+                .collect(Collectors.toList());
+
         if (todasConfigs.isEmpty()) {
             log.info("Usuário {} sem configurações de gráfico — inicializando automaticamente", usuarioId);
-            Usuario usuario = usuarioRepository.findById(usuarioId)
-                    .orElse(null);
             if (usuario != null) {
                 inicializarParaNovoUsuario(usuario);
             }
             return configuracaoRepository.findByUsuarioIdAndAtivoTrueOrderByOrdemExibicaoAsc(usuarioId)
-                    .stream().map(this::toResponse).collect(Collectors.toList());
+                    .stream()
+                    .filter(c -> tiposPermitidos.contains(c.getTipoGrafico()))
+                    .map(this::toResponse)
+                    .collect(Collectors.toList());
         }
         return todasConfigs.stream()
                 .filter(c -> Boolean.TRUE.equals(c.getAtivo()))
@@ -104,8 +120,15 @@ public class ConfiguracaoGraficoDashboardService {
 
     @Transactional
     public void resetarConfiguracoesParaPadrao(Long usuarioId) {
+        Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
+        Set<TipoGraficoDashboard> tiposPermitidos = resolverTiposPermitidos(
+                usuario != null ? usuario.getTipoUsuarioNovo() : null);
+
         List<ConfiguracaoGraficoDashboard> configs =
-                configuracaoRepository.findByUsuarioIdOrderByOrdemExibicaoAsc(usuarioId);
+                configuracaoRepository.findByUsuarioIdOrderByOrdemExibicaoAsc(usuarioId)
+                        .stream()
+                        .filter(c -> tiposPermitidos.contains(c.getTipoGrafico()))
+                        .collect(Collectors.toList());
         int ordem = 1;
         for (ConfiguracaoGraficoDashboard config : configs) {
             config.setAtivo(true);

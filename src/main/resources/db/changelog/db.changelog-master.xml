@@ -44,4 +44,7 @@
     <!-- Dados iniciais de produção -->
     <include file="db/changelog/changes/024-dados-iniciais-producao.xml"/>
 
+    <!-- Configuração de Cards do Dashboard -->
+    <include file="db/changelog/changes/025-criar-tabela-configuracao-card-dashboard.xml"/>
+
 </databaseChangeLog>

@@ -18,9 +18,8 @@
                 <constraints primaryKey="true" nullable="false"/>
             </column>
 
-            <column name="organizacao_id" type="BIGINT">
-                <constraints nullable="false"/>
-            </column>
+            <!-- nullable=true: SuperAdmin não tem organização -->
+            <column name="organizacao_id" type="BIGINT"/>
 
             <column name="usuario_id" type="BIGINT">
                 <constraints nullable="false"/>
@@ -87,52 +86,5 @@
 
     </changeSet>
 
-    <!-- ================================================================ -->
-    <!-- DADOS INICIAIS: configs por usuário conforme perfil               -->
-    <!--                                                                   -->
-    <!-- ADMIN / SUPER_ADMIN → 4 gráficos administrativos                 -->
-    <!-- MEDICO / DENTISTA   → 2 gráficos do profissional                 -->
-    <!-- ================================================================ -->
-    <changeSet id="020-002-inserir-configuracoes-por-usuario" author="equipe-sentinela">
-        <comment>
-            Gera configurações individuais ativas para cada usuário existente,
-            respeitando os gráficos permitidos por perfil.
-        </comment>
-
-        <sql>
-            /* ── Gráficos ADMINISTRATIVOS para SUPER_ADMIN, ADMIN_ORG e GERENTE ── */
-            INSERT INTO configuracao_grafico_dashboard
-            (organizacao_id, usuario_id, tipo_grafico, ativo, ordem_exibicao, created_at, updated_at)
-            SELECT u.organizacao_id, u.id, t.tipo, true, t.ordem, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-            FROM usuarios u
-            CROSS JOIN (
-            SELECT 'CONSULTAS_POR_PERIODO'     AS tipo, 1 AS ordem UNION ALL
-            SELECT 'AGENDAMENTOS_DIAS_SEMANA'  AS tipo, 2 AS ordem UNION ALL
-            SELECT 'SALDO_FINANCEIRO'           AS tipo, 3 AS ordem UNION ALL
-            SELECT 'MEDICOS_POR_ESPECIALIDADE'  AS tipo, 4 AS ordem
-            ) AS t
-            WHERE u.tipo_usuario_novo IN ('SUPER_ADMIN', 'ADMIN_ORG', 'GERENTE')
-            AND NOT EXISTS (
-            SELECT 1 FROM configuracao_grafico_dashboard cgd
-            WHERE cgd.usuario_id = u.id AND cgd.tipo_grafico = t.tipo
-            );
-
-            /* ── Gráficos PROFISSIONAL (médicos e dentistas) ── */
-            INSERT INTO configuracao_grafico_dashboard
-            (organizacao_id, usuario_id, tipo_grafico, ativo, ordem_exibicao, created_at, updated_at)
-            SELECT u.organizacao_id, u.id, t.tipo, true, t.ordem, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-            FROM usuarios u
-            CROSS JOIN (
-            SELECT 'MEDIA_TEMPO_CONSULTA'        AS tipo, 1 AS ordem UNION ALL
-            SELECT 'AGENDAMENTOS_MEDICO_PERIODO'  AS tipo, 2 AS ordem
-            ) AS t
-            WHERE u.tipo_usuario_novo = 'PROFISSIONAL'
-            AND NOT EXISTS (
-            SELECT 1 FROM configuracao_grafico_dashboard cgd
-            WHERE cgd.usuario_id = u.id AND cgd.tipo_grafico = t.tipo
-            );
-        </sql>
-
-    </changeSet>
 
 </databaseChangeLog>
