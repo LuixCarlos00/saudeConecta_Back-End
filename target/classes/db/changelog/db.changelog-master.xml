@@ -47,4 +47,7 @@
     <!-- Configuração de Cards do Dashboard -->
     <include file="db/changelog/changes/025-criar-tabela-configuracao-card-dashboard.xml"/>
 
+    <!-- Prontuário Odontológico: Termo, Procedimentos, Planejamento -->
+    <include file="db/changelog/changes/026-criar-tabelas-prontuario-odontologico.xml"/>
+
 </databaseChangeLog>

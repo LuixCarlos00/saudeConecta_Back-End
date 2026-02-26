@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ================================================================== -->
+    <!-- Tabela: tb_termo_autorizacao                                        -->
+    <!-- Armazena questionário de saúde + assinatura digital do paciente     -->
+    <!-- ================================================================== -->
+    <changeSet id="026-01-criar-tabela-termo-autorizacao" author="saudeConecta">
+        <createTable tableName="tb_termo_autorizacao">
+
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <column name="consulta_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="paciente_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="organizacao_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Token único para acesso público -->
+            <column name="token" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+
+            <column name="data_expiracao" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="data_assinatura" type="TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+
+            <!-- Assinatura digital tipada (base64 do canvas) -->
+            <column name="assinatura_base64" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+
+            <!-- IP de origem do paciente ao assinar -->
+            <column name="ip_origem" type="VARCHAR(45)">
+                <constraints nullable="true"/>
+            </column>
+
+            <!-- JSON com todas as respostas do questionário de saúde -->
+            <column name="respostas_questionario" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+
+            <column name="status" type="VARCHAR(20)" defaultValue="PENDENTE">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="tb_termo_autorizacao"
+                baseColumnNames="consulta_id"
+                referencedTableName="consulta"
+                referencedColumnNames="id"
+                constraintName="fk_termo_autorizacao_consulta"/>
+
+        <addForeignKeyConstraint
+                baseTableName="tb_termo_autorizacao"
+                baseColumnNames="paciente_id"
+                referencedTableName="paciente"
+                referencedColumnNames="PaciCodigo"
+                constraintName="fk_termo_autorizacao_paciente"/>
+
+        <addForeignKeyConstraint
+                baseTableName="tb_termo_autorizacao"
+                baseColumnNames="organizacao_id"
+                referencedTableName="organizacao"
+                referencedColumnNames="id"
+                constraintName="fk_termo_autorizacao_organizacao"/>
+
+        <createIndex tableName="tb_termo_autorizacao" indexName="idx_termo_token">
+            <column name="token"/>
+        </createIndex>
+
+    </changeSet>
+
+    <!-- ================================================================== -->
+    <!-- Tabela: tb_procedimento_padrao                                      -->
+    <!-- Procedimentos pré-definidos por profissional (opções do select)     -->
+    <!-- ================================================================== -->
+    <changeSet id="026-02-criar-tabela-procedimento-padrao" author="saudeConecta">
+        <createTable tableName="tb_procedimento_padrao">
+
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <column name="profissional_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="organizacao_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="nome_procedimento" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="valor_padrao" type="DECIMAL(10,2)">
+                <constraints nullable="true"/>
+            </column>
+
+            <column name="ativo" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="tb_procedimento_padrao"
+                baseColumnNames="profissional_id"
+                referencedTableName="profissional"
+                referencedColumnNames="id"
+                constraintName="fk_procedimento_padrao_profissional"/>
+
+        <addForeignKeyConstraint
+                baseTableName="tb_procedimento_padrao"
+                baseColumnNames="organizacao_id"
+                referencedTableName="organizacao"
+                referencedColumnNames="id"
+                constraintName="fk_procedimento_padrao_organizacao"/>
+
+    </changeSet>
+
+    <!-- ================================================================== -->
+    <!-- Tabela: tb_planejamento_terapeutico                                 -->
+    <!-- Registros de procedimentos realizados no planejamento               -->
+    <!-- ================================================================== -->
+    <changeSet id="026-03-criar-tabela-planejamento-terapeutico" author="saudeConecta">
+        <createTable tableName="tb_planejamento_terapeutico">
+
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <column name="prontuario_dentista_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="consulta_id" type="BIGINT">
+                <constraints nullable="true"/>
+            </column>
+
+            <column name="paciente_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="profissional_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="organizacao_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="data_procedimento" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="procedimento_realizado" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="valor" type="DECIMAL(10,2)">
+                <constraints nullable="true"/>
+            </column>
+
+            <!-- Token único para link de assinatura em lote -->
+            <column name="token_assinatura" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+
+            <column name="assinatura_base64" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+
+            <column name="data_assinatura" type="TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+
+            <column name="status_assinatura" type="VARCHAR(20)" defaultValue="PENDENTE">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="tb_planejamento_terapeutico"
+                baseColumnNames="prontuario_dentista_id"
+                referencedTableName="prontuario_dentista"
+                referencedColumnNames="prontdent_codigo"
+                constraintName="fk_planejamento_prontuario_dentista"/>
+
+        <addForeignKeyConstraint
+                baseTableName="tb_planejamento_terapeutico"
+                baseColumnNames="consulta_id"
+                referencedTableName="consulta"
+                referencedColumnNames="id"
+                constraintName="fk_planejamento_consulta"/>
+
+        <addForeignKeyConstraint
+                baseTableName="tb_planejamento_terapeutico"
+                baseColumnNames="paciente_id"
+                referencedTableName="paciente"
+                referencedColumnNames="PaciCodigo"
+                constraintName="fk_planejamento_paciente"/>
+
+        <addForeignKeyConstraint
+                baseTableName="tb_planejamento_terapeutico"
+                baseColumnNames="profissional_id"
+                referencedTableName="profissional"
+                referencedColumnNames="id"
+                constraintName="fk_planejamento_profissional"/>
+
+        <addForeignKeyConstraint
+                baseTableName="tb_planejamento_terapeutico"
+                baseColumnNames="organizacao_id"
+                referencedTableName="organizacao"
+                referencedColumnNames="id"
+                constraintName="fk_planejamento_organizacao"/>
+
+        <createIndex tableName="tb_planejamento_terapeutico" indexName="idx_planejamento_token">
+            <column name="token_assinatura"/>
+        </createIndex>
+
+    </changeSet>
+
+    <!-- ================================================================== -->
+    <!-- Adicionar campos de identificação e exame objetivo ao prontuário    -->
+    <!-- odontológico existente                                              -->
+    <!-- ================================================================== -->
+    <changeSet id="026-04-adicionar-campos-prontuario-dentista" author="saudeConecta">
+
+        <!-- Identificação do Paciente (endereço vem da entidade Paciente) -->
+        <addColumn tableName="prontuario_dentista">
+            <column name="prontdent_responsavel" type="VARCHAR(255)"/>
+            <column name="prontdent_inicio_tratamento" type="DATE"/>
+            <column name="prontdent_termino_tratamento" type="DATE"/>
+            <column name="prontdent_interrupcao" type="VARCHAR(500)"/>
+        </addColumn>
+
+        <!-- Exame Objetivo — Sinais Vitais e Dados Gerais -->
+        <addColumn tableName="prontuario_dentista">
+            <column name="prontdent_pressao_arterial" type="VARCHAR(20)"/>
+            <column name="prontdent_pulso" type="VARCHAR(20)"/>
+            <column name="prontdent_altura" type="VARCHAR(10)"/>
+            <column name="prontdent_temperatura" type="VARCHAR(10)"/>
+            <column name="prontdent_peso" type="VARCHAR(10)"/>
+            <column name="prontdent_edema" type="VARCHAR(100)"/>
+            <column name="prontdent_facies" type="VARCHAR(100)"/>
+            <column name="prontdent_linfonodos" type="VARCHAR(200)"/>
+            <column name="prontdent_labios" type="VARCHAR(200)"/>
+            <column name="prontdent_mucosas" type="VARCHAR(200)"/>
+            <column name="prontdent_soalho_bucal" type="VARCHAR(200)"/>
+            <column name="prontdent_palato" type="VARCHAR(200)"/>
+            <column name="prontdent_orofaringe" type="VARCHAR(200)"/>
+        </addColumn>
+
+        <!-- Exame Objetivo — Exame Intrabucal -->
+        <addColumn tableName="prontuario_dentista">
+            <column name="prontdent_lingua" type="VARCHAR(200)"/>
+            <column name="prontdent_gengiva" type="VARCHAR(200)"/>
+            <column name="prontdent_habitos_nocivos" type="VARCHAR(500)"/>
+            <column name="prontdent_portador_aparelho" type="VARCHAR(30)"/>
+            <column name="prontdent_oclusao" type="VARCHAR(200)"/>
+            <column name="prontdent_exame_outros" type="TEXT"/>
+        </addColumn>
+
+    </changeSet>
+
+</databaseChangeLog>

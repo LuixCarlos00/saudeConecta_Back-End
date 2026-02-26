@@ -60,6 +60,8 @@ public class SecurityConfigurations {
                 .requestMatchers(HttpMethod.GET, "/paciente/InserirCodigo/{codigo}").permitAll()
                 .requestMatchers(HttpMethod.PUT, "/Home/trocaDeSenha/{Id}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/Home/recuperaLogin={Id}&dados={tipoUsuario}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/publico/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/publico/**").permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .addFilterBefore(tenantFilter, UsernamePasswordAuthenticationFilter.class)

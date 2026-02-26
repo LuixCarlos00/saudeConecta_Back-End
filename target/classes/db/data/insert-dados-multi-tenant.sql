@@ -44,7 +44,6 @@ INSERT INTO endereco (EndNacionalidade, EndUF, EndMunicipio, EndBairro, EndCep, 
 -- ==========================================
 INSERT INTO usuarios (organizacao_id, login, senha, TipoUsuario, tipo_usuario_novo, status) VALUES
 -- Super Admin Global (sem organização)
-(NULL, 'luiz', '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 1, 'SUPER_ADMIN', 'ATIVO'),
 -- Organização 1 - Clínica Saúde Total
 (1, 'adm', '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 1, 'ADMIN_ORG', 'ATIVO'),
 (1, 'med', '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 3, 'PROFISSIONAL', 'ATIVO'),

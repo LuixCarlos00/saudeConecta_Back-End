@@ -43,11 +43,13 @@ public interface ProntuarioDentistaRepository extends JpaRepository<ProntuarioDe
     @Query("""
     SELECT pd FROM ProntuarioDentista pd
     LEFT JOIN FETCH pd.dentes
+    LEFT JOIN FETCH pd.planejamentos
     LEFT JOIN FETCH pd.profissional prof
     LEFT JOIN FETCH prof.tipoProfissional
     LEFT JOIN FETCH prof.especialidades
     LEFT JOIN FETCH pd.consulta c
     LEFT JOIN FETCH c.paciente
+    LEFT JOIN FETCH c.especialidade
     LEFT JOIN FETCH c.formaPagamento
     WHERE pd.id = :id
 """)
@@ -72,4 +74,26 @@ public interface ProntuarioDentistaRepository extends JpaRepository<ProntuarioDe
      * Verifica se já existe prontuário para uma consulta.
      */
     boolean existsByConsultaId(Long consultaId);
+
+    /**
+     * Lista prontuários de um paciente (via consulta → paciente).
+     *
+     * @param pacienteId ID do paciente
+     * @return lista de prontuários do paciente ordenados por data
+     */
+    @Query("""
+        SELECT DISTINCT pd FROM ProntuarioDentista pd
+        LEFT JOIN FETCH pd.dentes
+        LEFT JOIN FETCH pd.planejamentos
+        JOIN FETCH pd.consulta c
+        LEFT JOIN FETCH c.paciente
+        LEFT JOIN FETCH c.especialidade
+        LEFT JOIN FETCH c.formaPagamento
+        JOIN FETCH pd.profissional prof
+        LEFT JOIN FETCH prof.tipoProfissional
+        LEFT JOIN FETCH prof.especialidades
+        WHERE c.paciente.id = :pacienteId
+        ORDER BY pd.dataFinalizado DESC
+    """)
+    List<ProntuarioDentista> findByPacienteId(@Param("pacienteId") Long pacienteId);
 }

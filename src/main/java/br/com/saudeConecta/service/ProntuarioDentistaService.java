@@ -1,15 +1,20 @@
 package br.com.saudeConecta.service;
 
-  import br.com.saudeConecta.domain.consulta.Consulta;
-  import br.com.saudeConecta.domain.consulta.StatusConsulta;
-  import br.com.saudeConecta.domain.profissional.Profissional;
-  import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
+import br.com.saudeConecta.domain.consulta.Consulta;
+import br.com.saudeConecta.domain.consulta.StatusConsulta;
+import br.com.saudeConecta.domain.organizacao.Organizacao;
+import br.com.saudeConecta.domain.paciente.Paciente;
+import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
+import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
 import br.com.saudeConecta.domain.prontuario.ProntuarioDentistaDente;
-  import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
-  import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
-  import br.com.saudeConecta.infrastructure.persistence.repository.ProntuarioDentistaRepository;
-  import br.com.saudeConecta.presentation.dto.prontuario.CadastrarProntuarioDentistaRequest;
-  import lombok.RequiredArgsConstructor;
+import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.ProntuarioDentistaRepository;
+import br.com.saudeConecta.presentation.dto.prontuario.CadastrarProntuarioDentistaRequest;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +31,7 @@ public class ProntuarioDentistaService {
     private final ProntuarioDentistaRepository prontuarioDentistaRepository;
     private final ProfissionalRepository profissionalRepository;
     private final ConsultaRepository consultaRepository;
+    private final PacienteRepository pacienteRepository;
 
     // =========================================================================
     // CADASTRO
@@ -71,6 +77,32 @@ public class ProntuarioDentistaService {
                 // controle
                 .dataFinalizado(parseData(request.getDataFinalizado()))
                 .tempoDuracao(request.getTempoDuracao())
+                // identificação do paciente (endereço vem da entidade Paciente)
+                .responsavel(request.getResponsavel())
+                .inicioTratamento(parseData(request.getInicioTratamento()))
+                .terminoTratamento(parseData(request.getTerminoTratamento()))
+                .interrupcao(request.getInterrupcao())
+                // exame objetivo — sinais vitais
+                .pressaoArterial(request.getPressaoArterial())
+                .pulso(request.getPulso())
+                .altura(request.getAltura())
+                .temperatura(request.getTemperatura())
+                .peso(request.getPeso())
+                .edema(request.getEdema())
+                .facies(request.getFacies())
+                .linfonodos(request.getLinfonodos())
+                .labios(request.getLabios())
+                .mucosas(request.getMucosas())
+                .soalhoBucal(request.getSoalhoBucal())
+                .palato(request.getPalato())
+                .orofaringe(request.getOrofaringe())
+                // exame objetivo — exame intrabucal
+                .lingua(request.getLingua())
+                .gengiva(request.getGengiva())
+                .habitosNocivos(request.getHabitosNocivos())
+                .portadorAparelho(request.getPortadorAparelho())
+                .oclusao(request.getOclusao())
+                .exameOutros(request.getExameOutros())
                 // relacionamentos
                 .profissional(profissional)
                 .consulta(consulta)
@@ -97,10 +129,38 @@ public class ProntuarioDentistaService {
         log.info("Prontuário odontológico salvo — id={}, dentes={}",
                 salvo.getCodigo(), salvo.getDentes().size());
 
+        // ── Adiciona planejamentos terapêuticos ─────────────────────────────────
+        if (!CollectionUtils.isEmpty(request.getPlanejamentos())) {
+            Long orgId = TenantContext.getCurrentTenant();
+            Organizacao organizacao = new Organizacao();
+            organizacao.setId(orgId);
+
+            for (CadastrarProntuarioDentistaRequest.PlanejamentoItem item : request.getPlanejamentos()) {
+                Paciente paciente = null;
+                if (item.getPacienteId() != null) {
+                    paciente = pacienteRepository.findById(item.getPacienteId()).orElse(null);
+                }
+
+                PlanejamentoTerapeutico planejamento = PlanejamentoTerapeutico.builder()
+                        .prontuarioDentista(salvo)
+                        .consulta(consulta)
+                        .paciente(paciente)
+                        .profissional(profissional)
+                        .organizacao(organizacao)
+                        .dataProcedimento(parseData(item.getDataProcedimento()))
+                        .procedimentoRealizado(item.getProcedimentoRealizado())
+                        .valor(item.getValor())
+                        .statusAssinatura("PENDENTE")
+                        .build();
+                salvo.addPlanejamento(planejamento);
+            }
+            prontuarioDentistaRepository.save(salvo);
+            log.info("Planejamentos salvos — total={}", request.getPlanejamentos().size());
+        }
+
         consulta.setStatus(StatusConsulta.REALIZADA);
         consultaRepository.save(consulta);
         log.info("Status da consulta ID: {} atualizado para REALIZADA", consulta.getId());
-
 
         return salvo;
     }
@@ -140,6 +200,17 @@ public class ProntuarioDentistaService {
     @Transactional(readOnly = true)
     public List<ProntuarioDentista> listarPorProfissional(Long profissionalId) {
         return prontuarioDentistaRepository.findByProfissionalId(profissionalId);
+    }
+
+    /**
+     * Lista prontuários de um paciente (histórico).
+     *
+     * @param pacienteId ID do paciente
+     * @return lista de prontuários do paciente
+     */
+    @Transactional(readOnly = true)
+    public List<ProntuarioDentista> listarPorPaciente(Long pacienteId) {
+        return prontuarioDentistaRepository.findByPacienteId(pacienteId);
     }
 
     // =========================================================================
