@@ -265,47 +265,5 @@
 
     </changeSet>
 
-    <!-- ================================================================== -->
-    <!-- Adicionar campos de identificação e exame objetivo ao prontuário    -->
-    <!-- odontológico existente                                              -->
-    <!-- ================================================================== -->
-    <changeSet id="026-04-adicionar-campos-prontuario-dentista" author="saudeConecta">
-
-        <!-- Identificação do Paciente (endereço vem da entidade Paciente) -->
-        <addColumn tableName="prontuario_dentista">
-            <column name="prontdent_responsavel" type="VARCHAR(255)"/>
-            <column name="prontdent_inicio_tratamento" type="DATE"/>
-            <column name="prontdent_termino_tratamento" type="DATE"/>
-            <column name="prontdent_interrupcao" type="VARCHAR(500)"/>
-        </addColumn>
-
-        <!-- Exame Objetivo — Sinais Vitais e Dados Gerais -->
-        <addColumn tableName="prontuario_dentista">
-            <column name="prontdent_pressao_arterial" type="VARCHAR(20)"/>
-            <column name="prontdent_pulso" type="VARCHAR(20)"/>
-            <column name="prontdent_altura" type="VARCHAR(10)"/>
-            <column name="prontdent_temperatura" type="VARCHAR(10)"/>
-            <column name="prontdent_peso" type="VARCHAR(10)"/>
-            <column name="prontdent_edema" type="VARCHAR(100)"/>
-            <column name="prontdent_facies" type="VARCHAR(100)"/>
-            <column name="prontdent_linfonodos" type="VARCHAR(200)"/>
-            <column name="prontdent_labios" type="VARCHAR(200)"/>
-            <column name="prontdent_mucosas" type="VARCHAR(200)"/>
-            <column name="prontdent_soalho_bucal" type="VARCHAR(200)"/>
-            <column name="prontdent_palato" type="VARCHAR(200)"/>
-            <column name="prontdent_orofaringe" type="VARCHAR(200)"/>
-        </addColumn>
-
-        <!-- Exame Objetivo — Exame Intrabucal -->
-        <addColumn tableName="prontuario_dentista">
-            <column name="prontdent_lingua" type="VARCHAR(200)"/>
-            <column name="prontdent_gengiva" type="VARCHAR(200)"/>
-            <column name="prontdent_habitos_nocivos" type="VARCHAR(500)"/>
-            <column name="prontdent_portador_aparelho" type="VARCHAR(30)"/>
-            <column name="prontdent_oclusao" type="VARCHAR(200)"/>
-            <column name="prontdent_exame_outros" type="TEXT"/>
-        </addColumn>
-
-    </changeSet>
 
 </databaseChangeLog>

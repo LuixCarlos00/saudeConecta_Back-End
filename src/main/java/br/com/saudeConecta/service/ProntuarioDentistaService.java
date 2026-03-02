@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -32,6 +33,7 @@ public class ProntuarioDentistaService {
     private final ProfissionalRepository profissionalRepository;
     private final ConsultaRepository consultaRepository;
     private final PacienteRepository pacienteRepository;
+    private final EntityManager entityManager;
 
     // =========================================================================
     // CADASTRO
@@ -103,6 +105,10 @@ public class ProntuarioDentistaService {
                 .portadorAparelho(request.getPortadorAparelho())
                 .oclusao(request.getOclusao())
                 .exameOutros(request.getExameOutros())
+                // TUSS e CID
+                .tussTexto(request.getTussTexto())
+                .cidTexto(request.getCidTexto())
+                .solicitacaoExameTexto(request.getSolicitacaoExameTexto())
                 // relacionamentos
                 .profissional(profissional)
                 .consulta(consulta)
@@ -163,6 +169,107 @@ public class ProntuarioDentistaService {
         log.info("Status da consulta ID: {} atualizado para REALIZADA", consulta.getId());
 
         return salvo;
+    }
+
+    // =========================================================================
+    // ATUALIZAÇÃO
+    // =========================================================================
+
+    /**
+     * Atualiza um prontuário odontológico existente.
+     *
+     * @param id      ID do prontuário a ser atualizado
+     * @param request Dados atualizados do prontuário
+     */
+    @Transactional
+    public void atualizarProntuario(Long id, CadastrarProntuarioDentistaRequest request) {
+        log.info("Atualizando prontuário odontológico — id={}", id);
+
+        ProntuarioDentista prontuario = prontuarioDentistaRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Prontuário odontológico não encontrado: " + id));
+
+        // ── Anamnese ──
+        prontuario.setQueixaPrincipal(request.getQueixaPrincipal());
+        prontuario.setAnamnese(request.getAnamnese());
+        prontuario.setObservacao(request.getObservacao());
+
+        // ── Exame Clínico ──
+        prontuario.setHigieneBucal(request.getHigieneBucal());
+        prontuario.setCondicaoGengival(request.getCondicaoGengival());
+        prontuario.setOclusal(request.getOclusal());
+        prontuario.setAtm(request.getAtm());
+
+        // ── Diagnóstico ──
+        prontuario.setDiagnostico(request.getDiagnostico());
+        prontuario.setPlanoTratamento(request.getPlanoTratamento());
+
+        // ── Prescrição ──
+        prontuario.setTituloPrescricao(request.getTituloPrescricao());
+        prontuario.setDataPrescricao(request.getDataPrescricao());
+        prontuario.setPrescricao(request.getPrescricao());
+
+        // ── Procedimentos ──
+        prontuario.setTituloExame(request.getTituloExame());
+        prontuario.setDataExame(request.getDataExame());
+        prontuario.setProcedimentos(request.getProcedimentos());
+        prontuario.setOrientacoes(request.getOrientacoes());
+
+        // ── TUSS e CID ──
+        prontuario.setTussTexto(request.getTussTexto());
+        prontuario.setCidTexto(request.getCidTexto());
+        prontuario.setSolicitacaoExameTexto(request.getSolicitacaoExameTexto());
+
+        // ── Identificação ──
+        prontuario.setResponsavel(request.getResponsavel());
+        prontuario.setInicioTratamento(parseData(request.getInicioTratamento()));
+        prontuario.setTerminoTratamento(parseData(request.getTerminoTratamento()));
+        prontuario.setInterrupcao(request.getInterrupcao());
+
+        // ── Sinais Vitais ──
+        prontuario.setPressaoArterial(request.getPressaoArterial());
+        prontuario.setPulso(request.getPulso());
+        prontuario.setAltura(request.getAltura());
+        prontuario.setTemperatura(request.getTemperatura());
+        prontuario.setPeso(request.getPeso());
+        prontuario.setEdema(request.getEdema());
+        prontuario.setFacies(request.getFacies());
+        prontuario.setLinfonodos(request.getLinfonodos());
+        prontuario.setLabios(request.getLabios());
+        prontuario.setMucosas(request.getMucosas());
+        prontuario.setSoalhoBucal(request.getSoalhoBucal());
+        prontuario.setPalato(request.getPalato());
+        prontuario.setOrofaringe(request.getOrofaringe());
+
+        // ── Exame Intrabucal ──
+        prontuario.setLingua(request.getLingua());
+        prontuario.setGengiva(request.getGengiva());
+        prontuario.setHabitosNocivos(request.getHabitosNocivos());
+        prontuario.setPortadorAparelho(request.getPortadorAparelho());
+        prontuario.setOclusao(request.getOclusao());
+        prontuario.setExameOutros(request.getExameOutros());
+
+        // ── Atualiza odontograma (limpa e recria) ──
+        prontuario.getDentes().clear();
+        prontuarioDentistaRepository.saveAndFlush(prontuario);
+
+        if (!CollectionUtils.isEmpty(request.getOdontograma())) {
+            for (CadastrarProntuarioDentistaRequest.DenteRequest dr : request.getOdontograma()) {
+                if ("sadio".equals(dr.getStatus()) &&
+                        (dr.getObservacao() == null || dr.getObservacao().isBlank())) {
+                    continue;
+                }
+                ProntuarioDentistaDente dente = ProntuarioDentistaDente.builder()
+                        .numeroFdi(dr.getNumeroFdi())
+                        .status(dr.getStatus())
+                        .observacao(dr.getObservacao())
+                        .build();
+                prontuario.addDente(dente);
+            }
+        }
+
+        prontuarioDentistaRepository.save(prontuario);
+        log.info("Prontuário odontológico atualizado — id={}", id);
     }
 
     // =========================================================================

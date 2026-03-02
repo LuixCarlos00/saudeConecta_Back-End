@@ -162,6 +162,17 @@ public class CadastrarProntuarioDentistaRequest {
     @JsonProperty("exameOutros")
     private String exameOutros;
 
+    // ── TUSS e CID ──────────────────────────────────────────────────────────
+
+    @JsonProperty("tussTexto")
+    private String tussTexto;
+
+    @JsonProperty("cidTexto")
+    private String cidTexto;
+
+    @JsonProperty("solicitacaoExameTexto")
+    private String solicitacaoExameTexto;
+
     // ── Relacionamentos ───────────────────────────────────────────────────────
 
     @JsonProperty("codigoMedico")

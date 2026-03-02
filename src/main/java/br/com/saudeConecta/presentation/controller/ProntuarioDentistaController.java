@@ -39,6 +39,20 @@ public class ProntuarioDentistaController {
     }
 
     /**
+     * Atualiza um prontuário odontológico existente.
+     * PUT /prontuario-dentista/{id}
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<Void> atualizarProntuario(
+            @PathVariable Long id,
+            @RequestBody CadastrarProntuarioDentistaRequest request) {
+
+        log.info("PUT /prontuario-dentista/{} — atualizando prontuário", id);
+        prontuarioDentistaService.atualizarProntuario(id, request);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
      * Busca prontuário por ID (inclui odontograma completo para recarregar o SVG).
      * GET /prontuario-dentista/{id}
      */

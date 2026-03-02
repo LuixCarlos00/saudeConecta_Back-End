@@ -7,7 +7,9 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -34,10 +36,10 @@ public class ProntuarioDentista {
     @Column(name = "prontdent_observacao", columnDefinition = "TEXT")
     private String observacao;
 
-    @Column(name = "prontdent_higiene_bucal", length = 50)
+    @Column(name = "prontdent_higiene_bucal", length = 250)
     private String higieneBucal;
 
-    @Column(name = "prontdent_condicao_gengival", length = 100)
+    @Column(name = "prontdent_condicao_gengival", length = 250)
     private String condicaoGengival;
 
     @Column(name = "prontdent_oclusal", columnDefinition = "TEXT")
@@ -93,63 +95,73 @@ public class ProntuarioDentista {
     private String interrupcao;
 
     // ── Exame Objetivo — Sinais Vitais ──────────────────────────────────────
-    @Column(name = "prontdent_pressao_arterial", length = 20)
+    @Column(name = "prontdent_pressao_arterial", length = 250)
     private String pressaoArterial;
 
-    @Column(name = "prontdent_pulso", length = 20)
+    @Column(name = "prontdent_pulso", length = 250)
     private String pulso;
 
-    @Column(name = "prontdent_altura", length = 10)
+    @Column(name = "prontdent_altura", length = 250)
     private String altura;
 
-    @Column(name = "prontdent_temperatura", length = 10)
+    @Column(name = "prontdent_temperatura", length = 250)
     private String temperatura;
 
-    @Column(name = "prontdent_peso", length = 10)
+    @Column(name = "prontdent_peso", length = 250)
     private String peso;
 
-    @Column(name = "prontdent_edema", length = 100)
+    @Column(name = "prontdent_edema", length = 500)
     private String edema;
 
-    @Column(name = "prontdent_facies", length = 100)
+    @Column(name = "prontdent_facies", length = 500)
     private String facies;
 
-    @Column(name = "prontdent_linfonodos", length = 200)
+    @Column(name = "prontdent_linfonodos", length = 500)
     private String linfonodos;
 
-    @Column(name = "prontdent_labios", length = 200)
+    @Column(name = "prontdent_labios", length = 500)
     private String labios;
 
-    @Column(name = "prontdent_mucosas", length = 200)
+    @Column(name = "prontdent_mucosas", length = 500)
     private String mucosas;
 
-    @Column(name = "prontdent_soalho_bucal", length = 200)
+    @Column(name = "prontdent_soalho_bucal", length = 500)
     private String soalhoBucal;
 
-    @Column(name = "prontdent_palato", length = 200)
+    @Column(name = "prontdent_palato", length = 500)
     private String palato;
 
-    @Column(name = "prontdent_orofaringe", length = 200)
+    @Column(name = "prontdent_orofaringe", length = 500)
     private String orofaringe;
 
     // ── Exame Objetivo — Exame Intrabucal ───────────────────────────────────
-    @Column(name = "prontdent_lingua", length = 200)
+    @Column(name = "prontdent_lingua", length = 500)
     private String lingua;
 
-    @Column(name = "prontdent_gengiva", length = 200)
+    @Column(name = "prontdent_gengiva", length = 500)
     private String gengiva;
 
     @Column(name = "prontdent_habitos_nocivos", length = 500)
     private String habitosNocivos;
 
-    @Column(name = "prontdent_portador_aparelho", length = 30)
+    @Column(name = "prontdent_portador_aparelho", length = 250)
     private String portadorAparelho;
 
-    @Column(name = "prontdent_oclusao", length = 200)
+    @Column(name = "prontdent_oclusao", length = 500)
     private String oclusao;
 
     @Column(name = "prontdent_exame_outros", columnDefinition = "TEXT")
     private String exameOutros;
+
+    // ── TUSS e CID ─────────────────────────────────────────────────────────
+    @Column(name = "prontdent_tuss_texto", columnDefinition = "TEXT")
+    private String tussTexto;
+
+    @Column(name = "prontdent_cid_texto", columnDefinition = "TEXT")
+    private String cidTexto;
+
+    @Column(name = "prontdent_solicitacao_exame_texto", columnDefinition = "TEXT")
+    private String solicitacaoExameTexto;
 
     // ── Relacionamentos ─────────────────────────────────────────────────────
     @ManyToOne(fetch = FetchType.LAZY)
@@ -178,7 +190,7 @@ public class ProntuarioDentista {
     )
     @JsonIgnoreProperties("prontuarioDentista")
     @Builder.Default
-    private Set<PlanejamentoTerapeutico> planejamentos = new HashSet<>();
+    private List<PlanejamentoTerapeutico> planejamentos = new ArrayList<>();
 
     public void addDente(ProntuarioDentistaDente dente) {
         dente.setProntuarioDentista(this);
