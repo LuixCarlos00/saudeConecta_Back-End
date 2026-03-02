@@ -20,7 +20,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@EqualsAndHashCode(of = "id")
 @JsonIgnoreProperties({"hibernateLazyInitializer"})
 public class PlanejamentoTerapeutico {
 

@@ -17,6 +17,8 @@ public interface TermoAutorizacaoRepository extends JpaRepository<TermoAutorizac
 
     @Query("SELECT t FROM TermoAutorizacao t " +
            "LEFT JOIN FETCH t.consulta c " +
+           "LEFT JOIN FETCH c.organizacao o " +
+           "LEFT JOIN FETCH c.profissional pr " +
            "LEFT JOIN FETCH t.paciente p " +
            "WHERE t.token = :token")
     Optional<TermoAutorizacao> findByTokenComRelacionamentos(@Param("token") String token);

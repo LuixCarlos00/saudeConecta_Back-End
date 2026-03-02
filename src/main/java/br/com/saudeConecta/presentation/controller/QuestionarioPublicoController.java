@@ -48,6 +48,8 @@ public class QuestionarioPublicoController {
         response.put("token", termo.getToken());
         response.put("pacienteNome", termo.getPaciente().getPaciNome());
         response.put("status", termo.getStatus());
+        response.put("profissionalNome", termo.getConsulta().getProfissional().getNome());
+        response.put("clinicaNome",termo.getOrganizacao().getNome());
         response.put("dataExpiracao", termo.getDataExpiracao());
 
         return ResponseEntity.ok(response);
