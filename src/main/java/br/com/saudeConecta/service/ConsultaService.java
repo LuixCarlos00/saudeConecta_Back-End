@@ -284,6 +284,35 @@ public class ConsultaService {
             .orElse(salva);
     }
 
+    /**
+     * Altera o status de uma consulta REALIZADA para PAGO.
+     *
+     * @param id ID da consulta
+     * @return Consulta atualizada com status PAGO
+     */
+    @RequiresTenant
+    @Transactional
+    public Consulta marcarComoPago(Long id) {
+        Consulta consulta = buscarPorId(id)
+            .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada com ID: " + id));
+
+        if (!StatusConsulta.REALIZADA.equals(consulta.getStatus())) {
+            throw new IllegalStateException(
+                "Apenas consultas REALIZADAS podem ser marcadas como PAGO. Status atual: " + consulta.getStatus());
+        }
+
+        StatusConsulta statusAnterior = consulta.getStatus();
+        consulta.setStatus(StatusConsulta.PAGO);
+
+        Consulta salva = consultaRepository.save(consulta);
+
+        registrarHistorico(salva, statusAnterior, StatusConsulta.PAGO, "Consulta marcada como paga", getUsuarioAtual());
+
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return consultaRepository.findByIdAndOrganizacao_IdWithRelations(salva.getId(), orgId)
+            .orElse(salva);
+    }
+
     @RequiresTenant
     @Transactional
     public Consulta atualizarConsultaByOrg(Long id, AtualizarConsultaRequest request) {

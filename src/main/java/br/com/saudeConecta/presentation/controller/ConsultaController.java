@@ -128,6 +128,27 @@ public class ConsultaController {
         }
     }
 
+    /**
+     * Altera o status de uma consulta REALIZADA para PAGO.
+     *
+     * @param id ID da consulta
+     * @return Consulta atualizada com status PAGO
+     */
+    @PatchMapping("/{id}/pagar")
+    public ResponseEntity<ConsultaResponse> marcarComoPago(@PathVariable Long id) {
+        log.info("Marcando consulta {} como PAGO", id);
+        try {
+            Consulta consulta = consultaService.marcarComoPago(id);
+            return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
+        } catch (IllegalArgumentException e) {
+            log.warn("Consulta não encontrada: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (IllegalStateException e) {
+            log.warn("Transição de status inválida para PAGO: {}", e.getMessage());
+            return ResponseEntity.unprocessableEntity().build();
+        }
+    }
+
     @GetMapping("/horarios-ocupados")
     public ResponseEntity<List<String>> buscarHorariosOcupados(
             @RequestParam Long medicoId,
