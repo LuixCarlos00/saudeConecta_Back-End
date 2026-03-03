@@ -42,4 +42,17 @@ public interface MensageriaRepository extends JpaRepository<Mensageria, Long> {
     long countByOrganizacao_IdAndStatus(Long organizacaoId, StatusMensagem status);
 
     long countByOrganizacao_IdAndAdminNotificadoFalseAndStatus(Long organizacaoId, StatusMensagem status);
+
+    @Query("SELECT m FROM Mensageria m " +
+           "WHERE (:status IS NULL OR m.status = :status) " +
+           "AND (:tipo IS NULL OR m.tipoMensagem = :tipo) " +
+           "ORDER BY m.dataCriacao DESC")
+    Page<Mensageria> findAllWithFilters(
+            @Param("status") StatusMensagem status,
+            @Param("tipo") TipoMensagem tipo,
+            Pageable pageable);
+
+    List<Mensageria> findByAdminNotificadoFalseAndStatus(StatusMensagem status);
+
+    long countByAdminNotificadoFalseAndStatus(StatusMensagem status);
 }

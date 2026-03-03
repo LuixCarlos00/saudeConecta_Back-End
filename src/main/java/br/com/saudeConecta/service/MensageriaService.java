@@ -137,17 +137,24 @@ public class MensageriaService {
     }
 
     /**
-     * Lista todas as mensagens da organização com paginação e filtros opcionais.
+     * Lista mensagens com paginação e filtros opcionais.
+     * SuperAdmin (sem organização) vê mensagens globais de todas as organizações.
+     * Admin Org vê apenas mensagens da própria organização.
      *
      * @param status   Filtro por status (pode ser nulo)
      * @param tipo     Filtro por tipo de mensagem (pode ser nulo)
      * @param pageable Configuração de paginação
      * @return Página de mensagens
      */
-    @RequiresTenant
     @Transactional(readOnly = true)
     public Page<MensageriaResponse> listarMensagens(StatusMensagem status, TipoMensagem tipo, Pageable pageable) {
-        Long orgId = tenantHelper.getCurrentTenantId();
+        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
+        if (orgId == null) {
+            log.info("SUPER_ADMIN: listando mensagens globais");
+            return mensageriaRepository
+                    .findAllWithFilters(status, tipo, pageable)
+                    .map(MensageriaResponse::fromEntity);
+        }
         return mensageriaRepository
                 .findByOrganizacaoIdWithFilters(orgId, status, tipo, pageable)
                 .map(MensageriaResponse::fromEntity);
@@ -155,13 +162,21 @@ public class MensageriaService {
 
     /**
      * Busca mensagens com falha ainda não notificadas ao administrador.
+     * SuperAdmin vê falhas de todas as organizações.
      *
      * @return Lista de mensagens com falha pendentes de notificação
      */
-    @RequiresTenant
     @Transactional(readOnly = true)
     public List<MensageriaResponse> listarFalhasPendentesNotificacao() {
-        Long orgId = tenantHelper.getCurrentTenantId();
+        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
+        if (orgId == null) {
+            log.info("SUPER_ADMIN: listando falhas pendentes globais");
+            return mensageriaRepository
+                    .findByAdminNotificadoFalseAndStatus(StatusMensagem.FALHOU)
+                    .stream()
+                    .map(MensageriaResponse::fromEntity)
+                    .toList();
+        }
         return mensageriaRepository
                 .findByOrganizacao_IdAndAdminNotificadoFalseAndStatus(orgId, StatusMensagem.FALHOU)
                 .stream()
@@ -171,17 +186,17 @@ public class MensageriaService {
 
     /**
      * Marca uma mensagem como notificada ao administrador.
+     * SuperAdmin pode marcar mensagens de qualquer organização.
      *
      * @param mensageriaId ID da mensagem
      */
-    @RequiresTenant
     @Transactional
     public void marcarComoNotificado(Long mensageriaId) {
-        Long orgId = tenantHelper.getCurrentTenantId();
+        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
         Mensageria mensageria = mensageriaRepository.findById(mensageriaId)
                 .orElseThrow(() -> new IllegalArgumentException("Mensagem não encontrada: " + mensageriaId));
 
-        if (!mensageria.getOrganizacaoId().equals(orgId)) {
+        if (orgId != null && !mensageria.getOrganizacaoId().equals(orgId)) {
             throw new IllegalArgumentException("Acesso negado à mensagem: " + mensageriaId);
         }
 
@@ -193,30 +208,33 @@ public class MensageriaService {
 
     /**
      * Retorna contagem de mensagens com falha não notificadas (para badge de alerta).
+     * SuperAdmin vê contagem global de todas as organizações.
      *
      * @return Quantidade de falhas pendentes
      */
-    @RequiresTenant
     @Transactional(readOnly = true)
     public long contarFalhasPendentes() {
-        Long orgId = tenantHelper.getCurrentTenantId();
+        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
+        if (orgId == null) {
+            return mensageriaRepository.countByAdminNotificadoFalseAndStatus(StatusMensagem.FALHOU);
+        }
         return mensageriaRepository.countByOrganizacao_IdAndAdminNotificadoFalseAndStatus(orgId, StatusMensagem.FALHOU);
     }
 
     /**
-     * Busca uma mensagem específica por ID dentro da organização.
+     * Busca uma mensagem específica por ID.
+     * SuperAdmin pode acessar mensagens de qualquer organização.
      *
      * @param mensageriaId ID da mensagem
      * @return DTO da mensagem
      */
-    @RequiresTenant
     @Transactional(readOnly = true)
     public MensageriaResponse buscarPorId(Long mensageriaId) {
-        Long orgId = tenantHelper.getCurrentTenantId();
+        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
         Mensageria mensageria = mensageriaRepository.findById(mensageriaId)
                 .orElseThrow(() -> new IllegalArgumentException("Mensagem não encontrada: " + mensageriaId));
 
-        if (!mensageria.getOrganizacaoId().equals(orgId)) {
+        if (orgId != null && !mensageria.getOrganizacaoId().equals(orgId)) {
             throw new IllegalArgumentException("Acesso negado à mensagem: " + mensageriaId);
         }
 

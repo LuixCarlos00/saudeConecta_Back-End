@@ -223,21 +223,22 @@ public class AdminOrganizacaoService {
  
     /**
      * Cadastra um Admin de Organização completo pelo SUPER_ADMIN.
-     * Cria: Endereco → Organizacao → Usuario (senha = CPF) → AdminOrganizacao.
+     * Cria: Endereco → Organizacao → Usuario (login e senha = CNPJ) → AdminOrganizacao.
+     * Email de credenciais é enviado para o email da clínica.
      *
      * @param request dados completos do admin e da organização
      * @return AdminOrganizacao criado
      */
     @Transactional
     public AdminOrganizacao cadastrarAdminOrgCompleto(CadastrarAdminOrgCompletoRequest request) {
-        String cpfLimpo = limparCpf(request.cpf());
-        log.info("Cadastrando Admin Org completo. CPF: {}, Clínica: {}", cpfLimpo, request.nomeClinica());
+        String cnpjLimpo = limparCnpj(request.cnpj());
+        log.info("Cadastrando Admin Org completo. CNPJ: {}, Clínica: {}", cnpjLimpo, request.nomeClinica());
 
-        if (usuarioRepository.existsByLogin(cpfLimpo)) {
-            throw new IllegalStateException("CPF já cadastrado no sistema");
+        if (usuarioRepository.existsByLogin(cnpjLimpo)) {
+            throw new IllegalStateException("CNPJ já cadastrado como login no sistema");
         }
 
-        if (organizacaoRepository.existsByCnpj(limparCnpj(request.cnpj()))) {
+        if (organizacaoRepository.existsByCnpj(cnpjLimpo)) {
             throw new IllegalStateException("CNPJ já cadastrado no sistema");
         }
 
@@ -254,7 +255,7 @@ public class AdminOrganizacaoService {
         Organizacao organizacao = organizacaoRepository.save(Organizacao.builder()
                 .nome(request.nomeClinica())
                 .razaoSocial(request.razaoSocial())
-                .cnpj(limparCnpj(request.cnpj()))
+                .cnpj(cnpjLimpo)
                 .tipo(TipoOrganizacao.valueOf(request.tipoClinica()))
                 .email(request.emailClinica())
                 .telefone(request.telefone())
@@ -262,9 +263,12 @@ public class AdminOrganizacaoService {
                 .status(StatusOrganizacao.ATIVO)
                 .build());
 
+
+        String senhaGerada = gerarSenhaAleatoria();
+
         Usuario usuario = usuarioRepository.save(Usuario.builder()
-                .login(cpfLimpo)
-                .senha(passwordEncoder.encode(cpfLimpo))
+                .login(cnpjLimpo)
+                .senha(passwordEncoder.encode(senhaGerada))
                 .tipoUsuario((byte) 1)
                 .tipoUsuarioNovo(TipoUsuarioNovo.ADMIN_ORG)
                 .status(StatusUsuario.ATIVO)
@@ -283,19 +287,14 @@ public class AdminOrganizacaoService {
 
         configuracaoGraficoDashboardService.inicializarParaNovoUsuario(usuario);
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                emailCadastroService.enviarCredenciaisAdministradorAsync(
-                    request.email(),
-                    request.nome(),
-                    cpfLimpo,
-                    cpfLimpo
-                );
-                log.info("Email de credenciais enviado para: {}", request.email());
-            } catch (Exception e) {
-                log.error("Erro ao enviar email para: {}", request.email(), e);
-            }
-        }, emailTaskExecutor);
+        emailCadastroService.enviarCredenciaisAdministradorAsync(
+                request.emailClinica(),
+                request.nome(),
+                cnpjLimpo,
+                cnpjLimpo,
+                organizacao.getId(),
+                null
+        );
 
         log.info("Admin Org criado com sucesso. ID: {}, Org: {}", admin.getId(), organizacao.getId());
         return admin;

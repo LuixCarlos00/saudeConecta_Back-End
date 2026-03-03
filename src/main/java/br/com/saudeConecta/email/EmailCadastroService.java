@@ -115,23 +115,29 @@ public class EmailCadastroService {
     }
 
     /**
-     * Envia email de credenciais para administrador de forma assíncrona
+     * Envia email de credenciais para administrador de forma assíncrona.
+     * O @Async garante execução em thread separada.
+     * Registra sucesso ou falha na tabela de mensageria.
+     *
+     * @param email            Email do destinatário
+     * @param nome             Nome do administrador
+     * @param cpf              Login (CNPJ)
+     * @param senha            Senha gerada
+     * @param organizacaoId    ID da organização (para registro na mensageria)
+     * @param administradorId  ID do administrador (não é profissional, será passado como null para destinatarioProfissional)
      */
     @Async
     public void enviarCredenciaisAdministradorAsync(String email, String nome, String cpf, String senha, Long organizacaoId, Long administradorId) {
         if (emailEnabled) {
-            CompletableFuture.runAsync(() -> {
-                try {
-                    credenciaisEmailService.enviarCredenciaisAdministrador(email, nome, cpf, senha);
-                    log.info("Email de credenciais enviado para administrador: {}", email);
-                    // Registra sucesso na mensageria
-                    registrarSucessoNaMensageria(email, nome, cpf, senha, null, "administrador",
-                            organizacaoId, administradorId, 1);
-                } catch (Exception e) {
-                    log.error("Erro ao enviar email de credenciais para administrador: {}", e.getMessage());
-                    agendarRetryEnvioEmail(email, nome, cpf, senha, null, "administrador", organizacaoId, administradorId);
-                }
-            }, emailTaskExecutor);
+            try {
+                credenciaisEmailService.enviarCredenciaisAdministrador(email, nome, cpf, senha);
+                log.info("Email de credenciais enviado para administrador: {}", email);
+                registrarSucessoNaMensageria(email, nome, cpf, senha, null, "administrador",
+                        organizacaoId, null, 1);
+            } catch (Exception e) {
+                log.error("Erro ao enviar email de credenciais para administrador: {}", e.getMessage());
+                agendarRetryEnvioEmail(email, nome, cpf, senha, null, "administrador", organizacaoId, null);
+            }
         } else {
             log.warn("Envio de email desabilitado. Credenciais não enviadas para administrador: {}", email);
             log.info("CREDENCIAIS ADMINISTRADOR - Login: {}, Senha: {}", cpf, senha);
@@ -229,6 +235,9 @@ public class EmailCadastroService {
             return;
         }
 
+        log.info("Registrando falha de envio na mensageria. Email: {}, OrgId: {}, Tipo: {}, Tentativas: {}",
+                email, organizacaoId, tipoUsuario, tentativas);
+
         try {
             TipoMensagem tipo = resolverTipoMensagem(tipoUsuario);
             String corpoMensagem = construirCorpoMensagemFalha(nome, cpf, senha, nomeOrganizacao, tipoUsuario);
@@ -245,8 +254,9 @@ public class EmailCadastroService {
                     "Falha no envio após " + tentativas + " tentativas",
                     tentativas
             );
+            log.info("Falha de envio registrada com sucesso na mensageria para: {}", email);
         } catch (Exception ex) {
-            log.error("Erro ao registrar falha de email na mensageria para {}: {}", email, ex.getMessage());
+            log.error("Erro CRÍTICO ao registrar falha de email na mensageria para {}: {}", email, ex.getMessage(), ex);
         }
     }
 
@@ -303,6 +313,9 @@ public class EmailCadastroService {
             return;
         }
 
+        log.info("Registrando sucesso de envio na mensageria. Email: {}, OrgId: {}, Tipo: {}",
+                email, organizacaoId, tipoUsuario);
+
         try {
             TipoMensagem tipo = resolverTipoMensagem(tipoUsuario);
             String corpoMensagem = construirCorpoMensagemSucesso(nome, cpf, senha, nomeOrganizacao, tipoUsuario);
@@ -318,8 +331,9 @@ public class EmailCadastroService {
                     tipo,
                     tentativas
             );
+            log.info("Sucesso de envio registrado na mensageria para: {}", email);
         } catch (Exception ex) {
-            log.error("Erro ao registrar sucesso de email na mensageria para {}: {}", email, ex.getMessage());
+            log.error("Erro ao registrar sucesso de email na mensageria para {}: {}", email, ex.getMessage(), ex);
         }
     }
 

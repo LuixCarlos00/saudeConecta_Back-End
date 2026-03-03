@@ -54,6 +54,8 @@ public record CadastrarAdminOrgCompletoRequest(
     @NotBlank(message = "Tipo da clínica é obrigatório")
     String tipoClinica,
 
+    @NotBlank(message = "Email da clínica é obrigatório")
+    @Email(message = "Email da clínica inválido")
     String emailClinica,
 
     String telefone,
