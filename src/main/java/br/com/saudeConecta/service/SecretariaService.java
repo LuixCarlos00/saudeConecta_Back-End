@@ -2,14 +2,12 @@ package br.com.saudeConecta.service;
 
 import br.com.saudeConecta.domain.historicodadospessoais.EntidadeTipo;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
-import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.domain.secretaria.StatusSecretaria;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.domain.usuario.StatusUsuario;
-import br.com.saudeConecta.email.CredenciaisEmailService;
-import br.com.saudeConecta.email.EmailCadastroService;
+import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infra.tenant.RequiresTenant;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
@@ -19,15 +17,12 @@ import br.com.saudeConecta.presentation.dto.secretaria.CadastrarSecretariaReques
 import br.com.saudeConecta.util.EmailUnicoService;
 import br.com.saudeConecta.util.SnapshotUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 
 @Service
 @Slf4j
@@ -41,10 +36,10 @@ public class SecretariaService {
     private final OrganizacaoRepository organizacaoRepository;
     private final PasswordEncoder passwordEncoder;
     private final TenantHelper tenantHelper;
-    private final EmailCadastroService emailCadastroService;
-    private final Executor emailTaskExecutor;
+    private final EmailNotificacaoService emailNotificacaoService;
     private final EmailUnicoService emailUnicoService;
     private final HistoricoDadosPessoaisService historicoDadosPessoaisService;
+    private final LimitePlanoService limitePlanoService;
 
 
     public SecretariaService(
@@ -53,19 +48,19 @@ public class SecretariaService {
             OrganizacaoRepository organizacaoRepository,
             PasswordEncoder passwordEncoder,
             TenantHelper tenantHelper,
-            EmailCadastroService emailCadastroService,
-            @Qualifier("emailTaskExecutor") Executor emailTaskExecutor,
+            EmailNotificacaoService emailNotificacaoService,
             EmailUnicoService emailUnicoService,
-            HistoricoDadosPessoaisService historicoDadosPessoaisService) {
+            HistoricoDadosPessoaisService historicoDadosPessoaisService,
+            LimitePlanoService limitePlanoService) {
         this.secretariaRepository = secretariaRepository;
         this.usuarioRepository = usuarioRepository;
         this.organizacaoRepository = organizacaoRepository;
         this.passwordEncoder = passwordEncoder;
         this.tenantHelper = tenantHelper;
-        this.emailCadastroService = emailCadastroService;
-        this.emailTaskExecutor = emailTaskExecutor;
+        this.emailNotificacaoService = emailNotificacaoService;
         this.emailUnicoService = emailUnicoService;
         this.historicoDadosPessoaisService = historicoDadosPessoaisService;
+        this.limitePlanoService = limitePlanoService;
     }
 
 
@@ -115,6 +110,8 @@ public class SecretariaService {
         Long orgId = tenantHelper.getCurrentTenantId();
         log.info("Cadastrando secretária: {} na organização: {}", request.nome(), orgId);
 
+        limitePlanoService.validarLimiteSecretaria(orgId);
+
         String cpfLimpo = limparCpf(request.cpf());
 
 
@@ -157,20 +154,14 @@ public class SecretariaService {
         Secretaria salva = secretariaRepository.save(secretaria);
         log.info("Secretária cadastrada com sucesso. ID: {}", salva.getId());
 
-        // Envio de email assíncrono otimizado
-        CompletableFuture.runAsync(() -> {
-            try {
-                emailCadastroService.enviarCredenciaisSecretariaAsync(
-                        request.email(),
-                        request.nome(),
-                        cpfLimpo,
-                        senhaGerada
-                );
-                log.info("Email enviado para: {}", request.email());
-            } catch (Exception e) {
-                log.error("Erro ao enviar email para: {}", request.email(), e);
-            }
-        }, emailTaskExecutor);
+        emailNotificacaoService.enviarCredenciaisSecretaria(
+                request.email(),
+                request.nome(),
+                cpfLimpo,
+                senhaGerada,
+                orgId,
+                salva.getId()
+        );
 
         return salva;
     }

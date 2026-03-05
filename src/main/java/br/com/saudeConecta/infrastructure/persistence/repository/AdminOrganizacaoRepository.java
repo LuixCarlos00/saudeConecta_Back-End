@@ -32,7 +32,24 @@ public interface AdminOrganizacaoRepository extends JpaRepository<AdminOrganizac
 
     Optional<AdminOrganizacao> findByEmail(String email);
 
-    @Query("SELECT a FROM AdminOrganizacao a LEFT JOIN FETCH a.usuario LEFT JOIN FETCH a.organizacao")
+    @Query("SELECT DISTINCT a FROM AdminOrganizacao a " +
+           "LEFT JOIN FETCH a.usuario " +
+           "LEFT JOIN FETCH a.organizacao o " +
+           "LEFT JOIN FETCH o.assinaturas assin " +
+           "LEFT JOIN FETCH assin.planoAssinatura")
     List<AdminOrganizacao> findAllWithRelations();
+
+    @Query("SELECT a FROM AdminOrganizacao a " +
+           "LEFT JOIN FETCH a.usuario " +
+           "LEFT JOIN FETCH a.organizacao o " +
+           "LEFT JOIN FETCH o.endereco " +
+           "WHERE a.id = :id")
+    Optional<AdminOrganizacao> findByIdWithOrgAndEndereco(@Param("id") Long id);
+
+    @Query(value = "SELECT COUNT(*) FROM admin_organizacao a " +
+           "INNER JOIN usuarios u ON a.usuario_id = u.id " +
+           "WHERE a.organizacao_id = :orgId AND u.status IN ('ATIVO', 'INATIVO')",
+           nativeQuery = true)
+    Long countAtivosByOrganizacaoId(@Param("orgId") Long organizacaoId);
 
 }

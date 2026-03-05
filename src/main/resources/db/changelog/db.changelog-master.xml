@@ -50,4 +50,7 @@
     <!-- Prontuário Odontológico: Termo, Procedimentos, Planejamento -->
     <include file="db/changelog/changes/026-criar-tabelas-prontuario-odontologico.xml"/>
 
+    <!-- Planos, Assinaturas e Cobranças -->
+    <include file="db/changelog/changes/027-criar-tabelas-planos-assinaturas.xml"/>
+
 </databaseChangeLog>

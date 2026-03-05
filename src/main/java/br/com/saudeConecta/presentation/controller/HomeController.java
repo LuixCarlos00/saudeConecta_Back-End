@@ -2,11 +2,13 @@ package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.service.HomeService;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
+import br.com.saudeConecta.domain.planos.AssinaturaTenant;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infra.configuracoesseguranca.TokenService;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.SecretariaRepository;
 import br.com.saudeConecta.presentation.dto.usuario.DadosLoginUsuario;
@@ -15,6 +17,7 @@ import jakarta.validation.constraints.NotNull;
 import jdk.jfr.Description;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -37,15 +40,35 @@ public class HomeController {
     private final ProfissionalRepository profissionalRepository;
     private final AdminOrganizacaoRepository adminOrganizacaoRepository;
     private final SecretariaRepository secretariaRepository;
+    private final AssinaturaTenantRepository assinaturaTenantRepository;
 
     @PostMapping("/login")
     @Description("Realiza autenticação do usuário e retorna token JWT. Utilizado em: LoginComponent, AuthService")
-    public ResponseEntity<DadosTokenJWT> autenticar(@RequestBody @NotNull DadosLoginUsuario dados) {
+    public ResponseEntity<?> autenticar(@RequestBody @NotNull DadosLoginUsuario dados) {
         var authenticatetoken = new UsernamePasswordAuthenticationToken(dados.login(), dados.senha());
         var authentication = authenticationManager.authenticate(authenticatetoken);
 
         Usuario usuario = (Usuario) authentication.getPrincipal();
         Long organizacaoId = usuario.getOrganizacaoId();
+
+        // Validar plano da organização (não se aplica a SUPER_ADMIN)
+        if (!usuario.isSuperAdmin() && organizacaoId != null) {
+            Optional<AssinaturaTenant> assinatura = assinaturaTenantRepository
+                    .findAssinaturaAtivaByOrganizacaoId(organizacaoId);
+
+            if (assinatura.isEmpty()) {
+                log.warn("Login bloqueado para usuário {}: organização {} sem plano ativo", usuario.getLogin(), organizacaoId);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("message", "Sua organização não possui um plano ativo. Entre em contato com o administrador."));
+            }
+
+            if (!assinatura.get().permiteAcesso()) {
+                String statusPlano = assinatura.get().getStatus().getDescricao();
+                log.warn("Login bloqueado para usuário {}: plano {} da org {}", usuario.getLogin(), statusPlano, organizacaoId);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("message", "O plano da sua organização está " + statusPlano.toLowerCase() + ". Entre em contato com o administrador."));
+            }
+        }
 
         // Obter nome do usuário baseado no tipo
         String nomeUsuario = getNomeUsuario(usuario);

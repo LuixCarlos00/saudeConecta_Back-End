@@ -31,4 +31,8 @@ public interface SecretariaRepository extends JpaRepository<Secretaria, Long> {
     Optional<Secretaria> findByUsuario_Id(Long usuarioId);
 
     Optional<Secretaria> findByOrganizacao_IdAndUsuario_Id(Long id, Long id1);
+
+    @Query("SELECT COUNT(s) FROM Secretaria s " +
+           "WHERE s.organizacao.id = :orgId AND s.status IN ('ATIVO', 'INATIVO')")
+    Long countAtivasByOrganizacaoId(@Param("orgId") Long organizacaoId);
 }

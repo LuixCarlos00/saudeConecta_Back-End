@@ -1,12 +1,14 @@
 package br.com.saudeConecta.domain.organizacao;
 
 import br.com.saudeConecta.domain.endereco.Endereco;
+import br.com.saudeConecta.domain.planos.AssinaturaTenant;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "organizacao")
@@ -50,6 +52,9 @@ public class Organizacao implements Serializable {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "endereco_id")
     private Endereco endereco;
+    
+    @OneToMany(mappedBy = "organizacao", fetch = FetchType.LAZY)
+    private List<AssinaturaTenant> assinaturas;
     
     @Enumerated(EnumType.STRING)
     @Column(length = 20)

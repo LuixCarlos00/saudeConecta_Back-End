@@ -4,21 +4,18 @@ import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.email.EmailRecuperacaoSenhaService;
+import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.SecretariaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 
 @Service
 @Slf4j
@@ -28,25 +25,22 @@ public class HomeService {
     private final UsuarioRepository usuarioRepository;
     private final SecretariaRepository secretariaRepository;
     private final AdminOrganizacaoRepository adminOrganizacaoRepository;
-    private final EmailRecuperacaoSenhaService emailRecuperacaoSenhaService;
+    private final EmailNotificacaoService emailNotificacaoService;
     private final PasswordEncoder passwordEncoder;
-    private final Executor emailTaskExecutor;
 
     public HomeService(
             ProfissionalRepository profissionalRepository,
             UsuarioRepository usuarioRepository,
             SecretariaRepository secretariaRepository,
             AdminOrganizacaoRepository adminOrganizacaoRepository,
-            EmailRecuperacaoSenhaService emailRecuperacaoSenhaService,
-            PasswordEncoder passwordEncoder,
-            @Qualifier("emailTaskExecutor") Executor emailTaskExecutor) {
+            EmailNotificacaoService emailNotificacaoService,
+            PasswordEncoder passwordEncoder) {
         this.profissionalRepository = profissionalRepository;
         this.usuarioRepository = usuarioRepository;
         this.secretariaRepository = secretariaRepository;
         this.adminOrganizacaoRepository = adminOrganizacaoRepository;
-        this.emailRecuperacaoSenhaService = emailRecuperacaoSenhaService;
+        this.emailNotificacaoService = emailNotificacaoService;
         this.passwordEncoder = passwordEncoder;
-        this.emailTaskExecutor = emailTaskExecutor;
     }
 
     @Transactional
@@ -94,15 +88,8 @@ public class HomeService {
         usuario.setSenha(passwordEncoder.encode(novaSenha));
         usuarioRepository.save(usuario);
 
-        // Envio de email assíncrono
-        CompletableFuture.runAsync(() -> {
-            try {
-                emailRecuperacaoSenhaService.enviarEmailRecuperacao(email, nome, usuario.getLogin(), novaSenha);
-                log.info("Email de recuperação enviado para: {}", email);
-            } catch (Exception e) {
-                log.error("Erro ao enviar email de recuperação para: {}", email, e);
-            }
-        }, emailTaskExecutor);
+        Long organizacaoId = usuario.getOrganizacao() != null ? usuario.getOrganizacao().getId() : null;
+        emailNotificacaoService.enviarRecuperacaoSenha(email, nome, usuario.getLogin(), novaSenha, organizacaoId);
 
         log.info("Senha atualizada para: {}", email);
     }

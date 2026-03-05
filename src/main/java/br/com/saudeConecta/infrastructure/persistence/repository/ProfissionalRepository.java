@@ -69,7 +69,7 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
 
     
     @Query("SELECT COUNT(p) FROM Profissional p " +
-           "WHERE p.organizacao.id = :orgId AND p.status = 'ATIVO'")
+           "WHERE p.organizacao.id = :orgId AND p.status IN ('ATIVO', 'INATIVO')")
     Long countAtivosByOrganizacaoId(@Param("orgId") Long organizacaoId);
 
     @Query("SELECT COUNT(p) FROM Profissional p WHERE p.status = 'ATIVO'")

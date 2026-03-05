@@ -10,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -102,6 +103,27 @@ public class MensageriaController {
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException e) {
             log.warn("Erro ao marcar mensagem como notificada: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * Reenvia uma mensagem para o destinatário original.
+     *
+     * @param id ID da mensagem
+     * @return Resposta sem conteúdo em caso de sucesso
+     */
+    @PostMapping("/{id}/reenviar")
+    public ResponseEntity<?> reenviarMensagem(@PathVariable Long id) {
+        log.info("Reenviando mensagem ID: {}", id);
+        try {
+            mensageriaService.reenviarMensagem(id);
+            return ResponseEntity.ok().build();
+        } catch (IllegalStateException e) {
+            log.warn("Erro ao reenviar mensagem: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            log.warn("Mensagem não encontrada para reenvio: {}", e.getMessage());
             return ResponseEntity.notFound().build();
         }
     }

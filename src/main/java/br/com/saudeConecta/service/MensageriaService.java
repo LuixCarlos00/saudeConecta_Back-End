@@ -18,6 +18,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import br.com.saudeConecta.email.EmailNotificacaoService;
+
 import java.util.List;
 
 /**
@@ -33,108 +35,8 @@ public class MensageriaService {
     private final OrganizacaoRepository organizacaoRepository;
     private final ProfissionalRepository profissionalRepository;
     private final TenantHelper tenantHelper;
+    private final EmailNotificacaoService emailNotificacaoService;
 
-    /**
-     * Registra uma mensagem com falha de envio na tabela de mensageria.
-     * Utilizado quando o envio de email falha após todas as tentativas.
-     *
-     * @param organizacaoId              ID da organização
-     * @param destinatarioProfissionalId ID do profissional destinatário (pode ser nulo)
-     * @param destinatarioEmail          Email do destinatário
-     * @param destinatarioNome           Nome do destinatário
-     * @param assunto                    Assunto da mensagem
-     * @param corpoMensagem              Corpo completo da mensagem (template HTML)
-     * @param tipoMensagem               Tipo da mensagem
-     * @param erroDetalhe                Detalhe do erro ocorrido
-     * @param tentativas                 Número de tentativas realizadas
-     */
-    @Transactional
-    public void registrarFalhaEnvio(
-            Long organizacaoId,
-            Long destinatarioProfissionalId,
-            String destinatarioEmail,
-            String destinatarioNome,
-            String assunto,
-            String corpoMensagem,
-            TipoMensagem tipoMensagem,
-            String erroDetalhe,
-            int tentativas) {
-
-        Organizacao organizacao = organizacaoRepository.findById(organizacaoId)
-                .orElseThrow(() -> new IllegalArgumentException("Organização não encontrada: " + organizacaoId));
-
-        Profissional profissional = null;
-        if (destinatarioProfissionalId != null) {
-            profissional = profissionalRepository.findById(destinatarioProfissionalId).orElse(null);
-        }
-
-        Mensageria mensageria = Mensageria.builder()
-                .organizacao(organizacao)
-                .destinatarioProfissional(profissional)
-                .destinatarioEmail(destinatarioEmail)
-                .destinatarioNome(destinatarioNome)
-                .assunto(assunto)
-                .corpoMensagem(corpoMensagem)
-                .tipoMensagem(tipoMensagem)
-                .status(StatusMensagem.FALHOU)
-                .erroDetalhe(erroDetalhe)
-                .tentativas(tentativas)
-                .adminNotificado(false)
-                .build();
-
-        mensageriaRepository.save(mensageria);
-        log.warn("Falha de envio registrada na mensageria. Destinatário: {}, Tipo: {}", destinatarioEmail, tipoMensagem);
-    }
-
-    /**
-     * Registra uma mensagem enviada com sucesso na tabela de mensageria.
-     * Utilizado para manter histórico completo de envios.
-     *
-     * @param organizacaoId              ID da organização
-     * @param destinatarioProfissionalId ID do profissional destinatário (pode ser nulo)
-     * @param destinatarioEmail          Email do destinatário
-     * @param destinatarioNome           Nome do destinatário
-     * @param assunto                    Assunto da mensagem
-     * @param corpoMensagem              Corpo completo da mensagem (template HTML)
-     * @param tipoMensagem               Tipo da mensagem
-     * @param tentativas                 Número de tentativas até o sucesso
-     */
-    @Transactional
-    public void registrarEnvioSucesso(
-            Long organizacaoId,
-            Long destinatarioProfissionalId,
-            String destinatarioEmail,
-            String destinatarioNome,
-            String assunto,
-            String corpoMensagem,
-            TipoMensagem tipoMensagem,
-            int tentativas) {
-
-        Organizacao organizacao = organizacaoRepository.findById(organizacaoId)
-                .orElseThrow(() -> new IllegalArgumentException("Organização não encontrada: " + organizacaoId));
-
-        Profissional profissional = null;
-        if (destinatarioProfissionalId != null) {
-            profissional = profissionalRepository.findById(destinatarioProfissionalId).orElse(null);
-        }
-
-        Mensageria mensageria = Mensageria.builder()
-                .organizacao(organizacao)
-                .destinatarioProfissional(profissional)
-                .destinatarioEmail(destinatarioEmail)
-                .destinatarioNome(destinatarioNome)
-                .assunto(assunto)
-                .corpoMensagem(corpoMensagem)
-                .tipoMensagem(tipoMensagem)
-                .status(StatusMensagem.ENVIADO)
-                .erroDetalhe(null)
-                .tentativas(tentativas)
-                .adminNotificado(true) // Sucesso não precisa notificar admin
-                .build();
-
-        mensageriaRepository.save(mensageria);
-        log.info("Envio bem-sucedido registrado na mensageria. Destinatário: {}, Tipo: {}", destinatarioEmail, tipoMensagem);
-    }
 
     /**
      * Lista mensagens com paginação e filtros opcionais.
@@ -239,5 +141,64 @@ public class MensageriaService {
         }
 
         return MensageriaResponse.fromEntity(mensageria);
+    }
+
+    /**
+     * Reenvia uma mensagem registrada na mensageria.
+     * Utiliza os dados armazenados (email, assunto, corpo) para disparar o email novamente.
+     * Atualiza o status e incrementa o número de tentativas.
+     *
+     * @param mensageriaId ID da mensagem a ser reenviada
+     */
+    @Transactional
+    public void reenviarMensagem(Long mensageriaId) {
+        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
+        Mensageria mensageria = mensageriaRepository.findById(mensageriaId)
+                .orElseThrow(() -> new IllegalArgumentException("Mensagem não encontrada: " + mensageriaId));
+
+        if (orgId != null && !mensageria.getOrganizacaoId().equals(orgId)) {
+            throw new IllegalArgumentException("Acesso negado à mensagem: " + mensageriaId);
+        }
+
+        log.info("Reenviando mensagem ID: {} para: {}", mensageriaId, mensageria.getDestinatarioEmail());
+
+        Long profissionalId = mensageria.getDestinatarioProfissional() != null
+                ? mensageria.getDestinatarioProfissional().getId()
+                : null;
+
+        String tipoUsuario = resolverTipoUsuario(mensageria.getTipoMensagem());
+
+        mensageria.setStatus(StatusMensagem.PENDENTE);
+        mensageria.setTentativas(mensageria.getTentativas() + 1);
+        mensageria.setErroDetalhe(null);
+        mensageriaRepository.save(mensageria);
+
+        emailNotificacaoService.reenviarEmail(
+                mensageria.getDestinatarioEmail(),
+                mensageria.getDestinatarioNome(),
+                mensageria.getAssunto(),
+                mensageria.getCorpoMensagem(),
+                tipoUsuario,
+                mensageria.getOrganizacaoId(),
+                profissionalId
+        );
+
+        log.info("Reenvio delegado ao EmailNotificacaoService. Mensagem ID: {}", mensageriaId);
+    }
+
+    /**
+     * Converte o enum TipoMensagem para a String de tipo de usuário usada pelo EmailNotificacaoService.
+     *
+     * @param tipoMensagem tipo da mensagem armazenada
+     * @return String do tipo de usuário
+     */
+    private String resolverTipoUsuario(TipoMensagem tipoMensagem) {
+        return switch (tipoMensagem) {
+            case EMAIL_CREDENCIAIS_CLINICO -> "medico";
+            case EMAIL_CREDENCIAIS_SECRETARIA -> "secretaria";
+            case EMAIL_CREDENCIAIS_ADMINISTRADOR -> "administrador";
+            case EMAIL_RECUPERACAO_SENHA -> "recuperacao";
+            case EMAIL_GENERICO -> "generico";
+        };
     }
 }
