@@ -99,11 +99,15 @@ public class ConsultaController {
     }
 
     /**
-     * Altera o status de uma consulta.
-     * Aceita todos os status: AGENDADA, CONFIRMADA, CANCELADA, REALIZADA, PAGO
+     * Altera o status de uma consulta seguindo as regras de transição:
+     * - AGENDADA → CONFIRMADA, CANCELADA
+     * - CONFIRMADA → AGENDADA, CANCELADA
+     * - REALIZADA → PAGO (AdminOrg pode marcar como pago após médico concluir)
+     * 
+     * IMPORTANTE: Status REALIZADA só pode ser definido pelo médico através do endpoint PUT /concluirConsultabyOrg/{id}
      *
      * @param id     ID da consulta
-     * @param status Novo status
+     * @param status Novo status (AGENDADA, CONFIRMADA, CANCELADA, PAGO)
      * @param motivo Motivo (obrigatório apenas para CANCELADA)
      * @return Consulta atualizada
      */
@@ -122,27 +126,6 @@ public class ConsultaController {
             return ResponseEntity.badRequest().build();
         } catch (IllegalStateException e) {
             log.warn("Transição de status inválida: {}", e.getMessage());
-            return ResponseEntity.unprocessableEntity().build();
-        }
-    }
-
-    /**
-     * Altera o status de uma consulta REALIZADA para PAGO.
-     *
-     * @param id ID da consulta
-     * @return Consulta atualizada com status PAGO
-     */
-    @PatchMapping("/{id}/pagar")
-    public ResponseEntity<ConsultaResponse> marcarComoPago(@PathVariable Long id) {
-        log.info("Marcando consulta {} como PAGO", id);
-        try {
-            Consulta consulta = consultaService.marcarComoPago(id);
-            return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
-        } catch (IllegalArgumentException e) {
-            log.warn("Consulta não encontrada: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
-        } catch (IllegalStateException e) {
-            log.warn("Transição de status inválida para PAGO: {}", e.getMessage());
             return ResponseEntity.unprocessableEntity().build();
         }
     }
@@ -167,6 +150,55 @@ public class ConsultaController {
     }
 
 
+
+    /**
+     * Endpoint dinâmico para buscar consultas com filtros opcionais
+     * Todos os parâmetros são opcionais, permitindo qualquer combinação de filtros
+     * 
+     * @param profissionalId ID do profissional/médico (opcional)
+     * @param especialidade Nome da especialidade (opcional)
+     * @param dataInicial Data inicial do período (opcional)
+     * @param dataFinal Data final do período (opcional)
+     * @param status Lista de status separados por vírgula (opcional) - ex: "AGENDADA,CONFIRMADA"
+     * @return Lista de consultas que atendem aos filtros
+     */
+    @GetMapping("/buscar")
+    public ResponseEntity<List<ConsultaResponse>> buscarComFiltrosDinamicos(
+            @RequestParam(required = false) Long profissionalId,
+            @RequestParam(required = false) String especialidade,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal,
+            @RequestParam(required = false) String status) {
+        
+        log.info("Endpoint /buscar - profissionalId: {}, especialidade: {}, período: {} a {}, status: {}",
+                profissionalId, especialidade, dataInicial, dataFinal, status);
+        
+        // Converter datas para LocalDateTime
+        LocalDateTime inicio = dataInicial != null ? dataInicial.atStartOfDay() : null;
+        LocalDateTime fim = dataFinal != null ? dataFinal.atTime(23, 59, 59) : null;
+        
+        // Converter string de status para lista de StatusConsulta
+        List<StatusConsulta> statusList = null;
+        if (status != null && !status.trim().isEmpty()) {
+            statusList = java.util.Arrays.stream(status.split(","))
+                    .map(String::trim)
+                    .map(StatusConsulta::valueOf)
+                    .toList();
+        }
+        
+        List<ConsultaResponse> response = consultaService.buscarComFiltrosDinamicos(
+                profissionalId,
+                especialidade,
+                inicio,
+                fim,
+                statusList
+        ).stream()
+                .map(ConsultaResponse::fromEntity)
+                .toList();
+        
+        log.info("Retornando {} consultas", response.size());
+        return ResponseEntity.ok(response);
+    }
 
     @GetMapping("/intervalo")
     public ResponseEntity<List<ConsultaResponse>> buscarTodasPorIntervalo(

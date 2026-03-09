@@ -51,6 +51,9 @@ public class CobrancaTenant implements Serializable {
     @Column(length = 100, unique = true)
     private String txid;
 
+    @Column(name = "asaas_payment_id", length = 100, unique = true)
+    private String asaasPaymentId;
+
     @Column(name = "data_vencimento_pix")
     private LocalDate dataVencimentoPix;
 

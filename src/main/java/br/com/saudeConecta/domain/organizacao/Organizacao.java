@@ -49,6 +49,9 @@ public class Organizacao implements Serializable {
     @Column(name = "logo_url", length = 500)
     private String logoUrl;
     
+    @Column(name = "asaas_customer_id", length = 100, unique = true)
+    private String asaasCustomerId;
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "endereco_id")
     private Endereco endereco;

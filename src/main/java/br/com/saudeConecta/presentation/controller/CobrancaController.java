@@ -10,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/cobrancas")
@@ -22,7 +21,7 @@ public class CobrancaController {
     private final CobrancaService cobrancaService;
 
     /**
-     * Gera uma nova cobrança Pix para a assinatura.
+     * Gera uma nova cobrança Pix para a assinatura (AdminOrg).
      */
     @PostMapping("/gerar/{assinaturaId}")
     public ResponseEntity<CobrancaTenantResponse> gerarCobranca(@PathVariable Long assinaturaId) {
@@ -32,24 +31,25 @@ public class CobrancaController {
     }
 
     /**
-     * Webhook para confirmação de pagamento Pix pelo PSP.
-     * Acesso público (autenticação via assinatura do PSP).
+     * Confirma pagamento manualmente (SuperAdmin).
      */
-    @PostMapping("/webhook/pix")
-    public ResponseEntity<Void> webhookPix(@RequestBody Map<String, Object> payload) {
-        String txid = extrairTxidDoPayload(payload);
-        if (txid == null) {
-            log.warn("Webhook Pix recebido sem txid válido: {}", payload);
-            return ResponseEntity.badRequest().build();
-        }
-
-        log.info("Webhook Pix recebido: txid={}", txid);
-        cobrancaService.confirmarPagamento(txid);
-        return ResponseEntity.ok().build();
+    @PatchMapping("/{cobrancaId}/confirmar-pagamento")
+    public ResponseEntity<CobrancaTenantResponse> confirmarPagamento(@PathVariable Long cobrancaId) {
+        log.info("Confirmação manual de pagamento: cobrancaId={}", cobrancaId);
+        CobrancaTenantResponse response = cobrancaService.confirmarPagamentoManual(cobrancaId);
+        return ResponseEntity.ok(response);
     }
 
     /**
-     * Lista cobranças da organização do usuário logado.
+     * Lista todas as cobranças pendentes (SuperAdmin).
+     */
+    @GetMapping("/pendentes")
+    public ResponseEntity<List<CobrancaTenantResponse>> listarPendentes() {
+        return ResponseEntity.ok(cobrancaService.listarTodasPendentes());
+    }
+
+    /**
+     * Lista cobranças da organização do usuário logado (AdminOrg).
      */
     @GetMapping("/minhas-cobrancas")
     public ResponseEntity<List<CobrancaTenantResponse>> minhasCobrancas() {
@@ -58,7 +58,58 @@ public class CobrancaController {
     }
 
     /**
-     * Lista cobranças de uma organização específica (SUPER_ADMIN).
+     * Busca cobrança pendente atual da organização (AdminOrg).
+     * Usado para exibir alerta no dashboard.
+     */
+    @GetMapping("/pendente-atual")
+    public ResponseEntity<CobrancaTenantResponse> buscarCobrancaPendenteAtual() {
+        Long organizacaoId = TenantContext.getCurrentTenant();
+        CobrancaTenantResponse cobranca = cobrancaService.buscarCobrancaPendenteAtual(organizacaoId);
+        
+        if (cobranca == null) {
+            return ResponseEntity.noContent().build();
+        }
+        
+        return ResponseEntity.ok(cobranca);
+    }
+
+    /**
+     * [TESTE] Força geração de cobranças mensais (simula scheduler).
+     * REMOVER EM PRODUÇÃO!
+     */
+    @PostMapping("/teste/gerar-cobrancas-mensais")
+    public ResponseEntity<String> testarGeracaoCobrancas() {
+        log.warn("[TESTE] Forçando geração de cobranças mensais...");
+        
+        List<br.com.saudeConecta.domain.planos.AssinaturaTenant> assinaturas = 
+            cobrancaService.listarAssinaturasAtivasParaCobranca();
+        
+        int geradas = 0;
+        int erros = 0;
+        
+        for (var assinatura : assinaturas) {
+            try {
+                boolean temPendente = cobrancaService.existeCobrancaPendente(assinatura.getId());
+                if (!temPendente) {
+                    cobrancaService.gerarCobranca(assinatura.getId());
+                    geradas++;
+                } else {
+                    log.info("[TESTE] Assinatura {} já tem cobrança pendente", assinatura.getId());
+                }
+            } catch (Exception e) {
+                erros++;
+                log.error("[TESTE] Erro ao gerar cobrança: {}", e.getMessage());
+            }
+        }
+        
+        String resultado = String.format("Cobranças geradas: %d | Erros: %d | Total: %d", 
+                geradas, erros, assinaturas.size());
+        
+        return ResponseEntity.ok(resultado);
+    }
+
+    /**
+     * Lista cobranças de uma organização específica (SuperAdmin).
      */
     @GetMapping("/organizacao/{organizacaoId}")
     public ResponseEntity<List<CobrancaTenantResponse>> listarPorOrganizacao(
@@ -72,28 +123,5 @@ public class CobrancaController {
     @GetMapping("/txid/{txid}")
     public ResponseEntity<CobrancaTenantResponse> buscarPorTxid(@PathVariable String txid) {
         return ResponseEntity.ok(cobrancaService.buscarPorTxid(txid));
-    }
-
-    /**
-     * Extrai o txid do payload do webhook Pix.
-     * Formato genérico — adaptar conforme PSP (EfiPay, Mercado Pago, etc.).
-     */
-    @SuppressWarnings("unchecked")
-    private String extrairTxidDoPayload(Map<String, Object> payload) {
-        if (payload.containsKey("txid")) {
-            return String.valueOf(payload.get("txid"));
-        }
-
-        if (payload.containsKey("pix")) {
-            Object pixObj = payload.get("pix");
-            if (pixObj instanceof List<?> pixList && !pixList.isEmpty()) {
-                Object primeiro = pixList.get(0);
-                if (primeiro instanceof Map<?, ?> pixMap) {
-                    return String.valueOf(pixMap.get("txid"));
-                }
-            }
-        }
-
-        return null;
     }
 }

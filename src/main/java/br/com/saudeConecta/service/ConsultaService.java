@@ -11,6 +11,7 @@ import br.com.saudeConecta.infra.tenant.RequiresTenant;
 import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
+import br.com.saudeConecta.infrastructure.persistence.specification.ConsultaSpecification;
 import br.com.saudeConecta.presentation.dto.consulta.AgendarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.AtualizarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.CancelarConsultaRequest;
@@ -137,6 +138,42 @@ public class ConsultaService {
         return consultaRepository.findByOrganizacao_IdAndPaciente_PaciCodigoWithRelations(orgId, pacienteId);
     }
 
+    /**
+     * Busca consultas com filtros dinâmicos opcionais
+     * 
+     * @param profissionalId ID do profissional/médico (opcional)
+     * @param especialidade Nome da especialidade (opcional)
+     * @param dataInicio Data/hora inicial (opcional)
+     * @param dataFim Data/hora final (opcional)
+     * @param statusList Lista de status (opcional)
+     * @return Lista de consultas que atendem aos filtros
+     */
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<Consulta> buscarComFiltrosDinamicos(
+            Long profissionalId,
+            String especialidade,
+            LocalDateTime dataInicio,
+            LocalDateTime dataFim,
+            List<StatusConsulta> statusList) {
+        
+        Long orgId = tenantHelper.getCurrentTenantId();
+        
+        log.info("Buscando consultas com filtros dinâmicos - orgId: {}, profissionalId: {}, especialidade: {}, período: {} a {}, status: {}",
+                orgId, profissionalId, especialidade, dataInicio, dataFim, statusList);
+        
+        return consultaRepository.findAll(
+            ConsultaSpecification.buscarComFiltros(
+                orgId,
+                profissionalId,
+                especialidade,
+                dataInicio,
+                dataFim,
+                statusList
+            )
+        );
+    }
+
     @RequiresTenant
     @Transactional
     public Consulta cadastrarConsultaByOrg(AgendarConsultaRequest request) {
@@ -241,10 +278,15 @@ public class ConsultaService {
 
 
     /**
-     * Atualiza o status de uma consulta AGENDADA para CONFIRMADA ou CANCELADA.
+     * Atualiza o status de uma consulta seguindo as regras de transição:
+     * - AGENDADA → CONFIRMADA, CANCELADA
+     * - CONFIRMADA → AGENDADA, CANCELADA
+     * - REALIZADA → PAGO (AdminOrg pode marcar como pago após médico concluir)
+     * 
+     * IMPORTANTE: Status REALIZADA só pode ser definido pelo médico através do método concluirConsultabyOrg
      *
      * @param id             ID da consulta
-     * @param novoStatus     CONFIRMADA ou CANCELADA
+     * @param novoStatus     Novo status desejado
      * @param motivo         Motivo (obrigatório apenas para CANCELADA)
      * @return Consulta atualizada
      */
@@ -254,18 +296,15 @@ public class ConsultaService {
         Consulta consulta = buscarPorId(id)
             .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada com ID: " + id));
 
-        if (!StatusConsulta.AGENDADA.equals(consulta.getStatus()) &&
-            !StatusConsulta.CONFIRMADA.equals(consulta.getStatus())) {
-            throw new IllegalStateException(
-                "Apenas consultas AGENDADAS ou CONFIRMADAS podem ter o status alterado. Status atual: " + consulta.getStatus());
-        }
+        StatusConsulta statusAtual = consulta.getStatus();
+        
+        validarTransicaoStatus(statusAtual, novoStatus);
 
         if (StatusConsulta.CANCELADA.equals(novoStatus) &&
             (motivo == null || motivo.isBlank())) {
             throw new IllegalArgumentException("Motivo é obrigatório ao cancelar uma consulta");
         }
 
-        StatusConsulta statusAnterior = consulta.getStatus();
         consulta.setStatus(novoStatus);
 
         if (StatusConsulta.CANCELADA.equals(novoStatus)) {
@@ -274,10 +313,8 @@ public class ConsultaService {
 
         Consulta salva = consultaRepository.save(consulta);
 
-        String descricao = StatusConsulta.CONFIRMADA.equals(novoStatus)
-            ? "Consulta confirmada"
-            : "Consulta cancelada: " + motivo;
-        registrarHistorico(salva, statusAnterior, novoStatus, descricao, getUsuarioAtual());
+        String descricao = gerarDescricaoHistorico(novoStatus, motivo);
+        registrarHistorico(salva, statusAtual, novoStatus, descricao, getUsuarioAtual());
 
         Long orgId = tenantHelper.getCurrentTenantId();
         return consultaRepository.findByIdAndOrganizacao_IdWithRelations(salva.getId(), orgId)
@@ -285,33 +322,65 @@ public class ConsultaService {
     }
 
     /**
-     * Altera o status de uma consulta REALIZADA para PAGO.
-     *
-     * @param id ID da consulta
-     * @return Consulta atualizada com status PAGO
+     * Valida se a transição de status é permitida conforme regras de negócio.
+     * 
+     * IMPORTANTE: Status REALIZADA não pode ser definido manualmente, apenas via concluirConsultabyOrg
      */
-    @RequiresTenant
-    @Transactional
-    public Consulta marcarComoPago(Long id) {
-        Consulta consulta = buscarPorId(id)
-            .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada com ID: " + id));
-
-        if (!StatusConsulta.REALIZADA.equals(consulta.getStatus())) {
-            throw new IllegalStateException(
-                "Apenas consultas REALIZADAS podem ser marcadas como PAGO. Status atual: " + consulta.getStatus());
+    private void validarTransicaoStatus(StatusConsulta statusAtual, StatusConsulta novoStatus) {
+        switch (statusAtual) {
+            case AGENDADA:
+                if (!StatusConsulta.CONFIRMADA.equals(novoStatus) && 
+                    !StatusConsulta.CANCELADA.equals(novoStatus)) {
+                    throw new IllegalStateException(
+                        "Consulta AGENDADA só pode ir para CONFIRMADA ou CANCELADA. Status solicitado: " + novoStatus);
+                }
+                break;
+                
+            case CONFIRMADA:
+                if (!StatusConsulta.AGENDADA.equals(novoStatus) && 
+                    !StatusConsulta.CANCELADA.equals(novoStatus)) {
+                    throw new IllegalStateException(
+                        "Consulta CONFIRMADA só pode voltar para AGENDADA ou ir para CANCELADA. Status solicitado: " + novoStatus);
+                }
+                break;
+                
+            case REALIZADA:
+                if (!StatusConsulta.PAGO.equals(novoStatus)) {
+                    throw new IllegalStateException(
+                        "Consulta REALIZADA só pode ir para PAGO. Status solicitado: " + novoStatus);
+                }
+                break;
+                
+            case PAGO:
+            case CANCELADA:
+                throw new IllegalStateException(
+                    "Consultas com status " + statusAtual + " não podem ter o status alterado");
+                
+            default:
+                throw new IllegalStateException("Status atual não reconhecido: " + statusAtual);
         }
-
-        StatusConsulta statusAnterior = consulta.getStatus();
-        consulta.setStatus(StatusConsulta.PAGO);
-
-        Consulta salva = consultaRepository.save(consulta);
-
-        registrarHistorico(salva, statusAnterior, StatusConsulta.PAGO, "Consulta marcada como paga", getUsuarioAtual());
-
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return consultaRepository.findByIdAndOrganizacao_IdWithRelations(salva.getId(), orgId)
-            .orElse(salva);
     }
+
+    /**
+     * Gera descrição para o histórico baseado no novo status
+     */
+    private String gerarDescricaoHistorico(StatusConsulta novoStatus, String motivo) {
+        switch (novoStatus) {
+            case CONFIRMADA:
+                return "Consulta confirmada";
+            case CANCELADA:
+                return "Consulta cancelada: " + motivo;
+            case AGENDADA:
+                return "Consulta voltou para agendada";
+            case REALIZADA:
+                return "Consulta realizada";
+            case PAGO:
+                return "Consulta marcada como paga";
+            default:
+                return "Status alterado para " + novoStatus;
+        }
+    }
+
 
     @RequiresTenant
     @Transactional
@@ -327,8 +396,13 @@ public class ConsultaService {
         Paciente paciente = pacienteRepository.findById(request.pacienteId())
             .orElseThrow(() -> new IllegalArgumentException("Paciente não encontrado"));
 
-        if (consultaRepository.existsByProfissional_IdAndOrganizacao_IdAndDataHoraAndStatus(
-            request.profissionalId(), orgId,request.dataHora(), StatusConsulta.AGENDADA)) {
+        // Verificar se existe OUTRA consulta no mesmo horário (excluindo a consulta atual)
+        boolean horarioOcupado = consultaRepository.findByProfissional_IdAndOrganizacao_IdAndDataHora(
+            request.profissionalId(), orgId, request.dataHora()
+        ).stream()
+            .anyMatch(c -> !c.getId().equals(id) && c.getStatus() == StatusConsulta.AGENDADA);
+        
+        if (horarioOcupado) {
             throw new IllegalStateException("Já existe consulta agendada para este horário");
         }
 

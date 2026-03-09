@@ -2,13 +2,14 @@ package br.com.saudeConecta.service;
 
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
 import br.com.saudeConecta.domain.planos.CobrancaTenant;
+import br.com.saudeConecta.domain.planos.StatusAssinatura;
 import br.com.saudeConecta.domain.planos.StatusCobranca;
 import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.CobrancaTenantRepository;
 import br.com.saudeConecta.presentation.dto.planos.CobrancaTenantResponse;
 import br.com.saudeConecta.service.pix.PixResponse;
-import br.com.saudeConecta.service.pix.PixService;
+import br.com.saudeConecta.service.pix.PixServiceEstatico;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -27,21 +28,21 @@ public class CobrancaService {
     private final CobrancaTenantRepository cobrancaTenantRepository;
     private final AssinaturaTenantRepository assinaturaTenantRepository;
     private final AssinaturaTenantService assinaturaTenantService;
-    private final PixService pixService;
+    private final PixServiceEstatico pixServiceEstatico;
 
     public CobrancaService(
             CobrancaTenantRepository cobrancaTenantRepository,
             AssinaturaTenantRepository assinaturaTenantRepository,
             AssinaturaTenantService assinaturaTenantService,
-            PixService pixService) {
+            PixServiceEstatico pixServiceEstatico) {
         this.cobrancaTenantRepository = cobrancaTenantRepository;
         this.assinaturaTenantRepository = assinaturaTenantRepository;
         this.assinaturaTenantService = assinaturaTenantService;
-        this.pixService = pixService;
+        this.pixServiceEstatico = pixServiceEstatico;
     }
 
     /**
-     * Gera uma nova cobrança Pix para a assinatura.
+     * Gera uma nova cobrança Pix estática para a assinatura.
      * Verifica se já existe cobrança PENDENTE antes de criar.
      *
      * @param assinaturaId ID da assinatura
@@ -61,11 +62,9 @@ public class CobrancaService {
                     HttpStatus.CONFLICT);
         }
 
-        String descricao = String.format("Assinatura %s - %s",
-                assinatura.getPlanoAssinatura().getNome(),
-                assinatura.getOrganizacao().getNome());
 
-        PixResponse pix = pixService.gerarCobrancaPix(assinatura.getValorMensal(), descricao);
+
+        PixResponse pix = pixServiceEstatico.gerarCobrancaPix(assinatura.getValorMensal() );
 
         CobrancaTenant cobranca = CobrancaTenant.builder()
                 .assinaturaTenant(assinatura)
@@ -79,7 +78,7 @@ public class CobrancaService {
                 .build();
 
         CobrancaTenant salva = cobrancaTenantRepository.save(cobranca);
-        log.info("Cobrança gerada: id={}, txid={}, org={}, valor=R${}",
+        log.info("Cobrança Pix gerada: id={}, txid={}, org={}, valor=R${}",
                 salva.getId(), salva.getTxid(),
                 assinatura.getOrganizacao().getId(), salva.getValorTotal());
 
@@ -87,8 +86,51 @@ public class CobrancaService {
     }
 
     /**
-     * Confirma pagamento via webhook do PSP (idempotente pelo txid).
+     * Confirma pagamento manualmente (SuperAdmin).
      * Marca cobrança como PAGA e renova a assinatura.
+     * Idempotente — ignora se já estiver pago.
+     *
+     * @param cobrancaId ID da cobrança
+     * @return CobrancaTenantResponse atualizada
+     */
+    @Transactional
+    public CobrancaTenantResponse confirmarPagamentoManual(Long cobrancaId) {
+        CobrancaTenant cobranca = cobrancaTenantRepository.findById(cobrancaId)
+                .orElseThrow(() -> new BusinessException(
+                        "Cobrança não encontrada: " + cobrancaId,
+                        HttpStatus.NOT_FOUND));
+
+        if (cobranca.isPago()) {
+            log.info("Cobrança já paga, ignorando: id={}", cobrancaId);
+            return CobrancaTenantResponse.fromEntity(cobranca);
+        }
+
+        cobranca.setStatus(StatusCobranca.PAGO);
+        cobranca.setDataPagamento(LocalDateTime.now());
+        cobrancaTenantRepository.save(cobranca);
+
+        assinaturaTenantService.renovarAposPagamento(cobranca.getAssinaturaTenant().getId());
+
+        log.info("Pagamento confirmado manualmente: cobrancaId={}, org={}, valor=R${}",
+                cobrancaId, cobranca.getOrganizacao().getId(), cobranca.getValorTotal());
+
+        return CobrancaTenantResponse.fromEntity(cobranca);
+    }
+
+    /**
+     * Verifica se existe cobrança pendente para uma assinatura.
+     * Usado pelo scheduler para evitar duplicação de cobranças.
+     *
+     * @param assinaturaId ID da assinatura
+     * @return true se existe cobrança pendente
+     */
+    public boolean existeCobrancaPendente(Long assinaturaId) {
+        return cobrancaTenantRepository.existsByAssinaturaTenantIdAndStatus(
+                assinaturaId, StatusCobranca.PENDENTE);
+    }
+
+    /**
+     * Confirma pagamento via txid (mantido para compatibilidade com scheduler).
      *
      * @param txid identificador da transação Pix
      * @return CobrancaTenantResponse atualizada
@@ -99,22 +141,46 @@ public class CobrancaService {
                 .orElseThrow(() -> new BusinessException(
                         "Cobrança não encontrada para txid: " + txid,
                         HttpStatus.NOT_FOUND));
+        return confirmarPagamentoManual(cobranca.getId());
+    }
 
-        if (cobranca.isPago()) {
-            log.info("Webhook duplicado ignorado para txid={}", txid);
-            return CobrancaTenantResponse.fromEntity(cobranca);
-        }
+    /**
+     * Lista todas as cobranças pendentes de todas as organizações (SuperAdmin).
+     *
+     * @return lista de CobrancaTenantResponse pendentes
+     */
+    @Transactional(readOnly = true)
+    public List<CobrancaTenantResponse> listarTodasPendentes() {
+        return cobrancaTenantRepository.findByStatusOrderByCriadaEmDesc(StatusCobranca.PENDENTE)
+                .stream()
+                .map(CobrancaTenantResponse::fromEntity)
+                .toList();
+    }
 
-        cobranca.setStatus(StatusCobranca.PAGO);
-        cobranca.setDataPagamento(LocalDateTime.now());
-        cobrancaTenantRepository.save(cobranca);
+    /**
+     * Busca a cobrança pendente mais recente da organização (AdminOrg).
+     * Usado para exibir alerta no dashboard.
+     *
+     * @param organizacaoId ID da organização
+     * @return CobrancaTenantResponse ou null se não houver pendente
+     */
+    public CobrancaTenantResponse buscarCobrancaPendenteAtual(Long organizacaoId) {
+        return cobrancaTenantRepository
+                .findTopByOrganizacaoIdAndStatusOrderByCriadaEmDesc(organizacaoId, StatusCobranca.PENDENTE)
+                .map(CobrancaTenantResponse::fromEntity)
+                .orElse(null);
+    }
 
-        assinaturaTenantService.renovarAposPagamento(cobranca.getAssinaturaTenant().getId());
-
-        log.info("Pagamento confirmado: txid={}, org={}, valor=R${}",
-                txid, cobranca.getOrganizacao().getId(), cobranca.getValorTotal());
-
-        return CobrancaTenantResponse.fromEntity(cobranca);
+    /**
+     * Lista assinaturas ativas para geração de cobrança (usado pelo scheduler e testes).
+     *
+     * @return lista de assinaturas ATIVAS e TRIAL
+     */
+    public List<AssinaturaTenant> listarAssinaturasAtivasParaCobranca() {
+        return assinaturaTenantRepository.findByStatusIn(List.of(
+                StatusAssinatura.ATIVA,
+                StatusAssinatura.TRIAL
+        ));
     }
 
     /**

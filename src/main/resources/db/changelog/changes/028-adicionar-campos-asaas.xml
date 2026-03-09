@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ========================================== -->
+    <!-- Adiciona campo asaas_customer_id na         -->
+    <!-- organização para vincular cliente Asaas.    -->
+    <!-- ========================================== -->
+    <changeSet id="028-001-adicionar-asaas-customer-id-organizacao" author="equipe-sentinela">
+        <addColumn tableName="organizacao">
+            <column name="asaas_customer_id" type="VARCHAR(100)">
+                <constraints nullable="true" unique="true"/>
+            </column>
+        </addColumn>
+
+        <createIndex tableName="organizacao" indexName="idx_org_asaas_customer_id">
+            <column name="asaas_customer_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- ========================================== -->
+    <!-- Adiciona campo asaas_payment_id na          -->
+    <!-- cobrança para vincular pagamento Asaas.     -->
+    <!-- ========================================== -->
+    <changeSet id="028-002-adicionar-asaas-payment-id-cobranca" author="equipe-sentinela">
+        <addColumn tableName="cobranca_tenant">
+            <column name="asaas_payment_id" type="VARCHAR(100)">
+                <constraints nullable="true" unique="true"/>
+            </column>
+        </addColumn>
+
+        <createIndex tableName="cobranca_tenant" indexName="idx_cobranca_asaas_payment_id">
+            <column name="asaas_payment_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

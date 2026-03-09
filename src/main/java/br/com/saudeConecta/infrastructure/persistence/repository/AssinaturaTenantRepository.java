@@ -25,9 +25,15 @@ public interface AssinaturaTenantRepository extends JpaRepository<AssinaturaTena
 
     List<AssinaturaTenant> findByOrganizacaoId(Long organizacaoId);
 
-    Optional<AssinaturaTenant> findByOrganizacaoIdAndStatusIn(Long organizacaoId, List<StatusAssinatura> statuses);
 
-    List<AssinaturaTenant> findByStatus(StatusAssinatura status);
+    /**
+     * Busca assinaturas por lista de status (para geração automática de cobranças).
+     */
+    @Query("SELECT a FROM AssinaturaTenant a " +
+           "JOIN FETCH a.planoAssinatura " +
+           "JOIN FETCH a.organizacao " +
+           "WHERE a.status IN :statuses")
+    List<AssinaturaTenant> findByStatusIn(@Param("statuses") List<StatusAssinatura> statuses);
 
     /**
      * Busca assinaturas com vencimento dentro de um intervalo (para gerar cobranças).

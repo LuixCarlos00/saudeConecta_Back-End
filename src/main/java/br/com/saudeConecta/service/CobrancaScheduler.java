@@ -30,29 +30,46 @@ public class CobrancaScheduler {
     }
 
     /**
-     * Gera cobranças mensais para assinaturas cuja dataProximaCobranca é hoje.
-     * Executa diariamente às 08:00.
+     * Gera cobranças mensais automaticamente no dia 1º de cada mês às 08:00.
+     * Cria cobrança para todas as assinaturas ATIVAS e TRIAL.
+     * Vencimento: dia 10 do mês (10 dias para pagamento).
      */
-    @Scheduled(cron = "0 0 8 * * *")
+    @Scheduled(cron = "0 0 8 1 * *")
     @Transactional
-    public void gerarCobrancasMensais() {
-        log.info("[SCHEDULER] Iniciando geração de cobranças mensais...");
-        LocalDate hoje = LocalDate.now();
+    public void gerarCobrancasMensaisAutomaticas() {
+        log.info("[SCHEDULER] Iniciando geração automática de cobranças mensais (dia 1º do mês)...");
+        
         List<AssinaturaTenant> assinaturas = assinaturaTenantRepository
-                .findVencendoNoIntervalo(hoje, hoje);
+                .findByStatusIn(List.of(
+                    br.com.saudeConecta.domain.planos.StatusAssinatura.ATIVA,
+                    br.com.saudeConecta.domain.planos.StatusAssinatura.TRIAL
+                ));
 
         int geradas = 0;
+        int erros = 0;
+        
         for (AssinaturaTenant assinatura : assinaturas) {
             try {
-                cobrancaService.gerarCobranca(assinatura.getId());
-                geradas++;
+                // Verifica se já existe cobrança pendente para evitar duplicação
+                boolean temPendente = cobrancaService.existeCobrancaPendente(assinatura.getId());
+                if (!temPendente) {
+                    cobrancaService.gerarCobranca(assinatura.getId());
+                    geradas++;
+                    log.info("[SCHEDULER] Cobrança gerada para organização: {}", 
+                            assinatura.getOrganizacao().getNome());
+                } else {
+                    log.debug("[SCHEDULER] Assinatura {} já possui cobrança pendente, ignorando", 
+                            assinatura.getId());
+                }
             } catch (Exception e) {
+                erros++;
                 log.error("[SCHEDULER] Erro ao gerar cobrança para assinatura {}: {}",
                         assinatura.getId(), e.getMessage());
             }
         }
 
-        log.info("[SCHEDULER] Cobranças mensais geradas: {}/{}", geradas, assinaturas.size());
+        log.info("[SCHEDULER] Cobranças mensais geradas: {} | Erros: {} | Total processado: {}", 
+                geradas, erros, assinaturas.size());
     }
 
     /**

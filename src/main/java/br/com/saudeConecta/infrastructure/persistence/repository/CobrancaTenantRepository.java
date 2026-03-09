@@ -16,6 +16,8 @@ public interface CobrancaTenantRepository extends JpaRepository<CobrancaTenant, 
 
     Optional<CobrancaTenant> findByTxid(String txid);
 
+    Optional<CobrancaTenant> findByAsaasPaymentId(String asaasPaymentId);
+
     List<CobrancaTenant> findByOrganizacaoIdOrderByCriadaEmDesc(Long organizacaoId);
 
     List<CobrancaTenant> findByAssinaturaTenantIdOrderByCriadaEmDesc(Long assinaturaId);
@@ -36,9 +38,35 @@ public interface CobrancaTenantRepository extends JpaRepository<CobrancaTenant, 
     List<CobrancaTenant> findByStatus(StatusCobranca status);
 
     /**
+     * Busca cobranças por status ordenadas por data de criação (SuperAdmin).
+     */
+    @Query("SELECT c FROM CobrancaTenant c " +
+           "JOIN FETCH c.assinaturaTenant a " +
+           "JOIN FETCH a.planoAssinatura " +
+           "JOIN FETCH c.organizacao " +
+           "WHERE c.status = :status " +
+           "ORDER BY c.criadaEm DESC")
+    List<CobrancaTenant> findByStatusOrderByCriadaEmDesc(@Param("status") StatusCobranca status);
+
+    /**
      * Verifica se já existe cobrança pendente para a assinatura.
      */
     boolean existsByAssinaturaTenantIdAndStatus(Long assinaturaId, StatusCobranca status);
+
+    /**
+     * Busca a cobrança pendente mais recente de uma organização (para dashboard).
+     */
+    @Query("SELECT c FROM CobrancaTenant c " +
+           "JOIN FETCH c.organizacao " +
+           "JOIN FETCH c.assinaturaTenant a " +
+           "JOIN FETCH a.planoAssinatura " +
+           "WHERE c.organizacao.id = :organizacaoId " +
+           "AND c.status = :status " +
+           "ORDER BY c.criadaEm DESC " +
+           "LIMIT 1")
+    Optional<CobrancaTenant> findTopByOrganizacaoIdAndStatusOrderByCriadaEmDesc(
+            @Param("organizacaoId") Long organizacaoId, 
+            @Param("status") StatusCobranca status);
 
     /**
      * Busca todas as cobranças de um tenant com dados da assinatura (para histórico).
