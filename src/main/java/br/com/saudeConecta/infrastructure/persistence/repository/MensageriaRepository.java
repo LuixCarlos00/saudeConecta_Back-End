@@ -18,16 +18,9 @@ import java.util.List;
 @Repository
 public interface MensageriaRepository extends JpaRepository<Mensageria, Long> {
 
-    Page<Mensageria> findByOrganizacao_IdOrderByDataCriacaoDesc(Long organizacaoId, Pageable pageable);
-
-    List<Mensageria> findByOrganizacao_IdAndStatusOrderByDataCriacaoDesc(Long organizacaoId, StatusMensagem status);
 
     List<Mensageria> findByOrganizacao_IdAndAdminNotificadoFalseAndStatus(Long organizacaoId, StatusMensagem status);
 
-    @Query(value = "SELECT m FROM Mensageria m LEFT JOIN FETCH m.destinatarioProfissional " +
-                   "WHERE m.organizacao.id = :orgId ORDER BY m.dataCriacao DESC",
-           countQuery = "SELECT COUNT(m) FROM Mensageria m WHERE m.organizacao.id = :orgId")
-    Page<Mensageria> findByOrganizacaoIdWithProfissional(@Param("orgId") Long orgId, Pageable pageable);
 
     @Query("SELECT m FROM Mensageria m WHERE m.organizacao.id = :orgId " +
            "AND (:status IS NULL OR m.status = :status) " +
@@ -39,9 +32,9 @@ public interface MensageriaRepository extends JpaRepository<Mensageria, Long> {
             @Param("tipo") TipoMensagem tipo,
             Pageable pageable);
 
-    long countByOrganizacao_IdAndStatus(Long organizacaoId, StatusMensagem status);
 
     long countByOrganizacao_IdAndAdminNotificadoFalseAndStatus(Long organizacaoId, StatusMensagem status);
+
 
     @Query("SELECT m FROM Mensageria m " +
            "WHERE (:status IS NULL OR m.status = :status) " +
@@ -52,7 +45,9 @@ public interface MensageriaRepository extends JpaRepository<Mensageria, Long> {
             @Param("tipo") TipoMensagem tipo,
             Pageable pageable);
 
+
     List<Mensageria> findByAdminNotificadoFalseAndStatus(StatusMensagem status);
+
 
     long countByAdminNotificadoFalseAndStatus(StatusMensagem status);
 }

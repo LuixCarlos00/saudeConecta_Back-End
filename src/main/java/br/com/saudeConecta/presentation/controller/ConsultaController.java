@@ -1,16 +1,10 @@
 package br.com.saudeConecta.presentation.controller;
 
-import br.com.saudeConecta.service.ConsultaService;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
 import br.com.saudeConecta.infra.tenant.TenantContext;
-import br.com.saudeConecta.presentation.dto.consulta.AgendarConsultaRequest;
-import br.com.saudeConecta.presentation.dto.consulta.AtualizarConsultaRequest;
-import br.com.saudeConecta.presentation.dto.consulta.CancelarConsultaRequest;
-import br.com.saudeConecta.presentation.dto.consulta.ConsultaResponse;
-import br.com.saudeConecta.presentation.dto.consulta.EstatisticasDashboardAdminOrgResponse;
-import br.com.saudeConecta.presentation.dto.consulta.HistoricoConsultaPacienteResponse;
-import br.com.saudeConecta.presentation.dto.consulta.HistoricoConsultaDentistaResponse;
+import br.com.saudeConecta.presentation.dto.consulta.*;
+import br.com.saudeConecta.service.ConsultaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/consultas")
@@ -74,6 +67,9 @@ public class ConsultaController {
         return ResponseEntity.ok(response);
     }
 
+    //=========================================Tela de /gerenciamento =========================================
+//=================================================CRUD =========================================
+
 
     @PostMapping("/cadastrarConsultaByOrg")
     public ResponseEntity<ConsultaResponse> cadastrarConsultaByOrg(@Valid @RequestBody AgendarConsultaRequest request) {
@@ -97,6 +93,11 @@ public class ConsultaController {
         Consulta consulta = consultaService.concluirConsultabyOrg(id);
         return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
     }
+
+
+    //===============================================CRUD ==================================================
+    //=======================Atualizar  Status ==========================
+
 
     /**
      * Altera o status de uma consulta seguindo as regras de transição:
@@ -129,7 +130,17 @@ public class ConsultaController {
             return ResponseEntity.unprocessableEntity().build();
         }
     }
+    //=======================Atualizar  Status ==========================
+    //=======================Validações para cadastro de consultas ==========================
 
+    /**
+     * Busca os horários já ocupados de um médico em uma data específica.
+     * Utilizado para montar um select com os horários disponíveis (aqueles que não estão no banco).
+     *
+     * @param medicoId ID do médico/profissional
+     * @param data     Data da consulta no formato yyyy-MM-dd
+     * @return Lista de horários ocupados no formato HH:mm
+     */
     @GetMapping("/horarios-ocupados")
     public ResponseEntity<List<String>> buscarHorariosOcupados(
             @RequestParam Long medicoId,
@@ -139,6 +150,15 @@ public class ConsultaController {
         return ResponseEntity.ok(horariosOcupados);
     }
 
+    /**
+     * Verifica a disponibilidade de um médico para uma consulta específica.
+     * Valida os critérios antes de cadastrar uma nova consulta.
+     *
+     * @param data     Data da consulta no formato yyyy-MM-dd
+     * @param horario  Horário da consulta no formato HH:mm
+     * @param medicoId ID do médico/profissional
+     * @return true se horário está disponível, false se já existe consulta
+     */
     @GetMapping("/verificarDisponibilidade")
     public ResponseEntity<Boolean> verificarDisponibilidade(
             @RequestParam String data,
@@ -150,8 +170,8 @@ public class ConsultaController {
     }
 
 
+    /**    //======================= Filtros  de pesquisas Dinamico ==========================
 
-    /**
      * Endpoint dinâmico para buscar consultas com filtros opcionais
      * Todos os parâmetros são opcionais, permitindo qualquer combinação de filtros
      * 
@@ -199,6 +219,9 @@ public class ConsultaController {
         log.info("Retornando {} consultas", response.size());
         return ResponseEntity.ok(response);
     }
+    //======================= Filtros  de pesquisas Dinamico ==========================
+
+
 
     @GetMapping("/intervalo")
     public ResponseEntity<List<ConsultaResponse>> buscarTodasPorIntervalo(
@@ -222,7 +245,7 @@ public class ConsultaController {
                 .toList();
         return ResponseEntity.ok(response);
     }
-
+// TODO verificar quais metodo estao sendo usados no front e com back , altera a url dels com o nome do metodo no front e back para vinculação
 
     /**
      * Busca consultas por médico e intervalo de datas

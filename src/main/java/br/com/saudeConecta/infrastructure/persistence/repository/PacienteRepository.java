@@ -1,8 +1,6 @@
 package br.com.saudeConecta.infrastructure.persistence.repository;
 
 import br.com.saudeConecta.domain.paciente.Paciente;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,6 +18,7 @@ public interface PacienteRepository extends JpaRepository<Paciente, Long> {
     List<Paciente> findByOrganizacao_Id(@Param("orgId") Long organizacaoId);
     
 
+
     @Query("SELECT p FROM Paciente p " +
             "LEFT JOIN FETCH p.endereco " +
             "WHERE p.paciCodigo = :id AND p.organizacao.id = :orgId")
@@ -27,7 +26,8 @@ public interface PacienteRepository extends JpaRepository<Paciente, Long> {
             @Param("id") Long id,
             @Param("orgId") Long orgId
     );
-    
+
+
     @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
            "AND LOWER(p.paciNome) LIKE LOWER(CONCAT('%', :nome, '%'))")
     List<Paciente> findByOrganizacaoIdAndNomeContaining(

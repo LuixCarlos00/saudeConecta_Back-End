@@ -17,6 +17,7 @@ public interface PlanejamentoTerapeuticoRepository extends JpaRepository<Planeja
            "ORDER BY p.dataProcedimento DESC")
     List<PlanejamentoTerapeutico> findByProntuarioId(@Param("prontuarioId") Long prontuarioId);
 
+
     @Query("SELECT p FROM PlanejamentoTerapeutico p " +
            "LEFT JOIN FETCH p.paciente " +
            "LEFT JOIN FETCH p.profissional " +
@@ -24,6 +25,7 @@ public interface PlanejamentoTerapeuticoRepository extends JpaRepository<Planeja
            "WHERE p.tokenAssinatura = :token " +
            "ORDER BY p.dataProcedimento")
     List<PlanejamentoTerapeutico> findByTokenAssinatura(@Param("token") String token);
+
 
     @Modifying
     @Query("UPDATE PlanejamentoTerapeutico p " +
@@ -33,11 +35,5 @@ public interface PlanejamentoTerapeuticoRepository extends JpaRepository<Planeja
            "WHERE p.tokenAssinatura = :token")
     int assinarPorToken(@Param("token") String token, @Param("assinatura") String assinatura);
 
-    @Query("SELECT p FROM PlanejamentoTerapeutico p " +
-           "WHERE p.paciente.paciCodigo = :pacienteId " +
-           "AND p.organizacao.id = :orgId " +
-           "ORDER BY p.dataProcedimento DESC")
-    List<PlanejamentoTerapeutico> findByPacienteAndOrg(
-            @Param("pacienteId") Long pacienteId,
-            @Param("orgId") Long orgId);
+
 }

@@ -1,28 +1,26 @@
 package br.com.saudeConecta.service;
 
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
+import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.historicodadospessoais.EntidadeTipo;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
-import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.domain.organizacao.StatusOrganizacao;
+import br.com.saudeConecta.domain.organizacao.TipoOrganizacao;
+import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
-import br.com.saudeConecta.domain.endereco.Endereco;
-import br.com.saudeConecta.domain.organizacao.TipoOrganizacao;
-import br.com.saudeConecta.domain.organizacao.StatusOrganizacao;
-import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
 import br.com.saudeConecta.presentation.dto.admin.AdminOrgCompletoResponse;
 import br.com.saudeConecta.presentation.dto.admin.AtualizarAdminOrgCompletoRequest;
 import br.com.saudeConecta.presentation.dto.admin.CadastrarAdminOrgCompletoRequest;
 import br.com.saudeConecta.presentation.dto.admin.CadastrarAdminRequest;
 import br.com.saudeConecta.util.EmailUnicoService;
 import br.com.saudeConecta.util.SnapshotUtil;
-import br.com.saudeConecta.service.ConfiguracaoGraficoDashboardService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -171,7 +169,7 @@ public class AdminOrganizacaoService {
         log.info("Administrador atualizado com sucesso. ID: {}", resultado.getId());
 
         historicoDadosPessoaisService.registrarAlteracoesDeObjeto(
-                EntidadeTipo.PROFISSIONAL,
+                EntidadeTipo.ADMIN,
                 resultado.getId(),
                 tenantHelper.getCurrentUserId(),
                 snapshot,

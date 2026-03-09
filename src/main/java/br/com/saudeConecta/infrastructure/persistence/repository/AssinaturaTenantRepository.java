@@ -23,6 +23,7 @@ public interface AssinaturaTenantRepository extends JpaRepository<AssinaturaTena
            "AND a.status IN ('TRIAL', 'ATIVA', 'INADIMPLENTE')")
     Optional<AssinaturaTenant> findAssinaturaAtivaByOrganizacaoId(@Param("orgId") Long orgId);
 
+
     List<AssinaturaTenant> findByOrganizacaoId(Long organizacaoId);
 
 

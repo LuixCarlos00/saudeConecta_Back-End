@@ -53,7 +53,5 @@
     <!-- Planos, Assinaturas e Cobranças -->
     <include file="db/changelog/changes/027-criar-tabelas-planos-assinaturas.xml"/>
 
-    <!-- Integração Asaas - campos para vincular cliente e pagamento -->
-    <include file="db/changelog/changes/028-adicionar-campos-asaas.xml"/>
 
 </databaseChangeLog>

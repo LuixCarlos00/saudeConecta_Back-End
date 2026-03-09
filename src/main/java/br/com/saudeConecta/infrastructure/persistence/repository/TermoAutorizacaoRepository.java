@@ -23,5 +23,4 @@ public interface TermoAutorizacaoRepository extends JpaRepository<TermoAutorizac
            "WHERE t.token = :token")
     Optional<TermoAutorizacao> findByTokenComRelacionamentos(@Param("token") String token);
 
-    boolean existsByConsultaId(Long consultaId);
 }

@@ -11,8 +11,6 @@ import java.util.Optional;
 @Repository
 public interface ConfiguracaoCardDashboardRepository extends JpaRepository<ConfiguracaoCardDashboard, Long> {
 
-    // ── Por usuário ──────────────────────────────────────────────────────────
-
     List<ConfiguracaoCardDashboard> findByUsuarioIdOrderByOrdemExibicaoAsc(Long usuarioId);
 
     List<ConfiguracaoCardDashboard> findByUsuarioIdAndAtivoTrueOrderByOrdemExibicaoAsc(Long usuarioId);
@@ -21,7 +19,5 @@ public interface ConfiguracaoCardDashboardRepository extends JpaRepository<Confi
 
     boolean existsByUsuarioIdAndTipoCard(Long usuarioId, TipoCardDashboard tipoCard);
 
-    // ── Por organização ──────────────────────────────────────────────────────
 
-    List<ConfiguracaoCardDashboard> findByOrganizacaoIdOrderByOrdemExibicaoAsc(Long organizacaoId);
 }

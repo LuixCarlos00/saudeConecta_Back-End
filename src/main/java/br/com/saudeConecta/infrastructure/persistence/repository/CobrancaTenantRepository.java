@@ -16,11 +16,6 @@ public interface CobrancaTenantRepository extends JpaRepository<CobrancaTenant, 
 
     Optional<CobrancaTenant> findByTxid(String txid);
 
-    Optional<CobrancaTenant> findByAsaasPaymentId(String asaasPaymentId);
-
-    List<CobrancaTenant> findByOrganizacaoIdOrderByCriadaEmDesc(Long organizacaoId);
-
-    List<CobrancaTenant> findByAssinaturaTenantIdOrderByCriadaEmDesc(Long assinaturaId);
 
     /**
      * Busca cobranças com Pix expirado para regenerar.
@@ -31,11 +26,6 @@ public interface CobrancaTenantRepository extends JpaRepository<CobrancaTenant, 
            "WHERE c.status = 'PENDENTE' " +
            "AND c.dataVencimentoPix < :hoje")
     List<CobrancaTenant> findPixExpirados(@Param("hoje") LocalDate hoje);
-
-    /**
-     * Busca cobranças por status.
-     */
-    List<CobrancaTenant> findByStatus(StatusCobranca status);
 
     /**
      * Busca cobranças por status ordenadas por data de criação (SuperAdmin).

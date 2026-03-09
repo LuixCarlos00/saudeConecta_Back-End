@@ -1,8 +1,8 @@
 package br.com.saudeConecta.service;
 
- import br.com.saudeConecta.domain.endereco.Endereco;
- import br.com.saudeConecta.domain.historicodadospessoais.EntidadeTipo;
- import br.com.saudeConecta.domain.organizacao.Organizacao;
+import br.com.saudeConecta.domain.endereco.Endereco;
+import br.com.saudeConecta.domain.historicodadospessoais.EntidadeTipo;
+import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.infra.tenant.RequiresTenant;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
@@ -11,17 +11,15 @@ import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepo
 import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
 import br.com.saudeConecta.presentation.dto.paciente.AtualizarPacienteRequest;
 import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteCompletoRequest;
- import br.com.saudeConecta.util.SnapshotUtil;
- import org.springframework.transaction.annotation.Transactional;
+import br.com.saudeConecta.util.SnapshotUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-  import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Date;
- import java.util.LinkedHashMap;
- import java.util.List;
- import java.util.Map;
- import java.util.Optional;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -159,7 +157,7 @@ public class PacienteService  {
         log.info("Paciente ID: {} atualizado com sucesso", id);
 
         historicoDadosPessoaisService.registrarAlteracoesDeObjeto(
-                EntidadeTipo.PROFISSIONAL,
+                EntidadeTipo.PACIENTE,
                 resultado.getPaciCodigo(),
                 tenantHelper.getCurrentUserId(),
                 snapshot,
@@ -235,142 +233,6 @@ public class PacienteService  {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//
-//    @RequiresTenant
-//    public List<Paciente> buscarTodosPorTenant() {
-//        Long orgId = tenantHelper.getCurrentTenantId();
-//        log.debug("Buscando pacientes da organização: {}", orgId);
-//        return pacienteRepository.findByOrganizacao_Id(orgId);
-//    }
-//
-//    @RequiresTenant
-//    public Page<Paciente> buscarTodosPorTenant(Pageable pageable) {
-//        Long orgId = tenantHelper.getCurrentTenantId();
-//        log.debug("Buscando pacientes paginados da organização: {}", orgId);
-//        return pacienteRepository.findByOrganizacao_Id(orgId, pageable);
-//    }
-//
-//
-//
-//    @RequiresTenant
-//    public List<Paciente> buscarPorNomeTenant(String nome) {
-//        Long orgId = tenantHelper.getCurrentTenantId();
-//        log.debug("Buscando pacientes por nome '{}' na organização: {}", nome, orgId);
-//        return pacienteRepository.findByOrganizacaoIdAndNomeContaining(orgId, nome);
-//    }
-//
-//    @RequiresTenant
-//    public Long contarAtivosTenant() {
-//        Long orgId = tenantHelper.getCurrentTenantId();
-//        return pacienteRepository.countByOrganizacaoIdAndStatus(orgId, "ATIVO");
-//    }
-//
-//
-
-//
-//    // ========== MÉTODOS LEGADOS (sem tenant) ==========
-//
-//
-//    public Optional<Paciente> buscarPorId(Long id) {
-//        log.debug("Buscando paciente por ID: {}", id);
-//        return pacienteOutputPort.findById(id);
-//    }
-//
-//
-//    public Optional<Paciente> buscarPorEmail(String email) {
-//        log.debug("Buscando paciente por email: {}", email);
-//        return pacienteOutputPort.findByPaciEmail(email);
-//    }
-//
-//
-//
-//
-//    public Page<Paciente> buscarTodos(Pageable pageable) {
-//        log.debug("Buscando todos os pacientes com paginação");
-//        if (tenantHelper.hasTenant()) {
-//            return buscarTodosPorTenant(pageable);
-//        }
-//        return pacienteOutputPort.findAll(pageable);
-//    }
-//
-//
-//    public List<Paciente> buscarPorCpf(String cpf) {
-//        log.debug("Buscando pacientes por CPF: {}", cpf);
-//        return pacienteOutputPort.findByPaciCpfContainingIgnoreCase(cpf);
-//    }
-//
-//
-//    public List<Paciente> buscarPorRg(String rg) {
-//        log.debug("Buscando pacientes por RG: {}", rg);
-//        return pacienteOutputPort.findByPaciRgContainingIgnoreCase(rg);
-//    }
-//
-//
-//    public List<Paciente> buscarPorTelefone(String telefone) {
-//        log.debug("Buscando pacientes por telefone: {}", telefone);
-//        return pacienteOutputPort.findByPaciTelefoneContainingIgnoreCase(telefone);
-//    }
-//
-//
-//    public List<Paciente> buscarPorNome(String nome) {
-//        log.debug("Buscando pacientes por nome: {}", nome);
-//        if (tenantHelper.hasTenant()) {
-//            return buscarPorNomeTenant(nome);
-//        }
-//        return pacienteOutputPort.findByPaciNomeContainingIgnoreCase(nome);
-//    }
-//
-//
-//    public Paciente cadastrar(Paciente paciente) {
-//        log.info("Cadastrando novo paciente: {}", paciente.getPaciNome());
-//
-//        // Se houver tenant e paciente não tem organização, define automaticamente
-//        if (tenantHelper.hasTenant() && paciente.getOrganizacao() == null) {
-//            Long orgId = tenantHelper.getCurrentTenantId();
-//            Organizacao org = organizacaoRepository.findById(orgId)
-//                .orElseThrow(() -> new IllegalStateException("Organização não encontrada"));
-//            paciente.setOrganizacao(org);
-//        }
-//
-//        Paciente pacienteSalvo = pacienteOutputPort.save(paciente);
-//        log.info("Paciente cadastrado com sucesso. ID: {}", pacienteSalvo.getPaciCodigo());
-//        return pacienteSalvo;
-//    }
-//
-//
-//    /**
-//     * Cadastra paciente com validação de endereço.
-//     * @param dados DTO com dados do paciente
-//     * @return Paciente cadastrado
-//     * @throws IllegalArgumentException se endereço não for encontrado
-//     */
-//
-//
-//    /**
-//     * Bloqueia ou desbloqueia paciente.
-//     * @param id ID do paciente
-//     * @param status 0 para inativo, 1 para ativo
-//     * @throws IllegalArgumentException se paciente não for encontrado
-//     */
-
-    // ========== MÉTODOS DE BUSCA PARA AUTOCOMPLETE COM FILTRO ==========
-    
 
     @RequiresTenant
     @Transactional(readOnly = true)

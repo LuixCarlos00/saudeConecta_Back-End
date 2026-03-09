@@ -17,13 +17,14 @@ import java.util.Optional;
 
 @Repository
 public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSpecificationExecutor<Consulta> {
-    
-    List<Consulta> findByOrganizacao_Id(Long organizacaoId);
-    
+
+
     Page<Consulta> findByOrganizacao_Id(Long organizacaoId, Pageable pageable);
-    
+
+
     Optional<Consulta> findByIdAndOrganizacao_Id(Long id, Long organizacaoId);
-    
+
+
     // Métodos com JOIN FETCH para evitar LazyInitializationException
     
     @Query("SELECT c FROM Consulta c " +
@@ -36,7 +37,8 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
     Optional<Consulta> findByIdAndOrganizacao_IdWithRelations(
         @Param("id") Long id,
         @Param("organizacaoId") Long organizacaoId);
-    
+
+
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
            "LEFT JOIN FETCH p.tipoProfissional " +
@@ -47,7 +49,8 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
     List<Consulta> findByOrganizacao_IdAndProfissional_IdWithRelations(
         @Param("organizacaoId") Long organizacaoId,
         @Param("profissionalId") Long profissionalId);
-    
+
+
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
            "LEFT JOIN FETCH p.tipoProfissional " +
@@ -58,7 +61,8 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
     List<Consulta> findByOrganizacao_IdAndPaciente_PaciCodigoWithRelations(
         @Param("organizacaoId") Long organizacaoId,
         @Param("pacienteId") Long pacienteId);
-    
+
+
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
            "LEFT JOIN FETCH p.tipoProfissional " +
@@ -68,6 +72,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
            "WHERE c.organizacao.id = :organizacaoId")
     List<Consulta> findByOrganizacao_IdWithRelations(@Param("organizacaoId") Long organizacaoId);
     
+
 
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
@@ -81,7 +86,8 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("orgId") Long organizacaoId,
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
-    
+
+
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
            "LEFT JOIN FETCH p.tipoProfissional " +
@@ -94,7 +100,8 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("orgId") Long organizacaoId,
         @Param("profId") Long profissionalId,
         @Param("data") LocalDate data);
-    
+
+
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
            "LEFT JOIN FETCH p.tipoProfissional " +
@@ -110,10 +117,11 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
     boolean existsByProfissional_IdAndOrganizacao_IdAndDataHoraAndStatus(
         Long profissionalId, Long organizacaoId, LocalDateTime dataHora, StatusConsulta status);
 
+
     List<Consulta> findByProfissional_IdAndOrganizacao_IdAndDataHora(
         Long profissionalId, Long organizacaoId, LocalDateTime dataHora);
 
-    
+
     @Query("SELECT COUNT(c) FROM Consulta c WHERE c.organizacao.id = :orgId " +
            "AND DATE(c.dataHora) = CURRENT_DATE AND c.status = 'AGENDADA'")
     Long countAgendadasHoje(@Param("orgId") Long organizacaoId);
@@ -145,6 +153,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
 
+
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
            "LEFT JOIN FETCH p.tipoProfissional " +
@@ -158,6 +167,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("profissionalId") Long profissionalId,
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
+
 
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
@@ -175,23 +185,6 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
 
-    @Query("SELECT c FROM Consulta c " +
-           "LEFT JOIN FETCH c.profissional p " +
-           "LEFT JOIN FETCH p.tipoProfissional " +
-           "LEFT JOIN FETCH c.paciente " +
-           "LEFT JOIN FETCH c.especialidade " +
-           "LEFT JOIN FETCH c.formaPagamento " +
-           "WHERE c.organizacao.id = :orgId " +
-           "AND p.usuario.id = :usuarioId " +
-           "AND (:status IS NULL OR c.status = :status) " +
-           "AND c.dataHora BETWEEN :inicio AND :fim " +
-           "ORDER BY c.dataHora")
-    List<Consulta> findByOrganizacaoIdAndProfissionalIdAndStatusOptionalAndDataHoraBetweenWithRelations(
-        @Param("orgId") Long orgId,
-        @Param("usuarioId") Long usuarioId,
-        @Param("status") StatusConsulta status,
-        @Param("inicio") LocalDateTime inicio,
-        @Param("fim") LocalDateTime fim);
 
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
@@ -211,6 +204,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
 
+
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
            "LEFT JOIN FETCH p.tipoProfissional " +
@@ -228,6 +222,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("especialidade") String especialidade,
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
+
 
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
@@ -249,6 +244,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
 
+
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
            "LEFT JOIN FETCH p.tipoProfissional " +
@@ -264,6 +260,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("especialidade") String especialidade,
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
+
 
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
@@ -283,6 +280,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
 
+
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
            "LEFT JOIN FETCH p.tipoProfissional " +
@@ -295,6 +293,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
     List<Consulta> findByOrganizacaoIdAndEspecialidadeNomeContainingWithRelations(
         @Param("orgId") Long orgId,
         @Param("especialidade") String especialidade);
+
 
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
@@ -311,6 +310,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("especialidade") String especialidade,
         @Param("status") StatusConsulta status);
 
+
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
            "LEFT JOIN FETCH p.tipoProfissional " +
@@ -325,6 +325,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("orgId") Long orgId,
         @Param("profissionalId") Long profissionalId,
         @Param("especialidade") String especialidade);
+
 
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
@@ -343,6 +344,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("especialidade") String especialidade,
         @Param("status") StatusConsulta status);
 
+
     // ==========================================
     // ESTATÍSTICAS GLOBAIS (SUPER ADMIN)
     // ==========================================
@@ -352,17 +354,6 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
     Long countByStatusAndDataHoraBetween(StatusConsulta status, LocalDateTime inicio, LocalDateTime fim);
 
 
-    @Query("SELECT c FROM Consulta c " +
-           "LEFT JOIN FETCH c.profissional p " +
-           "LEFT JOIN FETCH p.tipoProfissional " +
-           "LEFT JOIN FETCH c.paciente " +
-           "LEFT JOIN FETCH c.especialidade " +
-           "LEFT JOIN FETCH c.formaPagamento " +
-           "WHERE c.dataHora BETWEEN :inicio AND :fim " +
-           "ORDER BY c.dataHora")
-    List<Consulta> findByDataHoraBetweenWithRelations(
-        @Param("inicio") LocalDateTime inicio,
-        @Param("fim") LocalDateTime fim);
 
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
@@ -379,7 +370,8 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("status") StatusConsulta status,
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
-    
+
+
     // ========== MÉTODO PARA BUSCAR HORÁRIOS OCUPADOS ==========
     
     @Query("SELECT TIME(c.dataHora) FROM Consulta c " +
@@ -389,9 +381,10 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
            "AND (c.status ='AGENDADA' OR c.status ='CONFIRMADA')" +
            "ORDER BY c.dataHora")
     List<String> findHorariosOcupados(@Param("orgId") Long orgId,
-                                     @Param("profissionalId") Long profissionalId, 
-                                     @Param("data") LocalDateTime data);
-    //Todo tirar o 'realizando'
+                                      @Param("profissionalId") Long profissionalId,
+                                      @Param("data") LocalDateTime data);
+
+
 
     // ==========================================
     // ESTATÍSTICAS POR PROFISSIONAL (usuarioId + orgId) - HOJE
@@ -408,6 +401,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
 
+
     @Query("SELECT COUNT(c) FROM Consulta c " +
            "JOIN c.profissional p " +
            "WHERE c.organizacao.id = :orgId " +
@@ -419,6 +413,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("usuarioId") Long usuarioId,
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
+
 
     @Query("SELECT COUNT(c) FROM Consulta c " +
            "JOIN c.profissional p " +
@@ -449,6 +444,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
 
+
     @Query("SELECT COUNT(c) FROM Consulta c " +
            "LEFT JOIN c.profissional p " +
            "WHERE c.organizacao.id = :orgId " +
@@ -460,6 +456,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
 
+
     @Query("SELECT COUNT(c) FROM Consulta c " +
            "WHERE c.organizacao.id = :orgId " +
            "AND c.dataHora BETWEEN :inicio AND :fim")
@@ -467,6 +464,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("orgId") Long organizacaoId,
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
+
 
     /**
      * Retorna contagens agrupadas por status e por se é hoje ou semana,
@@ -494,6 +492,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
 
+
     /**
      * Retorna contagens agrupadas por status e período (hoje vs semana) para o SuperAdmin.
      * Sem filtro de organização — abrange todas as consultas do sistema.
@@ -511,6 +510,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("fimSemana") LocalDateTime fimSemana,
         @Param("inicioDia") LocalDateTime inicioDia,
         @Param("fimDia") LocalDateTime fimDia);
+
 
     /**
      * Retorna contagens agrupadas por status e período (hoje vs semana) para o Profissional.
@@ -533,6 +533,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("inicioDia") LocalDateTime inicioDia,
         @Param("fimDia") LocalDateTime fimDia);
 
+
     @Query("SELECT c.duracaoMinutos FROM Consulta c " +
            "JOIN c.profissional p " +
            "WHERE c.organizacao.id = :orgId " +
@@ -545,6 +546,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("usuarioId") Long usuarioId,
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
+
 
     // ==========================================
     // BUSCAR CONSULTAS POR MÉDICO E PERÍODO
@@ -600,6 +602,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
     List<Consulta> findHistoricoCompletoPaciente(
         @Param("pacienteId") Long pacienteId,
         @Param("organizacaoId") Long organizacaoId);
+
 
     /**
      * Busca histórico completo de consultas REALIZADAS de um paciente que POSSUEM prontuário odontológico

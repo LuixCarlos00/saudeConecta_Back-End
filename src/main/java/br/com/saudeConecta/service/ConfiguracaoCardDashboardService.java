@@ -27,7 +27,18 @@ public class ConfiguracaoCardDashboardService {
     private final UsuarioRepository usuarioRepository;
 
     // ── Cards por perfil ─────────────────────────────────────────────────────
+    /**
+     * SuperAdmin exibe os mesmos 7 cards que o AdminOrg.
+     */
+    private static final Set<TipoCardDashboard> CARDS_SUPER_ADMIN = Set.of(
+            TipoCardDashboard.CONSULTAS_HOJE_GLOBAL,
+            TipoCardDashboard.CONSULTAS_SEMANA_GLOBAL,
+            TipoCardDashboard.MEDICOS_ATIVOS_GLOBAL
+    ); //CARDS_ADMIN_ORG;
 
+    /**
+     * AdministradorOrg
+     */
     private static final Set<TipoCardDashboard> CARDS_ADMIN_ORG = Set.of(
             TipoCardDashboard.CONSULTAS_HOJE,
             TipoCardDashboard.CONSULTAS_ATENDIDAS,
@@ -38,8 +49,7 @@ public class ConfiguracaoCardDashboardService {
             TipoCardDashboard.CONFIRMADOS_SEMANA
     );
 
-    /** SuperAdmin exibe os mesmos 7 cards que o AdminOrg. */
-    private static final Set<TipoCardDashboard> CARDS_SUPER_ADMIN = CARDS_ADMIN_ORG;
+
 
     /** Profissional exibe apenas os 4 cards de suas próprias consultas. */
     private static final Set<TipoCardDashboard> CARDS_PROFISSIONAL = Set.of(
@@ -85,7 +95,7 @@ public class ConfiguracaoCardDashboardService {
         var todasConfigs = cardRepository.findByUsuarioIdOrderByOrdemExibicaoAsc(usuarioId)
                 .stream()
                 .filter(c -> tiposPermitidos.contains(c.getTipoCard()))
-                .collect(Collectors.toList());
+                .toList();
 
         if (todasConfigs.isEmpty()) {
             log.info("Usuário {} sem configurações de card — inicializando automaticamente", usuarioId);
@@ -96,12 +106,12 @@ public class ConfiguracaoCardDashboardService {
                     .stream()
                     .filter(c -> tiposPermitidos.contains(c.getTipoCard()))
                     .map(this::toResponse)
-                    .collect(Collectors.toList());
+                    .toList();
         }
         return todasConfigs.stream()
                 .filter(c -> Boolean.TRUE.equals(c.getAtivo()))
                 .map(this::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     // ── Atualização ──────────────────────────────────────────────────────────

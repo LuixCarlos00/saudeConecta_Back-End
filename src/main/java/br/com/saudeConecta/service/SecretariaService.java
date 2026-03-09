@@ -4,9 +4,9 @@ import br.com.saudeConecta.domain.historicodadospessoais.EntidadeTipo;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.domain.secretaria.StatusSecretaria;
+import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infra.tenant.RequiresTenant;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
@@ -94,7 +94,7 @@ public class SecretariaService {
         log.info("Secretária atualizada com sucesso. ID: {}", antes.getId());
 
         historicoDadosPessoaisService.registrarAlteracoesDeObjeto(
-                EntidadeTipo.PROFISSIONAL,
+                EntidadeTipo.SECRETARIA,
                 resultado.getId(),
                 tenantHelper.getCurrentUserId(),
                 snapshot,

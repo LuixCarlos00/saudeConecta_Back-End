@@ -70,10 +70,6 @@ public interface ProntuarioDentistaRepository extends JpaRepository<ProntuarioDe
     """)
     List<ProntuarioDentista> findByProfissionalId(@Param("profissionalId") Long profissionalId);
 
-    /**
-     * Verifica se já existe prontuário para uma consulta.
-     */
-    boolean existsByConsultaId(Long consultaId);
 
     /**
      * Lista prontuários de um paciente (via consulta → paciente).

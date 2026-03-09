@@ -14,10 +14,6 @@ public interface AdminOrganizacaoRepository extends JpaRepository<AdminOrganizac
     
     Optional<AdminOrganizacao> findByUsuario_Id(Long usuarioId);
 
-    @Query("SELECT a FROM AdminOrganizacao a WHERE a.usuario.id = :usuarioId AND a.organizacao.id = :organizacaoId")
-    Optional<AdminOrganizacao> findByUsuarioAndOrganizacao_Id(@Param("usuarioId") Long usuarioId, @Param("organizacaoId") Long organizacaoId);
-    
-    List<AdminOrganizacao> findByOrganizacao_Id(Long organizacaoId);
     
     @Query("SELECT a FROM AdminOrganizacao a LEFT JOIN FETCH a.usuario WHERE a.organizacao.id = :organizacaoId")
     List<AdminOrganizacao> findByOrganizacao_IdWithUsuario(@Param("organizacaoId") Long organizacaoId);
