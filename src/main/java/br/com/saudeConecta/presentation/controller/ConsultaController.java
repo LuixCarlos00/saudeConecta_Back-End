@@ -99,10 +99,11 @@ public class ConsultaController {
     }
 
     /**
-     * Atualiza o status de uma consulta para CONFIRMADA ou CANCELADA.
+     * Altera o status de uma consulta.
+     * Aceita todos os status: AGENDADA, CONFIRMADA, CANCELADA, REALIZADA, PAGO
      *
      * @param id     ID da consulta
-     * @param status Novo status: CONFIRMADA ou CANCELADA
+     * @param status Novo status
      * @param motivo Motivo (obrigatório apenas para CANCELADA)
      * @return Consulta atualizada
      */
@@ -114,9 +115,6 @@ public class ConsultaController {
         log.info("Atualizando status da consulta {} para {}", id, status);
         try {
             StatusConsulta novoStatus = StatusConsulta.valueOf(status.toUpperCase());
-            if (novoStatus != StatusConsulta.CONFIRMADA && novoStatus != StatusConsulta.CANCELADA) {
-                return ResponseEntity.badRequest().build();
-            }
             Consulta consulta = consultaService.atualizarStatus(id, novoStatus, motivo);
             return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
         } catch (IllegalArgumentException e) {

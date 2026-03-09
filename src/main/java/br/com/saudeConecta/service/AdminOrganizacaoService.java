@@ -189,17 +189,17 @@ public class AdminOrganizacaoService {
         // 1. Buscar o administrador na tabela admin_organizacao
         AdminOrganizacao admin;
         if (orgId == null) {
-            log.debug("SUPER_ADMIN: deletando administrador por ID sem filtro de organização");
+            log.debug("SUPER_ADMIN: deletando administrador por ID sem filtro de organizacao");
             admin = adminOrganizacaoRepository.findById(idAdmin)
                     .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
         } else {
             admin = adminOrganizacaoRepository.findByIdAndOrganizacao_Id(idAdmin, orgId)
-                    .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
+                    .orElseThrow(() -> new IllegalArgumentException("Administrador nao encontrado"));
         }
 
         Usuario usuario = admin.getUsuario();
         if (usuario == null) {
-            throw new IllegalStateException("Administrador não possui usuário associado");
+            throw new IllegalStateException("Administrador nao possui usuario associado");
         }
 
         try {
@@ -209,12 +209,12 @@ public class AdminOrganizacaoService {
             // 3. Deletar o usuário da tabela usuario
             usuarioRepository.delete(usuario);
             
-            log.info("Administrador e usuário deletados com sucesso. ID Admin: {}, ID Usuário: {}", 
+            log.info("Administrador e usuario deletados com sucesso. ID Admin: {}, ID Usuario: {}",
                     idAdmin, usuario.getId());
                     
         } catch (Exception e) {
             // 4. Caso haja relacionamento que impeça o delete, cancelar e avisar
-            String errorMessage = "Não foi possível deletar o administrador devido a relacionamentos existentes: " + e.getMessage();
+            String errorMessage = "Não foi possivel deletar o administrador devido a relacionamentos existentes: " + e.getMessage();
             log.error(errorMessage);
             throw new IllegalStateException(errorMessage);
         }
