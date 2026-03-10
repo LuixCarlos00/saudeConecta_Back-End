@@ -25,6 +25,12 @@ public record PlanoAssinaturaRequest(
 
         Integer limiteProfissional,
 
-        Integer limiteSecretaria
+        Integer limiteSecretaria,
+
+        BigDecimal valorAdicionalAdmin,
+
+        BigDecimal valorAdicionalProfissional,
+
+        BigDecimal valorAdicionalSecretaria
 ) {
 }

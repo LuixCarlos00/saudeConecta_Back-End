@@ -3,6 +3,7 @@ package br.com.saudeConecta.presentation.controller;
 import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.presentation.dto.planos.AssinaturaTenantRequest;
 import br.com.saudeConecta.presentation.dto.planos.AssinaturaTenantResponse;
+import br.com.saudeConecta.presentation.dto.planos.CustomizarPlanoTenantRequest;
 import br.com.saudeConecta.presentation.dto.planos.LimitesPlanoResponse;
 import br.com.saudeConecta.service.AssinaturaTenantService;
 import br.com.saudeConecta.service.LimitePlanoService;
@@ -93,6 +94,20 @@ public class AssinaturaTenantController {
     public ResponseEntity<List<AssinaturaTenantResponse>> listarPorOrganizacao(
             @PathVariable Long organizacaoId) {
         return ResponseEntity.ok(assinaturaTenantService.listarPorOrganizacao(organizacaoId));
+    }
+
+    /**
+     * Customiza os limites do plano para um tenant específico (SUPER_ADMIN).
+     * Permite adicionar perfis extras com cobrança adicional.
+     */
+    @PutMapping("/organizacao/{organizacaoId}/customizar")
+    public ResponseEntity<AssinaturaTenantResponse> customizarPlano(
+            @PathVariable Long organizacaoId,
+            @RequestBody @Valid CustomizarPlanoTenantRequest request) {
+        log.info("SUPER_ADMIN customizando plano: org={}, limAdmin={}, limProf={}, limSec={}",
+                organizacaoId, request.limiteAdminOrgCustom(),
+                request.limiteProfissionalCustom(), request.limiteSecretariaCustom());
+        return ResponseEntity.ok(assinaturaTenantService.customizarPlano(organizacaoId, request));
     }
 
     /**

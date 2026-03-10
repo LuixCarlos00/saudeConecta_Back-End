@@ -8,12 +8,14 @@ import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
 import br.com.saudeConecta.presentation.dto.planos.AssinaturaTenantResponse;
+import br.com.saudeConecta.presentation.dto.planos.CustomizarPlanoTenantRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -257,6 +259,72 @@ public class AssinaturaTenantService {
         assinaturaTenantRepository.save(assinatura);
         log.info("Assinatura {} renovada. Próximo vencimento: {}",
                 assinaturaId, assinatura.getDataVencimento());
+    }
+
+    /**
+     * Customiza os limites do plano para um tenant específico (SUPER_ADMIN).
+     * Calcula automaticamente o valor adicional baseado nos perfis extras.
+     *
+     * @param organizacaoId ID da organização
+     * @param request       limites customizados desejados
+     * @return AssinaturaTenantResponse atualizada
+     */
+    @Transactional
+    public AssinaturaTenantResponse customizarPlano(Long organizacaoId, CustomizarPlanoTenantRequest request) {
+        AssinaturaTenant assinatura = assinaturaTenantRepository
+                .findAssinaturaAtivaByOrganizacaoId(organizacaoId)
+                .orElseThrow(() -> new BusinessException(
+                        "Nenhuma assinatura ativa encontrada para a organização",
+                        HttpStatus.NOT_FOUND));
+
+        PlanoAssinatura plano = assinatura.getPlanoAssinatura();
+
+        // Calcular extras para cada perfil
+        int extraAdmin = calcularExtras(request.limiteAdminOrgCustom(), plano.getLimiteAdminOrg());
+        int extraProf = calcularExtras(request.limiteProfissionalCustom(), plano.getLimiteProfissional());
+        int extraSec = calcularExtras(request.limiteSecretariaCustom(), plano.getLimiteSecretaria());
+
+        // Calcular valor adicional
+        BigDecimal valorAdicional = BigDecimal.ZERO;
+        if (extraAdmin > 0 && plano.getValorAdicionalAdmin() != null) {
+            valorAdicional = valorAdicional.add(plano.getValorAdicionalAdmin().multiply(BigDecimal.valueOf(extraAdmin)));
+        }
+        if (extraProf > 0 && plano.getValorAdicionalProfissional() != null) {
+            valorAdicional = valorAdicional.add(plano.getValorAdicionalProfissional().multiply(BigDecimal.valueOf(extraProf)));
+        }
+        if (extraSec > 0 && plano.getValorAdicionalSecretaria() != null) {
+            valorAdicional = valorAdicional.add(plano.getValorAdicionalSecretaria().multiply(BigDecimal.valueOf(extraSec)));
+        }
+
+        // Atualizar assinatura
+        assinatura.setLimiteAdminOrgCustom(request.limiteAdminOrgCustom());
+        assinatura.setLimiteProfissionalCustom(request.limiteProfissionalCustom());
+        assinatura.setLimiteSecretariaCustom(request.limiteSecretariaCustom());
+        assinatura.setQtdAdminExtra(extraAdmin);
+        assinatura.setQtdProfissionalExtra(extraProf);
+        assinatura.setQtdSecretariaExtra(extraSec);
+        assinatura.setValorAdicionalPerfis(valorAdicional);
+        assinatura.setValorMensal(plano.getValorMensal().add(valorAdicional));
+
+        AssinaturaTenant salva = assinaturaTenantRepository.save(assinatura);
+        log.info("Plano customizado para org {}: +{} admin, +{} prof, +{} sec | Adicional: R${} | Total: R${}",
+                organizacaoId, extraAdmin, extraProf, extraSec, valorAdicional, salva.getValorMensal());
+
+        return AssinaturaTenantResponse.fromEntity(salva);
+    }
+
+    /**
+     * Calcula a quantidade de perfis extras com base no limite custom vs. limite do plano.
+     *
+     * @param limiteCustom limite personalizado (pode ser null = sem customização)
+     * @param limitePlano  limite padrão do plano (pode ser null = ilimitado)
+     * @return quantidade de extras (>= 0)
+     */
+    private int calcularExtras(Integer limiteCustom, Integer limitePlano) {
+        if (limiteCustom == null || limitePlano == null) {
+            return 0;
+        }
+        return Math.max(0, limiteCustom - limitePlano);
     }
 
     /**

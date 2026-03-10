@@ -50,8 +50,10 @@ public class LimitePlanoService {
             return;
         }
 
-        PlanoAssinatura plano = assinaturaOpt.get().getPlanoAssinatura();
-        Integer limite = plano.getLimiteAdminOrg();
+        AssinaturaTenant assinatura = assinaturaOpt.get();
+        Integer limite = obterLimiteEfetivo(
+                assinatura.getLimiteAdminOrgCustom(),
+                assinatura.getPlanoAssinatura().getLimiteAdminOrg());
 
         if (limite == null) {
             return;
@@ -78,8 +80,10 @@ public class LimitePlanoService {
             return;
         }
 
-        PlanoAssinatura plano = assinaturaOpt.get().getPlanoAssinatura();
-        Integer limite = plano.getLimiteProfissional();
+        AssinaturaTenant assinatura = assinaturaOpt.get();
+        Integer limite = obterLimiteEfetivo(
+                assinatura.getLimiteProfissionalCustom(),
+                assinatura.getPlanoAssinatura().getLimiteProfissional());
 
         if (limite == null) {
             return;
@@ -106,8 +110,10 @@ public class LimitePlanoService {
             return;
         }
 
-        PlanoAssinatura plano = assinaturaOpt.get().getPlanoAssinatura();
-        Integer limite = plano.getLimiteSecretaria();
+        AssinaturaTenant assinatura = assinaturaOpt.get();
+        Integer limite = obterLimiteEfetivo(
+                assinatura.getLimiteSecretariaCustom(),
+                assinatura.getPlanoAssinatura().getLimiteSecretaria());
 
         if (limite == null) {
             return;
@@ -140,18 +146,30 @@ public class LimitePlanoService {
             );
         }
 
-        PlanoAssinatura plano = assinaturaOpt.get().getPlanoAssinatura();
+        AssinaturaTenant assinatura = assinaturaOpt.get();
+        PlanoAssinatura plano = assinatura.getPlanoAssinatura();
 
         return LimitesPlanoResponse.of(
                 plano.getNome(),
                 plano.getTipo().name(),
-                plano.getLimiteAdminOrg(),
-                plano.getLimiteProfissional(),
-                plano.getLimiteSecretaria(),
+                obterLimiteEfetivo(assinatura.getLimiteAdminOrgCustom(), plano.getLimiteAdminOrg()),
+                obterLimiteEfetivo(assinatura.getLimiteProfissionalCustom(), plano.getLimiteProfissional()),
+                obterLimiteEfetivo(assinatura.getLimiteSecretariaCustom(), plano.getLimiteSecretaria()),
                 adminOrganizacaoRepository.countAtivosByOrganizacaoId(organizacaoId),
                 profissionalRepository.countAtivosByOrganizacaoId(organizacaoId),
                 secretariaRepository.countAtivasByOrganizacaoId(organizacaoId)
         );
+    }
+
+    /**
+     * Retorna o limite efetivo: custom se definido, senão o padrão do plano.
+     *
+     * @param limiteCustom limite personalizado da assinatura (pode ser null)
+     * @param limitePlano  limite padrão do plano (pode ser null = ilimitado)
+     * @return limite efetivo
+     */
+    private Integer obterLimiteEfetivo(Integer limiteCustom, Integer limitePlano) {
+        return limiteCustom != null ? limiteCustom : limitePlano;
     }
 
     /**

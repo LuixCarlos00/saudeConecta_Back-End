@@ -47,6 +47,15 @@ public class PlanoAssinatura implements Serializable {
     @Column(name = "limite_secretaria")
     private Integer limiteSecretaria;
 
+    @Column(name = "valor_adicional_admin", precision = 10, scale = 2)
+    private BigDecimal valorAdicionalAdmin;
+
+    @Column(name = "valor_adicional_profissional", precision = 10, scale = 2)
+    private BigDecimal valorAdicionalProfissional;
+
+    @Column(name = "valor_adicional_secretaria", precision = 10, scale = 2)
+    private BigDecimal valorAdicionalSecretaria;
+
     @Column(nullable = false)
     private Boolean ativo = true;
 

@@ -90,6 +90,9 @@ public class PlanoAssinaturaService {
                 .limiteAdminOrg(request.limiteAdminOrg())
                 .limiteProfissional(request.limiteProfissional())
                 .limiteSecretaria(request.limiteSecretaria())
+                .valorAdicionalAdmin(request.valorAdicionalAdmin())
+                .valorAdicionalProfissional(request.valorAdicionalProfissional())
+                .valorAdicionalSecretaria(request.valorAdicionalSecretaria())
                 .ativo(true)
                 .build();
 
@@ -118,6 +121,9 @@ public class PlanoAssinaturaService {
         plano.setLimiteAdminOrg(request.limiteAdminOrg());
         plano.setLimiteProfissional(request.limiteProfissional());
         plano.setLimiteSecretaria(request.limiteSecretaria());
+        plano.setValorAdicionalAdmin(request.valorAdicionalAdmin());
+        plano.setValorAdicionalProfissional(request.valorAdicionalProfissional());
+        plano.setValorAdicionalSecretaria(request.valorAdicionalSecretaria());
 
         PlanoAssinatura salvo = planoAssinaturaRepository.save(plano);
         log.info("Plano atualizado: {} ({})", salvo.getNome(), salvo.getTipo());

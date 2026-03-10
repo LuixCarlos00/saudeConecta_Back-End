@@ -51,6 +51,27 @@ public class AssinaturaTenant implements Serializable {
     @Column(name = "valor_mensal", nullable = false, precision = 10, scale = 2)
     private BigDecimal valorMensal;
 
+    @Column(name = "limite_admin_org_custom")
+    private Integer limiteAdminOrgCustom;
+
+    @Column(name = "limite_profissional_custom")
+    private Integer limiteProfissionalCustom;
+
+    @Column(name = "limite_secretaria_custom")
+    private Integer limiteSecretariaCustom;
+
+    @Column(name = "qtd_admin_extra", nullable = false)
+    private Integer qtdAdminExtra = 0;
+
+    @Column(name = "qtd_profissional_extra", nullable = false)
+    private Integer qtdProfissionalExtra = 0;
+
+    @Column(name = "qtd_secretaria_extra", nullable = false)
+    private Integer qtdSecretariaExtra = 0;
+
+    @Column(name = "valor_adicional_perfis", nullable = false, precision = 10, scale = 2)
+    private BigDecimal valorAdicionalPerfis = BigDecimal.ZERO;
+
     @Column(name = "criado_em", updatable = false)
     private LocalDateTime criadoEm;
 

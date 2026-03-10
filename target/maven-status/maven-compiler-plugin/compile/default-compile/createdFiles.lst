@@ -1,2 +1,2 @@
 br/com/saudeConecta/service/pix/PixServiceEstatico.class
-br/com/saudeConecta/service/pix/PixServiceAsaas.class
+br/com/saudeConecta/presentation/dto/planos/CustomizarPlanoTenantRequest.class

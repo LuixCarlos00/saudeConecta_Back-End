@@ -13,6 +13,9 @@ public record PlanoAssinaturaResponse(
         Integer limiteAdminOrg,
         Integer limiteProfissional,
         Integer limiteSecretaria,
+        BigDecimal valorAdicionalAdmin,
+        BigDecimal valorAdicionalProfissional,
+        BigDecimal valorAdicionalSecretaria,
         Boolean ativo
 ) {
 
@@ -32,6 +35,9 @@ public record PlanoAssinaturaResponse(
                 entity.getLimiteAdminOrg(),
                 entity.getLimiteProfissional(),
                 entity.getLimiteSecretaria(),
+                entity.getValorAdicionalAdmin(),
+                entity.getValorAdicionalProfissional(),
+                entity.getValorAdicionalSecretaria(),
                 entity.getAtivo()
         );
     }

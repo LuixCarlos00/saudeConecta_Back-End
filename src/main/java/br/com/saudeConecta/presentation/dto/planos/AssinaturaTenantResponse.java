@@ -18,6 +18,13 @@ public record AssinaturaTenantResponse(
         LocalDate dataVencimento,
         LocalDate dataProximaCobranca,
         BigDecimal valorMensal,
+        Integer limiteAdminOrgCustom,
+        Integer limiteProfissionalCustom,
+        Integer limiteSecretariaCustom,
+        Integer qtdAdminExtra,
+        Integer qtdProfissionalExtra,
+        Integer qtdSecretariaExtra,
+        BigDecimal valorAdicionalPerfis,
         LocalDateTime criadoEm
 ) {
 
@@ -40,6 +47,13 @@ public record AssinaturaTenantResponse(
                 entity.getDataVencimento(),
                 entity.getDataProximaCobranca(),
                 entity.getValorMensal(),
+                entity.getLimiteAdminOrgCustom(),
+                entity.getLimiteProfissionalCustom(),
+                entity.getLimiteSecretariaCustom(),
+                entity.getQtdAdminExtra(),
+                entity.getQtdProfissionalExtra(),
+                entity.getQtdSecretariaExtra(),
+                entity.getValorAdicionalPerfis(),
                 entity.getCriadoEm()
         );
     }
