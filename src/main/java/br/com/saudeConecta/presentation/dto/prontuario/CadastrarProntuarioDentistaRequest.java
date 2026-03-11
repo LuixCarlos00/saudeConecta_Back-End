@@ -156,9 +156,6 @@ public class CadastrarProntuarioDentistaRequest {
     @JsonProperty("portadorAparelho")
     private String portadorAparelho;
 
-    @JsonProperty("oclusao")
-    private String oclusao;
-
     @JsonProperty("exameOutros")
     private String exameOutros;
 

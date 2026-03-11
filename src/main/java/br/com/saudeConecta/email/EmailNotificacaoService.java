@@ -144,21 +144,15 @@ public class EmailNotificacaoService {
     }
 
     /**
-     * Reenvia um email cujo corpo HTML já está renderizado (ex.: reenvio de mensageria).
-     * Segue o mesmo fluxo: assíncrono → retry (3 tentativas) → registro na mensageria.
+     * Reenvia um email já registrado na mensageria, atualizando o registro existente.
      *
+     * @param mensageriaId   ID do registro existente na mensageria
      * @param destinatario   email do destinatário
-     * @param nome           nome do destinatário
      * @param assunto        assunto do email
-     * @param corpoHtml      HTML já renderizado (armazenado na tabela de mensageria)
-     * @param tipoUsuario    tipo do usuário para resolver TipoMensagem
-     * @param organizacaoId  ID da organização
-     * @param profissionalId ID do profissional (pode ser nulo)
+     * @param corpoHtml      corpo HTML já renderizado
      */
     @Async
-    public void reenviarEmail(String destinatario, String nome, String assunto,
-                               String corpoHtml, String tipoUsuario,
-                               Long organizacaoId, Long profissionalId) {
+    public void reenviarEmail(Long mensageriaId, String destinatario, String assunto, String corpoHtml) {
         if (!emailHabilitado) {
             log.warn("Email desabilitado. Reenvio não realizado para: {}", destinatario);
             return;
@@ -166,9 +160,7 @@ public class EmailNotificacaoService {
 
         CompletableFuture.runAsync(() -> {
             try {
-                emailRetryService.executarComRetry(
-                        destinatario, nome, assunto, corpoHtml,
-                        tipoUsuario, organizacaoId, profissionalId);
+                emailRetryService.executarReenvioComRetry(mensageriaId, destinatario, assunto, corpoHtml);
             } catch (Exception e) {
                 log.error("Erro ao reenviar email para {}: {}", destinatario, e.getMessage());
             }

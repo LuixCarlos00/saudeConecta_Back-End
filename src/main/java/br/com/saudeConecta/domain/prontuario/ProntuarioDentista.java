@@ -147,9 +147,6 @@ public class ProntuarioDentista {
     @Column(name = "prontdent_portador_aparelho", length = 250)
     private String portadorAparelho;
 
-    @Column(name = "prontdent_oclusao", length = 500)
-    private String oclusao;
-
     @Column(name = "prontdent_exame_outros", columnDefinition = "TEXT")
     private String exameOutros;
 

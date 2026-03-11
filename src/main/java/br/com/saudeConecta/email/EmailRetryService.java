@@ -81,4 +81,55 @@ public class EmailRetryService {
                             organizacaoId, profissionalId, tentativa + 1));
         }
     }
+
+    // ==========================================
+    // REENVIO (atualiza registro existente)
+    // ==========================================
+
+    /**
+     * Executa reenvio de email com retry, atualizando o registro existente na mensageria.
+     * Diferente do executarComRetry que cria um novo registro, este atualiza o registro original.
+     *
+     * @param mensageriaId  ID do registro existente na mensageria
+     * @param destinatario  email do destinatário
+     * @param assunto       assunto do email
+     * @param corpoHtml     HTML já renderizado
+     */
+    public void executarReenvioComRetry(Long mensageriaId, String destinatario,
+                                         String assunto, String corpoHtml) {
+        executarTentativaReenvio(mensageriaId, destinatario, assunto, corpoHtml, 1);
+    }
+
+    /**
+     * Executa uma tentativa de reenvio. Atualiza o registro existente ao invés de criar novo.
+     */
+    private void executarTentativaReenvio(Long mensageriaId, String destinatario,
+                                           String assunto, String corpoHtml, int tentativa) {
+        try {
+            log.info("Reenvio tentativa {}/{} para: {} [mensageriaId={}]",
+                    tentativa, MAX_TENTATIVAS, destinatario, mensageriaId);
+            emailRemetenteService.enviarHtml(destinatario, assunto, corpoHtml);
+
+            log.info("Reenvio com sucesso na tentativa {} para: {}", tentativa, destinatario);
+            emailMensageriaService.atualizarSucesso(mensageriaId, tentativa);
+
+        } catch (Exception e) {
+            log.error("Erro no reenvio tentativa {}/{} para {} [mensageriaId={}]: {}",
+                    tentativa, MAX_TENTATIVAS, destinatario, mensageriaId, e.getMessage());
+
+            if (tentativa >= MAX_TENTATIVAS) {
+                log.error("Falha definitiva no reenvio após {} tentativas para: {}", MAX_TENTATIVAS, destinatario);
+                emailMensageriaService.atualizarFalha(mensageriaId,
+                        "Falha no reenvio após " + MAX_TENTATIVAS + " tentativas: " + e.getMessage(),
+                        tentativa);
+                return;
+            }
+
+            long delayMs = DELAY_INICIAL_MS * (long) Math.pow(2, tentativa - 1);
+            log.info("Próxima tentativa de reenvio em {}ms para: {}", delayMs, destinatario);
+
+            CompletableFuture.delayedExecutor(delayMs, TimeUnit.MILLISECONDS).execute(() ->
+                    executarTentativaReenvio(mensageriaId, destinatario, assunto, corpoHtml, tentativa + 1));
+        }
+    }
 }

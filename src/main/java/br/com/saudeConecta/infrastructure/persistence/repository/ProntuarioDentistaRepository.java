@@ -41,9 +41,8 @@ public interface ProntuarioDentistaRepository extends JpaRepository<ProntuarioDe
 
 
     @Query("""
-    SELECT pd FROM ProntuarioDentista pd
+    SELECT DISTINCT pd FROM ProntuarioDentista pd
     LEFT JOIN FETCH pd.dentes
-    LEFT JOIN FETCH pd.planejamentos
     LEFT JOIN FETCH pd.profissional prof
     LEFT JOIN FETCH prof.tipoProfissional
     LEFT JOIN FETCH prof.especialidades
@@ -80,7 +79,6 @@ public interface ProntuarioDentistaRepository extends JpaRepository<ProntuarioDe
     @Query("""
         SELECT DISTINCT pd FROM ProntuarioDentista pd
         LEFT JOIN FETCH pd.dentes
-        LEFT JOIN FETCH pd.planejamentos
         JOIN FETCH pd.consulta c
         LEFT JOIN FETCH c.paciente
         LEFT JOIN FETCH c.especialidade

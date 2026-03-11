@@ -16,6 +16,7 @@ import br.com.saudeConecta.infrastructure.persistence.repository.ProntuarioDenti
 import br.com.saudeConecta.presentation.dto.prontuario.CadastrarProntuarioDentistaRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -103,7 +104,6 @@ public class ProntuarioDentistaService {
                 .gengiva(request.getGengiva())
                 .habitosNocivos(request.getHabitosNocivos())
                 .portadorAparelho(request.getPortadorAparelho())
-                .oclusao(request.getOclusao())
                 .exameOutros(request.getExameOutros())
                 // TUSS e CID
                 .tussTexto(request.getTussTexto())
@@ -246,7 +246,6 @@ public class ProntuarioDentistaService {
         prontuario.setGengiva(request.getGengiva());
         prontuario.setHabitosNocivos(request.getHabitosNocivos());
         prontuario.setPortadorAparelho(request.getPortadorAparelho());
-        prontuario.setOclusao(request.getOclusao());
         prontuario.setExameOutros(request.getExameOutros());
 
         // ── Atualiza odontograma (limpa e recria) ──
@@ -295,10 +294,15 @@ public class ProntuarioDentistaService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Nenhum prontuário odontológico encontrado para consulta: " + consultaId));
 
-        return prontuarioDentistaRepository
+        ProntuarioDentista pd = prontuarioDentistaRepository
                 .findByIdComDentes(id)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Prontuário odontológico não encontrado: id=" + id));
+
+        // Inicializa planejamentos em query separada para evitar cartesian product com dentes
+        Hibernate.initialize(pd.getPlanejamentos());
+
+        return pd;
     }
 
 
@@ -317,7 +321,10 @@ public class ProntuarioDentistaService {
      */
     @Transactional(readOnly = true)
     public List<ProntuarioDentista> listarPorPaciente(Long pacienteId) {
-        return prontuarioDentistaRepository.findByPacienteId(pacienteId);
+        List<ProntuarioDentista> lista = prontuarioDentistaRepository.findByPacienteId(pacienteId);
+        // Inicializa planejamentos em query separada para evitar cartesian product com dentes
+        lista.forEach(pd -> Hibernate.initialize(pd.getPlanejamentos()));
+        return lista;
     }
 
     // =========================================================================

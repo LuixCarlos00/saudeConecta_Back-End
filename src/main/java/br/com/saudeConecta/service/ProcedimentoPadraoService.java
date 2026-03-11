@@ -64,6 +64,36 @@ public class ProcedimentoPadraoService {
     }
 
     /**
+     * Lista todos os procedimentos (ativos e inativos) de um profissional na organização.
+     * Usado na tela de configurações para gerenciamento completo.
+     *
+     * @param profissionalId ID do profissional
+     * @return lista de todos os procedimentos padrão
+     */
+    @Transactional(readOnly = true)
+    public List<ProcedimentoPadrao> listarTodosPorProfissional(Long profissionalId) {
+        Long orgId = TenantContext.getCurrentTenant();
+        return procedimentoRepository.findAllByProfissionalAndOrg(profissionalId, orgId);
+    }
+
+    /**
+     * Alterna o status ativo/inativo de um procedimento padrão.
+     *
+     * @param id ID do procedimento
+     * @return procedimento com status atualizado
+     */
+    @Transactional
+    public ProcedimentoPadrao toggleAtivo(Long id) {
+        ProcedimentoPadrao procedimento = procedimentoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Procedimento não encontrado: " + id));
+
+        procedimento.setAtivo(!procedimento.getAtivo());
+        ProcedimentoPadrao salvo = procedimentoRepository.save(procedimento);
+        log.info("Procedimento {} — id={}", salvo.getAtivo() ? "ativado" : "bloqueado", id);
+        return salvo;
+    }
+
+    /**
      * Atualiza um procedimento padrão existente.
      *
      * @param id ID do procedimento

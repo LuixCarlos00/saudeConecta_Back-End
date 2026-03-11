@@ -4,7 +4,9 @@ import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
 import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.presentation.dto.consulta.*;
+import br.com.saudeConecta.presentation.dto.dashboard.SaldoFinanceiroResponse;
 import br.com.saudeConecta.service.ConsultaService;
+import br.com.saudeConecta.service.SaldoFinanceiroService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +28,7 @@ import java.util.List;
 public class ConsultaController {
     
     private final ConsultaService consultaService;
+    private final SaldoFinanceiroService saldoFinanceiroService;
 
 //=================Tela de /gerenciamento =================
     @GetMapping("/hoje")
@@ -818,5 +821,37 @@ public class ConsultaController {
             log.error("Erro ao buscar histórico odontológico do paciente {}: {}", pacienteId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    // ==========================================
+    // SALDO FINANCEIRO (DASHBOARD)
+    // ==========================================
+
+    /**
+     * Retorna estatísticas financeiras: consultas realizadas + procedimentos terapêuticos.
+     *
+     * @param inicio    data de início (ISO: yyyy-MM-dd)
+     * @param fim       data de fim (ISO: yyyy-MM-dd)
+     * @param agruparPor "mes" (padrão) ou "semana"
+     * @return SaldoFinanceiroResponse com totais e detalhamento
+     */
+    @GetMapping("/estatisticas/saldo-financeiro")
+    public ResponseEntity<SaldoFinanceiroResponse> getSaldoFinanceiro(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim,
+            @RequestParam(defaultValue = "mes") String agruparPor) {
+
+        Long organizacaoId = TenantContext.getCurrentTenant();
+        if (organizacaoId == null) {
+            log.warn("Saldo financeiro solicitado sem organização no contexto");
+            return ResponseEntity.badRequest().build();
+        }
+
+        log.info("Saldo financeiro: orgId={}, período={} a {}, agrupamento={}",
+                organizacaoId, inicio, fim, agruparPor);
+
+        SaldoFinanceiroResponse response = saldoFinanceiroService
+                .calcularSaldo(organizacaoId, inicio, fim, agruparPor);
+        return ResponseEntity.ok(response);
     }
 }

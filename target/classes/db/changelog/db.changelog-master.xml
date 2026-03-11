@@ -56,5 +56,10 @@
     <!-- Plano personalizado por tenant (limites custom + valor adicional) -->
     <include file="db/changelog/changes/028-plano-personalizado-por-tenant.xml"/>
 
+    <!-- Corrigir ordem de exibição dos gráficos do dashboard -->
+    <include file="db/changelog/changes/029-corrigir-ordem-graficos-dashboard.xml"/>
+
+    <!-- Remover coluna duplicada prontdent_oclusao -->
+    <include file="db/changelog/changes/030-remover-coluna-prontdent-oclusao.xml"/>
 
 </databaseChangeLog>

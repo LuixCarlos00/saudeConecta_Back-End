@@ -4,5 +4,7 @@ public enum EntidadeTipo {
     PACIENTE,
     PROFISSIONAL,
     ADMIN,
-    SECRETARIA
+    SECRETARIA,
+    ORGANIZACAO,
+    ENDERECO
 }

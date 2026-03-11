@@ -146,6 +146,78 @@ public class AdminOrganizacaoService {
         return admin;
     }
 
+    /**
+     * Atualiza os dados pessoais do Admin Org logado + dados da organização + endereço.
+     * Usado na tela "Meus Dados" pelo próprio Admin Org.
+     *
+     * @param adminId ID do AdminOrganizacao
+     * @param request dados atualizados (admin + org + endereço)
+     */
+    @Transactional
+    public void atualizarMeusDadosAdminOrg(Long adminId, AtualizarAdminOrgCompletoRequest request) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        Long userId = tenantHelper.getCurrentUserId();
+        log.info("Admin Org atualizando seus próprios dados. AdminID: {}, OrgID: {}", adminId, orgId);
+
+        AdminOrganizacao admin = adminOrganizacaoRepository.findByIdWithOrgAndEndereco(adminId)
+                .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
+
+        // Validação de tenant
+        if (!admin.getOrganizacao().getId().equals(orgId)) {
+            throw new IllegalArgumentException("Acesso negado: administrador não pertence à organização");
+        }
+
+        // Snapshot para histórico
+        AdminOrganizacao snapshot = SnapshotUtil.copiarSnapshot(admin);
+
+        // Atualiza dados do admin
+        admin.setNome(request.nome());
+        admin.setCargo(request.cargo());
+        admin.setEmail(request.email());
+
+        AdminOrganizacao resultado = adminOrganizacaoRepository.save(admin);
+
+        // Registra histórico do admin
+        historicoDadosPessoaisService.registrarAlteracoesDeObjeto(
+                EntidadeTipo.ADMIN, resultado.getId(), userId, snapshot, resultado);
+
+        // Atualiza dados da organização
+        Organizacao org = admin.getOrganizacao();
+        if (org != null) {
+            Organizacao orgSnapshot = SnapshotUtil.copiarSnapshot(org);
+
+            org.setNome(request.nomeClinica());
+            org.setRazaoSocial(request.razaoSocial());
+            org.setTipo(TipoOrganizacao.valueOf(request.tipoClinica()));
+            org.setEmail(request.emailClinica());
+            org.setTelefone(request.telefone());
+
+            Organizacao orgAtualizada = organizacaoRepository.save(org);
+            historicoDadosPessoaisService.registrarAlteracoesDeObjeto(
+                    EntidadeTipo.ORGANIZACAO, orgAtualizada.getId(), userId, orgSnapshot, orgAtualizada);
+
+            // Atualiza endereço da organização
+            Endereco end = org.getEndereco();
+            if (end != null) {
+                Endereco endSnapshot = SnapshotUtil.copiarSnapshot(end);
+
+                end.setEndCep(request.cep());
+                end.setEndUF(request.uf());
+                end.setEndMunicipio(request.municipio());
+                end.setEndBairro(request.bairro());
+                end.setEndRua(request.rua());
+                end.setEndNumero(request.numero());
+                end.setEndComplemento(request.complemento());
+
+                Endereco endAtualizado = enderecoRepository.save(end);
+                historicoDadosPessoaisService.registrarAlteracoesDeObjeto(
+                        EntidadeTipo.ENDERECO, endAtualizado.getEndCodigo(), userId, endSnapshot, endAtualizado);
+            }
+        }
+
+        log.info("Dados pessoais do Admin Org atualizados com sucesso. AdminID: {}", adminId);
+    }
+
     @Transactional
     public AdminOrganizacao atualizarAdmByOrg(Long id, String nome, String email) {
         log.info("Atualizando administrador ID: {}", id);

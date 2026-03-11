@@ -612,6 +612,59 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
      * @param organizacaoId ID da organização
      * @return Lista de consultas REALIZADAS com prontuário dentista, ordenadas por data/hora (mais recente primeiro)
      */
+    // ==========================================
+    // ESTATÍSTICAS FINANCEIRAS (SALDO)
+    // ==========================================
+
+    /**
+     * Soma o valor das consultas realizadas por organização em um período.
+     * @return [somaValor, quantidade]
+     */
+    @Query("SELECT COALESCE(SUM(c.valor), 0), COUNT(c) FROM Consulta c " +
+           "WHERE c.organizacao.id = :orgId " +
+           "AND c.status = 'REALIZADA' " +
+           "AND c.valor IS NOT NULL " +
+           "AND c.dataHora BETWEEN :inicio AND :fim")
+    List<Object[]> somarValorConsultasRealizadasPorOrganizacao(
+        @Param("orgId") Long organizacaoId,
+        @Param("inicio") LocalDateTime inicio,
+        @Param("fim") LocalDateTime fim);
+
+    /**
+     * Soma o valor das consultas realizadas agrupadas por mês/ano.
+     * @return [ano, mes, somaValor, quantidade]
+     */
+    @Query("SELECT YEAR(c.dataHora), MONTH(c.dataHora), COALESCE(SUM(c.valor), 0), COUNT(c) " +
+           "FROM Consulta c " +
+           "WHERE c.organizacao.id = :orgId " +
+           "AND c.status = 'REALIZADA' " +
+           "AND c.valor IS NOT NULL " +
+           "AND c.dataHora BETWEEN :inicio AND :fim " +
+           "GROUP BY YEAR(c.dataHora), MONTH(c.dataHora) " +
+           "ORDER BY YEAR(c.dataHora), MONTH(c.dataHora)")
+    List<Object[]> somarValorConsultasAgrupadasPorMes(
+        @Param("orgId") Long organizacaoId,
+        @Param("inicio") LocalDateTime inicio,
+        @Param("fim") LocalDateTime fim);
+
+    /**
+     * Soma o valor das consultas realizadas agrupadas por semana ISO.
+     * @return [ano, semana, somaValor, quantidade]
+     */
+    @Query("SELECT YEAR(c.dataHora), WEEK(c.dataHora), COALESCE(SUM(c.valor), 0), COUNT(c) " +
+           "FROM Consulta c " +
+           "WHERE c.organizacao.id = :orgId " +
+           "AND c.status = 'REALIZADA' " +
+           "AND c.valor IS NOT NULL " +
+           "AND c.dataHora BETWEEN :inicio AND :fim " +
+           "GROUP BY YEAR(c.dataHora), WEEK(c.dataHora) " +
+           "ORDER BY YEAR(c.dataHora), WEEK(c.dataHora)")
+    List<Object[]> somarValorConsultasAgrupadasPorSemana(
+        @Param("orgId") Long organizacaoId,
+        @Param("inicio") LocalDateTime inicio,
+        @Param("fim") LocalDateTime fim);
+
+
     @Query("SELECT DISTINCT c FROM Consulta c " +
            "INNER JOIN ProntuarioDentista pd ON pd.consulta.id = c.id " +
            "LEFT JOIN FETCH c.profissional p " +

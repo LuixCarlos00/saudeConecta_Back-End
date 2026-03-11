@@ -122,6 +122,20 @@ public class AdminOrganizacaoController {
         }
     }
 
+    @PutMapping("/atualizarMeusDados/{id}")
+    @Transactional
+    @Description("Atualiza dados pessoais do Admin Org logado + organização + endereço. Utilizado em: DadosPessoaisComponent")
+    public ResponseEntity<?> atualizarMeusDados(@PathVariable Long id, @RequestBody AtualizarAdminOrgCompletoRequest request) {
+        log.debug("Admin Org atualizando seus próprios dados. AdminID: {}", id);
+        try {
+            adminOrganizacaoService.atualizarMeusDadosAdminOrg(id, request);
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            log.warn("Erro ao atualizar dados pessoais do admin: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @DeleteMapping("/deletarAdmByOrg/{id}")
     @Transactional
     @Description("Deleta administrador por ID")

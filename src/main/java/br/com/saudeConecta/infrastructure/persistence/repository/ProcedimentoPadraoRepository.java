@@ -20,4 +20,12 @@ public interface ProcedimentoPadraoRepository extends JpaRepository<Procedimento
             @Param("profissionalId") Long profissionalId,
             @Param("orgId") Long orgId);
 
+    @Query("SELECT p FROM ProcedimentoPadrao p " +
+           "WHERE p.profissional.id = :profissionalId " +
+           "AND p.organizacao.id = :orgId " +
+           "ORDER BY p.ativo DESC, p.nomeProcedimento")
+    List<ProcedimentoPadrao> findAllByProfissionalAndOrg(
+            @Param("profissionalId") Long profissionalId,
+            @Param("orgId") Long orgId);
+
 }

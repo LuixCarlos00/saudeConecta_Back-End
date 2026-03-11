@@ -20,7 +20,8 @@ public interface AdminOrganizacaoRepository extends JpaRepository<AdminOrganizac
     
     @Query("SELECT a FROM AdminOrganizacao a " +
            "LEFT JOIN FETCH a.usuario " +
-           "LEFT JOIN FETCH a.organizacao " +
+           "LEFT JOIN FETCH a.organizacao o " +
+           "LEFT JOIN FETCH o.endereco " +
            "WHERE a.usuario.id = :usuarioId")
     Optional<AdminOrganizacao> findByUsuarioIdWithRelations(@Param("usuarioId") Long usuarioId);
 

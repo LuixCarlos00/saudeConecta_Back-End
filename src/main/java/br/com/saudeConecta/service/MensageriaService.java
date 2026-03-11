@@ -162,25 +162,15 @@ public class MensageriaService {
 
         log.info("Reenviando mensagem ID: {} para: {}", mensageriaId, mensageria.getDestinatarioEmail());
 
-        Long profissionalId = mensageria.getDestinatarioProfissional() != null
-                ? mensageria.getDestinatarioProfissional().getId()
-                : null;
-
-        String tipoUsuario = resolverTipoUsuario(mensageria.getTipoMensagem());
-
         mensageria.setStatus(StatusMensagem.PENDENTE);
-        mensageria.setTentativas(mensageria.getTentativas() + 1);
         mensageria.setErroDetalhe(null);
         mensageriaRepository.save(mensageria);
 
         emailNotificacaoService.reenviarEmail(
+                mensageria.getId(),
                 mensageria.getDestinatarioEmail(),
-                mensageria.getDestinatarioNome(),
                 mensageria.getAssunto(),
-                mensageria.getCorpoMensagem(),
-                tipoUsuario,
-                mensageria.getOrganizacaoId(),
-                profissionalId
+                mensageria.getCorpoMensagem()
         );
 
         log.info("Reenvio delegado ao EmailNotificacaoService. Mensagem ID: {}", mensageriaId);

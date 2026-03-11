@@ -83,12 +83,15 @@ public class SecretariaService {
         Secretaria snapshot = SnapshotUtil.copiarSnapshot(antes);
 
 
-        // Atualiza apenas os campos permitidos (nome e email)
+        // Atualiza campos permitidos (nome, email e telefone)
         if (dadosAtualizados.getNome() != null) {
             antes.setNome(dadosAtualizados.getNome());
         }
         if (dadosAtualizados.getEmail() != null) {
             antes.setEmail(dadosAtualizados.getEmail());
+        }
+        if (dadosAtualizados.getTelefone() != null) {
+            antes.setTelefone(dadosAtualizados.getTelefone());
         }
        Secretaria resultado = secretariaRepository.save(antes);
         log.info("Secretária atualizada com sucesso. ID: {}", antes.getId());

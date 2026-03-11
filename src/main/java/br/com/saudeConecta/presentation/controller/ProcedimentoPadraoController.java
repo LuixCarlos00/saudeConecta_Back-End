@@ -69,6 +69,48 @@ public class ProcedimentoPadraoController {
     }
 
     /**
+     * Lista todos os procedimentos (ativos e inativos) do profissional.
+     * Usado na tela de configurações para gerenciamento completo.
+     * GET /procedimentos-padrao/profissional/{profissionalId}/todos
+     */
+    @GetMapping("/profissional/{profissionalId}/todos")
+    public ResponseEntity<List<Map<String, Object>>> listarTodos(@PathVariable Long profissionalId) {
+        log.info("GET /procedimentos-padrao/profissional/{}/todos", profissionalId);
+
+        List<ProcedimentoPadrao> lista = procedimentoService.listarTodosPorProfissional(profissionalId);
+
+        List<Map<String, Object>> response = lista.stream().map(p -> {
+            Map<String, Object> item = new java.util.HashMap<>();
+            item.put("id", p.getId());
+            item.put("nomeProcedimento", p.getNomeProcedimento());
+            item.put("valorPadrao", p.getValorPadrao());
+            item.put("ativo", p.getAtivo());
+            return item;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Alterna o status ativo/inativo de um procedimento.
+     * PATCH /procedimentos-padrao/{id}/toggle
+     */
+    @PatchMapping("/{id}/toggle")
+    public ResponseEntity<Map<String, Object>> toggleAtivo(@PathVariable Long id) {
+        log.info("PATCH /procedimentos-padrao/{}/toggle", id);
+
+        ProcedimentoPadrao atualizado = procedimentoService.toggleAtivo(id);
+
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("id", atualizado.getId());
+        response.put("nomeProcedimento", atualizado.getNomeProcedimento());
+        response.put("valorPadrao", atualizado.getValorPadrao());
+        response.put("ativo", atualizado.getAtivo());
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * Atualiza um procedimento padrão.
      * PUT /procedimentos-padrao/{id}
      */

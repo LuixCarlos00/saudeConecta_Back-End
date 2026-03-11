@@ -127,6 +127,51 @@ public class EmailMensageriaService {
     }
 
     /**
+     * Atualiza um registro existente na mensageria para ENVIADO (usado no reenvio).
+     *
+     * @param mensageriaId ID do registro existente
+     * @param tentativas   número de tentativas até o sucesso
+     */
+    @Transactional
+    public void atualizarSucesso(Long mensageriaId, int tentativas) {
+        try {
+            Mensageria mensageria = mensageriaRepository.findById(mensageriaId)
+                    .orElseThrow(() -> new IllegalArgumentException("Mensagem não encontrada: " + mensageriaId));
+
+            mensageria.setStatus(StatusMensagem.ENVIADO);
+            mensageria.setTentativas(tentativas);
+            mensageria.setErroDetalhe(null);
+            mensageriaRepository.save(mensageria);
+            log.info("Reenvio registrado com sucesso na mensageria ID: {}", mensageriaId);
+        } catch (Exception ex) {
+            log.error("Erro ao atualizar sucesso na mensageria ID {}: {}", mensageriaId, ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * Atualiza um registro existente na mensageria para FALHOU (usado no reenvio).
+     *
+     * @param mensageriaId ID do registro existente
+     * @param erroDetalhe  detalhe do erro
+     * @param tentativas   número de tentativas realizadas
+     */
+    @Transactional
+    public void atualizarFalha(Long mensageriaId, String erroDetalhe, int tentativas) {
+        try {
+            Mensageria mensageria = mensageriaRepository.findById(mensageriaId)
+                    .orElseThrow(() -> new IllegalArgumentException("Mensagem não encontrada: " + mensageriaId));
+
+            mensageria.setStatus(StatusMensagem.FALHOU);
+            mensageria.setErroDetalhe(erroDetalhe);
+            mensageria.setTentativas(tentativas);
+            mensageriaRepository.save(mensageria);
+            log.info("Falha de reenvio registrada na mensageria ID: {}", mensageriaId);
+        } catch (Exception ex) {
+            log.error("Erro CRÍTICO ao atualizar falha na mensageria ID {}: {}", mensageriaId, ex.getMessage(), ex);
+        }
+    }
+
+    /**
      * Resolve o TipoMensagem com base no tipo de usuário em String.
      *
      * @param tipoUsuario tipo do usuário (medico, secretaria, administrador, recuperacao)
