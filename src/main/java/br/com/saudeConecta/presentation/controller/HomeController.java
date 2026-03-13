@@ -107,7 +107,7 @@ public class HomeController {
             } else if (usuario.isProfissional()) {
                 Optional<Profissional> profissional = profissionalRepository.findByUsuario_Id(usuario.getId());
                 return profissional.map(Profissional::getNome).orElse("Profissional");
-            } else if (usuario.getTipoUsuario() != null && usuario.getTipoUsuario() == 3) { // Secretaria
+            } else if (usuario.isRecepcionista()) { // Secretaria
                 Optional<Secretaria> secretaria = secretariaRepository.findByUsuario_Id(usuario.getId());
                 return secretaria.map(Secretaria::getNome).orElse("Secretária");
             }
@@ -139,9 +139,9 @@ public class HomeController {
                 Optional<AdminOrganizacao> admin = adminOrganizacaoRepository.findByUsuario_Id(usuario.getId());
                 return admin.isPresent() ? "Administrador" : "null";
             }
-            if (usuario.getTipoUsuario() != null && usuario.getTipoUsuario() == 3) { // Secretaria
+            if (usuario.isRecepcionista()) { // Secretaria
                 Optional<Secretaria> secretaria = secretariaRepository.findByUsuario_Id(usuario.getId());
-                return secretaria.map(Secretaria::getNome).orElse("Secretária");
+                return secretaria.isPresent() ? "Recepcionista" : "null";
             }
         } catch (Exception e) {
             log.warn("Erro ao obter profissional do usuário ID: {}", usuario.getId(), e);

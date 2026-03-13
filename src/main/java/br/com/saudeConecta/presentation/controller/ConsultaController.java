@@ -6,6 +6,8 @@ import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.presentation.dto.consulta.*;
 import br.com.saudeConecta.presentation.dto.dashboard.SaldoFinanceiroResponse;
 import br.com.saudeConecta.service.ConsultaService;
+import br.com.saudeConecta.usecase.BuscarHistoricoCompletoPacienteUseCase;
+import br.com.saudeConecta.usecase.BuscarHistoricoCompletoPacienteMedicoUseCase;
 import br.com.saudeConecta.service.SaldoFinanceiroService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,8 @@ public class ConsultaController {
     
     private final ConsultaService consultaService;
     private final SaldoFinanceiroService saldoFinanceiroService;
+    private final BuscarHistoricoCompletoPacienteUseCase buscarHistoricoCompletoPacienteUseCase;
+    private final BuscarHistoricoCompletoPacienteMedicoUseCase buscarHistoricoCompletoPacienteMedicoUseCase;
 
 //=================Tela de /gerenciamento =================
     @GetMapping("/hoje")
@@ -97,6 +101,31 @@ public class ConsultaController {
         return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
     }
 
+
+    /**
+     * Exclui uma consulta e registros associados (questionário, planejamentos, histórico).
+     * Consultas com prontuário (dentista ou médico) não podem ser excluídas.
+     *
+     * @param id ID da consulta a ser excluída
+     * @return 204 No Content em caso de sucesso, 404 se não encontrada, 409 se possuir prontuário
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deletarConsulta(@PathVariable Long id) {
+        log.info("Solicitação de exclusão da consulta {}", id);
+        try {
+            consultaService.deletarConsulta(id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            log.warn("Consulta não encontrada para exclusão: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            log.warn("Exclusão bloqueada para consulta {}: {}", id, e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        } catch (Exception e) {
+            log.error("Erro ao excluir consulta {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 
     //===============================================CRUD ==================================================
     //=======================Atualizar  Status ==========================
@@ -428,14 +457,6 @@ public class ConsultaController {
 
     
 
-    @PutMapping("/{id}/realizar")
-    public ResponseEntity<ConsultaResponse> realizar(
-            @PathVariable Long id,
-            @RequestParam(required = false) String observacoes) {
-        Consulta consulta = consultaService.realizar(id, observacoes);
-        return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
-    }
-    
 
 
 
@@ -778,47 +799,37 @@ public class ConsultaController {
     // ========== ENDPOINT PARA BUSCAR HORÁRIOS OCUPADOS ==========
 
 
-    @GetMapping("/BuscandoHistoricoDeConsultasDoPaciente/{pacienteId}")
-    public ResponseEntity<List<HistoricoConsultaPacienteResponse>> buscarHistoricoCompletoPaciente(
-            @PathVariable Long pacienteId) {
-        
-        log.info("=== Requisição recebida: GET /consultas/BuscandoHistoricoDeConsultasDoPaciente/{} ===", pacienteId);
-        
-        try {
-            List<HistoricoConsultaPacienteResponse> historico = 
-                consultaService.buscarHistoricoCompletoPaciente(pacienteId);
-            
-            log.info("Histórico de consultas retornado com sucesso - {} registros", historico.size());
-            return ResponseEntity.ok(historico);
-            
-        } catch (Exception e) {
-            log.error("Erro ao buscar histórico de consultas do paciente {}: {}", pacienteId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
     /**
-     * Busca histórico completo de consultas odontológicas de um paciente
-     * Retorna consultas REALIZADAS que possuem prontuário dentista
+     * Busca histórico completo de consultas de um paciente.
+     * Usa o parâmetro tipo para decidir qual prontuário buscar:
+     * - "medico"   → prontuário médico (Prontuario)
+     * - "dentista" → prontuário odontológico (ProntuarioDentista)
      *
      * @param pacienteId ID do paciente
-     * @return Lista com histórico odontológico completo
+     * @param tipo       "medico" ou "dentista"
+     * @return Lista unificada com histórico completo
      */
-    @GetMapping("/BuscandoHistoricoDeConsultasDoPaciente_dentista/{pacienteId}")
-    public ResponseEntity<List<HistoricoConsultaDentistaResponse>> buscarHistoricoCompletoPacienteDentista(
-            @PathVariable Long pacienteId) {
+    @GetMapping("/BuscandoHistoricoDeConsultasDoPaciente/{pacienteId}")
+    public ResponseEntity<List<HistoricoConsultaPacienteResponse>> buscarHistoricoCompletoPaciente(
+            @PathVariable Long pacienteId,
+            @RequestParam(defaultValue = "medico") String tipo) {
 
-        log.info("=== Requisição recebida: GET /consultas/BuscandoHistoricoDeConsultasDoPaciente_dentista/{} ===", pacienteId);
+        log.info("=== Requisição: GET /consultas/BuscandoHistoricoDeConsultasDoPaciente/{} tipo={} ===", pacienteId, tipo);
 
         try {
-            List<HistoricoConsultaDentistaResponse> historico =
-                consultaService.buscarHistoricoCompletoPacienteDentista(pacienteId);
+            List<HistoricoConsultaPacienteResponse> historico;
 
-            log.info("Histórico odontológico retornado com sucesso - {} registros", historico.size());
+            if ("dentista".equalsIgnoreCase(tipo)) {
+                historico = buscarHistoricoCompletoPacienteUseCase.executar(pacienteId);
+            } else {
+                historico = buscarHistoricoCompletoPacienteMedicoUseCase.executar(pacienteId);
+            }
+
+            log.info("Histórico ({}) retornado com sucesso - {} registros", tipo, historico.size());
             return ResponseEntity.ok(historico);
 
         } catch (Exception e) {
-            log.error("Erro ao buscar histórico odontológico do paciente {}: {}", pacienteId, e.getMessage(), e);
+            log.error("Erro ao buscar histórico ({}) do paciente {}: {}", tipo, pacienteId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

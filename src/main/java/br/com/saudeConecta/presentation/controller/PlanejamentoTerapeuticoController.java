@@ -96,6 +96,7 @@ public class PlanejamentoTerapeuticoController {
             item.put("valor", p.getValor());
             item.put("statusAssinatura", p.getStatusAssinatura());
             item.put("dataAssinatura", p.getDataAssinatura());
+            item.put("assinaturaBase64", p.getAssinaturaBase64());
             return item;
         }).collect(Collectors.toList());
     }

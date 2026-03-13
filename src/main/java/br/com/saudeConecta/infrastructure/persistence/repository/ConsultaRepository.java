@@ -580,13 +580,36 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("fim") LocalDateTime fim);
 
     /**
-     * Busca histórico completo de consultas REALIZADAS de um paciente que POSSUEM prontuário
-     * Usa INNER JOIN com Prontuario para garantir que apenas consultas com prontuário sejam retornadas
-     * Filtra por organização e retorna apenas consultas com status REALIZADA
+     * Busca histórico completo de consultas REALIZADAS ou PAGAS de um paciente que POSSUEM prontuário odontológico
+     * Usa INNER JOIN com ProntuarioDentista para garantir que apenas consultas com prontuário dental sejam retornadas
+     * Filtra por organização e retorna apenas consultas com status REALIZADA ou PAGA
      * 
      * @param pacienteId ID do paciente
      * @param organizacaoId ID da organização
-     * @return Lista de consultas REALIZADAS com prontuário, ordenadas por data/hora (mais recente primeiro)
+     * @return Lista de consultas REALIZADAS ou PAGAS com prontuário dentista, ordenadas por data/hora (mais recente primeiro)
+     */
+    @Query("SELECT DISTINCT c FROM Consulta c " +
+           "INNER JOIN ProntuarioDentista pr ON pr.consulta.id = c.id " +
+           "LEFT JOIN FETCH c.profissional p " +
+           "LEFT JOIN FETCH p.tipoProfissional " +
+           "LEFT JOIN FETCH p.especialidades " +
+           "LEFT JOIN FETCH c.paciente pac " +
+           "LEFT JOIN FETCH c.especialidade " +
+           "WHERE c.organizacao.id = :organizacaoId " +
+           "AND c.paciente.paciCodigo = :pacienteId " +
+           "AND c.status IN ('REALIZADA', 'PAGO') " +
+           "ORDER BY c.dataHora DESC")
+    List<Consulta> findHistoricoCompletoPaciente(
+        @Param("pacienteId") Long pacienteId,
+        @Param("organizacaoId") Long organizacaoId);
+
+    /**
+     * Busca histórico completo de consultas REALIZADAS ou PAGAS de um paciente que POSSUEM prontuário médico.
+     * Usa INNER JOIN com Prontuario para garantir que apenas consultas com prontuário médico sejam retornadas.
+     *
+     * @param pacienteId ID do paciente
+     * @param organizacaoId ID da organização
+     * @return Lista de consultas com prontuário médico, ordenadas por data/hora (mais recente primeiro)
      */
     @Query("SELECT DISTINCT c FROM Consulta c " +
            "INNER JOIN Prontuario pr ON pr.consulta.id = c.id " +
@@ -597,24 +620,11 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
            "LEFT JOIN FETCH c.especialidade " +
            "WHERE c.organizacao.id = :organizacaoId " +
            "AND c.paciente.paciCodigo = :pacienteId " +
-           "AND c.status = 'REALIZADA' " +
+           "AND c.status IN ('REALIZADA', 'PAGO') " +
            "ORDER BY c.dataHora DESC")
-    List<Consulta> findHistoricoCompletoPaciente(
+    List<Consulta> findHistoricoCompletoPacienteMedico(
         @Param("pacienteId") Long pacienteId,
         @Param("organizacaoId") Long organizacaoId);
-
-
-    /**
-     * Busca histórico completo de consultas REALIZADAS de um paciente que POSSUEM prontuário odontológico
-     * Usa INNER JOIN com ProntuarioDentista para garantir que apenas consultas com prontuário dental sejam retornadas
-     *
-     * @param pacienteId ID do paciente
-     * @param organizacaoId ID da organização
-     * @return Lista de consultas REALIZADAS com prontuário dentista, ordenadas por data/hora (mais recente primeiro)
-     */
-    // ==========================================
-    // ESTATÍSTICAS FINANCEIRAS (SALDO)
-    // ==========================================
 
     /**
      * Soma o valor das consultas realizadas por organização em um período.
@@ -663,20 +673,4 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("orgId") Long organizacaoId,
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
-
-
-    @Query("SELECT DISTINCT c FROM Consulta c " +
-           "INNER JOIN ProntuarioDentista pd ON pd.consulta.id = c.id " +
-           "LEFT JOIN FETCH c.profissional p " +
-           "LEFT JOIN FETCH p.tipoProfissional " +
-           "LEFT JOIN FETCH p.especialidades " +
-           "LEFT JOIN FETCH c.paciente pac " +
-           "LEFT JOIN FETCH c.especialidade " +
-           "WHERE c.organizacao.id = :organizacaoId " +
-           "AND c.paciente.paciCodigo = :pacienteId " +
-           "AND c.status = 'REALIZADA' " +
-           "ORDER BY c.dataHora DESC")
-    List<Consulta> findHistoricoCompletoPacienteDentista(
-        @Param("pacienteId") Long pacienteId,
-        @Param("organizacaoId") Long organizacaoId);
 }

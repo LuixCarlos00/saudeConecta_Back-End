@@ -85,5 +85,10 @@ public interface PlanejamentoTerapeuticoRepository extends JpaRepository<Planeja
            "WHERE p.tokenAssinatura = :token")
     int assinarPorToken(@Param("token") String token, @Param("assinatura") String assinatura);
 
-
+    /**
+     * Exclui planejamentos terapêuticos vinculados diretamente a uma consulta.
+     */
+    @Modifying
+    @Query("DELETE FROM PlanejamentoTerapeutico p WHERE p.consulta.id = :consultaId")
+    void deleteByConsultaId(@Param("consultaId") Long consultaId);
 }

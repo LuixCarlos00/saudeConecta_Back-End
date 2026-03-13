@@ -48,8 +48,10 @@ public class ConsultaService {
     private final FormaPagamentoRepository formaPagamentoRepository;
     private final OrganizacaoRepository organizacaoRepository;
     private final UsuarioRepository usuarioRepository;
-    private final ProntuarioRepository prontuarioRepository;
     private final ProntuarioDentistaRepository prontuarioDentistaRepository;
+    private final PlanejamentoTerapeuticoRepository planejamentoTerapeuticoRepository;
+    private final TermoAutorizacaoRepository termoAutorizacaoRepository;
+    private final ProntuarioRepository prontuarioRepository;
     private final TenantHelper tenantHelper;
     
     @RequiresTenant
@@ -232,24 +234,7 @@ public class ConsultaService {
     }
 
 
-    @RequiresTenant
-    @Transactional
-    public Consulta realizar(Long id, String observacoes) {
-        Consulta consulta = buscarPorId(id)
-            .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada"));
-        
-        StatusConsulta statusAnterior = consulta.getStatus();
-        consulta.setStatus(StatusConsulta.REALIZADA);
-        if (observacoes != null) {
-            consulta.setObservacoes(observacoes);
-        }
-        consultaRepository.save(consulta);
-        
-        registrarHistorico(consulta, statusAnterior, StatusConsulta.REALIZADA, "Consulta realizada", getUsuarioAtual());
-        
-        log.info("Consulta ID: {} realizada", id);
-        return consulta;
-    }
+
 
     @RequiresTenant
     @Transactional
@@ -446,10 +431,7 @@ public class ConsultaService {
         Long orgId = tenantHelper.getCurrentTenantId();
         return consultaRepository.countAgendadasHoje(orgId);
     }
-    
-    public List<ConsultaHistorico> buscarHistorico(Long consultaId) {
-        return historicoRepository.findByConsulta_IdOrderByCreatedAtDesc(consultaId);
-    }
+
 
     // ==========================================
     // ESTATÍSTICAS POR PROFISSIONAL (usuarioId + orgId) - HOJE
@@ -1240,206 +1222,6 @@ public class ConsultaService {
     }
 
     /**
-     * Busca histórico completo de consultas de um paciente
-     * Inclui dados da consulta, paciente, profissional e prontuário (se existir)
-     * 
-     * @param pacienteId ID do paciente
-     * @return Lista de DTOs com histórico completo
-     */
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public List<HistoricoConsultaPacienteResponse> buscarHistoricoCompletoPaciente(Long pacienteId) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Buscando histórico completo do paciente ID: {} na organização ID: {}", pacienteId, orgId);
-        
-        List<Consulta> consultas = consultaRepository.findHistoricoCompletoPaciente(pacienteId, orgId);
-        log.debug("Encontradas {} consultas para o paciente", consultas.size());
-        
-        return consultas.stream()
-            .map(consulta -> {
-                // Buscar prontuário associado à consulta
-                Prontuario prontuario = prontuarioRepository.findByConsulta_Id(consulta.getId());
-                return mapearParaHistoricoResponse(consulta, prontuario);
-            })
-            .toList();
-    }
-    
-    /**
-     * Mapeia entidade Consulta e Prontuário para DTO de resposta
-     */
-    private HistoricoConsultaPacienteResponse mapearParaHistoricoResponse(Consulta consulta, Prontuario prontuario) {
-        HistoricoConsultaPacienteResponse.HistoricoConsultaPacienteResponseBuilder builder = 
-            HistoricoConsultaPacienteResponse.builder();
-        
-        // Dados da Consulta
-        builder.consultaId(consulta.getId())
-               .dataHora(consulta.getDataHora())
-               .duracaoMinutos(consulta.getDuracaoMinutos())
-               .observacoes(consulta.getObservacoes())
-               .valor(consulta.getValor())
-               .status(consulta.getStatus() != null ? consulta.getStatus().name() : null)
-               .motivoCancelamento(consulta.getMotivoCancelamento());
-        
-        // Dados do Paciente
-        if (consulta.getPaciente() != null) {
-            builder.pacienteId(consulta.getPaciente().getPaciCodigo())
-                   .pacienteNome(consulta.getPaciente().getPaciNome())
-                   .pacienteCpf(consulta.getPaciente().getPaciCpf())
-                   .pacienteDataNascimento(consulta.getPaciente().getPaciDataNacimento())
-                   .pacienteTelefone(consulta.getPaciente().getPaciTelefone());
-        }
-        
-        // Dados do Profissional
-        if (consulta.getProfissional() != null) {
-            builder.profissionalId(consulta.getProfissional().getId())
-                   .profissionalNome(consulta.getProfissional().getNome())
-                   .profissionalCrm(consulta.getProfissional().getRegistroConselho());
-            
-            // Especialidade do profissional
-            if (consulta.getEspecialidade() != null) {
-                builder.profissionalEspecialidade(consulta.getEspecialidade().getNome());
-            }
-        }
-        
-        // Dados do Prontuário (se existir)
-        if (prontuario != null) {
-            builder.prontuarioId(prontuario.getProntCodigoProntuario())
-                   
-                   // Dados Vitais e Antropométricos
-                   .peso(prontuario.getProntPeso())
-                   .altura(prontuario.getProntAltura())
-                   .temperatura(prontuario.getProntTemperatura())
-                   .saturacao(prontuario.getProntSaturacao())
-                   .pressao(prontuario.getProntPressao())
-                   .frequenciaRespiratoria(prontuario.getProntFrequenciaRespiratoria())
-                   .frequenciaArterialSistolica(prontuario.getProntFrequenciaArterialSistolica())
-                   .frequenciaArterialDiastolica(prontuario.getProntFrequenciaArterialDiastolica())
-                   .hemoglobina(prontuario.getProntHemoglobina())
-                   
-                   // Dados Demográficos
-                    .sexo(prontuario.getProntSexo())
-                   
-                   // Anamnese e Avaliação
-                   .queixaPrincipal(prontuario.getProntQueixaPricipal())
-                   .anamnese(prontuario.getProntAnamnese())
-                   .conduta(prontuario.getProntCondulta())
-                   .observacao(prontuario.getProntObservacao())
-                   .diagnostico(prontuario.getProntDiagnostico())
-                   
-                   // Prescrição Médica
-                   .modeloPrescricao(prontuario.getProntModeloPrescricao())
-                   .tituloPrescricao(prontuario.getProntTituloPrescricao())
-                   .dataPrescricao(this.parseStringToDate(prontuario.getProntDataPrescricao()))
-                   .prescricao(prontuario.getProntPrescricao())
-                   
-                   // Exames
-                   .modeloExame(prontuario.getProntModeloExame())
-                   .tituloExame(prontuario.getProntTituloExame())
-                   .dataExame(this.parseStringToDate(prontuario.getProntDataExame()))
-                   .exame(prontuario.getProntExame())
-                   .tempoDuracao(prontuario.getProntTempoDuracao())
-                   
-                   // Dados de Controle
-                   .dataFinalizado(prontuario.getProntDataFinalizado())
-                   .codigoProntuario(prontuario.getProntCodigoProntuario().toString());
-        }
-        
-        return builder.build();
-    }
-    
-    /**
-     * Busca histórico completo de consultas odontológicas de um paciente
-     * Inclui dados da consulta, paciente, profissional e prontuário dentista (se existir)
-     *
-     * @param pacienteId ID do paciente
-     * @return Lista de DTOs com histórico odontológico completo
-     */
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public List<HistoricoConsultaDentistaResponse> buscarHistoricoCompletoPacienteDentista(Long pacienteId) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Buscando histórico odontológico do paciente ID: {} na organização ID: {}", pacienteId, orgId);
-
-        List<Consulta> consultas = consultaRepository.findHistoricoCompletoPacienteDentista(pacienteId, orgId);
-        log.debug("Encontradas {} consultas odontológicas para o paciente", consultas.size());
-
-        return consultas.stream()
-            .map(consulta -> {
-                List<ProntuarioDentista> prontuarios = prontuarioDentistaRepository.findByConsultaId(consulta.getId());
-                ProntuarioDentista prontuario = prontuarios.isEmpty() ? null : prontuarios.get(0);
-                return mapearParaHistoricoDentistaResponse(consulta, prontuario);
-            })
-            .toList();
-    }
-
-    /**
-     * Mapeia entidade Consulta e ProntuarioDentista para DTO de resposta odontológica
-     */
-    private HistoricoConsultaDentistaResponse mapearParaHistoricoDentistaResponse(Consulta consulta, ProntuarioDentista prontuario) {
-        HistoricoConsultaDentistaResponse.HistoricoConsultaDentistaResponseBuilder builder =
-            HistoricoConsultaDentistaResponse.builder();
-
-        builder.consultaId(consulta.getId())
-               .dataHora(consulta.getDataHora())
-               .duracaoMinutos(consulta.getDuracaoMinutos())
-               .observacoes(consulta.getObservacoes())
-               .valor(consulta.getValor())
-               .status(consulta.getStatus() != null ? consulta.getStatus().name() : null)
-               .motivoCancelamento(consulta.getMotivoCancelamento());
-
-        if (consulta.getPaciente() != null) {
-            builder.pacienteId(consulta.getPaciente().getPaciCodigo())
-                   .pacienteNome(consulta.getPaciente().getPaciNome())
-                   .pacienteCpf(consulta.getPaciente().getPaciCpf())
-                   .pacienteDataNascimento(consulta.getPaciente().getPaciDataNacimento())
-                   .pacienteTelefone(consulta.getPaciente().getPaciTelefone());
-        }
-
-        if (consulta.getProfissional() != null) {
-            builder.profissionalId(consulta.getProfissional().getId())
-                   .profissionalNome(consulta.getProfissional().getNome())
-                   .profissionalCrm(consulta.getProfissional().getRegistroConselho());
-            if (consulta.getEspecialidade() != null) {
-                builder.profissionalEspecialidade(consulta.getEspecialidade().getNome());
-            }
-        }
-
-        if (prontuario != null) {
-            builder.prontuarioId(prontuario.getCodigo())
-                   .queixaPrincipal(prontuario.getQueixaPrincipal())
-                   .anamnese(prontuario.getAnamnese())
-                   .observacao(prontuario.getObservacao())
-                   .diagnostico(prontuario.getDiagnostico())
-                   .higieneBucal(prontuario.getHigieneBucal())
-                   .condicaoGengival(prontuario.getCondicaoGengival())
-                   .oclusal(prontuario.getOclusal())
-                   .atm(prontuario.getAtm())
-                   .planoTratamento(prontuario.getPlanoTratamento())
-                   .procedimentos(prontuario.getProcedimentos())
-                   .orientacoes(prontuario.getOrientacoes())
-                   .tituloPrescricao(prontuario.getTituloPrescricao())
-                   .dataPrescricao(prontuario.getDataPrescricao())
-                   .prescricao(prontuario.getPrescricao())
-                   .tituloExame(prontuario.getTituloExame())
-                   .dataExame(prontuario.getDataExame())
-                   .tempoDuracao(prontuario.getTempoDuracao())
-                   .dataFinalizado(prontuario.getDataFinalizado() != null ?
-                       java.sql.Date.valueOf(prontuario.getDataFinalizado()) : null)
-                   .dentes(prontuario.getDentes() != null ?
-                       prontuario.getDentes().stream()
-                           .map(d -> HistoricoConsultaDentistaResponse.DenteResponse.builder()
-                               .codigo(d.getCodigo())
-                               .numeroFdi(d.getNumeroFdi())
-                               .status(d.getStatus())
-                               .observacao(d.getObservacao())
-                               .build())
-                           .toList() : java.util.List.of());
-        }
-
-        return builder.build();
-    }
-
-    /**
      * Converte uma String de data para o tipo Date
      * @param dataString String no formato "yyyy-MM-dd" ou "dd/MM/yyyy"
      * @return Date ou null se a string for nula ou vazia
@@ -1471,5 +1253,62 @@ public class ConsultaService {
             log.error("Erro ao converter data: {}", dataString, e);
             return null;
         }
+    }
+
+    // ==========================================
+    // DELETAR CONSULTA COM REGISTROS RELACIONADOS
+    // ==========================================
+
+    /**
+     * Exclui uma consulta que ainda não foi concluída (sem prontuário).
+     * Se a consulta possuir prontuário dentista ou médico (dados clínicos),
+     * a exclusão é bloqueada para preservar os registros clínicos.
+     *
+     * Registros excluídos em cascata:
+     * - tb_termo_autorizacao (questionário de saúde)
+     * - tb_planejamento_terapeutico (planejamentos vinculados à consulta)
+     * - consulta_historico (histórico de status)
+     * - consulta
+     *
+     * @param consultaId ID da consulta a ser excluída
+     * @throws IllegalArgumentException se a consulta não for encontrada
+     * @throws IllegalStateException se a consulta possuir prontuário (concluída)
+     */
+    @RequiresTenant
+    @Transactional
+    public void deletarConsulta(Long consultaId) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        Consulta consulta = consultaRepository.findByIdAndOrganizacao_Id(consultaId, orgId)
+                .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada ou não pertence à organização"));
+
+        // Bloqueia exclusão se houver prontuário dentista (consulta concluída)
+        boolean temProntuarioDentista = !prontuarioDentistaRepository.findByConsultaId(consultaId).isEmpty();
+        if (temProntuarioDentista) {
+            throw new IllegalStateException("Não é possível excluir uma consulta que possui prontuário odontológico. Os dados clínicos devem ser preservados.");
+        }
+
+        // Bloqueia exclusão se houver prontuário médico (consulta concluída)
+        boolean temProntuarioMedico = prontuarioRepository.findByConsulta_Id(consultaId) != null;
+        if (temProntuarioMedico) {
+            throw new IllegalStateException("Não é possível excluir uma consulta que possui prontuário médico. Os dados clínicos devem ser preservados.");
+        }
+
+        log.info("Iniciando exclusão da consulta {} e registros relacionados", consultaId);
+
+        // 1. Termo de autorização / questionário de saúde
+        termoAutorizacaoRepository.deleteByConsultaId(consultaId);
+        log.debug("Termos de autorização excluídos para consulta {}", consultaId);
+
+        // 2. Planejamentos terapêuticos (via FK direta com consulta)
+        planejamentoTerapeuticoRepository.deleteByConsultaId(consultaId);
+        log.debug("Planejamentos excluídos para consulta {}", consultaId);
+
+        // 3. Histórico de alterações de status
+        historicoRepository.deleteByConsultaId(consultaId);
+        log.debug("Histórico de consulta excluído para consulta {}", consultaId);
+
+        // 4. Consulta
+        consultaRepository.delete(consulta);
+        log.info("Consulta {} excluída com sucesso", consultaId);
     }
 }

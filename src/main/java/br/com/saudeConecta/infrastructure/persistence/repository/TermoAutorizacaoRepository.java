@@ -2,6 +2,7 @@ package br.com.saudeConecta.infrastructure.persistence.repository;
 
 import br.com.saudeConecta.domain.prontuario.TermoAutorizacao;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -23,4 +24,10 @@ public interface TermoAutorizacaoRepository extends JpaRepository<TermoAutorizac
            "WHERE t.token = :token")
     Optional<TermoAutorizacao> findByTokenComRelacionamentos(@Param("token") String token);
 
+    /**
+     * Exclui todos os termos de autorização/questionários vinculados a uma consulta.
+     */
+    @Modifying
+    @Query("DELETE FROM TermoAutorizacao t WHERE t.consulta.id = :consultaId")
+    void deleteByConsultaId(@Param("consultaId") Long consultaId);
 }

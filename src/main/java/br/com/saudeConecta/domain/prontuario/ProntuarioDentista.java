@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
+//Prntuario de dentista
 @Entity
 @Table(name = "prontuario_dentista")
 @Getter
@@ -19,7 +19,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@JsonIgnoreProperties({"hibernateLazyInitializer"})   // igual ao Prontuario médico
+@JsonIgnoreProperties({"hibernateLazyInitializer"})
 public class ProntuarioDentista {
 
     @Id

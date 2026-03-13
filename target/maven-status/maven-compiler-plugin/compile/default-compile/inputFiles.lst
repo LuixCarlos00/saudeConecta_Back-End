@@ -1,4 +1,5 @@
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/infrastructure/persistence/repository/ConsultaRepository.java
+/home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/service/SaldoFinanceiroService.java
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/infrastructure/persistence/repository/HistoricoDadosPessoaisRepository.java
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/infrastructure/persistence/repository/ProcedimentoPadraoRepository.java
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/service/PlanoAssinaturaService.java
@@ -7,6 +8,7 @@
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/infra/exceptions/LimitePlanoException.java
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/domain/organizacao/Organizacao.java
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/presentation/dto/consulta/EstatisticasDashboardAdminOrgResponse.java
+/home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/presentation/dto/dashboard/SaldoFinanceiroResponse.java
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/domain/historicodadospessoais/EntidadeTipo.java
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/domain/planos/StatusAssinatura.java
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/infrastructure/persistence/repository/ConfiguracaoGraficoDashboardRepository.java
@@ -168,6 +170,7 @@
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/domain/common/Sexo.java
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/domain/profissional/Especialidade.java
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/util/SnapshotUtil.java
+/home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/presentation/dto/planos/CustomizarPlanoTenantRequest.java
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/presentation/dto/prontuario/AssinaturaPlanjamentoRequest.java
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/presentation/dto/admin/AtualizarAdminRequest.java
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/presentation/dto/endereco/EnderecoResponse.java
@@ -185,7 +188,6 @@
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/presentation/controller/ProcedimentoPadraoController.java
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/domain/consulta/CanceladoPor.java
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/presentation/controller/OrganizacaoController.java
-/home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/service/pix/PixServiceAsaas.java
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/domain/consulta/StatusConsulta.java
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/infrastructure/persistence/repository/AssinaturaTenantRepository.java
 /home/luiz.carlos/Documentos/GitHub/saudeConectaAPI/src/main/java/br/com/saudeConecta/domain/admin/AdminOrganizacao.java

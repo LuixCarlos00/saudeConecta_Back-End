@@ -34,14 +34,17 @@ public class PlanejamentoTerapeutico {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "consulta_id")
+    @JsonIgnore
     private Consulta consulta;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "paciente_id", nullable = false)
+    @JsonIgnore
     private Paciente paciente;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "profissional_id", nullable = false)
+    @JsonIgnore
     private Profissional profissional;
 
     @ManyToOne(fetch = FetchType.LAZY)
