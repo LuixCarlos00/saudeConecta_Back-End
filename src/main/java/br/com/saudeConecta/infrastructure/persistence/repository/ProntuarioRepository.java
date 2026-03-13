@@ -2,7 +2,9 @@ package br.com.saudeConecta.infrastructure.persistence.repository;
 
 import br.com.saudeConecta.domain.prontuario.Prontuario;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -23,4 +25,11 @@ public interface ProntuarioRepository extends JpaRepository<Prontuario, Long> {
            "LEFT JOIN FETCH c.formaPagamento " +
            "WHERE p.consulta.id = :consultaId")
     Prontuario findByConsulta_IdWithFetch(Long consultaId);
+
+    /**
+     * Exclui todos os prontuários médicos vinculados a uma consulta.
+     */
+    @Modifying
+    @Query("DELETE FROM Prontuario p WHERE p.consulta.id = :consultaId")
+    void deleteByConsultaId(@Param("consultaId") Long consultaId);
 }

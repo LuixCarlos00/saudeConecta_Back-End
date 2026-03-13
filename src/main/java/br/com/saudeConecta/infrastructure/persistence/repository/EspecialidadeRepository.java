@@ -12,8 +12,6 @@ import java.util.Optional;
 @Repository
 public interface EspecialidadeRepository extends JpaRepository<Especialidade, Long> {
     
-    List<Especialidade> findByTipoProfissional_Id(Long tipoProfissionalId);
-    
     List<Especialidade> findByTipoProfissional_IdAndStatus(Long tipoProfissionalId, Byte status);
     
     @Query("SELECT e FROM Especialidade e WHERE e.tipoProfissional.codigo = :codigo AND e.status = 1")

@@ -21,7 +21,4 @@ public interface ConfiguracaoGraficoDashboardRepository extends JpaRepository<Co
 
     boolean existsByUsuarioIdAndTipoGrafico(Long usuarioId, TipoGraficoDashboard tipoGrafico);
 
-    // ── Por organização (mantido para operações administrativas globais) ──────
-
-    List<ConfiguracaoGraficoDashboard> findByOrganizacaoIdOrderByOrdemExibicaoAsc(Long organizacaoId);
 }

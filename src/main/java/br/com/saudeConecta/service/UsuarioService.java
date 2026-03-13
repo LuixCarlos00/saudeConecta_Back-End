@@ -53,38 +53,93 @@ public class UsuarioService   {
     @Transactional
     public void bloquearUsuariobyOrg(BloquearUsuarioRequest request) {
         Long organizacaoId = TenantContext.getCurrentTenant();
+        boolean isSuperAdmin = (organizacaoId == null);
 
-        log.info("Bloqueando usuário ID: {} (registro ID: {}) para {} na organização {}",
+        log.info("Bloqueando usuário ID: {} (registro ID: {}) para {} | orgId: {} | SUPER_ADMIN: {}",
                 request.codigoUsuario(),
                 request.codigo(),
                 request.status() == 0 ? "INATIVO" : "ATIVO",
-                organizacaoId);
+                organizacaoId,
+                isSuperAdmin);
 
-        // 1. Busca e atualiza o Usuario principal
-        Usuario usuario = usuarioRepository.findById(request.codigoUsuario())
-                .filter(u -> organizacaoId.equals(u.getOrganizacaoId()))
-                .orElseThrow(() -> {
-                    log.warn("Usuário {} não encontrado ou não pertence à organização {}",
-                            request.codigoUsuario(), organizacaoId);
-                    return new IllegalArgumentException("Usuário não encontrado ou sem permissão");
-                });
+        // 1. Busca o Usuario principal
+        Usuario usuario;
+        if (isSuperAdmin) {
+            usuario = usuarioRepository.findById(request.codigoUsuario())
+                    .orElseThrow(() -> {
+                        log.warn("Usuário {} não encontrado", request.codigoUsuario());
+                        return new IllegalArgumentException("Usuário não encontrado");
+                    });
+        } else {
+            usuario = usuarioRepository.findById(request.codigoUsuario())
+                    .filter(u -> organizacaoId.equals(u.getOrganizacaoId()))
+                    .orElseThrow(() -> {
+                        log.warn("Usuário {} não encontrado ou não pertence à organização {}",
+                                request.codigoUsuario(), organizacaoId);
+                        return new IllegalArgumentException("Usuário não encontrado ou sem permissão");
+                    });
+        }
 
         // Validação: não pode bloquear super admin
         if (usuario.isSuperAdmin()) {
             throw new IllegalArgumentException("Não é possível bloquear um Super Admin");
         }
 
-        // Atualiza status do usuário
         StatusUsuario novoStatus = request.status() == 0
                 ? StatusUsuario.INATIVO
                 : StatusUsuario.ATIVO;
-        usuario.setStatus(novoStatus);
-        usuarioRepository.save(usuario);
 
-        // 2. Atualiza o registro específico baseado no tipo de usuário
-        atualizarStatusPerfil(request.codigo(), organizacaoId, usuario.getTipoUsuarioNovo(), novoStatus);
+        // 2. Se SUPER_ADMIN bloqueando AdminOrg → bloqueio em cascata (toda a organização)
+        if (isSuperAdmin && usuario.getTipoUsuarioNovo() == TipoUsuarioNovo.ADMIN_ORG) {
+            bloquearTenantEmCascata(usuario, request.codigo(), novoStatus);
+        } else {
+            // Bloqueio individual
+            usuario.setStatus(novoStatus);
+            usuarioRepository.save(usuario);
 
-        log.info("Usuário ID: {} e seu perfil bloqueados com sucesso", request.codigoUsuario());
+            Long orgIdPerfil = isSuperAdmin ? usuario.getOrganizacaoId() : organizacaoId;
+            atualizarStatusPerfil(request.codigo(), orgIdPerfil, usuario.getTipoUsuarioNovo(), novoStatus);
+        }
+
+        log.info("Usuário ID: {} bloqueado com sucesso (cascata: {})", request.codigoUsuario(),
+                isSuperAdmin && usuario.getTipoUsuarioNovo() == TipoUsuarioNovo.ADMIN_ORG);
+    }
+
+    /**
+     * Bloqueio em cascata: bloqueia/desbloqueia o AdminOrg e TODOS os usuários da organização.
+     * Chamado pelo SUPER_ADMIN ao bloquear um tenant (AdminOrg).
+     */
+    private void bloquearTenantEmCascata(Usuario adminUsuario, Long adminPerfilId, StatusUsuario novoStatus) {
+        Long orgId = adminUsuario.getOrganizacaoId();
+        log.info("Bloqueio em cascata da organização ID: {} para status: {}", orgId, novoStatus);
+
+        // 1. Bloqueia o AdminOrg principal
+        adminUsuario.setStatus(novoStatus);
+        usuarioRepository.save(adminUsuario);
+
+        // Atualiza perfil do AdminOrg
+        adminOrganizacaoRepository.findById(adminPerfilId)
+                .ifPresent(admin -> {
+                    admin.setStatus(novoStatus == StatusUsuario.ATIVO
+                            ? AdminOrganizacao.StatusAdmin.ATIVO
+                            : AdminOrganizacao.StatusAdmin.INATIVO);
+                    adminOrganizacaoRepository.save(admin);
+                });
+
+        // 2. Bloqueia/desbloqueia TODOS os outros usuários da organização
+        if (orgId != null) {
+            List<Usuario> usuariosOrg = usuarioRepository.findByOrganizacao_Id(orgId);
+            int count = 0;
+            for (Usuario u : usuariosOrg) {
+                if (!u.getId().equals(adminUsuario.getId()) && !u.isSuperAdmin()) {
+                    u.setStatus(novoStatus);
+                    usuarioRepository.save(u);
+                    count++;
+                }
+            }
+            log.info("Bloqueio em cascata: {} usuários adicionais da organização {} atualizados para {}",
+                    count, orgId, novoStatus);
+        }
     }
 
     private void atualizarStatusPerfil(Long codigoPerfil, Long organizacaoId,

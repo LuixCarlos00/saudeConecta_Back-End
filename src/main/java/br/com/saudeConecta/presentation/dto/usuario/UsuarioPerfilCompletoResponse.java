@@ -6,6 +6,8 @@ import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.domain.usuario.Usuario;
 
+import br.com.saudeConecta.domain.organizacao.Organizacao;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -19,6 +21,7 @@ public record UsuarioPerfilCompletoResponse(
     ProfissionalResumo profissional,
     AdminResumo adminOrganizacao,
     SecretariaResumo secretaria,
+    OrganizacaoResumo organizacao,
     EnderecoResumo endereco
 ) {
     
@@ -28,17 +31,26 @@ public record UsuarioPerfilCompletoResponse(
             AdminOrganizacao admin,
             Secretaria secretaria) {
         
+        Organizacao org = usuario.getOrganizacao();
+
+        // Endereço: profissional usa seu próprio; admin/secretaria usam o da organização
+        Endereco enderecoEntidade = null;
+        if (profissional != null && profissional.getEndereco() != null) {
+            enderecoEntidade = profissional.getEndereco();
+        } else if (org != null && org.getEndereco() != null) {
+            enderecoEntidade = org.getEndereco();
+        }
+
         return new UsuarioPerfilCompletoResponse(
             usuario.getId(),
             usuario.getLogin(),
             usuario.getTipoUsuarioNovo() != null ? usuario.getTipoUsuarioNovo().name() : null,
-            usuario.getOrganizacao() != null ? usuario.getOrganizacao().getId() : null,
+            org != null ? org.getId() : null,
             profissional != null ? ProfissionalResumo.fromEntity(profissional) : null,
             admin != null ? AdminResumo.fromEntity(admin) : null,
             secretaria != null ? SecretariaResumo.fromEntity(secretaria) : null,
-            profissional != null && profissional.getEndereco() != null 
-                ? EnderecoResumo.fromEntity(profissional.getEndereco()) 
-                : null
+            org != null ? OrganizacaoResumo.fromEntity(org) : null,
+            enderecoEntidade != null ? EnderecoResumo.fromEntity(enderecoEntidade) : null
         );
     }
     
@@ -132,6 +144,28 @@ public record UsuarioPerfilCompletoResponse(
         }
     }
     
+    public record OrganizacaoResumo(
+        Long id,
+        String nome,
+        String razaoSocial,
+        String cnpj,
+        String tipo,
+        String email,
+        String telefone
+    ) {
+        public static OrganizacaoResumo fromEntity(Organizacao o) {
+            return new OrganizacaoResumo(
+                o.getId(),
+                o.getNome(),
+                o.getRazaoSocial(),
+                o.getCnpj(),
+                o.getTipo() != null ? o.getTipo().name() : null,
+                o.getEmail(),
+                o.getTelefone()
+            );
+        }
+    }
+
     public record EnderecoResumo(
         Long endCodigo,
         String endRua,

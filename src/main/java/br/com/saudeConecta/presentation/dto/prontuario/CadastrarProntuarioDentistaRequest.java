@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Getter
@@ -86,6 +87,89 @@ public class CadastrarProntuarioDentistaRequest {
     @JsonProperty("tempoDuracao")
     private String tempoDuracao;
 
+    // ── Identificação do Paciente (endereço vem da entidade Paciente) ──────
+
+    @JsonProperty("responsavel")
+    private String responsavel;
+
+    @JsonProperty("inicioTratamento")
+    private String inicioTratamento;
+
+    @JsonProperty("terminoTratamento")
+    private String terminoTratamento;
+
+    @JsonProperty("interrupcao")
+    private String interrupcao;
+
+    // ── Exame Objetivo — Sinais Vitais ───────────────────────────────────────
+
+    @JsonProperty("pressaoArterial")
+    private String pressaoArterial;
+
+    @JsonProperty("pulso")
+    private String pulso;
+
+    @JsonProperty("altura")
+    private String altura;
+
+    @JsonProperty("temperatura")
+    private String temperatura;
+
+    @JsonProperty("peso")
+    private String peso;
+
+    @JsonProperty("edema")
+    private String edema;
+
+    @JsonProperty("facies")
+    private String facies;
+
+    @JsonProperty("linfonodos")
+    private String linfonodos;
+
+    @JsonProperty("labios")
+    private String labios;
+
+    @JsonProperty("mucosas")
+    private String mucosas;
+
+    @JsonProperty("soalhoBucal")
+    private String soalhoBucal;
+
+    @JsonProperty("palato")
+    private String palato;
+
+    @JsonProperty("orofaringe")
+    private String orofaringe;
+
+    // ── Exame Objetivo — Exame Intrabucal ────────────────────────────────────
+
+    @JsonProperty("lingua")
+    private String lingua;
+
+    @JsonProperty("gengiva")
+    private String gengiva;
+
+    @JsonProperty("habitosNocivos")
+    private String habitosNocivos;
+
+    @JsonProperty("portadorAparelho")
+    private String portadorAparelho;
+
+    @JsonProperty("exameOutros")
+    private String exameOutros;
+
+    // ── TUSS e CID ──────────────────────────────────────────────────────────
+
+    @JsonProperty("tussTexto")
+    private String tussTexto;
+
+    @JsonProperty("cidTexto")
+    private String cidTexto;
+
+    @JsonProperty("solicitacaoExameTexto")
+    private String solicitacaoExameTexto;
+
     // ── Relacionamentos ───────────────────────────────────────────────────────
 
     @JsonProperty("codigoMedico")
@@ -93,6 +177,11 @@ public class CadastrarProntuarioDentistaRequest {
 
     @JsonProperty("consulta")
     private Long consulta;
+
+    // ── Planejamento Terapêutico ────────────────────────────────────────────
+
+    @JsonProperty("planejamentos")
+    private List<PlanejamentoItem> planejamentos;
 
     // ── DTO interno para cada dente ───────────────────────────────────────────
 
@@ -112,5 +201,25 @@ public class CadastrarProntuarioDentistaRequest {
         /** Observação livre do dentista sobre este dente */
         @JsonProperty("observacao")
         private String observacao;
+    }
+
+    // ── DTO interno para cada item de planejamento terapêutico ──────────────
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class PlanejamentoItem {
+
+        @JsonProperty("dataProcedimento")
+        private String dataProcedimento;
+
+        @JsonProperty("procedimentoRealizado")
+        private String procedimentoRealizado;
+
+        @JsonProperty("valor")
+        private BigDecimal valor;
+
+        @JsonProperty("pacienteId")
+        private Long pacienteId;
     }
 }

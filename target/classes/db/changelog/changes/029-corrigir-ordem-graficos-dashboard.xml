@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ================================================================ -->
+    <!-- Corrige a ordem de exibição dos gráficos do dashboard para       -->
+    <!-- espelhar o layout HTML:                                          -->
+    <!--   1. CONSULTAS_POR_PERIODO       (sup. esquerdo)                 -->
+    <!--   2. AGENDAMENTOS_DIAS_SEMANA    (sup. direito)                  -->
+    <!--   3. SALDO_FINANCEIRO            (inf. esquerdo)                 -->
+    <!--   4. MEDICOS_POR_ESPECIALIDADE   (inf. direito)                  -->
+    <!--                                                                  -->
+    <!-- Profissional:                                                    -->
+    <!--   1. MEDIA_TEMPO_CONSULTA        (sup. esquerdo)                 -->
+    <!--   2. AGENDAMENTOS_MEDICO_PERIODO (sup. direito)                  -->
+    <!-- ================================================================ -->
+
+    <changeSet id="029-001-corrigir-ordem-graficos-admin" author="equipe-sentinela">
+        <comment>Corrige ordem dos gráficos administrativos no dashboard</comment>
+
+        <update tableName="configuracao_grafico_dashboard">
+            <column name="ordem_exibicao" valueNumeric="1"/>
+            <where>tipo_grafico = 'CONSULTAS_POR_PERIODO'</where>
+        </update>
+
+        <update tableName="configuracao_grafico_dashboard">
+            <column name="ordem_exibicao" valueNumeric="2"/>
+            <where>tipo_grafico = 'AGENDAMENTOS_DIAS_SEMANA'</where>
+        </update>
+
+        <update tableName="configuracao_grafico_dashboard">
+            <column name="ordem_exibicao" valueNumeric="3"/>
+            <where>tipo_grafico = 'SALDO_FINANCEIRO'</where>
+        </update>
+
+        <update tableName="configuracao_grafico_dashboard">
+            <column name="ordem_exibicao" valueNumeric="4"/>
+            <where>tipo_grafico = 'MEDICOS_POR_ESPECIALIDADE'</where>
+        </update>
+    </changeSet>
+
+    <changeSet id="029-002-corrigir-ordem-graficos-profissional" author="equipe-sentinela">
+        <comment>Corrige ordem dos gráficos profissionais no dashboard</comment>
+
+        <update tableName="configuracao_grafico_dashboard">
+            <column name="ordem_exibicao" valueNumeric="1"/>
+            <where>tipo_grafico = 'MEDIA_TEMPO_CONSULTA'</where>
+        </update>
+
+        <update tableName="configuracao_grafico_dashboard">
+            <column name="ordem_exibicao" valueNumeric="2"/>
+            <where>tipo_grafico = 'AGENDAMENTOS_MEDICO_PERIODO'</where>
+        </update>
+    </changeSet>
+
+</databaseChangeLog>

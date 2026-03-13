@@ -11,7 +11,7 @@ import br.com.saudeConecta.domain.profissional.TipoProfissional;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.domain.usuario.StatusUsuario;
-import br.com.saudeConecta.email.EmailCadastroService;
+import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infra.tenant.RequiresTenant;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
@@ -47,9 +47,10 @@ public class ProfissionalService {
     private final EnderecoRepository enderecoRepository;
     private final PasswordEncoder passwordEncoder;
     private final TenantHelper tenantHelper;
-    private final EmailCadastroService emailCadastroService;
+    private final EmailNotificacaoService emailNotificacaoService;
     private final EmailUnicoService emailUnicoService;
     private final HistoricoDadosPessoaisService historicoDadosPessoaisService;
+    private final LimitePlanoService limitePlanoService;
 
 
     private static final String CARACTERES_SENHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*";
@@ -63,9 +64,10 @@ public class ProfissionalService {
             EnderecoRepository enderecoRepository,
             PasswordEncoder passwordEncoder,
             TenantHelper tenantHelper,
-            EmailCadastroService emailCadastroService,
+            EmailNotificacaoService emailNotificacaoService,
             EmailUnicoService emailUnicoService,
-            HistoricoDadosPessoaisService historicoDadosPessoaisService
+            HistoricoDadosPessoaisService historicoDadosPessoaisService,
+            LimitePlanoService limitePlanoService
     ) {
         this.profissionalRepository = profissionalRepository;
         this.tipoProfissionalRepository = tipoProfissionalRepository;
@@ -75,9 +77,10 @@ public class ProfissionalService {
         this.enderecoRepository = enderecoRepository;
         this.passwordEncoder = passwordEncoder;
         this.tenantHelper = tenantHelper;
-        this.emailCadastroService = emailCadastroService;
+        this.emailNotificacaoService = emailNotificacaoService;
         this.emailUnicoService = emailUnicoService;
         this.historicoDadosPessoaisService = historicoDadosPessoaisService;
+        this.limitePlanoService = limitePlanoService;
     }
 
 
@@ -88,6 +91,8 @@ public class ProfissionalService {
     public Profissional cadastraClinicoByOrg(CadastrarClinicoRequest request) {
         Long orgId = tenantHelper.getCurrentTenantId();
         log.info("Cadastrando clínico: {} na organização: {}", request.nome(), orgId);
+
+        limitePlanoService.validarLimiteProfissional(orgId);
 
         String cpfLimpo = limparCpf(request.cpf());
 
@@ -185,9 +190,7 @@ public class ProfissionalService {
         Profissional salvo = profissionalRepository.save(profissional);
         log.info("Clínico cadastrado com sucesso. ID: {}", salvo.getId());
 
-        // Enviar email de credenciais de forma assíncrona
-        // Em caso de falha, o EmailCadastroService registrará na tabela de mensageria
-        emailCadastroService.enviarCredenciaisClinicoAsync(
+        emailNotificacaoService.enviarCredenciaisClinico(
             request.email(),
             request.nome(),
             cpfLimpo,
@@ -366,6 +369,15 @@ return resultado ;
 
     public Long contarAtivosPorOrganizacao(Long organizacaoId) {
         return profissionalRepository.countAtivosByOrganizacaoId(organizacaoId);
+    }
+
+    /**
+     * Conta todos os profissionais ativos em todas as organizações (SuperAdmin)
+     *
+     * @return Quantidade total de profissionais ativos
+     */
+    public Long getEstatisticasMedicosAtivosByOrg() {
+        return profissionalRepository.countTodosAtivos();
     }
 
 

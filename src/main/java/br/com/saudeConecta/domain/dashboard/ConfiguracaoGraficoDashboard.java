@@ -33,7 +33,7 @@ public class ConfiguracaoGraficoDashboard implements Serializable {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "organizacao_id", nullable = false)
+    @JoinColumn(name = "organizacao_id", nullable = true)
     private Organizacao organizacao;
 
     @ManyToOne(fetch = FetchType.LAZY)

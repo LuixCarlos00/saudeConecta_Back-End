@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.Modifying;
 
 @Repository
 public interface ProntuarioDentistaRepository extends JpaRepository<ProntuarioDentista, Long> {
@@ -41,13 +42,14 @@ public interface ProntuarioDentistaRepository extends JpaRepository<ProntuarioDe
 
 
     @Query("""
-    SELECT pd FROM ProntuarioDentista pd
+    SELECT DISTINCT pd FROM ProntuarioDentista pd
     LEFT JOIN FETCH pd.dentes
     LEFT JOIN FETCH pd.profissional prof
     LEFT JOIN FETCH prof.tipoProfissional
     LEFT JOIN FETCH prof.especialidades
     LEFT JOIN FETCH pd.consulta c
     LEFT JOIN FETCH c.paciente
+    LEFT JOIN FETCH c.especialidade
     LEFT JOIN FETCH c.formaPagamento
     WHERE pd.id = :id
 """)
@@ -68,8 +70,46 @@ public interface ProntuarioDentistaRepository extends JpaRepository<ProntuarioDe
     """)
     List<ProntuarioDentista> findByProfissionalId(@Param("profissionalId") Long profissionalId);
 
+
     /**
-     * Verifica se já existe prontuário para uma consulta.
+     * Lista prontuários de um paciente (via consulta → paciente).
+     *
+     * @param pacienteId ID do paciente
+     * @return lista de prontuários do paciente ordenados por data
      */
-    boolean existsByConsultaId(Long consultaId);
+    @Query("""
+        SELECT DISTINCT pd FROM ProntuarioDentista pd
+        LEFT JOIN FETCH pd.dentes
+        JOIN FETCH pd.consulta c
+        LEFT JOIN FETCH c.paciente
+        LEFT JOIN FETCH c.especialidade
+        LEFT JOIN FETCH c.formaPagamento
+        JOIN FETCH pd.profissional prof
+        LEFT JOIN FETCH prof.tipoProfissional
+        LEFT JOIN FETCH prof.especialidades
+        WHERE c.paciente.id = :pacienteId
+        ORDER BY pd.dataFinalizado DESC
+    """)
+    List<ProntuarioDentista> findByPacienteId(@Param("pacienteId") Long pacienteId);
+
+    /**
+     * Exclui todos os dentes (odontograma) dos prontuários vinculados a uma consulta.
+     */
+    @Modifying
+    @Query("DELETE FROM ProntuarioDentistaDente d WHERE d.prontuarioDentista.codigo IN (SELECT pd.codigo FROM ProntuarioDentista pd WHERE pd.consulta.id = :consultaId)")
+    void deleteDentesByConsultaId(@Param("consultaId") Long consultaId);
+
+    /**
+     * Exclui todos os planejamentos terapêuticos vinculados aos prontuários de uma consulta.
+     */
+    @Modifying
+    @Query("DELETE FROM PlanejamentoTerapeutico p WHERE p.prontuarioDentista.codigo IN (SELECT pd.codigo FROM ProntuarioDentista pd WHERE pd.consulta.id = :consultaId)")
+    void deletePlanejamentosByConsultaId(@Param("consultaId") Long consultaId);
+
+    /**
+     * Exclui todos os prontuários dentista vinculados a uma consulta.
+     */
+    @Modifying
+    @Query("DELETE FROM ProntuarioDentista pd WHERE pd.consulta.id = :consultaId")
+    void deleteByConsultaId(@Param("consultaId") Long consultaId);
 }

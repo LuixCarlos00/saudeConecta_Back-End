@@ -11,10 +11,9 @@ import java.util.Optional;
 public interface TipoProfissionalRepository extends JpaRepository<TipoProfissional, Long> {
     
     Optional<TipoProfissional> findByCodigo(String codigo);
-    
-    List<TipoProfissional> findByStatus(Byte status);
-    
+
+
     List<TipoProfissional> findByStatusOrderByNomeAsc(Byte status);
-    
-    boolean existsByCodigo(String codigo);
+
+
 }

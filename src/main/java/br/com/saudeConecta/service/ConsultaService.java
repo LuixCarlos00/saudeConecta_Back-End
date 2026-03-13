@@ -11,9 +11,11 @@ import br.com.saudeConecta.infra.tenant.RequiresTenant;
 import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
+import br.com.saudeConecta.infrastructure.persistence.specification.ConsultaSpecification;
 import br.com.saudeConecta.presentation.dto.consulta.AgendarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.AtualizarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.CancelarConsultaRequest;
+import br.com.saudeConecta.presentation.dto.consulta.EstatisticasDashboardAdminOrgResponse;
 import br.com.saudeConecta.presentation.dto.consulta.HistoricoConsultaPacienteResponse;
 import br.com.saudeConecta.presentation.dto.consulta.HistoricoConsultaDentistaResponse;
 import br.com.saudeConecta.domain.prontuario.Prontuario;
@@ -46,8 +48,10 @@ public class ConsultaService {
     private final FormaPagamentoRepository formaPagamentoRepository;
     private final OrganizacaoRepository organizacaoRepository;
     private final UsuarioRepository usuarioRepository;
-    private final ProntuarioRepository prontuarioRepository;
     private final ProntuarioDentistaRepository prontuarioDentistaRepository;
+    private final PlanejamentoTerapeuticoRepository planejamentoTerapeuticoRepository;
+    private final TermoAutorizacaoRepository termoAutorizacaoRepository;
+    private final ProntuarioRepository prontuarioRepository;
     private final TenantHelper tenantHelper;
     
     @RequiresTenant
@@ -136,6 +140,42 @@ public class ConsultaService {
         return consultaRepository.findByOrganizacao_IdAndPaciente_PaciCodigoWithRelations(orgId, pacienteId);
     }
 
+    /**
+     * Busca consultas com filtros dinâmicos opcionais
+     * 
+     * @param profissionalId ID do profissional/médico (opcional)
+     * @param especialidade Nome da especialidade (opcional)
+     * @param dataInicio Data/hora inicial (opcional)
+     * @param dataFim Data/hora final (opcional)
+     * @param statusList Lista de status (opcional)
+     * @return Lista de consultas que atendem aos filtros
+     */
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<Consulta> buscarComFiltrosDinamicos(
+            Long profissionalId,
+            String especialidade,
+            LocalDateTime dataInicio,
+            LocalDateTime dataFim,
+            List<StatusConsulta> statusList) {
+        
+        Long orgId = tenantHelper.getCurrentTenantId();
+        
+        log.info("Buscando consultas com filtros dinâmicos - orgId: {}, profissionalId: {}, especialidade: {}, período: {} a {}, status: {}",
+                orgId, profissionalId, especialidade, dataInicio, dataFim, statusList);
+        
+        return consultaRepository.findAll(
+            ConsultaSpecification.buscarComFiltros(
+                orgId,
+                profissionalId,
+                especialidade,
+                dataInicio,
+                dataFim,
+                statusList
+            )
+        );
+    }
+
     @RequiresTenant
     @Transactional
     public Consulta cadastrarConsultaByOrg(AgendarConsultaRequest request) {
@@ -194,24 +234,7 @@ public class ConsultaService {
     }
 
 
-    @RequiresTenant
-    @Transactional
-    public Consulta realizar(Long id, String observacoes) {
-        Consulta consulta = buscarPorId(id)
-            .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada"));
-        
-        StatusConsulta statusAnterior = consulta.getStatus();
-        consulta.setStatus(StatusConsulta.REALIZADA);
-        if (observacoes != null) {
-            consulta.setObservacoes(observacoes);
-        }
-        consultaRepository.save(consulta);
-        
-        registrarHistorico(consulta, statusAnterior, StatusConsulta.REALIZADA, "Consulta realizada", getUsuarioAtual());
-        
-        log.info("Consulta ID: {} realizada", id);
-        return consulta;
-    }
+
 
     @RequiresTenant
     @Transactional
@@ -240,10 +263,15 @@ public class ConsultaService {
 
 
     /**
-     * Atualiza o status de uma consulta AGENDADA para CONFIRMADA ou CANCELADA.
+     * Atualiza o status de uma consulta seguindo as regras de transição:
+     * - AGENDADA → CONFIRMADA, CANCELADA
+     * - CONFIRMADA → AGENDADA, CANCELADA
+     * - REALIZADA → PAGO (AdminOrg pode marcar como pago após médico concluir)
+     * 
+     * IMPORTANTE: Status REALIZADA só pode ser definido pelo médico através do método concluirConsultabyOrg
      *
      * @param id             ID da consulta
-     * @param novoStatus     CONFIRMADA ou CANCELADA
+     * @param novoStatus     Novo status desejado
      * @param motivo         Motivo (obrigatório apenas para CANCELADA)
      * @return Consulta atualizada
      */
@@ -253,18 +281,15 @@ public class ConsultaService {
         Consulta consulta = buscarPorId(id)
             .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada com ID: " + id));
 
-        if (!StatusConsulta.AGENDADA.equals(consulta.getStatus()) &&
-            !StatusConsulta.CONFIRMADA.equals(consulta.getStatus())) {
-            throw new IllegalStateException(
-                "Apenas consultas AGENDADAS ou CONFIRMADAS podem ter o status alterado. Status atual: " + consulta.getStatus());
-        }
+        StatusConsulta statusAtual = consulta.getStatus();
+        
+        validarTransicaoStatus(statusAtual, novoStatus);
 
         if (StatusConsulta.CANCELADA.equals(novoStatus) &&
             (motivo == null || motivo.isBlank())) {
             throw new IllegalArgumentException("Motivo é obrigatório ao cancelar uma consulta");
         }
 
-        StatusConsulta statusAnterior = consulta.getStatus();
         consulta.setStatus(novoStatus);
 
         if (StatusConsulta.CANCELADA.equals(novoStatus)) {
@@ -273,15 +298,74 @@ public class ConsultaService {
 
         Consulta salva = consultaRepository.save(consulta);
 
-        String descricao = StatusConsulta.CONFIRMADA.equals(novoStatus)
-            ? "Consulta confirmada"
-            : "Consulta cancelada: " + motivo;
-        registrarHistorico(salva, statusAnterior, novoStatus, descricao, getUsuarioAtual());
+        String descricao = gerarDescricaoHistorico(novoStatus, motivo);
+        registrarHistorico(salva, statusAtual, novoStatus, descricao, getUsuarioAtual());
 
         Long orgId = tenantHelper.getCurrentTenantId();
         return consultaRepository.findByIdAndOrganizacao_IdWithRelations(salva.getId(), orgId)
             .orElse(salva);
     }
+
+    /**
+     * Valida se a transição de status é permitida conforme regras de negócio.
+     * 
+     * IMPORTANTE: Status REALIZADA não pode ser definido manualmente, apenas via concluirConsultabyOrg
+     */
+    private void validarTransicaoStatus(StatusConsulta statusAtual, StatusConsulta novoStatus) {
+        switch (statusAtual) {
+            case AGENDADA:
+                if (!StatusConsulta.CONFIRMADA.equals(novoStatus) && 
+                    !StatusConsulta.CANCELADA.equals(novoStatus)) {
+                    throw new IllegalStateException(
+                        "Consulta AGENDADA só pode ir para CONFIRMADA ou CANCELADA. Status solicitado: " + novoStatus);
+                }
+                break;
+                
+            case CONFIRMADA:
+                if (!StatusConsulta.AGENDADA.equals(novoStatus) && 
+                    !StatusConsulta.CANCELADA.equals(novoStatus)) {
+                    throw new IllegalStateException(
+                        "Consulta CONFIRMADA só pode voltar para AGENDADA ou ir para CANCELADA. Status solicitado: " + novoStatus);
+                }
+                break;
+                
+            case REALIZADA:
+                if (!StatusConsulta.PAGO.equals(novoStatus)) {
+                    throw new IllegalStateException(
+                        "Consulta REALIZADA só pode ir para PAGO. Status solicitado: " + novoStatus);
+                }
+                break;
+                
+            case PAGO:
+            case CANCELADA:
+                throw new IllegalStateException(
+                    "Consultas com status " + statusAtual + " não podem ter o status alterado");
+                
+            default:
+                throw new IllegalStateException("Status atual não reconhecido: " + statusAtual);
+        }
+    }
+
+    /**
+     * Gera descrição para o histórico baseado no novo status
+     */
+    private String gerarDescricaoHistorico(StatusConsulta novoStatus, String motivo) {
+        switch (novoStatus) {
+            case CONFIRMADA:
+                return "Consulta confirmada";
+            case CANCELADA:
+                return "Consulta cancelada: " + motivo;
+            case AGENDADA:
+                return "Consulta voltou para agendada";
+            case REALIZADA:
+                return "Consulta realizada";
+            case PAGO:
+                return "Consulta marcada como paga";
+            default:
+                return "Status alterado para " + novoStatus;
+        }
+    }
+
 
     @RequiresTenant
     @Transactional
@@ -297,8 +381,13 @@ public class ConsultaService {
         Paciente paciente = pacienteRepository.findById(request.pacienteId())
             .orElseThrow(() -> new IllegalArgumentException("Paciente não encontrado"));
 
-        if (consultaRepository.existsByProfissional_IdAndOrganizacao_IdAndDataHoraAndStatus(
-            request.profissionalId(), orgId,request.dataHora(), StatusConsulta.AGENDADA)) {
+        // Verificar se existe OUTRA consulta no mesmo horário (excluindo a consulta atual)
+        boolean horarioOcupado = consultaRepository.findByProfissional_IdAndOrganizacao_IdAndDataHora(
+            request.profissionalId(), orgId, request.dataHora()
+        ).stream()
+            .anyMatch(c -> !c.getId().equals(id) && c.getStatus() == StatusConsulta.AGENDADA);
+        
+        if (horarioOcupado) {
             throw new IllegalStateException("Já existe consulta agendada para este horário");
         }
 
@@ -342,10 +431,7 @@ public class ConsultaService {
         Long orgId = tenantHelper.getCurrentTenantId();
         return consultaRepository.countAgendadasHoje(orgId);
     }
-    
-    public List<ConsultaHistorico> buscarHistorico(Long consultaId) {
-        return historicoRepository.findByConsulta_IdOrderByCreatedAtDesc(consultaId);
-    }
+
 
     // ==========================================
     // ESTATÍSTICAS POR PROFISSIONAL (usuarioId + orgId) - HOJE
@@ -402,11 +488,220 @@ public class ConsultaService {
         );
     }
 
-    // ==========================================
-    // ESTATÍSTICAS POR ORGANIZAÇÃO
-    // ==========================================
+    // ===============================================================
+    // BUSCAS DE ESTATISTICAS - Dashboard - Admin_ORGANIZACAO
+    // ===============================================================
 
-    public Long contarConsultasHojePorOrganizacao(Long organizacaoId) {
+    /**
+     * Retorna todas as estatísticas do dashboard para AdminOrg em uma única query.
+     * Calcula a semana atual (segunda a domingo) e o dia atual, agrupando por status.
+     *
+     * @param organizacaoId ID da organização
+     * @return DTO com consultasHoje, consultasAguardando, consultasAtendidas,
+     *         consultasSemana, canceladosSemana e confirmadosSemana
+     */
+    @Transactional(readOnly = true)
+    public EstatisticasDashboardAdminOrgResponse getEstatisticasDashboardAdminOrg(Long organizacaoId) {
+        LocalDate hoje = LocalDate.now();
+        LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
+        LocalDate fimSemana = inicioSemana.plusDays(6);
+
+        LocalDateTime inicioSemanaLdt = inicioSemana.atStartOfDay();
+        LocalDateTime fimSemanaLdt = fimSemana.atTime(23, 59, 59);
+        LocalDateTime inicioDiaLdt = hoje.atStartOfDay();
+        LocalDateTime fimDiaLdt = hoje.atTime(23, 59, 59);
+
+        log.debug("Buscando estatísticas dashboard AdminOrg - OrgId: {}, Semana: {} a {}, Hoje: {}",
+                  organizacaoId, inicioSemana, fimSemana, hoje);
+
+        List<Object[]> rows = consultaRepository.findEstatisticasDashboardByOrganizacao(
+            organizacaoId, inicioSemanaLdt, fimSemanaLdt, inicioDiaLdt, fimDiaLdt
+        );
+
+        long consultasHoje = 0L;
+        long consultasAguardando = 0L;
+        long consultasAtendidas = 0L;
+        long consultasSemana = 0L;
+        long canceladosSemana = 0L;
+        long confirmadosSemana = 0L;
+
+        for (Object[] row : rows) {
+            StatusConsulta status = (StatusConsulta) row[0];
+            String periodo = (String) row[1];
+            long quantidade = ((Number) row[2]).longValue();
+
+            consultasSemana += quantidade;
+
+            boolean isHoje = "HOJE".equals(periodo);
+
+            if (isHoje) {
+                consultasHoje += quantidade;
+                if (status == StatusConsulta.AGENDADA || status == StatusConsulta.CONFIRMADA) {
+                    consultasAguardando += quantidade;
+                }
+                if (status == StatusConsulta.REALIZADA) {
+                    consultasAtendidas += quantidade;
+                }
+            }
+
+            if (status == StatusConsulta.CANCELADA) {
+                canceladosSemana += quantidade;
+            }
+            if (status == StatusConsulta.CONFIRMADA) {
+                confirmadosSemana += quantidade;
+            }
+        }
+
+        return EstatisticasDashboardAdminOrgResponse.builder()
+            .consultasHoje(consultasHoje)
+            .consultasAguardando(consultasAguardando)
+            .consultasAtendidas(consultasAtendidas)
+            .consultasSemana(consultasSemana)
+            .canceladosSemana(canceladosSemana)
+            .confirmadosSemana(confirmadosSemana)
+            .build();
+    }
+
+    // ===============================================================
+    // BUSCAS DE ESTATISTICAS - Dashboard - PROFISSIONAL
+    // ===============================================================
+
+    /**
+     * Retorna todas as estatísticas do dashboard para o Profissional em uma única query.
+     * Filtra por usuario.id via JOIN com profissional — o profissional vê apenas seus próprios dados.
+     *
+     * @param usuarioId ID do usuário logado
+     * @return DTO com consultasHoje, consultasAguardando, consultasAtendidas,
+     *         consultasSemana, canceladosSemana e confirmadosSemana
+     */
+    @Transactional(readOnly = true)
+    public EstatisticasDashboardAdminOrgResponse getEstatisticasDashboardProfissional(Long usuarioId) {
+        LocalDate hoje = LocalDate.now();
+        LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
+        LocalDate fimSemana = inicioSemana.plusDays(6);
+
+        LocalDateTime inicioSemanaLdt = inicioSemana.atStartOfDay();
+        LocalDateTime fimSemanaLdt    = fimSemana.atTime(23, 59, 59);
+        LocalDateTime inicioDiaLdt    = hoje.atStartOfDay();
+        LocalDateTime fimDiaLdt       = hoje.atTime(23, 59, 59);
+
+        log.debug("Buscando estatísticas dashboard Profissional - UsuarioId: {}, Semana: {} a {}, Hoje: {}",
+                  usuarioId, inicioSemana, fimSemana, hoje);
+
+        List<Object[]> rows = consultaRepository.findEstatisticasDashboardByProfissional(
+            usuarioId, inicioSemanaLdt, fimSemanaLdt, inicioDiaLdt, fimDiaLdt
+        );
+
+        long consultasHoje       = 0L;
+        long consultasAguardando = 0L;
+        long consultasAtendidas  = 0L;
+        long consultasSemana     = 0L;
+        long canceladosSemana    = 0L;
+        long confirmadosSemana   = 0L;
+
+        for (Object[] row : rows) {
+            StatusConsulta status = (StatusConsulta) row[0];
+            String periodo        = (String) row[1];
+            long quantidade       = ((Number) row[2]).longValue();
+
+            consultasSemana += quantidade;
+
+            boolean isHoje = "HOJE".equals(periodo);
+
+            if (isHoje) {
+                consultasHoje += quantidade;
+                if (status == StatusConsulta.AGENDADA || status == StatusConsulta.CONFIRMADA) {
+                    consultasAguardando += quantidade;
+                }
+                if (status == StatusConsulta.REALIZADA) {
+                    consultasAtendidas += quantidade;
+                }
+            }
+
+            if (status == StatusConsulta.CANCELADA)  { canceladosSemana  += quantidade; }
+            if (status == StatusConsulta.CONFIRMADA) { confirmadosSemana += quantidade; }
+        }
+
+        return EstatisticasDashboardAdminOrgResponse.builder()
+            .consultasHoje(consultasHoje)
+            .consultasAguardando(consultasAguardando)
+            .consultasAtendidas(consultasAtendidas)
+            .consultasSemana(consultasSemana)
+            .canceladosSemana(canceladosSemana)
+            .confirmadosSemana(confirmadosSemana)
+            .build();
+    }
+
+    // ===============================================================
+    // BUSCAS DE ESTATISTICAS - Dashboard - SUPER_ADMIN (global)
+    // ===============================================================
+
+    /**
+     * Retorna todas as estatísticas do dashboard para SuperAdmin em uma única query global.
+     * Sem filtro de organização — abrange todas as consultas do sistema.
+     *
+     * @return DTO com consultasHoje, consultasAguardando, consultasAtendidas,
+     *         consultasSemana, canceladosSemana e confirmadosSemana
+     */
+    @Transactional(readOnly = true)
+    public EstatisticasDashboardAdminOrgResponse getEstatisticasDashboardSuperAdmin() {
+        LocalDate hoje = LocalDate.now();
+        LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
+        LocalDate fimSemana = inicioSemana.plusDays(6);
+
+        LocalDateTime inicioSemanaLdt = inicioSemana.atStartOfDay();
+        LocalDateTime fimSemanaLdt    = fimSemana.atTime(23, 59, 59);
+        LocalDateTime inicioDiaLdt    = hoje.atStartOfDay();
+        LocalDateTime fimDiaLdt       = hoje.atTime(23, 59, 59);
+
+        log.debug("Buscando estatísticas dashboard SuperAdmin - Semana: {} a {}, Hoje: {}",
+                  inicioSemana, fimSemana, hoje);
+
+        List<Object[]> rows = consultaRepository.findEstatisticasDashboardGlobal(
+            inicioSemanaLdt, fimSemanaLdt, inicioDiaLdt, fimDiaLdt
+        );
+
+        long consultasHoje      = 0L;
+        long consultasAguardando = 0L;
+        long consultasAtendidas  = 0L;
+        long consultasSemana    = 0L;
+        long canceladosSemana   = 0L;
+        long confirmadosSemana  = 0L;
+
+        for (Object[] row : rows) {
+            StatusConsulta status  = (StatusConsulta) row[0];
+            String periodo         = (String) row[1];
+            long quantidade        = ((Number) row[2]).longValue();
+
+            consultasSemana += quantidade;
+
+            boolean isHoje = "HOJE".equals(periodo);
+
+            if (isHoje) {
+                consultasHoje += quantidade;
+                if (status == StatusConsulta.AGENDADA || status == StatusConsulta.CONFIRMADA) {
+                    consultasAguardando += quantidade;
+                }
+                if (status == StatusConsulta.REALIZADA) {
+                    consultasAtendidas += quantidade;
+                }
+            }
+
+            if (status == StatusConsulta.CANCELADA)  { canceladosSemana  += quantidade; }
+            if (status == StatusConsulta.CONFIRMADA) { confirmadosSemana += quantidade; }
+        }
+
+        return EstatisticasDashboardAdminOrgResponse.builder()
+            .consultasHoje(consultasHoje)
+            .consultasAguardando(consultasAguardando)
+            .consultasAtendidas(consultasAtendidas)
+            .consultasSemana(consultasSemana)
+            .canceladosSemana(canceladosSemana)
+            .confirmadosSemana(confirmadosSemana)
+            .build();
+    }
+
+    public Long getEstatisticaConsultasHojeByAdmiOrg(Long organizacaoId) {
         LocalDate hoje = LocalDate.now();
         return consultaRepository.countByOrganizacao_IdAndDataHoraBetween(
             organizacaoId, 
@@ -417,7 +712,7 @@ public class ConsultaService {
 
 
 
-    public Long contarConsultasRealizadasHojePorOrganizacao(Long organizacaoId) {
+    public Long getEstatisticaConsultasAtendidasByAdmiOrg(Long organizacaoId) {
         LocalDate hoje = LocalDate.now();
         return consultaRepository.countByOrganizacao_IdAndStatusAndDataHoraBetween(
             organizacaoId,
@@ -427,7 +722,7 @@ public class ConsultaService {
         );
     }
 
-    public Long contarConsultasAgendadasHojePorOrganizacao(Long organizacaoId) {
+    public Long getEstatisticasConsultaAgendadasHojeByOrd(Long organizacaoId) {
         LocalDate hoje = LocalDate.now();
         return consultaRepository.countByOrganizacao_IdAndStatusAndDataHoraBetween(
             organizacaoId,
@@ -445,6 +740,27 @@ public class ConsultaService {
             dataFim.plusDays(1).atStartOfDay()
         );
     }
+
+
+
+    @Transactional(readOnly = true)
+    public Long getEstatisticasSemanaPorOrganizacao(Long organizacaoId) {
+        LocalDate hoje = LocalDate.now();
+        LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
+        LocalDate fimSemana = inicioSemana.plusDays(6);
+
+        log.debug("Contando consultas da semana por organização - OrgId: {}, Início: {}, Fim: {}",
+                organizacaoId, inicioSemana, fimSemana);
+
+        return consultaRepository.countConsultasSemanaByOrganizacao(
+                organizacaoId,
+                inicioSemana.atStartOfDay(),
+                fimSemana.atTime(23, 59, 59)
+        );
+    }
+
+
+    //==========================================FIM=========================================
 
     /**
      * Busca estatísticas de consultas por médico e intervalo de datas
@@ -496,6 +812,28 @@ public class ConsultaService {
         return consultaRepository.countConsultasPorMedicoEIntervalo(
             organizacaoId,
             profissionalId,
+            inicioSemana.atStartOfDay(),
+            fimSemana.atTime(23, 59, 59)
+        );
+    }
+
+
+
+    /**
+     * Conta consultas da semana atual de todas as organizações (SuperAdmin)
+     *
+     * @return Quantidade total de consultas da semana
+     */
+    @Transactional(readOnly = true)
+    public Long contarConsultasSemanaGlobal() {
+        LocalDate hoje = LocalDate.now();
+        LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
+        LocalDate fimSemana = inicioSemana.plusDays(6);
+
+        log.debug("Contando consultas da semana globalmente - Início: {}, Fim: {}",
+                  inicioSemana, fimSemana);
+
+        return consultaRepository.countConsultasSemanaGlobal(
             inicioSemana.atStartOfDay(),
             fimSemana.atTime(23, 59, 59)
         );
@@ -884,206 +1222,6 @@ public class ConsultaService {
     }
 
     /**
-     * Busca histórico completo de consultas de um paciente
-     * Inclui dados da consulta, paciente, profissional e prontuário (se existir)
-     * 
-     * @param pacienteId ID do paciente
-     * @return Lista de DTOs com histórico completo
-     */
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public List<HistoricoConsultaPacienteResponse> buscarHistoricoCompletoPaciente(Long pacienteId) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Buscando histórico completo do paciente ID: {} na organização ID: {}", pacienteId, orgId);
-        
-        List<Consulta> consultas = consultaRepository.findHistoricoCompletoPaciente(pacienteId, orgId);
-        log.debug("Encontradas {} consultas para o paciente", consultas.size());
-        
-        return consultas.stream()
-            .map(consulta -> {
-                // Buscar prontuário associado à consulta
-                Prontuario prontuario = prontuarioRepository.findByConsulta_Id(consulta.getId());
-                return mapearParaHistoricoResponse(consulta, prontuario);
-            })
-            .toList();
-    }
-    
-    /**
-     * Mapeia entidade Consulta e Prontuário para DTO de resposta
-     */
-    private HistoricoConsultaPacienteResponse mapearParaHistoricoResponse(Consulta consulta, Prontuario prontuario) {
-        HistoricoConsultaPacienteResponse.HistoricoConsultaPacienteResponseBuilder builder = 
-            HistoricoConsultaPacienteResponse.builder();
-        
-        // Dados da Consulta
-        builder.consultaId(consulta.getId())
-               .dataHora(consulta.getDataHora())
-               .duracaoMinutos(consulta.getDuracaoMinutos())
-               .observacoes(consulta.getObservacoes())
-               .valor(consulta.getValor())
-               .status(consulta.getStatus() != null ? consulta.getStatus().name() : null)
-               .motivoCancelamento(consulta.getMotivoCancelamento());
-        
-        // Dados do Paciente
-        if (consulta.getPaciente() != null) {
-            builder.pacienteId(consulta.getPaciente().getPaciCodigo())
-                   .pacienteNome(consulta.getPaciente().getPaciNome())
-                   .pacienteCpf(consulta.getPaciente().getPaciCpf())
-                   .pacienteDataNascimento(consulta.getPaciente().getPaciDataNacimento())
-                   .pacienteTelefone(consulta.getPaciente().getPaciTelefone());
-        }
-        
-        // Dados do Profissional
-        if (consulta.getProfissional() != null) {
-            builder.profissionalId(consulta.getProfissional().getId())
-                   .profissionalNome(consulta.getProfissional().getNome())
-                   .profissionalCrm(consulta.getProfissional().getRegistroConselho());
-            
-            // Especialidade do profissional
-            if (consulta.getEspecialidade() != null) {
-                builder.profissionalEspecialidade(consulta.getEspecialidade().getNome());
-            }
-        }
-        
-        // Dados do Prontuário (se existir)
-        if (prontuario != null) {
-            builder.prontuarioId(prontuario.getProntCodigoProntuario())
-                   
-                   // Dados Vitais e Antropométricos
-                   .peso(prontuario.getProntPeso())
-                   .altura(prontuario.getProntAltura())
-                   .temperatura(prontuario.getProntTemperatura())
-                   .saturacao(prontuario.getProntSaturacao())
-                   .pressao(prontuario.getProntPressao())
-                   .frequenciaRespiratoria(prontuario.getProntFrequenciaRespiratoria())
-                   .frequenciaArterialSistolica(prontuario.getProntFrequenciaArterialSistolica())
-                   .frequenciaArterialDiastolica(prontuario.getProntFrequenciaArterialDiastolica())
-                   .hemoglobina(prontuario.getProntHemoglobina())
-                   
-                   // Dados Demográficos
-                    .sexo(prontuario.getProntSexo())
-                   
-                   // Anamnese e Avaliação
-                   .queixaPrincipal(prontuario.getProntQueixaPricipal())
-                   .anamnese(prontuario.getProntAnamnese())
-                   .conduta(prontuario.getProntCondulta())
-                   .observacao(prontuario.getProntObservacao())
-                   .diagnostico(prontuario.getProntDiagnostico())
-                   
-                   // Prescrição Médica
-                   .modeloPrescricao(prontuario.getProntModeloPrescricao())
-                   .tituloPrescricao(prontuario.getProntTituloPrescricao())
-                   .dataPrescricao(this.parseStringToDate(prontuario.getProntDataPrescricao()))
-                   .prescricao(prontuario.getProntPrescricao())
-                   
-                   // Exames
-                   .modeloExame(prontuario.getProntModeloExame())
-                   .tituloExame(prontuario.getProntTituloExame())
-                   .dataExame(this.parseStringToDate(prontuario.getProntDataExame()))
-                   .exame(prontuario.getProntExame())
-                   .tempoDuracao(prontuario.getProntTempoDuracao())
-                   
-                   // Dados de Controle
-                   .dataFinalizado(prontuario.getProntDataFinalizado())
-                   .codigoProntuario(prontuario.getProntCodigoProntuario().toString());
-        }
-        
-        return builder.build();
-    }
-    
-    /**
-     * Busca histórico completo de consultas odontológicas de um paciente
-     * Inclui dados da consulta, paciente, profissional e prontuário dentista (se existir)
-     *
-     * @param pacienteId ID do paciente
-     * @return Lista de DTOs com histórico odontológico completo
-     */
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public List<HistoricoConsultaDentistaResponse> buscarHistoricoCompletoPacienteDentista(Long pacienteId) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Buscando histórico odontológico do paciente ID: {} na organização ID: {}", pacienteId, orgId);
-
-        List<Consulta> consultas = consultaRepository.findHistoricoCompletoPacienteDentista(pacienteId, orgId);
-        log.debug("Encontradas {} consultas odontológicas para o paciente", consultas.size());
-
-        return consultas.stream()
-            .map(consulta -> {
-                List<ProntuarioDentista> prontuarios = prontuarioDentistaRepository.findByConsultaId(consulta.getId());
-                ProntuarioDentista prontuario = prontuarios.isEmpty() ? null : prontuarios.get(0);
-                return mapearParaHistoricoDentistaResponse(consulta, prontuario);
-            })
-            .toList();
-    }
-
-    /**
-     * Mapeia entidade Consulta e ProntuarioDentista para DTO de resposta odontológica
-     */
-    private HistoricoConsultaDentistaResponse mapearParaHistoricoDentistaResponse(Consulta consulta, ProntuarioDentista prontuario) {
-        HistoricoConsultaDentistaResponse.HistoricoConsultaDentistaResponseBuilder builder =
-            HistoricoConsultaDentistaResponse.builder();
-
-        builder.consultaId(consulta.getId())
-               .dataHora(consulta.getDataHora())
-               .duracaoMinutos(consulta.getDuracaoMinutos())
-               .observacoes(consulta.getObservacoes())
-               .valor(consulta.getValor())
-               .status(consulta.getStatus() != null ? consulta.getStatus().name() : null)
-               .motivoCancelamento(consulta.getMotivoCancelamento());
-
-        if (consulta.getPaciente() != null) {
-            builder.pacienteId(consulta.getPaciente().getPaciCodigo())
-                   .pacienteNome(consulta.getPaciente().getPaciNome())
-                   .pacienteCpf(consulta.getPaciente().getPaciCpf())
-                   .pacienteDataNascimento(consulta.getPaciente().getPaciDataNacimento())
-                   .pacienteTelefone(consulta.getPaciente().getPaciTelefone());
-        }
-
-        if (consulta.getProfissional() != null) {
-            builder.profissionalId(consulta.getProfissional().getId())
-                   .profissionalNome(consulta.getProfissional().getNome())
-                   .profissionalCrm(consulta.getProfissional().getRegistroConselho());
-            if (consulta.getEspecialidade() != null) {
-                builder.profissionalEspecialidade(consulta.getEspecialidade().getNome());
-            }
-        }
-
-        if (prontuario != null) {
-            builder.prontuarioId(prontuario.getCodigo())
-                   .queixaPrincipal(prontuario.getQueixaPrincipal())
-                   .anamnese(prontuario.getAnamnese())
-                   .observacao(prontuario.getObservacao())
-                   .diagnostico(prontuario.getDiagnostico())
-                   .higieneBucal(prontuario.getHigieneBucal())
-                   .condicaoGengival(prontuario.getCondicaoGengival())
-                   .oclusal(prontuario.getOclusal())
-                   .atm(prontuario.getAtm())
-                   .planoTratamento(prontuario.getPlanoTratamento())
-                   .procedimentos(prontuario.getProcedimentos())
-                   .orientacoes(prontuario.getOrientacoes())
-                   .tituloPrescricao(prontuario.getTituloPrescricao())
-                   .dataPrescricao(prontuario.getDataPrescricao())
-                   .prescricao(prontuario.getPrescricao())
-                   .tituloExame(prontuario.getTituloExame())
-                   .dataExame(prontuario.getDataExame())
-                   .tempoDuracao(prontuario.getTempoDuracao())
-                   .dataFinalizado(prontuario.getDataFinalizado() != null ?
-                       java.sql.Date.valueOf(prontuario.getDataFinalizado()) : null)
-                   .dentes(prontuario.getDentes() != null ?
-                       prontuario.getDentes().stream()
-                           .map(d -> HistoricoConsultaDentistaResponse.DenteResponse.builder()
-                               .codigo(d.getCodigo())
-                               .numeroFdi(d.getNumeroFdi())
-                               .status(d.getStatus())
-                               .observacao(d.getObservacao())
-                               .build())
-                           .toList() : java.util.List.of());
-        }
-
-        return builder.build();
-    }
-
-    /**
      * Converte uma String de data para o tipo Date
      * @param dataString String no formato "yyyy-MM-dd" ou "dd/MM/yyyy"
      * @return Date ou null se a string for nula ou vazia
@@ -1115,5 +1253,62 @@ public class ConsultaService {
             log.error("Erro ao converter data: {}", dataString, e);
             return null;
         }
+    }
+
+    // ==========================================
+    // DELETAR CONSULTA COM REGISTROS RELACIONADOS
+    // ==========================================
+
+    /**
+     * Exclui uma consulta que ainda não foi concluída (sem prontuário).
+     * Se a consulta possuir prontuário dentista ou médico (dados clínicos),
+     * a exclusão é bloqueada para preservar os registros clínicos.
+     *
+     * Registros excluídos em cascata:
+     * - tb_termo_autorizacao (questionário de saúde)
+     * - tb_planejamento_terapeutico (planejamentos vinculados à consulta)
+     * - consulta_historico (histórico de status)
+     * - consulta
+     *
+     * @param consultaId ID da consulta a ser excluída
+     * @throws IllegalArgumentException se a consulta não for encontrada
+     * @throws IllegalStateException se a consulta possuir prontuário (concluída)
+     */
+    @RequiresTenant
+    @Transactional
+    public void deletarConsulta(Long consultaId) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        Consulta consulta = consultaRepository.findByIdAndOrganizacao_Id(consultaId, orgId)
+                .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada ou não pertence à organização"));
+
+        // Bloqueia exclusão se houver prontuário dentista (consulta concluída)
+        boolean temProntuarioDentista = !prontuarioDentistaRepository.findByConsultaId(consultaId).isEmpty();
+        if (temProntuarioDentista) {
+            throw new IllegalStateException("Não é possível excluir uma consulta que possui prontuário odontológico. Os dados clínicos devem ser preservados.");
+        }
+
+        // Bloqueia exclusão se houver prontuário médico (consulta concluída)
+        boolean temProntuarioMedico = prontuarioRepository.findByConsulta_Id(consultaId) != null;
+        if (temProntuarioMedico) {
+            throw new IllegalStateException("Não é possível excluir uma consulta que possui prontuário médico. Os dados clínicos devem ser preservados.");
+        }
+
+        log.info("Iniciando exclusão da consulta {} e registros relacionados", consultaId);
+
+        // 1. Termo de autorização / questionário de saúde
+        termoAutorizacaoRepository.deleteByConsultaId(consultaId);
+        log.debug("Termos de autorização excluídos para consulta {}", consultaId);
+
+        // 2. Planejamentos terapêuticos (via FK direta com consulta)
+        planejamentoTerapeuticoRepository.deleteByConsultaId(consultaId);
+        log.debug("Planejamentos excluídos para consulta {}", consultaId);
+
+        // 3. Histórico de alterações de status
+        historicoRepository.deleteByConsultaId(consultaId);
+        log.debug("Histórico de consulta excluído para consulta {}", consultaId);
+
+        // 4. Consulta
+        consultaRepository.delete(consulta);
+        log.info("Consulta {} excluída com sucesso", consultaId);
     }
 }

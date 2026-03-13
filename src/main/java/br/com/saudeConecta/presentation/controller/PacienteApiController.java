@@ -1,11 +1,11 @@
 package br.com.saudeConecta.presentation.controller;
 
-import br.com.saudeConecta.service.PacienteService;
 import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.presentation.dto.paciente.AtualizarPacienteRequest;
 import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteCompletoRequest;
 import br.com.saudeConecta.presentation.dto.paciente.PacienteResponse;
 import br.com.saudeConecta.presentation.dto.usuario.BloquearUsuarioRequest;
+import br.com.saudeConecta.service.PacienteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -68,25 +68,6 @@ public class PacienteApiController {
     }
 
 
-
-
-    @PutMapping("/bloquearPacientebyOrg")
-    public ResponseEntity<Void> bloquearPacientebyOrg(
-            @RequestBody @Valid @NotNull BloquearUsuarioRequest request) {
-        log.info("Alterando status do paciente ID: {} para {}", request.codigo(), request.status());
-
-        // Verifica se paciente pertence ao tenant
-        if (pacienteService.buscarrPacientebyOrg(request.codigo()).isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        pacienteService.bloquearPacientebyOrg(request.codigo(), request.status());
-        return ResponseEntity.ok().build();
-    }
-
-
-
-
     @DeleteMapping("/deletarPacientebyOrg/{id}")
     public ResponseEntity<Void> deletarPacientebyOrg(@PathVariable Long id) {
         log.info("Deletando paciente ID: {} do tenant", id);
@@ -105,10 +86,17 @@ public class PacienteApiController {
         }
     }
 
+
+    // ==========CRUD============================
+
+
+// ============================= Pesquisas com filtros  ========================================
+
+
     // Métodos de busca para autocomplete com filtro opcional
     @GetMapping("/buscar-por-nome")
     public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPorNome(
-            @RequestParam String nome, 
+            @RequestParam String nome,
             @RequestParam(required = false, defaultValue = "ALL") String filtro) {
         log.debug("Buscando pacientes por nome: {} no tenant com filtro: {}", nome, filtro);
         List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorNomeComFiltro(nome, filtro)
@@ -120,7 +108,7 @@ public class PacienteApiController {
 
     @GetMapping("/buscar-por-cpf")
     public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPorCPF(
-            @RequestParam String cpf, 
+            @RequestParam String cpf,
             @RequestParam(required = false, defaultValue = "ALL") String filtro) {
         log.debug("Buscando pacientes por CPF: {} no tenant com filtro: {}", cpf, filtro);
         List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorCPFComFiltro(cpf, filtro)
@@ -132,7 +120,7 @@ public class PacienteApiController {
 
     @GetMapping("/buscar-por-rg")
     public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPor_RG(
-            @RequestParam String rg, 
+            @RequestParam String rg,
             @RequestParam(required = false, defaultValue = "ALL") String filtro) {
         log.debug("Buscando pacientes por RG: {} no tenant com filtro: {}", rg, filtro);
         List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorRGComFiltro(rg, filtro)
@@ -144,7 +132,7 @@ public class PacienteApiController {
 
     @GetMapping("/buscar-por-telefone")
     public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPorTelefone(
-            @RequestParam String telefone, 
+            @RequestParam String telefone,
             @RequestParam(required = false, defaultValue = "ALL") String filtro) {
         log.debug("Buscando pacientes por telefone: {} no tenant com filtro: {}", telefone, filtro);
         List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorTelefoneComFiltro(telefone, filtro)
@@ -165,59 +153,22 @@ public class PacienteApiController {
         return ResponseEntity.ok(pacientes);
     }
 
+// ============================= Pesquisas com filtros  ========================================
 
 
+    @PutMapping("/bloquearPacientebyOrg")
+    public ResponseEntity<Void> bloquearPacientebyOrg(
+            @RequestBody @Valid @NotNull BloquearUsuarioRequest request) {
+        log.info("Alterando status do paciente ID: {} para {}", request.codigo(), request.status());
 
+        // Verifica se paciente pertence ao tenant
+        if (pacienteService.buscarrPacientebyOrg(request.codigo()).isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
 
-
-//
-//
-//    @GetMapping
-//    public ResponseEntity<List<PacienteResponse>> listarTodos() {
-//        log.debug("Listando todos os pacientes do tenant");
-//        List<PacienteResponse> pacientes = pacienteService.buscarTodosPorTenant()
-//                .stream()
-//                .map(PacienteResponse::new)
-//                .toList();
-//        return ResponseEntity.ok(pacientes);
-//    }
-//
-//
-//
-//
-//
-//    @GetMapping("/pagina")
-//    public ResponseEntity<Page<PacienteResponse>> listarPaginado(
-//            @PageableDefault(size = 12, sort = {"paciNome"}) Pageable pageable) {
-//        log.debug("Listando pacientes paginados do tenant");
-//        Page<PacienteResponse> pacientes = pacienteService.buscarTodosPorTenant(pageable)
-//            .map(PacienteResponse::new);
-//        return ResponseEntity.ok(pacientes);
-//    }
-//
-//
-//
-//    @GetMapping("/buscar")
-//    public ResponseEntity<List<PacienteResponse>> buscarPorNome(@RequestParam String nome) {
-//        log.debug("Buscando pacientes por nome: {} no tenant", nome);
-//        List<PacienteResponse> pacientes = pacienteService.buscarPorNomeTenant(nome)
-//            .stream()
-//            .map(PacienteResponse::new)
-//            .toList();
-//        return ResponseEntity.ok(pacientes);
-//    }
-//
-//    @GetMapping("/estatisticas/ativos")
-//    public ResponseEntity<Long> contarAtivos() {
-//        log.debug("Contando pacientes ativos no tenant");
-//        return ResponseEntity.ok(pacienteService.contarAtivosTenant());
-//    }
-//
-//    @GetMapping("/verificar-cpf")
-//    public ResponseEntity<Boolean> verificarCpfExiste(@RequestParam String cpf) {
-//        log.debug("Verificando se CPF existe no tenant: {}", cpf);
-//        return ResponseEntity.ok(pacienteService.existeCpfNoTenant(cpf));
-//    }
+        pacienteService.bloquearPacientebyOrg(request.codigo(), request.status());
+        return ResponseEntity.ok().build();
+    }
 
 
 

@@ -96,9 +96,27 @@ public record TodosUsuariosAgrupadosResponse(
         String status,
         Long usuarioId,
         String usuarioLogin,
-        String nomeOrganizacao
+        String nomeOrganizacao,
+        Long organizacaoId,
+        String nomePlano
     ) {
         public static AdminResumo fromEntity(AdminOrganizacao a) {
+            // Busca o nome do plano da assinatura ativa da organização
+            String nomePlano = null;
+            if (a.getOrganizacao() != null && a.getOrganizacao().getAssinaturas() != null) {
+                nomePlano = a.getOrganizacao().getAssinaturas().stream()
+                    .filter(assinatura -> 
+                        assinatura.getStatus() != null && 
+                        (assinatura.getStatus().name().equals("TRIAL") || 
+                         assinatura.getStatus().name().equals("ATIVA") ||
+                         assinatura.getStatus().name().equals("INADIMPLENTE"))
+                    )
+                    .findFirst()
+                    .map(assinatura -> assinatura.getPlanoAssinatura() != null ? 
+                         assinatura.getPlanoAssinatura().getNome() : null)
+                    .orElse(null);
+            }
+            
             return new AdminResumo(
                 a.getId(),
                 a.getNome(),
@@ -108,7 +126,9 @@ public record TodosUsuariosAgrupadosResponse(
                 a.getStatus() != null ? a.getStatus().name() : null,
                 a.getUsuario() != null ? a.getUsuario().getId() : null,
                 a.getUsuario() != null ? a.getUsuario().getLogin() : null,
-                a.getOrganizacao() != null ? a.getOrganizacao().getNome() : null
+                a.getOrganizacao() != null ? a.getOrganizacao().getNome() : null,
+                a.getOrganizacao() != null ? a.getOrganizacao().getId() : null,
+                nomePlano
             );
         }
     }

@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
  import java.lang.reflect.Field;
+ import java.lang.reflect.Modifier;
+ import java.math.BigDecimal;
    import java.util.*;
 
 
@@ -34,11 +36,14 @@ public class HistoricoDadosPessoaisService {
             "endereco",           // endereço é tratado separadamente
             "especialidades",     // coleções não comparadas aqui
             "tipoProfissional",   // relação lazy
+            "assinaturas",        // coleção lazy da Organizacao
+            "status",             // status da Organizacao não é editável pelo Admin
+            "logoUrl",            // não editável na tela de dados pessoais
             "createdAt",
             "updatedAt",
             "criadoEm",
             // campos ID de cada entidade
-            "id", "paciCodigo"
+            "id", "paciCodigo", "endCodigo"
     );
 
 
@@ -112,6 +117,7 @@ public class HistoricoDadosPessoaisService {
 
         for (Field campo : campos) {
             if (CAMPOS_IGNORADOS.contains(campo.getName())) continue;
+            if (Modifier.isStatic(campo.getModifiers())) continue;
 
             campo.setAccessible(true);
 
@@ -119,8 +125,8 @@ public class HistoricoDadosPessoaisService {
                 Object valorAntes  = campo.get(antes);
                 Object valorDepois = campo.get(depois);
 
-                // Sem mudança — ignora
-                if (Objects.equals(valorAntes, valorDepois)) continue;
+                // Sem mudança — ignora (com tratamento especial para BigDecimal)
+                if (saoIguais(valorAntes, valorDepois)) continue;
 
                 String strAntes  = valorAntes  != null ? valorAntes.toString()  : null;
                 String strDepois = valorDepois != null ? valorDepois.toString() : null;
@@ -150,6 +156,18 @@ public class HistoricoDadosPessoaisService {
 
         historicoRepository.saveAll(registros);
         log.info("{} campo(s) registrado(s) no histórico. Entidade: {}, ID: {}", registros.size(), entidade, idEntidade);
+    }
+
+    /**
+     * Compara dois valores com tratamento especial para BigDecimal (ignora scale).
+     * BigDecimal.equals(250.00, 250) retorna false; compareTo retorna 0.
+     */
+    private boolean saoIguais(Object a, Object b) {
+        if (Objects.equals(a, b)) return true;
+        if (a instanceof BigDecimal && b instanceof BigDecimal) {
+            return ((BigDecimal) a).compareTo((BigDecimal) b) == 0;
+        }
+        return false;
     }
 
     public static List<Field> getAllFieldsFromClass(Class<?> clazz) {

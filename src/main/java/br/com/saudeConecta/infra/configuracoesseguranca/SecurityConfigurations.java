@@ -4,7 +4,6 @@ import br.com.saudeConecta.infra.configuracoesseguranca.filtroSeguranca.FiltroAc
 import br.com.saudeConecta.infra.tenant.TenantFilter;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -30,17 +29,13 @@ public class SecurityConfigurations {
     @Autowired
     private TenantFilter tenantFilter;
 
-    @Value("${app.url.frontend}")
-    private String urlFrontEnd;
 
-    @Value("${app.url.backend}")
-    private String urlBackEnd;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http.cors(cors -> cors.configurationSource(request -> {
                     org.springframework.web.cors.CorsConfiguration config = new org.springframework.web.cors.CorsConfiguration();
-                    config.setAllowedOrigins(java.util.List.of(urlFrontEnd, "http://localhost:4200", "https://saude-conecta-frontend.vercel.app"));
+                    config.setAllowedOrigins(java.util.List.of("http://localhost:4200", "https://saude-conecta-frontend.vercel.app"));
                     config.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
                     config.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "ngrok-skip-browser-warning"));
                     config.setExposedHeaders(java.util.List.of("Authorization"));
@@ -60,6 +55,8 @@ public class SecurityConfigurations {
                 .requestMatchers(HttpMethod.GET, "/paciente/InserirCodigo/{codigo}").permitAll()
                 .requestMatchers(HttpMethod.PUT, "/Home/trocaDeSenha/{Id}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/Home/recuperaLogin={Id}&dados={tipoUsuario}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/publico/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/publico/**").permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .addFilterBefore(tenantFilter, UsernamePasswordAuthenticationFilter.class)
@@ -83,7 +80,7 @@ public class SecurityConfigurations {
             @Override
             public void addCorsMappings(@NotNull CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins(urlBackEnd, urlFrontEnd, "http://localhost:4200", "https://saude-conecta-frontend.vercel.app")
+                        .allowedOrigins("http://localhost:4200", "https://saude-conecta-frontend.vercel.app")
                         .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                         .allowedHeaders("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "ngrok-skip-browser-warning")
                         .exposedHeaders("Authorization")

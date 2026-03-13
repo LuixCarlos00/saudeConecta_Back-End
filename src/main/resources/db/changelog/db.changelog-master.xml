@@ -44,4 +44,22 @@
     <!-- Dados iniciais de produção -->
     <include file="db/changelog/changes/024-dados-iniciais-producao.xml"/>
 
+    <!-- Configuração de Cards do Dashboard -->
+    <include file="db/changelog/changes/025-criar-tabela-configuracao-card-dashboard.xml"/>
+
+    <!-- Prontuário Odontológico: Termo, Procedimentos, Planejamento -->
+    <include file="db/changelog/changes/026-criar-tabelas-prontuario-odontologico.xml"/>
+
+    <!-- Planos, Assinaturas e Cobranças -->
+    <include file="db/changelog/changes/027-criar-tabelas-planos-assinaturas.xml"/>
+
+    <!-- Plano personalizado por tenant (limites custom + valor adicional) -->
+    <include file="db/changelog/changes/028-plano-personalizado-por-tenant.xml"/>
+
+    <!-- Corrigir ordem de exibição dos gráficos do dashboard -->
+    <include file="db/changelog/changes/029-corrigir-ordem-graficos-dashboard.xml"/>
+
+    <!-- Remover coluna duplicada prontdent_oclusao -->
+    <include file="db/changelog/changes/030-remover-coluna-prontdent-oclusao.xml"/>
+
 </databaseChangeLog>

@@ -3,6 +3,8 @@ package br.com.saudeConecta.presentation.controller;
 import br.com.saudeConecta.service.AdminOrganizacaoService;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.presentation.dto.admin.AdminOrgCompletoResponse;
+import br.com.saudeConecta.presentation.dto.admin.AtualizarAdminOrgCompletoRequest;
 import br.com.saudeConecta.presentation.dto.admin.AtualizarAdminRequest;
 import br.com.saudeConecta.presentation.dto.admin.CadastrarAdminOrgCompletoRequest;
 import br.com.saudeConecta.presentation.dto.admin.CadastrarAdminRequest;
@@ -88,6 +90,48 @@ public class AdminOrganizacaoController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         } catch (IllegalArgumentException e) {
             log.warn("Erro de validação ao cadastrar Admin Org: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/buscarAdminOrgCompleto/{id}")
+    @Transactional
+    @Description("Busca dados completos do AdminOrg (admin + organização + endereço). Exclusivo para SUPER_ADMIN.")
+    public ResponseEntity<AdminOrgCompletoResponse> buscarAdminOrgCompleto(@PathVariable Long id) {
+        log.debug("Buscando AdminOrg completo por ID: {}", id);
+        try {
+            AdminOrgCompletoResponse response = adminOrganizacaoService.buscarAdminOrgCompleto(id);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            log.warn("AdminOrg não encontrado: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PutMapping("/atualizarAdminOrgCompleto/{id}")
+    @Transactional
+    @Description("Atualiza dados completos do AdminOrg (admin + organização + endereço). Exclusivo para SUPER_ADMIN.")
+    public ResponseEntity<?> atualizarAdminOrgCompleto(@PathVariable Long id, @RequestBody AtualizarAdminOrgCompletoRequest request) {
+        log.debug("Atualizando AdminOrg completo ID: {}", id);
+        try {
+            AdminOrgCompletoResponse response = adminOrganizacaoService.atualizarAdminOrgCompleto(id, request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            log.warn("Erro ao atualizar AdminOrg: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PutMapping("/atualizarMeusDados/{id}")
+    @Transactional
+    @Description("Atualiza dados pessoais do Admin Org logado + organização + endereço. Utilizado em: DadosPessoaisComponent")
+    public ResponseEntity<?> atualizarMeusDados(@PathVariable Long id, @RequestBody AtualizarAdminOrgCompletoRequest request) {
+        log.debug("Admin Org atualizando seus próprios dados. AdminID: {}", id);
+        try {
+            adminOrganizacaoService.atualizarMeusDadosAdminOrg(id, request);
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            log.warn("Erro ao atualizar dados pessoais do admin: {}", e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }

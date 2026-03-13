@@ -9,5 +9,4 @@ public interface CodigoVerificacaoRepository extends JpaRepository<CodigoVerific
 
         boolean existsByCodVerificacaoCodigo(String codVerificacaoCodigo);
 
-    long deleteByCodVerificacaoCodigo(String codVerificacaoCodigo);
 }

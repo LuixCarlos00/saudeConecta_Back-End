@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -26,37 +27,81 @@ public class ConfiguracaoGraficoDashboardService {
     private final ConfiguracaoGraficoDashboardRepository configuracaoRepository;
     private final UsuarioRepository usuarioRepository;
 
-    private static final Set<TipoGraficoDashboard> GRAFICOS_ADMIN = Set.of(
+    /**
+     * Ordem dos gráficos no dashboard administrativo:
+     * 1. Consultas por Período (canto superior esquerdo)
+     * 2. Agendamentos (canto superior direito)
+     * 3. Saldo Financeiro (canto inferior esquerdo)
+     * 4. Clínico por Especialidade (canto inferior direito)
+     */
+    private static final List<TipoGraficoDashboard> GRAFICOS_ADMIN_ORDENADOS = List.of(
             TipoGraficoDashboard.CONSULTAS_POR_PERIODO,
             TipoGraficoDashboard.AGENDAMENTOS_DIAS_SEMANA,
             TipoGraficoDashboard.SALDO_FINANCEIRO,
             TipoGraficoDashboard.MEDICOS_POR_ESPECIALIDADE
     );
+    private static final Set<TipoGraficoDashboard> GRAFICOS_ADMIN =
+            new LinkedHashSet<>(GRAFICOS_ADMIN_ORDENADOS);
 
-    private static final Set<TipoGraficoDashboard> GRAFICOS_PROFISSIONAL = Set.of(
+    /**
+     * Ordem dos gráficos no dashboard profissional:
+     * 1. Média de Tempo de Consulta (canto superior esquerdo)
+     * 2. Meus Agendamentos por Período (canto superior direito)
+     */
+    private static final List<TipoGraficoDashboard> GRAFICOS_PROFISSIONAL_ORDENADOS = List.of(
             TipoGraficoDashboard.MEDIA_TEMPO_CONSULTA,
             TipoGraficoDashboard.AGENDAMENTOS_MEDICO_PERIODO
     );
+    private static final Set<TipoGraficoDashboard> GRAFICOS_PROFISSIONAL =
+            new LinkedHashSet<>(GRAFICOS_PROFISSIONAL_ORDENADOS);
+
+    /**
+     * Recepcionista vê apenas:
+     * 1. Consultas por Período (canto superior esquerdo)
+     * 2. Agendamentos (canto superior direito)
+     */
+    private static final List<TipoGraficoDashboard> GRAFICOS_RECEPCIONISTA_ORDENADOS = List.of(
+            TipoGraficoDashboard.CONSULTAS_POR_PERIODO,
+            TipoGraficoDashboard.AGENDAMENTOS_DIAS_SEMANA
+    );
+    private static final Set<TipoGraficoDashboard> GRAFICOS_RECEPCIONISTA =
+            new LinkedHashSet<>(GRAFICOS_RECEPCIONISTA_ORDENADOS);
 
     // ── Listagem ─────────────────────────────────────────────────────────────
 
     public List<ConfiguracaoGraficoResponse> listarConfiguracoes(Long usuarioId) {
+        Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
+        Set<TipoGraficoDashboard> tiposPermitidos = resolverTiposPermitidos(
+                usuario != null ? usuario.getTipoUsuarioNovo() : null);
+
         return configuracaoRepository.findByUsuarioIdOrderByOrdemExibicaoAsc(usuarioId)
-                .stream().map(this::toResponse).collect(Collectors.toList());
+                .stream()
+                .filter(c -> tiposPermitidos.contains(c.getTipoGrafico()))
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Transactional
     public List<ConfiguracaoGraficoResponse> listarGraficosAtivos(Long usuarioId) {
-        var todasConfigs = configuracaoRepository.findByUsuarioIdOrderByOrdemExibicaoAsc(usuarioId);
+        Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
+        Set<TipoGraficoDashboard> tiposPermitidos = resolverTiposPermitidos(
+                usuario != null ? usuario.getTipoUsuarioNovo() : null);
+
+        var todasConfigs = configuracaoRepository.findByUsuarioIdOrderByOrdemExibicaoAsc(usuarioId)
+                .stream()
+                .filter(c -> tiposPermitidos.contains(c.getTipoGrafico()))
+                .collect(Collectors.toList());
+
         if (todasConfigs.isEmpty()) {
             log.info("Usuário {} sem configurações de gráfico — inicializando automaticamente", usuarioId);
-            Usuario usuario = usuarioRepository.findById(usuarioId)
-                    .orElse(null);
             if (usuario != null) {
                 inicializarParaNovoUsuario(usuario);
             }
             return configuracaoRepository.findByUsuarioIdAndAtivoTrueOrderByOrdemExibicaoAsc(usuarioId)
-                    .stream().map(this::toResponse).collect(Collectors.toList());
+                    .stream()
+                    .filter(c -> tiposPermitidos.contains(c.getTipoGrafico()))
+                    .map(this::toResponse)
+                    .collect(Collectors.toList());
         }
         return todasConfigs.stream()
                 .filter(c -> Boolean.TRUE.equals(c.getAtivo()))
@@ -104,13 +149,24 @@ public class ConfiguracaoGraficoDashboardService {
 
     @Transactional
     public void resetarConfiguracoesParaPadrao(Long usuarioId) {
+        Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
+        List<TipoGraficoDashboard> tiposOrdenados = resolverTiposOrdenados(
+                usuario != null ? usuario.getTipoUsuarioNovo() : null);
+
         List<ConfiguracaoGraficoDashboard> configs =
                 configuracaoRepository.findByUsuarioIdOrderByOrdemExibicaoAsc(usuarioId);
+
+        // Reordenar conforme a ordem padrão do dashboard
         int ordem = 1;
-        for (ConfiguracaoGraficoDashboard config : configs) {
-            config.setAtivo(true);
-            config.setOrdemExibicao(ordem++);
-            configuracaoRepository.save(config);
+        for (TipoGraficoDashboard tipo : tiposOrdenados) {
+            for (ConfiguracaoGraficoDashboard config : configs) {
+                if (config.getTipoGrafico() == tipo) {
+                    config.setAtivo(true);
+                    config.setOrdemExibicao(ordem++);
+                    configuracaoRepository.save(config);
+                    break;
+                }
+            }
         }
     }
 
@@ -119,7 +175,7 @@ public class ConfiguracaoGraficoDashboardService {
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
 
-        Set<TipoGraficoDashboard> tipos = resolverTiposPermitidos(usuario.getTipoUsuarioNovo());
+        List<TipoGraficoDashboard> tipos = resolverTiposOrdenados(usuario.getTipoUsuarioNovo());
 
         int ordem = 1;
         for (TipoGraficoDashboard tipo : tipos) {
@@ -141,7 +197,7 @@ public class ConfiguracaoGraficoDashboardService {
     /** Chamado ao criar um novo usuário — inicializa configs já ativas */
     @Transactional
     public void inicializarParaNovoUsuario(Usuario usuario) {
-        Set<TipoGraficoDashboard> tipos = resolverTiposPermitidos(usuario.getTipoUsuarioNovo());
+        List<TipoGraficoDashboard> tipos = resolverTiposOrdenados(usuario.getTipoUsuarioNovo());
         int ordem = 1;
         for (TipoGraficoDashboard tipo : tipos) {
             configuracaoRepository.save(ConfiguracaoGraficoDashboard.builder()
@@ -161,9 +217,25 @@ public class ConfiguracaoGraficoDashboardService {
             return GRAFICOS_ADMIN;
         }
         return switch (tipo) {
-            case PROFISSIONAL -> GRAFICOS_PROFISSIONAL;
-            // SUPER_ADMIN, ADMIN_ORG, GERENTE, RECEPCIONISTA → dashboards administrativos
-            default -> GRAFICOS_ADMIN;
+            case PROFISSIONAL   -> GRAFICOS_PROFISSIONAL;
+            case RECEPCIONISTA  -> GRAFICOS_RECEPCIONISTA;
+            default             -> GRAFICOS_ADMIN;
+        };
+    }
+
+    /**
+     * Retorna a lista ordenada dos tipos de gráficos conforme o layout do dashboard.
+     * @param tipo tipo de usuário
+     * @return lista ordenada de tipos de gráficos
+     */
+    public List<TipoGraficoDashboard> resolverTiposOrdenados(TipoUsuarioNovo tipo) {
+        if (tipo == null) {
+            return GRAFICOS_ADMIN_ORDENADOS;
+        }
+        return switch (tipo) {
+            case PROFISSIONAL   -> GRAFICOS_PROFISSIONAL_ORDENADOS;
+            case RECEPCIONISTA  -> GRAFICOS_RECEPCIONISTA_ORDENADOS;
+            default             -> GRAFICOS_ADMIN_ORDENADOS;
         };
     }
 

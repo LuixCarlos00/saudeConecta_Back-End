@@ -139,6 +139,10 @@ public class Usuario implements Serializable, UserDetails, TenantAware {
     public boolean isProfissional() {
         return TipoUsuarioNovo.PROFISSIONAL.equals(this.tipoUsuarioNovo);
     }
+
+    public boolean isRecepcionista() {
+        return TipoUsuarioNovo.RECEPCIONISTA.equals(this.tipoUsuarioNovo);
+     }
     
     public boolean hasOrganization() {
         return this.organizacao != null;

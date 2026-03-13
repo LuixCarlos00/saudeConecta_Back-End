@@ -1,37 +1,33 @@
 package br.com.saudeConecta.service;
 
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
+import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.historicodadospessoais.EntidadeTipo;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
-import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.domain.organizacao.StatusOrganizacao;
+import br.com.saudeConecta.domain.organizacao.TipoOrganizacao;
+import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.domain.usuario.StatusUsuario;
-import br.com.saudeConecta.email.CredenciaisEmailService;
-import br.com.saudeConecta.email.EmailCadastroService;
+import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
-import br.com.saudeConecta.domain.endereco.Endereco;
-import br.com.saudeConecta.domain.organizacao.TipoOrganizacao;
-import br.com.saudeConecta.domain.organizacao.StatusOrganizacao;
-import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
+import br.com.saudeConecta.presentation.dto.admin.AdminOrgCompletoResponse;
+import br.com.saudeConecta.presentation.dto.admin.AtualizarAdminOrgCompletoRequest;
 import br.com.saudeConecta.presentation.dto.admin.CadastrarAdminOrgCompletoRequest;
 import br.com.saudeConecta.presentation.dto.admin.CadastrarAdminRequest;
 import br.com.saudeConecta.util.EmailUnicoService;
 import br.com.saudeConecta.util.SnapshotUtil;
-import br.com.saudeConecta.service.ConfiguracaoGraficoDashboardService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 
 @Service
 @Slf4j
@@ -45,12 +41,12 @@ public class AdminOrganizacaoService {
     private final OrganizacaoRepository organizacaoRepository;
     private final EnderecoRepository enderecoRepository;
     private final PasswordEncoder passwordEncoder;
-    private final EmailCadastroService emailCadastroService;
-    private final Executor emailTaskExecutor;
+    private final EmailNotificacaoService emailNotificacaoService;
     private final TenantHelper tenantHelper;
     private final EmailUnicoService emailUnicoService;
     private final HistoricoDadosPessoaisService historicoDadosPessoaisService;
     private final ConfiguracaoGraficoDashboardService configuracaoGraficoDashboardService;
+    private final LimitePlanoService limitePlanoService;
 
 
 
@@ -61,22 +57,22 @@ public class AdminOrganizacaoService {
             EnderecoRepository enderecoRepository,
             PasswordEncoder passwordEncoder,
             TenantHelper tenantHelper,
-            EmailCadastroService emailCadastroService,
-            @Qualifier("emailTaskExecutor") Executor emailTaskExecutor,
+            EmailNotificacaoService emailNotificacaoService,
             EmailUnicoService emailUnicoService,
             HistoricoDadosPessoaisService historicoDadosPessoaisService,
-            ConfiguracaoGraficoDashboardService configuracaoGraficoDashboardService) {
+            ConfiguracaoGraficoDashboardService configuracaoGraficoDashboardService,
+            LimitePlanoService limitePlanoService) {
         this.adminOrganizacaoRepository = adminOrganizacaoRepository;
         this.usuarioRepository = usuarioRepository;
         this.organizacaoRepository = organizacaoRepository;
         this.enderecoRepository = enderecoRepository;
         this.passwordEncoder = passwordEncoder;
         this.tenantHelper = tenantHelper;
-        this.emailCadastroService = emailCadastroService;
-        this.emailTaskExecutor = emailTaskExecutor;
+        this.emailNotificacaoService = emailNotificacaoService;
         this.emailUnicoService = emailUnicoService;
         this.historicoDadosPessoaisService = historicoDadosPessoaisService;
         this.configuracaoGraficoDashboardService = configuracaoGraficoDashboardService;
+        this.limitePlanoService = limitePlanoService;
     }
 
     @Transactional(readOnly = true)
@@ -93,6 +89,8 @@ public class AdminOrganizacaoService {
     @Transactional
     public AdminOrganizacao cadastrarAdminByOrg(CadastrarAdminRequest request, Long organizacaoId) {
         log.info("Cadastrando administrador: {} para organização ID: {}", request.nome(), organizacaoId);
+
+        limitePlanoService.validarLimiteAdminOrg(organizacaoId);
 
         if (usuarioRepository.existsByLogin(request.cpf())) {
             log.warn("CPF já cadastrado como login: {}", request.cpf());
@@ -137,22 +135,87 @@ public class AdminOrganizacaoService {
         admin = adminOrganizacaoRepository.save(admin);
         log.info("Administrador cadastrado com sucesso. ID: {}", admin.getId());
 
-        // Envio de email assíncrono otimizado
-        CompletableFuture.runAsync(() -> {
-            try {
-                emailCadastroService.enviarCredenciaisAdministradorAsync(
-                    request.email(), 
-                    request.nome(), 
-                    cpfLimpo, 
-                    senhaGerada
-                );
-                log.info("Email enviado para: {}", request.email());
-            } catch (Exception e) {
-                log.error("Erro ao enviar email para: {}", request.email(), e);
-            }
-        }, emailTaskExecutor);
+        emailNotificacaoService.enviarCredenciaisAdministrador(
+                request.email(),
+                request.nome(),
+                cpfLimpo,
+                senhaGerada,
+                organizacaoId
+        );
 
         return admin;
+    }
+
+    /**
+     * Atualiza os dados pessoais do Admin Org logado + dados da organização + endereço.
+     * Usado na tela "Meus Dados" pelo próprio Admin Org.
+     *
+     * @param adminId ID do AdminOrganizacao
+     * @param request dados atualizados (admin + org + endereço)
+     */
+    @Transactional
+    public void atualizarMeusDadosAdminOrg(Long adminId, AtualizarAdminOrgCompletoRequest request) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        Long userId = tenantHelper.getCurrentUserId();
+        log.info("Admin Org atualizando seus próprios dados. AdminID: {}, OrgID: {}", adminId, orgId);
+
+        AdminOrganizacao admin = adminOrganizacaoRepository.findByIdWithOrgAndEndereco(adminId)
+                .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
+
+        // Validação de tenant
+        if (!admin.getOrganizacao().getId().equals(orgId)) {
+            throw new IllegalArgumentException("Acesso negado: administrador não pertence à organização");
+        }
+
+        // Snapshot para histórico
+        AdminOrganizacao snapshot = SnapshotUtil.copiarSnapshot(admin);
+
+        // Atualiza dados do admin
+        admin.setNome(request.nome());
+        admin.setCargo(request.cargo());
+        admin.setEmail(request.email());
+
+        AdminOrganizacao resultado = adminOrganizacaoRepository.save(admin);
+
+        // Registra histórico do admin
+        historicoDadosPessoaisService.registrarAlteracoesDeObjeto(
+                EntidadeTipo.ADMIN, resultado.getId(), userId, snapshot, resultado);
+
+        // Atualiza dados da organização
+        Organizacao org = admin.getOrganizacao();
+        if (org != null) {
+            Organizacao orgSnapshot = SnapshotUtil.copiarSnapshot(org);
+
+            org.setNome(request.nomeClinica());
+            org.setRazaoSocial(request.razaoSocial());
+            org.setTipo(TipoOrganizacao.valueOf(request.tipoClinica()));
+            org.setEmail(request.emailClinica());
+            org.setTelefone(request.telefone());
+
+            Organizacao orgAtualizada = organizacaoRepository.save(org);
+            historicoDadosPessoaisService.registrarAlteracoesDeObjeto(
+                    EntidadeTipo.ORGANIZACAO, orgAtualizada.getId(), userId, orgSnapshot, orgAtualizada);
+
+            // Atualiza endereço da organização
+            Endereco end = org.getEndereco();
+            if (end != null) {
+                Endereco endSnapshot = SnapshotUtil.copiarSnapshot(end);
+
+                end.setEndCep(request.cep());
+                end.setEndUF(request.uf());
+                end.setEndMunicipio(request.municipio());
+                end.setEndBairro(request.bairro());
+                end.setEndRua(request.rua());
+                end.setEndNumero(request.numero());
+                end.setEndComplemento(request.complemento());
+
+                Endereco endAtualizado = enderecoRepository.save(end);
+                historicoDadosPessoaisService.registrarAlteracoesDeObjeto(
+                        EntidadeTipo.ENDERECO, endAtualizado.getEndCodigo(), userId, endSnapshot, endAtualizado);
+            }
+        }
+
+        log.info("Dados pessoais do Admin Org atualizados com sucesso. AdminID: {}", adminId);
     }
 
     @Transactional
@@ -178,7 +241,7 @@ public class AdminOrganizacaoService {
         log.info("Administrador atualizado com sucesso. ID: {}", resultado.getId());
 
         historicoDadosPessoaisService.registrarAlteracoesDeObjeto(
-                EntidadeTipo.PROFISSIONAL,
+                EntidadeTipo.ADMIN,
                 resultado.getId(),
                 tenantHelper.getCurrentUserId(),
                 snapshot,
@@ -190,16 +253,23 @@ public class AdminOrganizacaoService {
  
     @Transactional
     public void deletarAdmByOrg(Long idAdmin) {
-        Long orgId = tenantHelper.getCurrentTenantId();
+        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
         log.info("Deletando administrador ID: {} da organização: {}", idAdmin, orgId);
 
         // 1. Buscar o administrador na tabela admin_organizacao
-        AdminOrganizacao admin = adminOrganizacaoRepository.findByIdAndOrganizacao_Id(idAdmin, orgId)
-                .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
+        AdminOrganizacao admin;
+        if (orgId == null) {
+            log.debug("SUPER_ADMIN: deletando administrador por ID sem filtro de organizacao");
+            admin = adminOrganizacaoRepository.findById(idAdmin)
+                    .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
+        } else {
+            admin = adminOrganizacaoRepository.findByIdAndOrganizacao_Id(idAdmin, orgId)
+                    .orElseThrow(() -> new IllegalArgumentException("Administrador nao encontrado"));
+        }
 
         Usuario usuario = admin.getUsuario();
         if (usuario == null) {
-            throw new IllegalStateException("Administrador não possui usuário associado");
+            throw new IllegalStateException("Administrador nao possui usuario associado");
         }
 
         try {
@@ -209,12 +279,12 @@ public class AdminOrganizacaoService {
             // 3. Deletar o usuário da tabela usuario
             usuarioRepository.delete(usuario);
             
-            log.info("Administrador e usuário deletados com sucesso. ID Admin: {}, ID Usuário: {}", 
+            log.info("Administrador e usuario deletados com sucesso. ID Admin: {}, ID Usuario: {}",
                     idAdmin, usuario.getId());
                     
         } catch (Exception e) {
             // 4. Caso haja relacionamento que impeça o delete, cancelar e avisar
-            String errorMessage = "Não foi possível deletar o administrador devido a relacionamentos existentes: " + e.getMessage();
+            String errorMessage = "Não foi possivel deletar o administrador devido a relacionamentos existentes: " + e.getMessage();
             log.error(errorMessage);
             throw new IllegalStateException(errorMessage);
         }
@@ -222,22 +292,106 @@ public class AdminOrganizacaoService {
 
  
     /**
+     * Busca dados completos do AdminOrg (admin + organização + endereço).
+     * Exclusivo para SUPER_ADMIN.
+     *
+     * @param id ID do AdminOrganizacao
+     * @return AdminOrgCompletoResponse com dados completos
+     */
+    @Transactional(readOnly = true)
+    public AdminOrgCompletoResponse buscarAdminOrgCompleto(Long id) {
+        log.debug("SUPER_ADMIN: buscando AdminOrg completo por ID: {}", id);
+        AdminOrganizacao admin = adminOrganizacaoRepository.findByIdWithOrgAndEndereco(id)
+                .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
+        return AdminOrgCompletoResponse.fromEntity(admin);
+    }
+
+    /**
+     * Atualiza dados completos do AdminOrg (admin + organização + endereço).
+     * Exclusivo para SUPER_ADMIN.
+     *
+     * @param id      ID do AdminOrganizacao
+     * @param request dados atualizados
+     * @return AdminOrgCompletoResponse com dados atualizados
+     */
+    @Transactional
+    public AdminOrgCompletoResponse atualizarAdminOrgCompleto(Long id, AtualizarAdminOrgCompletoRequest request) {
+        log.info("SUPER_ADMIN: atualizando AdminOrg completo ID: {}", id);
+
+        AdminOrganizacao admin = adminOrganizacaoRepository.findByIdWithOrgAndEndereco(id)
+                .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
+
+        // Atualiza dados do admin
+        if (request.nome() != null && !request.nome().isBlank()) {
+            admin.setNome(request.nome());
+        }
+        if (request.cargo() != null && !request.cargo().isBlank()) {
+            admin.setCargo(request.cargo());
+        }
+        if (request.email() != null && !request.email().isBlank()) {
+            admin.setEmail(request.email());
+        }
+
+        // Atualiza dados da organização
+        Organizacao org = admin.getOrganizacao();
+        if (org != null) {
+            if (request.nomeClinica() != null && !request.nomeClinica().isBlank()) {
+                org.setNome(request.nomeClinica());
+            }
+            if (request.razaoSocial() != null) {
+                org.setRazaoSocial(request.razaoSocial());
+            }
+            if (request.cnpj() != null && !request.cnpj().isBlank()) {
+                org.setCnpj(limparCnpj(request.cnpj()));
+            }
+            if (request.tipoClinica() != null && !request.tipoClinica().isBlank()) {
+                org.setTipo(TipoOrganizacao.valueOf(request.tipoClinica()));
+            }
+            if (request.emailClinica() != null) {
+                org.setEmail(request.emailClinica());
+            }
+            if (request.telefone() != null) {
+                org.setTelefone(request.telefone());
+            }
+            organizacaoRepository.save(org);
+
+            // Atualiza endereço
+            Endereco end = org.getEndereco();
+            if (end != null) {
+                if (request.cep() != null) end.setEndCep(request.cep());
+                if (request.uf() != null) end.setEndUF(request.uf());
+                if (request.municipio() != null) end.setEndMunicipio(request.municipio());
+                if (request.bairro() != null) end.setEndBairro(request.bairro());
+                if (request.rua() != null) end.setEndRua(request.rua());
+                if (request.numero() != null) end.setEndNumero(request.numero());
+                if (request.complemento() != null) end.setEndComplemento(request.complemento());
+                enderecoRepository.save(end);
+            }
+        }
+
+        AdminOrganizacao salvo = adminOrganizacaoRepository.save(admin);
+        log.info("SUPER_ADMIN: AdminOrg ID {} atualizado com sucesso", id);
+        return AdminOrgCompletoResponse.fromEntity(salvo);
+    }
+
+    /**
      * Cadastra um Admin de Organização completo pelo SUPER_ADMIN.
-     * Cria: Endereco → Organizacao → Usuario (senha = CPF) → AdminOrganizacao.
+     * Cria: Endereco → Organizacao → Usuario (login e senha = CNPJ) → AdminOrganizacao.
+     * Email de credenciais é enviado para o email da clínica.
      *
      * @param request dados completos do admin e da organização
      * @return AdminOrganizacao criado
      */
     @Transactional
     public AdminOrganizacao cadastrarAdminOrgCompleto(CadastrarAdminOrgCompletoRequest request) {
-        String cpfLimpo = limparCpf(request.cpf());
-        log.info("Cadastrando Admin Org completo. CPF: {}, Clínica: {}", cpfLimpo, request.nomeClinica());
+        String cnpjLimpo = limparCnpj(request.cnpj());
+        log.info("Cadastrando Admin Org completo. CNPJ: {}, Clínica: {}", cnpjLimpo, request.nomeClinica());
 
-        if (usuarioRepository.existsByLogin(cpfLimpo)) {
-            throw new IllegalStateException("CPF já cadastrado no sistema");
+        if (usuarioRepository.existsByLogin(cnpjLimpo)) {
+            throw new IllegalStateException("CNPJ já cadastrado como login no sistema");
         }
 
-        if (organizacaoRepository.existsByCnpj(limparCnpj(request.cnpj()))) {
+        if (organizacaoRepository.existsByCnpj(cnpjLimpo)) {
             throw new IllegalStateException("CNPJ já cadastrado no sistema");
         }
 
@@ -254,7 +408,7 @@ public class AdminOrganizacaoService {
         Organizacao organizacao = organizacaoRepository.save(Organizacao.builder()
                 .nome(request.nomeClinica())
                 .razaoSocial(request.razaoSocial())
-                .cnpj(limparCnpj(request.cnpj()))
+                .cnpj(cnpjLimpo)
                 .tipo(TipoOrganizacao.valueOf(request.tipoClinica()))
                 .email(request.emailClinica())
                 .telefone(request.telefone())
@@ -262,9 +416,12 @@ public class AdminOrganizacaoService {
                 .status(StatusOrganizacao.ATIVO)
                 .build());
 
+
+        String senhaGerada = gerarSenhaAleatoria();
+
         Usuario usuario = usuarioRepository.save(Usuario.builder()
-                .login(cpfLimpo)
-                .senha(passwordEncoder.encode(cpfLimpo))
+                .login(cnpjLimpo)
+                .senha(passwordEncoder.encode(senhaGerada))
                 .tipoUsuario((byte) 1)
                 .tipoUsuarioNovo(TipoUsuarioNovo.ADMIN_ORG)
                 .status(StatusUsuario.ATIVO)
@@ -283,27 +440,29 @@ public class AdminOrganizacaoService {
 
         configuracaoGraficoDashboardService.inicializarParaNovoUsuario(usuario);
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                emailCadastroService.enviarCredenciaisAdministradorAsync(
-                    request.email(),
-                    request.nome(),
-                    cpfLimpo,
-                    cpfLimpo
-                );
-                log.info("Email de credenciais enviado para: {}", request.email());
-            } catch (Exception e) {
-                log.error("Erro ao enviar email para: {}", request.email(), e);
-            }
-        }, emailTaskExecutor);
+        emailNotificacaoService.enviarCredenciaisAdministrador(
+                request.emailClinica(),
+                request.nome(),
+                cnpjLimpo,
+                senhaGerada,
+                organizacao.getId()
+        );
 
         log.info("Admin Org criado com sucesso. ID: {}, Org: {}", admin.getId(), organizacao.getId());
         return admin;
     }
 
+
+
+
+
     private String limparCnpj(String cnpj) {
         return cnpj.replaceAll("[^0-9]", "");
     }
+
+
+
+
 
     private String gerarSenhaAleatoria() {
         SecureRandom random = new SecureRandom();

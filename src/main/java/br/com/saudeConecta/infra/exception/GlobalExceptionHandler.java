@@ -1,5 +1,6 @@
 package br.com.saudeConecta.infra.exception;
 
+import br.com.saudeConecta.infra.exceptions.LimitePlanoException;
 import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.infra.tenant.TenantNotDefinedException;
 import jakarta.persistence.EntityNotFoundException;
@@ -66,6 +67,13 @@ public class GlobalExceptionHandler {
         });
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
             .body(new ValidationErrorResponse("VALIDATION_ERROR", "Erro de validação nos campos", errors, LocalDateTime.now()));
+    }
+
+    @ExceptionHandler(LimitePlanoException.class)
+    public ResponseEntity<ErrorResponse> handleLimitePlano(LimitePlanoException ex) {
+        log.warn("Limite do plano atingido: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+            .body(new ErrorResponse("LIMITE_PLANO", ex.getMessage(), LocalDateTime.now()));
     }
 
     @ExceptionHandler(Exception.class)
