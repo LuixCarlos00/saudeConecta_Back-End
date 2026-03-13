@@ -62,4 +62,7 @@
     <!-- Remover coluna duplicada prontdent_oclusao -->
     <include file="db/changelog/changes/030-remover-coluna-prontdent-oclusao.xml"/>
 
+    <!-- Atualizar credenciais do super admin (login CPF + nova senha) -->
+    <include file="db/changelog/changes/031-atualizar-credenciais-super-admin.xml"/>
+
 </databaseChangeLog>
