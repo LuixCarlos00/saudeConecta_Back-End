@@ -11,9 +11,6 @@
         <preConditions onFail="MARK_RAN">
             <sqlCheck expectedResult="1">SELECT COUNT(*) FROM usuarios WHERE login = 'luiz'</sqlCheck>
         </preConditions>
-        <preConditions onFail="MARK_RAN">
-            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM usuarios WHERE login = '14776815664'</sqlCheck>
-        </preConditions>
         <update tableName="usuarios">
             <column name="login" value="14776815664"/>
             <column name="senha" value="$2a$10$BcjmPs0ipAc5vb6WE8XQR.8CHWJTqE88WtiKQlXy6w6fr8qiP4cIm"/>

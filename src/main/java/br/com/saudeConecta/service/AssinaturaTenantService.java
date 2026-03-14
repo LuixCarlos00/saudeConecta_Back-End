@@ -72,6 +72,10 @@ public class AssinaturaTenantService {
                 .dataVencimento(hoje.plusDays(DIAS_TRIAL))
                 .dataProximaCobranca(hoje.plusDays(DIAS_TRIAL))
                 .valorMensal(plano.getValorMensal())
+                .qtdAdminExtra(0)
+                .qtdProfissionalExtra(0)
+                .qtdSecretariaExtra(0)
+                .valorAdicionalPerfis(BigDecimal.ZERO)
                 .build();
 
         AssinaturaTenant salva = assinaturaTenantRepository.save(assinatura);

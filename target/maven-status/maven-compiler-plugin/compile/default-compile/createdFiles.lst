@@ -1,6 +1,6 @@
-br/com/saudeConecta/presentation/dto/usuario/UsuarioPerfilCompletoResponse$OrganizacaoResumo.class
-br/com/saudeConecta/service/pix/PixServiceEstatico.class
-br/com/saudeConecta/presentation/dto/dashboard/SaldoFinanceiroResponse$SaldoPorPeriodo.class
-br/com/saudeConecta/presentation/dto/planos/CustomizarPlanoTenantRequest.class
-br/com/saudeConecta/presentation/dto/dashboard/SaldoFinanceiroResponse.class
-br/com/saudeConecta/service/SaldoFinanceiroService.class
+br\com\saudeConecta\presentation\dto\dashboard\SaldoFinanceiroResponse.class
+br\com\saudeConecta\presentation\dto\usuario\UsuarioPerfilCompletoResponse$OrganizacaoResumo.class
+br\com\saudeConecta\service\SaldoFinanceiroService.class
+br\com\saudeConecta\presentation\dto\dashboard\SaldoFinanceiroResponse$SaldoPorPeriodo.class
+br\com\saudeConecta\service\pix\PixServiceEstatico.class
+br\com\saudeConecta\presentation\dto\planos\CustomizarPlanoTenantRequest.class
