@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -72,7 +73,7 @@ public interface AssinaturaTenantRepository extends JpaRepository<AssinaturaTena
     @Query("SELECT a FROM AssinaturaTenant a " +
            "WHERE a.status = 'SUSPENSA' " +
            "AND a.atualizadoEm < :dataLimite")
-    List<AssinaturaTenant> findSuspensasParaCancelar(@Param("dataLimite") LocalDate dataLimite);
+    List<AssinaturaTenant> findSuspensasParaCancelar(@Param("dataLimite") LocalDateTime dataLimite);
 
     /**
      * Busca todas as assinaturas com dados do plano e organização (para listagem SUPER_ADMIN).

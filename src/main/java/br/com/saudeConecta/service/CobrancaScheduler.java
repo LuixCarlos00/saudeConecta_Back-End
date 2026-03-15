@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @Component
@@ -149,7 +151,8 @@ public class CobrancaScheduler {
     @Transactional
     public void cancelarSuspensas() {
         log.info("[SCHEDULER] Verificando assinaturas para cancelar...");
-        LocalDate limite = LocalDate.now().minusDays(30);
+        LocalDate limiteDate = LocalDate.now().minusDays(30);
+        LocalDateTime limite = limiteDate.atStartOfDay();
         List<AssinaturaTenant> suspensas = assinaturaTenantRepository
                 .findSuspensasParaCancelar(limite);
 
