@@ -47,7 +47,7 @@ public class ProcedimentoPadraoService {
         log.info("Criando procedimento padrão — profissional={}, nome={}", profissionalId, request.getNomeProcedimento());
 
         Profissional profissional = profissionalRepository.findById(profissionalId)
-                .orElseThrow(() -> new IllegalArgumentException("Profissional não encontrado: " + profissionalId));
+                .orElseThrow(() -> new IllegalArgumentException("Profissional nao encontrado: " + profissionalId));
 
         Organizacao organizacao = new Organizacao();
         organizacao.setId(orgId);
@@ -85,7 +85,7 @@ public class ProcedimentoPadraoService {
     @Transactional
     public ProcedimentoPadrao toggleAtivo(Long id) {
         ProcedimentoPadrao procedimento = procedimentoRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Procedimento não encontrado: " + id));
+                .orElseThrow(() -> new IllegalArgumentException("Procedimento nao encontrado: " + id));
 
         procedimento.setAtivo(!procedimento.getAtivo());
         ProcedimentoPadrao salvo = procedimentoRepository.save(procedimento);
@@ -103,7 +103,7 @@ public class ProcedimentoPadraoService {
     @Transactional
     public ProcedimentoPadrao atualizar(Long id, ProcedimentoPadraoRequest request) {
         ProcedimentoPadrao procedimento = procedimentoRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Procedimento não encontrado: " + id));
+                .orElseThrow(() -> new IllegalArgumentException("Procedimento nao encontrado: " + id));
 
         procedimento.setNomeProcedimento(request.getNomeProcedimento());
         procedimento.setValorPadrao(request.getValorPadrao());
@@ -119,7 +119,7 @@ public class ProcedimentoPadraoService {
     @Transactional
     public void desativar(Long id) {
         ProcedimentoPadrao procedimento = procedimentoRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Procedimento não encontrado: " + id));
+                .orElseThrow(() -> new IllegalArgumentException("Procedimento nao encontrado: " + id));
 
         procedimento.setAtivo(false);
         procedimentoRepository.save(procedimento);

@@ -57,16 +57,16 @@ public class HomeController {
                     .findAssinaturaAtivaByOrganizacaoId(organizacaoId);
 
             if (assinatura.isEmpty()) {
-                log.warn("Login bloqueado para usuário {}: organização {} sem plano ativo", usuario.getLogin(), organizacaoId);
+                log.warn("Login bloqueado para usuario {}: organizacao {} sem plano ativo", usuario.getLogin(), organizacaoId);
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("message", "Sua organização não possui um plano ativo. Entre em contato com o administrador."));
+                        .body(Map.of("message", "Sua organizacao nao possui um plano ativo. Entre em contato com o administrador."));
             }
 
             if (!assinatura.get().permiteAcesso()) {
                 String statusPlano = assinatura.get().getStatus().getDescricao();
-                log.warn("Login bloqueado para usuário {}: plano {} da org {}", usuario.getLogin(), statusPlano, organizacaoId);
+                log.warn("Login bloqueado para usuario {}: plano {} da org {}", usuario.getLogin(), statusPlano, organizacaoId);
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("message", "O plano da sua organização está " + statusPlano.toLowerCase() + ". Entre em contato com o administrador."));
+                        .body(Map.of("message", "O plano da sua organizacao está " + statusPlano.toLowerCase() + ". Entre em contato com o administrador."));
             }
         }
 
@@ -84,13 +84,13 @@ public class HomeController {
     @Description("Recupera senha do usuário enviando nova senha por email")
     public ResponseEntity<?> esqueciMinhaSenha(@RequestBody Map<String, String> dados) {
         String email = dados.get("email");
-        log.info("Solicitação de recuperação de senha para email: {}", email);
+        log.info("Solicitacao de recuperacao de senha para email: {}", email);
 
         try {
             recuperacaoSenhaService.recuperarSenhaPorEmail(email);
             return ResponseEntity.ok(Map.of("message", "Nova senha enviada para o email cadastrado"));
         } catch (HomeService.EmailNaoEncontradoException e) {
-            log.warn("Email não encontrado: {}", email);
+            log.warn("Email nao encontrado: {}", email);
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
             log.error("Erro ao recuperar senha: {}", e.getMessage());
@@ -112,10 +112,10 @@ public class HomeController {
                 return secretaria.map(Secretaria::getNome).orElse("Secretária");
             }
         } catch (Exception e) {
-            log.warn("Erro ao obter nome do usuário ID: {}", usuario.getId(), e);
+            log.warn("Erro ao obter nome do usuario ID: {}", usuario.getId(), e);
         }
 
-        return "Usuário"; // Default fallback
+        return "Usuario"; // Default fallback
     }
 
     private String getProfissional(Usuario usuario) {
@@ -144,7 +144,7 @@ public class HomeController {
                 return secretaria.isPresent() ? "Recepcionista" : "null";
             }
         } catch (Exception e) {
-            log.warn("Erro ao obter profissional do usuário ID: {}", usuario.getId(), e);
+            log.warn("Erro ao obter profissional do usuario ID: {}", usuario.getId(), e);
         }
 
         return "false"; // Default fallback

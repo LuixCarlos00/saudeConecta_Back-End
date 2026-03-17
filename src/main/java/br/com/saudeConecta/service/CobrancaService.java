@@ -78,7 +78,7 @@ public class CobrancaService {
                 .build();
 
         CobrancaTenant salva = cobrancaTenantRepository.save(cobranca);
-        log.info("Cobrança Pix gerada: id={}, txid={}, org={}, valor=R${}",
+        log.info("Cobranca Pix gerada: id={}, txid={}, org={}, valor=R${}",
                 salva.getId(), salva.getTxid(),
                 assinatura.getOrganizacao().getId(), salva.getValorTotal());
 
@@ -101,7 +101,7 @@ public class CobrancaService {
                         HttpStatus.NOT_FOUND));
 
         if (cobranca.isPago()) {
-            log.info("Cobrança já paga, ignorando: id={}", cobrancaId);
+            log.info("Cobranca ja paga, ignorando: id={}", cobrancaId);
             return CobrancaTenantResponse.fromEntity(cobranca);
         }
 
@@ -224,12 +224,12 @@ public class CobrancaService {
         for (CobrancaTenant cobranca : expiradas) {
             cobranca.setStatus(StatusCobranca.EXPIRADO);
             cobrancaTenantRepository.save(cobranca);
-            log.info("Cobrança expirada: id={}, txid={}, org={}",
+            log.info("Cobranca expirada: id={}, txid={}, org={}",
                     cobranca.getId(), cobranca.getTxid(), cobranca.getOrganizacao().getId());
         }
 
         if (!expiradas.isEmpty()) {
-            log.info("Total de cobranças expiradas: {}", expiradas.size());
+            log.info("Total de cobrancas expiradas: {}", expiradas.size());
         }
 
         return expiradas.size();

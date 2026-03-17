@@ -24,13 +24,13 @@ public class SecretariaController {
     @PostMapping("/cadastrarSecretariaByOrg")
     @Description("Cadastra nova secretária. Utilizado em: CadastroSecretariaComponent")
     public ResponseEntity<?> cadastrarSecretariaByOrg(@RequestBody @Valid CadastrarSecretariaRequest request) {
-        log.info("Cadastrando secretária: {}", request.nome());
+        log.info("Cadastrando secretaria: {}", request.nome());
         try {
             Secretaria secretaria = secretariaService.cadastrarSecretariaByOrg(request);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(SecretariaResponse.fromEntity(secretaria));
         } catch (IllegalStateException e) {
-            log.warn("Erro ao cadastrar secretária: {}", e.getMessage());
+            log.warn("Erro ao cadastrar secretaria: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         }
     }
@@ -52,7 +52,7 @@ public class SecretariaController {
             Secretaria atualizada = secretariaService.atualizarSecretariaIdByOrg(id, secretaria);
             return ResponseEntity.ok(SecretariaResponse.fromEntity(atualizada));
         } catch (IllegalArgumentException e) {
-            log.warn("Erro ao atualizar secretária: {}", e.getMessage());
+            log.warn("Erro ao atualizar secretaria: {}", e.getMessage());
             return ResponseEntity.notFound().build();
         }
     }
@@ -65,10 +65,10 @@ public class SecretariaController {
             secretariaService.deletarSecretariaIdByOrg(id);
             return ResponseEntity.ok().build();
         } catch (IllegalStateException e) {
-            log.warn("Erro ao deletar secretária: {}", e.getMessage());
+            log.warn("Erro ao deletar secretaria: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         } catch (IllegalArgumentException e) {
-            log.warn("Secretária não encontrada: {}", e.getMessage());
+            log.warn("Secretaria nao encontrada: {}", e.getMessage());
             return ResponseEntity.notFound().build();
         }
     }

@@ -25,7 +25,7 @@ public class CobrancaController {
      */
     @PostMapping("/gerar/{assinaturaId}")
     public ResponseEntity<CobrancaTenantResponse> gerarCobranca(@PathVariable Long assinaturaId) {
-        log.info("Gerando cobrança para assinatura ID: {}", assinaturaId);
+        log.info("Gerando cobranca para assinatura ID: {}", assinaturaId);
         CobrancaTenantResponse response = cobrancaService.gerarCobranca(assinaturaId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -35,7 +35,7 @@ public class CobrancaController {
      */
     @PatchMapping("/{cobrancaId}/confirmar-pagamento")
     public ResponseEntity<CobrancaTenantResponse> confirmarPagamento(@PathVariable Long cobrancaId) {
-        log.info("Confirmação manual de pagamento: cobrancaId={}", cobrancaId);
+        log.info("Confirmacao manual de pagamento: cobrancaId={}", cobrancaId);
         CobrancaTenantResponse response = cobrancaService.confirmarPagamentoManual(cobrancaId);
         return ResponseEntity.ok(response);
     }
@@ -79,7 +79,7 @@ public class CobrancaController {
      */
     @PostMapping("/teste/gerar-cobrancas-mensais")
     public ResponseEntity<String> testarGeracaoCobrancas() {
-        log.warn("[TESTE] Forçando geração de cobranças mensais...");
+        log.warn("[TESTE] Forçando geracao de cobranças mensais...");
         
         List<br.com.saudeConecta.domain.planos.AssinaturaTenant> assinaturas = 
             cobrancaService.listarAssinaturasAtivasParaCobranca();
@@ -94,15 +94,15 @@ public class CobrancaController {
                     cobrancaService.gerarCobranca(assinatura.getId());
                     geradas++;
                 } else {
-                    log.info("[TESTE] Assinatura {} já tem cobrança pendente", assinatura.getId());
+                    log.info("[TESTE] Assinatura {} ja tem cobrança pendente", assinatura.getId());
                 }
             } catch (Exception e) {
                 erros++;
-                log.error("[TESTE] Erro ao gerar cobrança: {}", e.getMessage());
+                log.error("[TESTE] Erro ao gerar cobranca: {}", e.getMessage());
             }
         }
         
-        String resultado = String.format("Cobranças geradas: %d | Erros: %d | Total: %d", 
+        String resultado = String.format("Cobrancas geradas: %d | Erros: %d | Total: %d",
                 geradas, erros, assinaturas.size());
         
         return ResponseEntity.ok(resultado);

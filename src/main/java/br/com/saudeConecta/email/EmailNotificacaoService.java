@@ -30,6 +30,7 @@ public class EmailNotificacaoService {
     private static final String COR_ADMINISTRADOR = "#1976D2";
     private static final String COR_MEDICO = "#4CAF50";
     private static final String COR_SECRETARIA = "#9C27B0";
+    private static final String COR_PACIENTE = "#FF9800";
 
     private final EmailTemplateService emailTemplateService;
     private final EmailRetryService emailRetryService;
@@ -58,17 +59,18 @@ public class EmailNotificacaoService {
     /**
      * Envia credenciais de acesso para um administrador de forma assíncrona.
      *
-     * @param email         email do destinatário
-     * @param nome          nome do administrador
-     * @param login         login de acesso (CPF ou CNPJ)
-     * @param senha         senha gerada
-     * @param organizacaoId ID da organização
+     * @param email            email do destinatário
+     * @param nome             nome do administrador
+     * @param login            login de acesso (CPF ou CNPJ)
+     * @param senha            senha gerada
+     * @param organizacaoId    ID da organização
+     * @param adminOrgId       ID do admin da organização
      */
     @Async
     public void enviarCredenciaisAdministrador(String email, String nome, String login,
-                                                String senha, Long organizacaoId) {
+                                                String senha, Long organizacaoId, Long adminOrgId) {
         enviarCredenciais(email, nome, login, senha, "Administrador",
-                COR_ADMINISTRADOR, null, organizacaoId, null);
+                COR_ADMINISTRADOR, null, organizacaoId, adminOrgId);
     }
 
     /**
@@ -97,7 +99,7 @@ public class EmailNotificacaoService {
      * @param login         login de acesso (CPF)
      * @param senha         senha gerada
      * @param organizacaoId ID da organização
-     * @param secretariaId  ID da secretária (usado como profissionalId na mensageria)
+     * @param secretariaId  ID da secretária
      */
     @Async
     public void enviarCredenciaisSecretaria(String email, String nome, String login, String senha,
@@ -168,12 +170,29 @@ public class EmailNotificacaoService {
     }
 
     /**
+     * Envia credenciais de acesso para um paciente de forma assíncrona.
+     *
+     * @param email         email do destinatário
+     * @param nome          nome do paciente
+     * @param login         login de acesso (CPF)
+     * @param senha         senha gerada
+     * @param organizacaoId ID da organização
+     * @param pacienteId    ID do paciente
+     */
+    @Async
+    public void enviarCredenciaisPaciente(String email, String nome, String login, String senha,
+                                           Long organizacaoId, Long pacienteId) {
+        enviarCredenciais(email, nome, login, senha, "Paciente",
+                COR_PACIENTE, null, organizacaoId, pacienteId);
+    }
+
+    /**
      * Método interno que centraliza o envio de credenciais para qualquer tipo de usuário.
      * Renderiza o template unificado e delega ao retry service.
      */
     private void enviarCredenciais(String email, String nome, String login, String senha,
                                     String tipoUsuario, String corTema, String nomeOrganizacao,
-                                    Long organizacaoId, Long profissionalId) {
+                                    Long organizacaoId, Long entidadeId) {
         if (!emailHabilitado) {
             log.warn("Email desabilitado. Credenciais não enviadas para {}: {}", tipoUsuario, email);
             log.info("CREDENCIAIS {} - Login: {}, Senha: {}", tipoUsuario.toUpperCase(), login, senha);
@@ -195,7 +214,7 @@ public class EmailNotificacaoService {
                 String tipoMensageria = resolverTipoMensageria(tipoUsuario);
                 emailRetryService.executarComRetry(
                         email, nome, ASSUNTO_CREDENCIAIS, corpoHtml,
-                        tipoMensageria, organizacaoId, profissionalId);
+                        tipoMensageria, organizacaoId, entidadeId);
 
             } catch (Exception e) {
                 log.error("Erro ao preparar email de credenciais {} para {}: {}",
@@ -212,6 +231,7 @@ public class EmailNotificacaoService {
             case "Administrador" -> "administrador";
             case "Médico" -> "medico";
             case "Secretária" -> "secretaria";
+            case "Paciente" -> "paciente";
             default -> "generico";
         };
     }

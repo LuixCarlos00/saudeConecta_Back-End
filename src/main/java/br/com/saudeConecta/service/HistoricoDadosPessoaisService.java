@@ -94,7 +94,7 @@ public class HistoricoDadosPessoaisService {
     public void registrarAlteracoesDeObjeto(EntidadeTipo entidade, Long idEntidade,
                                             Long idUsuario, Object antes, Object depois) {
         if (antes == null || depois == null) {
-            log.warn("Histórico ignorado - objeto antes ou depois é nulo. Entidade: {}, ID: {}", entidade, idEntidade);
+            log.warn("Historico ignorado - objeto antes ou depois e nulo. Entidade: {}, ID: {}", entidade, idEntidade);
             return;
         }
 
@@ -145,17 +145,17 @@ public class HistoricoDadosPessoaisService {
                         .build());
 
             } catch (IllegalAccessException e) {
-                log.warn("Não foi possível acessar campo '{}' para histórico: {}", campo.getName(), e.getMessage());
+                log.warn("Nao foi possivel acessar campo '{}' para historico: {}", campo.getName(), e.getMessage());
             }
         }
 
         if (registros.isEmpty()) {
-            log.debug("Nenhuma alteração detectada para Entidade: {}, ID: {}", entidade, idEntidade);
+            log.debug("Nenhuma alteracao detectada para Entidade: {}, ID: {}", entidade, idEntidade);
             return;
         }
 
         historicoRepository.saveAll(registros);
-        log.info("{} campo(s) registrado(s) no histórico. Entidade: {}, ID: {}", registros.size(), entidade, idEntidade);
+        log.info("{} campo(s) registrado(s) no historico. Entidade: {}, ID: {}", registros.size(), entidade, idEntidade);
     }
 
     /**

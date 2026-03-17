@@ -55,7 +55,7 @@ public class UsuarioService   {
         Long organizacaoId = TenantContext.getCurrentTenant();
         boolean isSuperAdmin = (organizacaoId == null);
 
-        log.info("Bloqueando usuário ID: {} (registro ID: {}) para {} | orgId: {} | SUPER_ADMIN: {}",
+        log.info("Bloqueando usuario ID: {} (registro ID: {}) para {} | orgId: {} | SUPER_ADMIN: {}",
                 request.codigoUsuario(),
                 request.codigo(),
                 request.status() == 0 ? "INATIVO" : "ATIVO",
@@ -67,29 +67,29 @@ public class UsuarioService   {
         if (isSuperAdmin) {
             usuario = usuarioRepository.findById(request.codigoUsuario())
                     .orElseThrow(() -> {
-                        log.warn("Usuário {} não encontrado", request.codigoUsuario());
-                        return new IllegalArgumentException("Usuário não encontrado");
+                        log.warn("Usuario {} nao encontrado", request.codigoUsuario());
+                        return new IllegalArgumentException("usuario nao encontrado");
                     });
         } else {
             usuario = usuarioRepository.findById(request.codigoUsuario())
                     .filter(u -> organizacaoId.equals(u.getOrganizacaoId()))
                     .orElseThrow(() -> {
-                        log.warn("Usuário {} não encontrado ou não pertence à organização {}",
+                        log.warn("Usuario {} nao encontrado ou nao pertence a organizacao {}",
                                 request.codigoUsuario(), organizacaoId);
-                        return new IllegalArgumentException("Usuário não encontrado ou sem permissão");
+                        return new IllegalArgumentException("Usuario nao encontrado ou sem permissao");
                     });
         }
 
-        // Validação: não pode bloquear super admin
+        // Validação: nao pode bloquear super admin
         if (usuario.isSuperAdmin()) {
-            throw new IllegalArgumentException("Não é possível bloquear um Super Admin");
+            throw new IllegalArgumentException("nao é possível bloquear um Super Admin");
         }
 
         StatusUsuario novoStatus = request.status() == 0
                 ? StatusUsuario.INATIVO
                 : StatusUsuario.ATIVO;
 
-        // 2. Se SUPER_ADMIN bloqueando AdminOrg → bloqueio em cascata (toda a organização)
+        // 2. Se SUPER_ADMIN bloqueando AdminOrg → bloqueio em cascata (toda a organizacao)
         if (isSuperAdmin && usuario.getTipoUsuarioNovo() == TipoUsuarioNovo.ADMIN_ORG) {
             bloquearTenantEmCascata(usuario, request.codigo(), novoStatus);
         } else {
@@ -101,17 +101,17 @@ public class UsuarioService   {
             atualizarStatusPerfil(request.codigo(), orgIdPerfil, usuario.getTipoUsuarioNovo(), novoStatus);
         }
 
-        log.info("Usuário ID: {} bloqueado com sucesso (cascata: {})", request.codigoUsuario(),
+        log.info("usuario ID: {} bloqueado com sucesso (cascata: {})", request.codigoUsuario(),
                 isSuperAdmin && usuario.getTipoUsuarioNovo() == TipoUsuarioNovo.ADMIN_ORG);
     }
 
     /**
-     * Bloqueio em cascata: bloqueia/desbloqueia o AdminOrg e TODOS os usuários da organização.
+     * Bloqueio em cascata: bloqueia/desbloqueia o AdminOrg e TODOS os usuarios da organizacao.
      * Chamado pelo SUPER_ADMIN ao bloquear um tenant (AdminOrg).
      */
     private void bloquearTenantEmCascata(Usuario adminUsuario, Long adminPerfilId, StatusUsuario novoStatus) {
         Long orgId = adminUsuario.getOrganizacaoId();
-        log.info("Bloqueio em cascata da organização ID: {} para status: {}", orgId, novoStatus);
+        log.info("Bloqueio em cascata da organizacao ID: {} para status: {}", orgId, novoStatus);
 
         // 1. Bloqueia o AdminOrg principal
         adminUsuario.setStatus(novoStatus);
@@ -126,7 +126,7 @@ public class UsuarioService   {
                     adminOrganizacaoRepository.save(admin);
                 });
 
-        // 2. Bloqueia/desbloqueia TODOS os outros usuários da organização
+        // 2. Bloqueia/desbloqueia TODOS os outros usuarios da organizacao
         if (orgId != null) {
             List<Usuario> usuariosOrg = usuarioRepository.findByOrganizacao_Id(orgId);
             int count = 0;
@@ -137,7 +137,7 @@ public class UsuarioService   {
                     count++;
                 }
             }
-            log.info("Bloqueio em cascata: {} usuários adicionais da organização {} atualizados para {}",
+            log.info("Bloqueio em cascata: {} usuarios adicionais da organizacao {} atualizados para {}",
                     count, orgId, novoStatus);
         }
     }
@@ -156,7 +156,7 @@ public class UsuarioService   {
                                     adminOrganizacaoRepository.save(admin);
                                     log.debug("Status atualizado em AdminOrganizacao ID: {}", codigoPerfil);
                                 },
-                                () -> log.warn("AdminOrganizacao ID {} não encontrado na org {}",
+                                () -> log.warn("AdminOrganizacao ID {} nao encontrado na org {}",
                                         codigoPerfil, organizacaoId)
                         );
             }
@@ -171,7 +171,7 @@ public class UsuarioService   {
                                     secretariaRepository.save(secretaria);
                                     log.debug("Status atualizado em Secretaria ID: {}", codigoPerfil);
                                 },
-                                () -> log.warn("Secretaria ID {} não encontrada na org {}",
+                                () -> log.warn("Secretaria ID {} nao encontrada na org {}",
                                         codigoPerfil, organizacaoId)
                         );
             }
@@ -186,12 +186,12 @@ public class UsuarioService   {
                                     profissionalRepository.save(profissional);
                                     log.debug("Status atualizado em Profissional ID: {}", codigoPerfil);
                                 },
-                                () -> log.warn("Profissional ID {} não encontrado na org {}",
+                                () -> log.warn("Profissional ID {} nao encontrado na org {}",
                                         codigoPerfil, organizacaoId)
                         );
             }
 
-            default -> log.warn("Tipo de usuário {} não possui perfil específico para bloquear",
+            default -> log.warn("Tipo de usuario {} nao possui perfil especifico para bloquear",
                     tipoUsuario);
         }
     }
@@ -208,7 +208,7 @@ public class UsuarioService   {
 
     @Transactional(readOnly = true)
     public TodosUsuariosAgrupadosResponse buscarTodosAgrupados(Long organizacaoId) {
-        log.debug("Buscando todos os usuários agrupados para organização ID: {}", organizacaoId);
+        log.debug("Buscando todos os usuarios agrupados para organizacao ID: {}", organizacaoId);
 
         var pacientes = pacienteRepository.findByOrganizacao_Id(organizacaoId).stream()
                 .map(TodosUsuariosAgrupadosResponse.PacienteResumo::fromEntity)
@@ -242,31 +242,31 @@ public class UsuarioService   {
 
         var usuarioOpt = buscarPorId(id);
         if (usuarioOpt.isEmpty()) {
-            log.warn("Usuário não encontrado para troca de senha: {}", id);
-            throw new IllegalArgumentException("Usuário não encontrado");
+            log.warn("usuario nao encontrado para troca de senha: {}", id);
+            throw new IllegalArgumentException("usuario nao encontrado");
         }
 
         var usuario = usuarioOpt.get();
         String senhaCriptografada = passwordEncoder.encode(novaSenha);
         usuario.setSenha(senhaCriptografada);
         usuarioRepository.save(usuario);
-        log.info("Senha do usuário ID: {} alterada com sucesso", id);
+        log.info("Senha do usuario ID: {} alterada com sucesso", id);
     }
 
 
     public Optional<Usuario> buscarPorId(Long id) {
-        log.debug("Buscando usuário por ID: {}", id);
+        log.debug("Buscando usuario por ID: {}", id);
         return usuarioRepository.findById(id);
     }
 
 
     @Transactional(readOnly = true)
     public Optional<UsuarioPerfilCompletoResponse> buscarPerfilCompleto(Long usuarioId) {
-        log.debug("Buscando perfil completo do usuário ID: {}", usuarioId);
+        log.debug("Buscando perfil completo do usuario ID: {}", usuarioId);
 
         Optional<Usuario> usuarioOpt = buscarPorId(usuarioId);
         if (usuarioOpt.isEmpty()) {
-            log.warn("Usuário não encontrado: {}", usuarioId);
+            log.warn("Usuario nao encontrado: {}", usuarioId);
             return Optional.empty();
         }
 
@@ -274,11 +274,11 @@ public class UsuarioService   {
         TipoUsuarioNovo tipoUsuario = usuario.getTipoUsuarioNovo();
         
         if (tipoUsuario == null) {
-            log.warn("Usuário ID: {} não possui tipo_usuario_novo definido", usuarioId);
+            log.warn("usuario ID: {} nao possui tipo_usuario_novo definido", usuarioId);
             return Optional.empty();
         }
 
-        log.debug("Tipo de usuário identificado: {}", tipoUsuario);
+        log.debug("Tipo de usuario identificado: {}", tipoUsuario);
 
         Profissional profissional = null;
         AdminOrganizacao admin = null;
@@ -290,7 +290,7 @@ public class UsuarioService   {
                 if (profissional != null) {
                     log.debug("Profissional encontrado ID: {} com endereço: {}", 
                         profissional.getId(), 
-                        profissional.getEndereco() != null ? "Sim" : "Não");
+                        profissional.getEndereco() != null ? "Sim" : "nao");
                 }
             }
             
@@ -306,11 +306,11 @@ public class UsuarioService   {
                 if (secretaria != null) {
                     log.debug("Secretaria encontrada ID: {}", secretaria.getId());
                 } else {
-                    log.warn("Secretaria não encontrada para usuário ID: {}", usuarioId);
+                    log.warn("Secretaria nao encontrada para usuario ID: {}", usuarioId);
                 }
             }
             
-            default -> log.warn("Tipo de usuário {} não possui perfil específico implementado", tipoUsuario);
+            default -> log.warn("Tipo de usuario {} nao possui perfil especifico implementado", tipoUsuario);
         }
 
         return Optional.of(UsuarioPerfilCompletoResponse.fromEntities(usuario, profissional, admin, secretaria));

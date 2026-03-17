@@ -36,9 +36,9 @@ public class TermoAutorizacaoService {
         log.info("Gerando link do questionário para consulta={}", consultaId);
 
         Consulta consulta = consultaRepository.findById(consultaId)
-                .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada: " + consultaId));
+                .orElseThrow(() -> new IllegalArgumentException("Consulta nao encontrada: " + consultaId));
 
-        // Se já existe um termo para esta consulta, retorna o token existente (se não expirado)
+        // Se já existe um termo para esta consulta, retorna o token existente (se nao expirado)
         var termoExistente = termoRepository.findByConsultaId(consultaId);
         if (termoExistente.isPresent()) {
             TermoAutorizacao existente = termoExistente.get();
@@ -79,14 +79,14 @@ public class TermoAutorizacaoService {
     @Transactional(readOnly = true)
     public TermoAutorizacao buscarPorToken(String token) {
         TermoAutorizacao termo = termoRepository.findByTokenComRelacionamentos(token)
-                .orElseThrow(() -> new IllegalArgumentException("Link inválido ou não encontrado."));
+                .orElseThrow(() -> new IllegalArgumentException("Link inválido ou nao encontrado."));
 
         if (termo.isExpirado()) {
             throw new IllegalStateException("Este link expirou. Solicite um novo ao profissional.");
         }
 
         if (termo.isAssinado()) {
-            throw new IllegalStateException("Este questionário já foi respondido e assinado.");
+            throw new IllegalStateException("Este questionario já foi respondido e assinado.");
         }
 
         return termo;
@@ -103,14 +103,14 @@ public class TermoAutorizacaoService {
         log.info("Recebendo respostas do questionário — token={}", request.getToken());
 
         TermoAutorizacao termo = termoRepository.findByToken(request.getToken())
-                .orElseThrow(() -> new IllegalArgumentException("Token inválido."));
+                .orElseThrow(() -> new IllegalArgumentException("Token invalido."));
 
         if (termo.isExpirado()) {
             throw new IllegalStateException("Este link expirou.");
         }
 
         if (termo.isAssinado()) {
-            throw new IllegalStateException("Este questionário já foi respondido.");
+            throw new IllegalStateException("Este questionario já foi respondido.");
         }
 
         termo.setRespostasQuestionario(request.getRespostasQuestionario());
@@ -127,7 +127,7 @@ public class TermoAutorizacaoService {
      * Busca o questionário respondido por consultaId (para exibir na aba do prontuário).
      *
      * @param consultaId ID da consulta
-     * @return termo com respostas ou null se não existir
+     * @return termo com respostas ou null se nao existir
      */
     @Transactional(readOnly = true)
     public TermoAutorizacao buscarPorConsultaId(Long consultaId) {

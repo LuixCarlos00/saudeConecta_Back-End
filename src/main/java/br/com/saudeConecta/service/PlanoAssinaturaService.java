@@ -48,7 +48,7 @@ public class PlanoAssinaturaService {
     public PlanoAssinaturaResponse buscarPorId(Long id) {
         PlanoAssinatura plano = planoAssinaturaRepository.findByIdAndAtivoTrue(id)
                 .orElseThrow(() -> new BusinessException(
-                        "Plano não encontrado ou inativo: " + id,
+                        "Plano nao encontrado ou inativo: " + id,
                         HttpStatus.NOT_FOUND));
         return PlanoAssinaturaResponse.fromEntity(plano);
     }
@@ -63,7 +63,7 @@ public class PlanoAssinaturaService {
     public PlanoAssinaturaResponse buscarPorTipo(TipoPlano tipo) {
         PlanoAssinatura plano = planoAssinaturaRepository.findByTipo(tipo)
                 .orElseThrow(() -> new BusinessException(
-                        "Plano não encontrado para o tipo: " + tipo,
+                        "Plano nao encontrado para o tipo: " + tipo,
                         HttpStatus.NOT_FOUND));
         return PlanoAssinaturaResponse.fromEntity(plano);
     }
@@ -112,7 +112,7 @@ public class PlanoAssinaturaService {
     public PlanoAssinaturaResponse atualizarPlano(Long id, PlanoAssinaturaRequest request) {
         PlanoAssinatura plano = planoAssinaturaRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(
-                        "Plano não encontrado: " + id,
+                        "Plano nao encontrado: " + id,
                         HttpStatus.NOT_FOUND));
 
         plano.setNome(request.nome());
@@ -139,7 +139,7 @@ public class PlanoAssinaturaService {
     public void desativarPlano(Long id) {
         PlanoAssinatura plano = planoAssinaturaRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(
-                        "Plano não encontrado: " + id,
+                        "Plano nao encontrado: " + id,
                         HttpStatus.NOT_FOUND));
 
         plano.setAtivo(false);
@@ -157,7 +157,7 @@ public class PlanoAssinaturaService {
     public PlanoAssinatura buscarEntidadePorId(Long id) {
         return planoAssinaturaRepository.findByIdAndAtivoTrue(id)
                 .orElseThrow(() -> new BusinessException(
-                        "Plano não encontrado ou inativo: " + id,
+                        "Plano nao encontrado ou inativo: " + id,
                         HttpStatus.NOT_FOUND));
     }
 }

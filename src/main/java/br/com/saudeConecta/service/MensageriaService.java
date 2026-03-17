@@ -3,13 +3,14 @@ package br.com.saudeConecta.service;
 import br.com.saudeConecta.domain.mensageria.Mensageria;
 import br.com.saudeConecta.domain.mensageria.StatusMensagem;
 import br.com.saudeConecta.domain.mensageria.TipoMensagem;
-import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.profissional.Profissional;
-import br.com.saudeConecta.infra.tenant.RequiresTenant;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.MensageriaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.SecretariaRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
 import br.com.saudeConecta.presentation.dto.mensageria.MensageriaResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +35,9 @@ public class MensageriaService {
     private final MensageriaRepository mensageriaRepository;
     private final OrganizacaoRepository organizacaoRepository;
     private final ProfissionalRepository profissionalRepository;
+    private final SecretariaRepository secretariaRepository;
+    private final AdminOrganizacaoRepository adminOrganizacaoRepository;
+    private final PacienteRepository pacienteRepository;
     private final TenantHelper tenantHelper;
     private final EmailNotificacaoService emailNotificacaoService;
 
@@ -145,7 +149,8 @@ public class MensageriaService {
 
     /**
      * Reenvia uma mensagem registrada na mensageria.
-     * Utiliza os dados armazenados (email, assunto, corpo) para disparar o email novamente.
+     * Busca o email atualizado da entidade de domínio (Profissional, Secretaria ou AdminOrganizacao)
+     * para garantir que o email mais recente seja utilizado.
      * Atualiza o status e incrementa o número de tentativas.
      *
      * @param mensageriaId ID da mensagem a ser reenviada
@@ -160,7 +165,10 @@ public class MensageriaService {
             throw new IllegalArgumentException("Acesso negado à mensagem: " + mensageriaId);
         }
 
-        log.info("Reenviando mensagem ID: {} para: {}", mensageriaId, mensageria.getDestinatarioEmail());
+        // Buscar email atualizado da entidade de domínio
+        String emailAtualizado = obterEmailAtualizadoDoDominio(mensageria);
+        
+        log.info("Reenviando mensagem ID: {} para email atualizado: {}", mensageriaId, emailAtualizado);
 
         mensageria.setStatus(StatusMensagem.PENDENTE);
         mensageria.setErroDetalhe(null);
@@ -168,12 +176,62 @@ public class MensageriaService {
 
         emailNotificacaoService.reenviarEmail(
                 mensageria.getId(),
-                mensageria.getDestinatarioEmail(),
+                emailAtualizado,
                 mensageria.getAssunto(),
                 mensageria.getCorpoMensagem()
         );
 
         log.info("Reenvio delegado ao EmailNotificacaoService. Mensagem ID: {}", mensageriaId);
+    }
+
+    /**
+     * Obtém o email atualizado da entidade de domínio correspondente.
+     * Busca em Profissional, Secretaria ou AdminOrganizacao conforme o tipo de mensagem.
+     *
+     * @param mensageria Mensagem com informações do destinatário
+     * @return Email atualizado da entidade de domínio
+     * @throws IllegalStateException se não conseguir encontrar o email atualizado
+     */
+    private String obterEmailAtualizadoDoDominio(Mensageria mensageria) {
+        Long entidadeId = mensageria.getDestinatarioEntidadeId();
+        TipoMensagem tipo = mensageria.getTipoMensagem();
+
+        // Tentar buscar por Profissional (Clínico/Dentista)
+        if (entidadeId != null && tipo == TipoMensagem.EMAIL_CREDENCIAIS_CLINICO) {
+            return profissionalRepository.findById(entidadeId)
+                    .map(Profissional::getEmail)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Profissional não encontrado para ID: " + entidadeId));
+        }
+
+        // Tentar buscar por Secretaria
+        if (entidadeId != null && tipo == TipoMensagem.EMAIL_CREDENCIAIS_SECRETARIA) {
+            return secretariaRepository.findById(entidadeId)
+                    .map(s -> s.getEmail())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Secretária não encontrada para ID: " + entidadeId));
+        }
+
+        // Tentar buscar por AdminOrganizacao
+        if (entidadeId != null && tipo == TipoMensagem.EMAIL_CREDENCIAIS_ADMINISTRADOR) {
+            return adminOrganizacaoRepository.findById(entidadeId)
+                    .map(a -> a.getEmail())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Administrador não encontrado para ID: " + entidadeId));
+        }
+
+        // Tentar buscar por Paciente
+        if (entidadeId != null && tipo == TipoMensagem.EMAIL_CREDENCIAIS_PACIENTE) {
+            return pacienteRepository.findById(entidadeId)
+                    .map(p -> p.getPaciEmail())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Paciente não encontrado para ID: " + entidadeId));
+        }
+
+        // Fallback: usar email armazenado na mensageria para outros tipos
+        log.warn("Nao foi possivel buscar email do dominio para mensagem ID: {}. Usando email armazenado.", 
+                 mensageria.getId());
+        return mensageria.getDestinatarioEmail();
     }
 
     /**
@@ -187,6 +245,7 @@ public class MensageriaService {
             case EMAIL_CREDENCIAIS_CLINICO -> "medico";
             case EMAIL_CREDENCIAIS_SECRETARIA -> "secretaria";
             case EMAIL_CREDENCIAIS_ADMINISTRADOR -> "administrador";
+            case EMAIL_CREDENCIAIS_PACIENTE -> "paciente";
             case EMAIL_RECUPERACAO_SENHA -> "recuperacao";
             case EMAIL_GENERICO -> "generico";
         };

@@ -46,7 +46,7 @@ public class LimitePlanoService {
     public void validarLimiteAdminOrg(Long organizacaoId) {
         Optional<AssinaturaTenant> assinaturaOpt = buscarAssinaturaAtiva(organizacaoId);
         if (assinaturaOpt.isEmpty()) {
-            log.warn("Organização {} sem assinatura ativa. Permitindo criação (sem plano).", organizacaoId);
+            log.warn("Organização {} sem assinatura ativa. Permitindo criacao (sem plano).", organizacaoId);
             return;
         }
 
@@ -76,7 +76,7 @@ public class LimitePlanoService {
     public void validarLimiteProfissional(Long organizacaoId) {
         Optional<AssinaturaTenant> assinaturaOpt = buscarAssinaturaAtiva(organizacaoId);
         if (assinaturaOpt.isEmpty()) {
-            log.warn("Organização {} sem assinatura ativa. Permitindo criação (sem plano).", organizacaoId);
+            log.warn("Organização {} sem assinatura ativa. Permitindo criacao (sem plano).", organizacaoId);
             return;
         }
 
@@ -106,7 +106,7 @@ public class LimitePlanoService {
     public void validarLimiteSecretaria(Long organizacaoId) {
         Optional<AssinaturaTenant> assinaturaOpt = buscarAssinaturaAtiva(organizacaoId);
         if (assinaturaOpt.isEmpty()) {
-            log.warn("Organização {} sem assinatura ativa. Permitindo criação (sem plano).", organizacaoId);
+            log.warn("Organização {} sem assinatura ativa. Permitindo criacao (sem plano).", organizacaoId);
             return;
         }
 

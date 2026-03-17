@@ -74,6 +74,9 @@ public class PlanejamentoTerapeutico {
     @Builder.Default
     private String statusAssinatura = "PENDENTE";
 
+    @Column(name = "ip_origem", length = 45)
+    private String ipOrigem;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

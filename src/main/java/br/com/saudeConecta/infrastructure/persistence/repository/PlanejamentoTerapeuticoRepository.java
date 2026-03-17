@@ -81,9 +81,10 @@ public interface PlanejamentoTerapeuticoRepository extends JpaRepository<Planeja
     @Query("UPDATE PlanejamentoTerapeutico p " +
            "SET p.statusAssinatura = 'ASSINADO', " +
            "    p.assinaturaBase64 = :assinatura, " +
-           "    p.dataAssinatura = CURRENT_TIMESTAMP " +
+           "    p.dataAssinatura = CURRENT_TIMESTAMP, " +
+           "    p.ipOrigem = :ipOrigem " +
            "WHERE p.tokenAssinatura = :token")
-    int assinarPorToken(@Param("token") String token, @Param("assinatura") String assinatura);
+    int assinarPorToken(@Param("token") String token, @Param("assinatura") String assinatura, @Param("ipOrigem") String ipOrigem);
 
     /**
      * Exclui planejamentos terapêuticos vinculados diretamente a uma consulta.

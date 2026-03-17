@@ -62,4 +62,16 @@
     <!-- Remover coluna duplicada prontdent_oclusao -->
     <include file="db/changelog/changes/030-remover-coluna-prontdent-oclusao.xml"/>
 
+    <!-- Atualizar credenciais do super admin (login CPF + nova senha) -->
+    <include file="db/changelog/changes/031-atualizar-credenciais-super-admin.xml"/>
+
+    <!-- Mensageria: FK profissional → coluna genérica destinatario_entidade_id -->
+    <include file="db/changelog/changes/032-alterar-mensageria-entidade-generica.xml"/>
+
+    <!-- Adicionar coluna ip_origem na tabela planejamento_terapeutico -->
+    <include file="db/changelog/033-adicionar-ip-origem-planejamento-terapeutico.xml"/>
+
+    <!-- Adicionar novos campos ao prontuário médico (paridade com odontológico) -->
+    <include file="db/changelog/changes/034-adicionar-campos-prontuario-medico.xml"/>
+
 </databaseChangeLog>

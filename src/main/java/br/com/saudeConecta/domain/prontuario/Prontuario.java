@@ -10,7 +10,9 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.Serializable;
 import java.sql.Date;
-//Prntuario Médico
+import java.time.LocalDate;
+
+//Prontuario Médico
 @Entity
 @Getter
 @Setter
@@ -36,9 +38,6 @@ public class Prontuario implements Serializable {
     private String prontTemperatura;
 
 
-    @Column(name = "prontSexo")
-    private String prontSexo;
-
     @Column(name = "prontSaturacao")
     private String prontSaturacao;
 
@@ -57,19 +56,17 @@ public class Prontuario implements Serializable {
     @Column(name = "prontFrequenciaArterialDiastolica")
     private String prontFrequenciaArterialDiastolica;
 
-    @Column(name = "prontObservacao")
+    @Column(name = "prontObservacao", columnDefinition = "TEXT")
     private String prontObservacao;
 
-    @Column(name = "prontCondulta")
-    private String prontCondulta;
 
-    @Column(name = "prontAnamnese")
+    @Column(name = "prontAnamnese", columnDefinition = "TEXT")
     private String prontAnamnese;
 
-    @Column(name = "prontQueixaPricipal")
+    @Column(name = "prontQueixaPricipal", columnDefinition = "TEXT")
     private String prontQueixaPricipal;
 
-    @Column(name = "prontDiagnostico")
+    @Column(name = "prontDiagnostico", columnDefinition = "TEXT")
     private String prontDiagnostico;
 
     @Column(name = "prontModeloPrescricao")
@@ -81,7 +78,7 @@ public class Prontuario implements Serializable {
     @Column(name = "prontDataPrescricao")
     private String prontDataPrescricao;
 
-    @Column(name = "prontPrescricao")
+    @Column(name = "prontPrescricao", columnDefinition = "TEXT")
     private String prontPrescricao;
 
     @Column(name = "prontDataFinalizado", nullable = false)
@@ -95,30 +92,41 @@ public class Prontuario implements Serializable {
     @JoinColumn(name = "consulta")
     private Consulta consulta;
 
-    @Column(name = "prontModeloExame")
-    private String prontModeloExame;
-
-    @Column(name = "prontTituloExame")
-    private String prontTituloExame;
-
-    @Column(name = "prontDataExame")
-    private String prontDataExame;
-
-    @Column(name = "prontExame")
-    private String prontExame;
 
     @Column(name = "prontTempoDuracao")
     private String prontTempoDuracao;
 
+    // ── Identificação do Paciente ─────────────────────────────────────────────
+    @Column(name = "prontResponsavel", length = 255)
+    private String prontResponsavel;
+
+    // ── Sinais Vitais (campo faltante) ────────────────────────────────────────
+    @Column(name = "prontPulso", length = 250)
+    private String prontPulso;
 
 
 
+    @Column(name = "prontExameOutros", columnDefinition = "TEXT")
+    private String prontExameOutros;
+
+    // ── Diagnóstico e Tratamento ──────────────────────────────────────────────
+    @Column(name = "prontOrientacoes", columnDefinition = "TEXT")
+    private String prontOrientacoes;
+
+    // ── TUSS e CID ────────────────────────────────────────────────────────────
+    @Column(name = "prontTussTexto", columnDefinition = "TEXT")
+    private String prontTussTexto;
+
+    @Column(name = "prontCidTexto", columnDefinition = "TEXT")
+    private String prontCidTexto;
+
+    @Column(name = "prontSolicitacaoExameTexto", columnDefinition = "TEXT")
+    private String prontSolicitacaoExameTexto;
 
     public Prontuario(@NotNull CadastrarProntuarioRequest dados, Profissional profissional, Consulta consulta) {
         this.prontAltura = dados.altura();
         this.prontPeso = dados.peso();
         this.prontTemperatura = dados.temperatura();
-        this.prontSexo = dados.sexo();
         this.prontSaturacao = dados.saturacao();
         this.prontHemoglobina = dados.hemoglobina();
         this.prontPressao = dados.pressao();
@@ -126,7 +134,6 @@ public class Prontuario implements Serializable {
         this.prontFrequenciaArterialSistolica = dados.frequenciaArterialSistolica();
         this.prontFrequenciaArterialDiastolica = dados.frequenciaArterialDiastolica();
         this.prontObservacao = dados.observacao();
-        this.prontCondulta = dados.conduta();
         this.prontAnamnese = dados.anamnese();
         this.prontQueixaPricipal = dados.queixaPrincipal();
         this.prontDiagnostico = dados.diagnostico();
@@ -137,11 +144,24 @@ public class Prontuario implements Serializable {
         this.prontDataFinalizado = dados.dataFinalizado();
         this.profissional = profissional;
         this.consulta = consulta;
-        this.prontTituloExame = dados.tituloExame();
-        this.prontDataExame = dados.dataExame();
-        this.prontExame = dados.exame();
-        this.prontModeloExame = dados.modeloExame();
         this.prontTempoDuracao = dados.tempoDuracao();
+        // Novos campos
+        this.prontResponsavel = dados.responsavel();
+        this.prontPulso = dados.pulso();
+        this.prontExameOutros = dados.exameOutros();
+        this.prontOrientacoes = dados.orientacoes();
+        this.prontTussTexto = dados.tussTexto();
+        this.prontCidTexto = dados.cidTexto();
+        this.prontSolicitacaoExameTexto = dados.solicitacaoExameTexto();
+    }
+
+    private LocalDate parseData(String data) {
+        if (data == null || data.isBlank()) return null;
+        try {
+            return LocalDate.parse(data);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
 

@@ -35,12 +35,10 @@ public class ProntuarioCompletoResponse {
     
     // Dados demográficos
     private String dataNascimento;
-    private String sexo;
     
     // Anamnese e avaliação
     private String queixaPrincipal;
     private String anamnese;
-    private String conduta;
     private String observacao;
     private String diagnostico;
     
@@ -51,15 +49,29 @@ public class ProntuarioCompletoResponse {
     private String prescricao;
     
     // Exames
-    private String modeloExame;
-    private String tituloExame;
-    private String dataExame;
-    private String exame;
     private String tempoDuracao;
     
     // Dados de controle
     @JsonFormat(pattern = "yyyy-MM-dd")
     private Date dataFinalizado;
+
+    // ── Identificação do Paciente ─────────────────────────────────────────────
+    private String responsavel;
+
+    // ── Sinais Vitais (campo adicional) ───────────────────────────────────────
+    private String pulso;
+
+
+    // ── Exame Físico ────────────────────────────────────────────────────────────
+    private String exameOutros;
+
+    // ── Diagnóstico e Tratamento ──────────────────────────────────────────────
+    private String orientacoes;
+
+    // ── TUSS e CID ────────────────────────────────────────────────────────────
+    private String tussTexto;
+    private String cidTexto;
+    private String solicitacaoExameTexto;
     
     // Relacionamentos (DTOs para evitar lazy loading)
     private ProfissionalResponse profissional;
@@ -135,22 +147,24 @@ public class ProntuarioCompletoResponse {
                 .frequenciaArterialSistolica(prontuario.getProntFrequenciaArterialSistolica())
                 .frequenciaArterialDiastolica(prontuario.getProntFrequenciaArterialDiastolica())
                 .hemoglobina(prontuario.getProntHemoglobina())
-                 .sexo(prontuario.getProntSexo())
                 .queixaPrincipal(prontuario.getProntQueixaPricipal())
                 .anamnese(prontuario.getProntAnamnese())
-                .conduta(prontuario.getProntCondulta())
                 .observacao(prontuario.getProntObservacao())
                 .diagnostico(prontuario.getProntDiagnostico())
                 .modeloPrescricao(prontuario.getProntModeloPrescricao())
                 .tituloPrescricao(prontuario.getProntTituloPrescricao())
                 .dataPrescricao(prontuario.getProntDataPrescricao())
                 .prescricao(prontuario.getProntPrescricao())
-                .modeloExame(prontuario.getProntModeloExame())
-                .tituloExame(prontuario.getProntTituloExame())
-                .dataExame(prontuario.getProntDataExame())
-                .exame(prontuario.getProntExame())
                 .tempoDuracao(prontuario.getProntTempoDuracao())
                 .dataFinalizado(prontuario.getProntDataFinalizado())
+                // Novos campos
+                .responsavel(prontuario.getProntResponsavel())
+                .pulso(prontuario.getProntPulso())
+                .exameOutros(prontuario.getProntExameOutros())
+                .orientacoes(prontuario.getProntOrientacoes())
+                .tussTexto(prontuario.getProntTussTexto())
+                .cidTexto(prontuario.getProntCidTexto())
+                .solicitacaoExameTexto(prontuario.getProntSolicitacaoExameTexto())
                 .profissional(profissionalResponse)
                 .consulta(consultaResponse)
                 .build();

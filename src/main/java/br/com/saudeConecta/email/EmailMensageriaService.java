@@ -4,10 +4,8 @@ import br.com.saudeConecta.domain.mensageria.Mensageria;
 import br.com.saudeConecta.domain.mensageria.StatusMensagem;
 import br.com.saudeConecta.domain.mensageria.TipoMensagem;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
-import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.infrastructure.persistence.repository.MensageriaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
-import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,13 +22,12 @@ public class EmailMensageriaService {
 
     private final MensageriaRepository mensageriaRepository;
     private final OrganizacaoRepository organizacaoRepository;
-    private final ProfissionalRepository profissionalRepository;
 
     /**
      * Registra o sucesso de envio de email na mensageria.
      *
      * @param organizacaoId  ID da organização
-     * @param profissionalId ID do profissional (pode ser nulo)
+     * @param entidadeId     ID da entidade destinatária (profissional, secretária, admin ou paciente)
      * @param email          email do destinatário
      * @param nome           nome do destinatário
      * @param assunto        assunto do email
@@ -38,7 +35,7 @@ public class EmailMensageriaService {
      * @param tipo           tipo da mensagem
      * @param tentativas     número de tentativas até o sucesso
      */
-    public void registrarSucesso(Long organizacaoId, Long profissionalId, String email,
+    public void registrarSucesso(Long organizacaoId, Long entidadeId, String email,
                                   String nome, String assunto, String corpo,
                                   TipoMensagem tipo, int tentativas) {
         if (organizacaoId == null) {
@@ -50,14 +47,9 @@ public class EmailMensageriaService {
             Organizacao organizacao = organizacaoRepository.findById(organizacaoId)
                     .orElseThrow(() -> new IllegalArgumentException("Organização não encontrada: " + organizacaoId));
 
-            Profissional profissional = null;
-            if (profissionalId != null) {
-                profissional = profissionalRepository.findById(profissionalId).orElse(null);
-            }
-
             Mensageria mensageria = Mensageria.builder()
                     .organizacao(organizacao)
-                    .destinatarioProfissional(profissional)
+                    .destinatarioEntidadeId(entidadeId)
                     .destinatarioEmail(email)
                     .destinatarioNome(nome)
                     .assunto(assunto)
@@ -79,7 +71,7 @@ public class EmailMensageriaService {
      * Registra a falha de envio de email na mensageria.
      *
      * @param organizacaoId  ID da organização
-     * @param profissionalId ID do profissional (pode ser nulo)
+     * @param entidadeId     ID da entidade destinatária (profissional, secretária, admin ou paciente)
      * @param email          email do destinatário
      * @param nome           nome do destinatário
      * @param assunto        assunto do email
@@ -88,7 +80,7 @@ public class EmailMensageriaService {
      * @param erroDetalhe    detalhe do erro
      * @param tentativas     número de tentativas realizadas
      */
-    public void registrarFalha(Long organizacaoId, Long profissionalId, String email,
+    public void registrarFalha(Long organizacaoId, Long entidadeId, String email,
                                 String nome, String assunto, String corpo,
                                 TipoMensagem tipo, String erroDetalhe, int tentativas) {
         if (organizacaoId == null) {
@@ -100,14 +92,9 @@ public class EmailMensageriaService {
             Organizacao organizacao = organizacaoRepository.findById(organizacaoId)
                     .orElseThrow(() -> new IllegalArgumentException("Organização não encontrada: " + organizacaoId));
 
-            Profissional profissional = null;
-            if (profissionalId != null) {
-                profissional = profissionalRepository.findById(profissionalId).orElse(null);
-            }
-
             Mensageria mensageria = Mensageria.builder()
                     .organizacao(organizacao)
-                    .destinatarioProfissional(profissional)
+                    .destinatarioEntidadeId(entidadeId)
                     .destinatarioEmail(email)
                     .destinatarioNome(nome)
                     .assunto(assunto)
@@ -182,6 +169,7 @@ public class EmailMensageriaService {
             case "medico" -> TipoMensagem.EMAIL_CREDENCIAIS_CLINICO;
             case "secretaria" -> TipoMensagem.EMAIL_CREDENCIAIS_SECRETARIA;
             case "administrador" -> TipoMensagem.EMAIL_CREDENCIAIS_ADMINISTRADOR;
+            case "paciente" -> TipoMensagem.EMAIL_CREDENCIAIS_PACIENTE;
             case "recuperacao" -> TipoMensagem.EMAIL_RECUPERACAO_SENHA;
             default -> TipoMensagem.EMAIL_GENERICO;
         };

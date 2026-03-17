@@ -34,13 +34,13 @@ public class EmailRetryService {
      * @param corpoHtml      HTML já renderizado
      * @param tipoUsuario    tipo do usuário (para resolver TipoMensagem)
      * @param organizacaoId  ID da organização (pode ser nulo)
-     * @param profissionalId ID do profissional (pode ser nulo)
+     * @param entidadeId     ID da entidade destinatária (profissional, secretária, admin ou paciente)
      */
     public void executarComRetry(String destinatario, String nome, String assunto,
                                   String corpoHtml, String tipoUsuario,
-                                  Long organizacaoId, Long profissionalId) {
+                                  Long organizacaoId, Long entidadeId) {
         executarTentativa(destinatario, nome, assunto, corpoHtml, tipoUsuario,
-                organizacaoId, profissionalId, 1);
+                organizacaoId, entidadeId, 1);
     }
 
     /**
@@ -49,7 +49,7 @@ public class EmailRetryService {
      */
     private void executarTentativa(String destinatario, String nome, String assunto,
                                     String corpoHtml, String tipoUsuario,
-                                    Long organizacaoId, Long profissionalId, int tentativa) {
+                                    Long organizacaoId, Long entidadeId, int tentativa) {
         try {
             log.info("Tentativa {}/{} de envio para: {} [{}]", tentativa, MAX_TENTATIVAS, destinatario, tipoUsuario);
             emailRemetenteService.enviarHtml(destinatario, assunto, corpoHtml);
@@ -57,7 +57,7 @@ public class EmailRetryService {
             log.info("Email enviado com sucesso na tentativa {} para: {}", tentativa, destinatario);
             TipoMensagem tipo = emailMensageriaService.resolverTipoMensagem(tipoUsuario);
             emailMensageriaService.registrarSucesso(
-                    organizacaoId, profissionalId, destinatario, nome, assunto, corpoHtml, tipo, tentativa);
+                    organizacaoId, entidadeId, destinatario, nome, assunto, corpoHtml, tipo, tentativa);
 
         } catch (Exception e) {
             log.error("Erro na tentativa {}/{} para {} [{}]: {}",
@@ -67,7 +67,7 @@ public class EmailRetryService {
                 log.error("Falha definitiva após {} tentativas para: {}", MAX_TENTATIVAS, destinatario);
                 TipoMensagem tipo = emailMensageriaService.resolverTipoMensagem(tipoUsuario);
                 emailMensageriaService.registrarFalha(
-                        organizacaoId, profissionalId, destinatario, nome, assunto, corpoHtml,
+                        organizacaoId, entidadeId, destinatario, nome, assunto, corpoHtml,
                         tipo, "Falha no envio após " + MAX_TENTATIVAS + " tentativas: " + e.getMessage(),
                         MAX_TENTATIVAS);
                 return;
@@ -78,7 +78,7 @@ public class EmailRetryService {
 
             CompletableFuture.delayedExecutor(delayMs, TimeUnit.MILLISECONDS).execute(() ->
                     executarTentativa(destinatario, nome, assunto, corpoHtml, tipoUsuario,
-                            organizacaoId, profissionalId, tentativa + 1));
+                            organizacaoId, entidadeId, tentativa + 1));
         }
     }
 

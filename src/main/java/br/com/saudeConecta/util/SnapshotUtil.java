@@ -46,7 +46,7 @@ public class SnapshotUtil {
                 try {
                     field.set(clone, field.get(original));
                 } catch (Exception e) {
-                    log.warn("Não foi possível copiar campo '{}': {}", field.getName(), e.getMessage());
+                    log.warn("Não foi possivel copiar campo '{}': {}", field.getName(), e.getMessage());
                 }
             }
 

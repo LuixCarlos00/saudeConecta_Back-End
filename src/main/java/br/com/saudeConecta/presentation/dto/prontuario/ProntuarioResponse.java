@@ -20,15 +20,13 @@ public class ProntuarioResponse {
     private String prontPeso;
     private String prontAltura;
     private String prontTemperatura;
-     private String prontSexo;
-    private String prontSaturacao;
+     private String prontSaturacao;
     private String prontHemoglobina;
     private String prontPressao;
     private String prontFrequenciaRespiratoria;
     private String prontFrequenciaArterialSistolica;
     private String prontFrequenciaArterialDiastolica;
     private String prontObservacao;
-    private String prontCondulta;
     private String prontAnamnese;
     private String prontQueixaPricipal;
     private String prontDiagnostico;
@@ -37,11 +35,17 @@ public class ProntuarioResponse {
     private String prontDataPrescricao;
     private String prontPrescricao;
     private Date prontDataFinalizado;
-    private String prontModeloExame;
-    private String prontTituloExame;
-    private String prontDataExame;
-    private String prontExame;
     private String prontTempoDuracao;
+
+
+    testar se esta cadastrando o prontuario de medico
+        + verifica os relatorio de Dentidsta e medico
+            + modificar a visualização de relatorios para tipos de profissonais
+                + puxar os dados da pagina de inicializado para o banco de dados
+                    assim quando atualizar o dados de plano atuliza a pagina de inicializado
+            +
+
+
     
     // IDs dos relacionamentos (sem carregar as entidades completas)
     private Long profissionalId;
@@ -59,7 +63,6 @@ public class ProntuarioResponse {
         response.setProntPeso(prontuario.getProntPeso());
         response.setProntAltura(prontuario.getProntAltura());
         response.setProntTemperatura(prontuario.getProntTemperatura());
-         response.setProntSexo(prontuario.getProntSexo());
         response.setProntSaturacao(prontuario.getProntSaturacao());
         response.setProntHemoglobina(prontuario.getProntHemoglobina());
         response.setProntPressao(prontuario.getProntPressao());
@@ -67,7 +70,6 @@ public class ProntuarioResponse {
         response.setProntFrequenciaArterialSistolica(prontuario.getProntFrequenciaArterialSistolica());
         response.setProntFrequenciaArterialDiastolica(prontuario.getProntFrequenciaArterialDiastolica());
         response.setProntObservacao(prontuario.getProntObservacao());
-        response.setProntCondulta(prontuario.getProntCondulta());
         response.setProntAnamnese(prontuario.getProntAnamnese());
         response.setProntQueixaPricipal(prontuario.getProntQueixaPricipal());
         response.setProntDiagnostico(prontuario.getProntDiagnostico());
@@ -76,10 +78,6 @@ public class ProntuarioResponse {
         response.setProntDataPrescricao(prontuario.getProntDataPrescricao());
         response.setProntPrescricao(prontuario.getProntPrescricao());
         response.setProntDataFinalizado(prontuario.getProntDataFinalizado());
-        response.setProntModeloExame(prontuario.getProntModeloExame());
-        response.setProntTituloExame(prontuario.getProntTituloExame());
-        response.setProntDataExame(prontuario.getProntDataExame());
-        response.setProntExame(prontuario.getProntExame());
         response.setProntTempoDuracao(prontuario.getProntTempoDuracao());
         
         // Apenas IDs, sem carregar entidades relacionadas

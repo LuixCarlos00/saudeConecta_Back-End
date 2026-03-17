@@ -110,13 +110,10 @@ public class BuscarHistoricoCompletoPacienteMedicoUseCase {
                    .frequenciaArterialSistolica(prontuario.getProntFrequenciaArterialSistolica())
                    .frequenciaArterialDiastolica(prontuario.getProntFrequenciaArterialDiastolica())
 
-                   // Dados Demográficos
-                   .sexo(prontuario.getProntSexo())
 
                    // Anamnese e Avaliação
                    .queixaPrincipal(prontuario.getProntQueixaPricipal())
                    .anamnese(prontuario.getProntAnamnese())
-                   .conduta(prontuario.getProntCondulta())
                    .observacao(prontuario.getProntObservacao())
                    .diagnostico(prontuario.getProntDiagnostico())
 
@@ -126,11 +123,6 @@ public class BuscarHistoricoCompletoPacienteMedicoUseCase {
                    .dataPrescricao(prontuario.getProntDataPrescricao())
                    .prescricao(prontuario.getProntPrescricao())
 
-                   // Exames
-                   .modeloExame(prontuario.getProntModeloExame())
-                   .tituloExame(prontuario.getProntTituloExame())
-                   .dataExame(prontuario.getProntDataExame())
-                   .exame(prontuario.getProntExame())
                    .tempoDuracao(prontuario.getProntTempoDuracao())
 
                    // Dados de Controle

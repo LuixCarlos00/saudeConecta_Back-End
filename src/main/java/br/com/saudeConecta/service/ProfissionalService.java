@@ -90,29 +90,29 @@ public class ProfissionalService {
     @Transactional
     public Profissional cadastraClinicoByOrg(CadastrarClinicoRequest request) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Cadastrando clínico: {} na organização: {}", request.nome(), orgId);
+        log.info("Cadastrando clinico: {} na organizacao: {}", request.nome(), orgId);
 
         limitePlanoService.validarLimiteProfissional(orgId);
 
         String cpfLimpo = limparCpf(request.cpf());
 
         if (usuarioRepository.existsByLogin(request.cpf())) {
-            throw new IllegalStateException("CPF já cadastrado no sistema");
+            throw new IllegalStateException("CPF ja cadastrado no sistema");
         }
 
-        // Verificar se o email já existe em qualquer tabela
+        // Verificar se o email ja existe em qualquer tabela
         if (emailUnicoService.emailJaExiste(request.email())) {
             String tabela = emailUnicoService.ondeEmailFoiEncontrado(request.email());
-            throw new IllegalStateException("Email já cadastrado no sistema como " + tabela);
+            throw new IllegalStateException("Email ja cadastrado no sistema como " + tabela);
         }
 
         Organizacao organizacao = organizacaoRepository.findById(orgId)
-            .orElseThrow(() -> new IllegalStateException("Organização não encontrada"));
+            .orElseThrow(() -> new IllegalStateException("Organização nao encontrada"));
 
         // Determina o tipo profissional com base no request
         String tipoCodigo = request.tipoProfissional() != null ? request.tipoProfissional() : "MEDICO";
         TipoProfissional tipoProfissional = tipoProfissionalRepository.findByCodigo(tipoCodigo)
-            .orElseThrow(() -> new IllegalStateException("Tipo " + tipoCodigo + " não encontrado"));
+            .orElseThrow(() -> new IllegalStateException("Tipo " + tipoCodigo + " nao encontrado"));
 
         String senhaGerada = gerarSenhaAleatoria();
         String senhaCriptografada = passwordEncoder.encode(senhaGerada);
@@ -152,7 +152,7 @@ public class ProfissionalService {
                 .ifPresentOrElse(
                     especialidades::add,
                     () -> {
-                        // Se não encontrar, cria nova especialidade
+                        // Se nao encontrar, cria nova especialidade
                         log.info("Criando nova especialidade: {} para tipo: {}", nomeEspecialidade, tipoProfissional.getCodigo());
                         Especialidade novaEspecialidade = Especialidade.builder()
                             .tipoProfissional(tipoProfissional)
@@ -188,7 +188,7 @@ public class ProfissionalService {
             .build();
 
         Profissional salvo = profissionalRepository.save(profissional);
-        log.info("Clínico cadastrado com sucesso. ID: {}", salvo.getId());
+        log.info("Clinico cadastrado com sucesso. ID: {}", salvo.getId());
 
         emailNotificacaoService.enviarCredenciaisClinico(
             request.email(),
@@ -218,7 +218,7 @@ public class ProfissionalService {
         Long orgId = tenantHelper.getCurrentTenantId();
 
         Profissional antes = profissionalRepository.buscarClinicoIdByOrg(id, orgId)
-                .orElseThrow(() -> new IllegalArgumentException("Profissional não encontrado"));
+                .orElseThrow(() -> new IllegalArgumentException("Profissional nao encontrado"));
 
         Profissional snapshot = SnapshotUtil.copiarSnapshot(antes);
 
@@ -239,7 +239,7 @@ public class ProfissionalService {
         if (dadosAtualizados.tipoProfissional() != null && !dadosAtualizados.tipoProfissional().isEmpty()) {
             String tipoCodigo = dadosAtualizados.tipoProfissional();
             TipoProfissional tipoProfissional = tipoProfissionalRepository.findByCodigo(tipoCodigo)
-                .orElseThrow(() -> new IllegalStateException("Tipo " + tipoCodigo + " não encontrado"));
+                .orElseThrow(() -> new IllegalStateException("Tipo " + tipoCodigo + " nao encontrado"));
             antes.setTipoProfissional(tipoProfissional);
         }
 
@@ -257,7 +257,7 @@ public class ProfissionalService {
                         antes.setEspecialidades(especialidades);
                     },
                     () -> {
-                        // Se não encontrar, cria nova especialidade
+                        // Se nao encontrar, cria nova especialidade
                         log.info("Criando nova especialidade: {} para tipo: {}", nomeEspecialidade, tipoProfissional.getCodigo());
                         Especialidade novaEspecialidade = Especialidade.builder()
                             .tipoProfissional(tipoProfissional)
@@ -314,16 +314,16 @@ return resultado ;
 
         // 1. Buscar o profissional na tabela profissional
         Profissional profissional = profissionalRepository.buscarClinicoIdByOrg(idProfissional, orgId)
-                .orElseThrow(() -> new IllegalArgumentException("Profissional não encontrado"));
+                .orElseThrow(() -> new IllegalArgumentException("Profissional nao encontrado"));
 
         Usuario usuario = profissional.getUsuario();
         if (usuario == null) {
-            throw new IllegalStateException("Profissional não possui usuário associado");
+            throw new IllegalStateException("Profissional nao possui usuario associado");
         }
 
         try {
             // 2. Deletar registros relacionados na tabela mensageria primeiro
-            List<Mensageria> mensagens = mensageriaRepository.findByDestinatarioProfissional_Id(profissional.getId());
+            List<Mensageria> mensagens = mensageriaRepository.findByDestinatarioEntidadeId(profissional.getId());
             if (!mensagens.isEmpty()) {
                 log.info("Deletando {} registros de mensageria do profissional ID: {}", mensagens.size(), idProfissional);
                 mensageriaRepository.deleteAll(mensagens);
@@ -332,15 +332,15 @@ return resultado ;
             // 3. Deletar o registro de profissional na tabela profissional
             profissionalRepository.delete(profissional);
 
-            // 4. Deletar o usuário da tabela usuario
+            // 4. Deletar o usuario da tabela usuario
             usuarioRepository.delete(usuario);
             
-            log.info("Profissional e usuário deletados com sucesso. ID Profissional: {}, ID Usuário: {}", 
+            log.info("Profissional e usuario deletados com sucesso. ID Profissional: {}, ID usuario: {}", 
                     idProfissional, usuario.getId());
                     
         } catch (Exception e) {
             // 5. Caso haja relacionamento que impeça o delete, cancelar e avisar
-            String errorMessage = "Não foi possível deletar o profissional devido a relacionamentos existentes: " + e.getMessage();
+            String errorMessage = "nao foi possível deletar o profissional devido a relacionamentos existentes: " + e.getMessage();
             log.error(errorMessage);
             throw new IllegalStateException(errorMessage);
         }

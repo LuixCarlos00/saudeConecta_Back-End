@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Remove FK para profissional e renomeia coluna para destinatario_entidade_id (genérica) -->
+    <changeSet id="032-alterar-mensageria-entidade-generica" author="equipe-sentinela">
+
+        <!-- 1. Remover a foreign key para profissional -->
+        <dropForeignKeyConstraint
+                baseTableName="mensageria"
+                constraintName="fk_mensageria_profissional"/>
+
+        <!-- 2. Remover o índice antigo -->
+        <dropIndex tableName="mensageria" indexName="idx_mensageria_profissional"/>
+
+        <!-- 3. Renomear a coluna -->
+        <renameColumn
+                tableName="mensageria"
+                oldColumnName="destinatario_profissional_id"
+                newColumnName="destinatario_entidade_id"
+                columnDataType="BIGINT"/>
+
+        <!-- 4. Criar novo índice com nome atualizado -->
+        <createIndex tableName="mensageria" indexName="idx_mensageria_entidade">
+            <column name="destinatario_entidade_id"/>
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>
