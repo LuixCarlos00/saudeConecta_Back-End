@@ -37,7 +37,7 @@ public class ProntuarioController {
     @PostMapping("/cadastrarProntuarioMedico")
     public ResponseEntity<ProntuarioResponse> cadastrarProntuarioMedico(@Valid @RequestBody CadastrarProntuarioRequest request) {
         log.info("=== Requisição recebida: POST /prontuario/cadastrarProntuarioMedico ===");
-        log.debug("Dados recebidos - Medico ID: {}, Consulta ID: {}", request.codigoMedico(), request.consulta());
+        log.debug("Dados recebidos - Medico ID: {}, Consulta ID: {}", request.getCodigoMedico(), request.getConsulta());
         
         try {
             Prontuario prontuario = prontuarioService.cadastrarProntuarioMedico(request);
@@ -121,11 +121,11 @@ public class ProntuarioController {
         List<PlanejamentoTerapeuticoRequest> planejamentos = request.getPlanejamentos();
         
         log.debug("Dados recebidos - Medico ID: {}, Consulta ID: {}, Planejamentos: {}", 
-                prontuarioRequest.codigoMedico(), prontuarioRequest.consulta(), 
+                prontuarioRequest.getCodigoMedico(), prontuarioRequest.getConsulta(), 
                 planejamentos != null ? planejamentos.size() : 0);
         
         try {
-            Prontuario prontuario = prontuarioService.cadastrarProntuarioMedico(prontuarioRequest, planejamentos);
+            Prontuario prontuario = prontuarioService.cadastrarProntuarioMedico(prontuarioRequest);
             log.info("Prontuário cadastrado com sucesso - ID: {}", prontuario.getProntCodigoProntuario());
             
             // Converter para DTO de resposta para evitar LazyInitializationException

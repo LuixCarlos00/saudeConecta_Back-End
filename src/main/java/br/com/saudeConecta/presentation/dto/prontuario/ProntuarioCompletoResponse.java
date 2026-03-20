@@ -2,10 +2,13 @@ package br.com.saudeConecta.presentation.dto.prontuario;
 
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.prontuario.Prontuario;
+import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
 
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * DTO completo para resposta do prontuário com todos os campos
@@ -77,6 +80,25 @@ public class ProntuarioCompletoResponse {
     private ProfissionalResponse profissional;
     private ConsultaResponse consulta;
     private PacienteResponse paciente;
+    
+    // Planejamentos terapêuticos
+    private List<PlanejamentoTerapeuticoResponse> planejamentos;
+
+    
+    /**
+     * DTO para informações do Planejamento Terapêutico
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PlanejamentoTerapeuticoResponse {
+        private Long id;
+        private String dataProcedimento;
+        private String procedimentoRealizado;
+        private Double valor;
+        private String statusAssinatura;
+    }
 
     
     /**
@@ -167,6 +189,16 @@ public class ProntuarioCompletoResponse {
                 .solicitacaoExameTexto(prontuario.getProntSolicitacaoExameTexto())
                 .profissional(profissionalResponse)
                 .consulta(consultaResponse)
+                .planejamentos(prontuario.getPlanejamentos() != null ? 
+                    prontuario.getPlanejamentos().stream()
+                        .map(p -> PlanejamentoTerapeuticoResponse.builder()
+                            .id(p.getId())
+                            .dataProcedimento(p.getDataProcedimento() != null ? p.getDataProcedimento().toString() : null)
+                            .procedimentoRealizado(p.getProcedimentoRealizado())
+                            .valor(p.getValor() != null ? p.getValor().doubleValue() : null)
+                            .statusAssinatura(p.getStatusAssinatura())
+                            .build())
+                        .collect(Collectors.toList()) : null)
                 .build();
     }
     

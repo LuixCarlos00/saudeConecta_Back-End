@@ -2,9 +2,14 @@ package br.com.saudeConecta.service;
 
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
+import br.com.saudeConecta.domain.organizacao.Organizacao;
+import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
 import br.com.saudeConecta.domain.prontuario.Prontuario;
+import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProntuarioRepository;
 import br.com.saudeConecta.presentation.dto.prontuario.CadastrarProntuarioRequest;
@@ -14,10 +19,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 import java.util.List;
 import java.util.ArrayList;
 import java.math.BigDecimal;
+import java.sql.Date;
+import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
@@ -27,116 +35,195 @@ public class ProntuarioService {
     private final ProntuarioRepository prontuarioRepository;
     private final ProfissionalRepository profissionalRepository;
     private final ConsultaRepository consultaRepository;
+    private final PacienteRepository pacienteRepository;
     private final PlanejamentoTerapeuticoService planejamentoService;
 
     /**
-     * Cadastra um novo prontuario Medico
+     * Cadastra um novo prontuario Medico com planejamentos terapêuticos
      * @param request Dados do prontuario a ser cadastrado
      * @return prontuario cadastrado
      */
     @Transactional
     public Prontuario cadastrarProntuarioMedico(CadastrarProntuarioRequest request) {
-        return cadastrarProntuarioMedico(request, null);
-    }
+        log.info("Cadastrando prontuario médico — consulta={}", request.getConsulta());
 
-    /**
-     * Cadastra um novo prontuario Medico com planejamentos terapêuticos
-     * @param request Dados do prontuario a ser cadastrado
-     * @param planejamentos Lista de planejamentos terapêuticos (opcional)
-     * @return prontuario cadastrado
-     */
-    @Transactional
-    public Prontuario cadastrarProntuarioMedico(CadastrarProntuarioRequest request, List<PlanejamentoTerapeuticoRequest> planejamentos) {
-        log.info("Iniciando cadastro de prontuario - Medico ID: {}, Consulta ID: {}", 
-                request.codigoMedico(), request.consulta());
+        Profissional profissional = profissionalRepository
+                .findById(request.getCodigoMedico())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Profissional nao encontrado: " + request.getCodigoMedico()));
 
-        // Buscar profissional
-        Profissional profissional = profissionalRepository.findById(request.codigoMedico())
-                .orElseThrow(() -> {
-                    log.error("Profissional nao encontrado - ID: {}", request.codigoMedico());
-                    return new EntityNotFoundException("Profissional nao encontrado com ID: " + request.codigoMedico());
-                });
+        Consulta consulta = consultaRepository
+                .findById(request.getConsulta())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Consulta nao encontrada: " + request.getConsulta()));
 
-        // Buscar consulta
-        Consulta consulta = consultaRepository.findById(request.consulta())
-                .orElseThrow(() -> {
-                    log.error("Consulta nao encontrada - ID: {}", request.consulta());
-                    return new EntityNotFoundException("Consulta nao encontrada com ID: " + request.consulta());
-                });
+        // ── Monta Prontuario principal ────────────────────────────────────────
+        Prontuario prontuario = Prontuario.builder()
+                // anamnese
+                .prontQueixaPricipal(request.getQueixaPrincipal())
+                .prontAnamnese(request.getAnamnese())
+                .prontObservacao(request.getObservacao())
+                // exame clínico — sinais vitais
+                .prontPressao(request.getPressao())
+                .prontFrequenciaRespiratoria(request.getFrequenciaRespiratoria())
+                .prontFrequenciaArterialSistolica(request.getFrequenciaArterialSistolica())
+                .prontFrequenciaArterialDiastolica(request.getFrequenciaArterialDiastolica())
+                .prontPulso(request.getPulso())
+                .prontAltura(request.getAltura())
+                .prontTemperatura(request.getTemperatura())
+                .prontPeso(request.getPeso())
+                .prontSaturacao(request.getSaturacao())
+                .prontHemoglobina(request.getHemoglobina())
+                // diagnóstico
+                .prontDiagnostico(request.getDiagnostico())
+                // prescrição
+                .prontModeloPrescricao(request.getModeloPrescricao())
+                .prontTituloPrescricao(request.getTituloPrescricao())
+                .prontDataPrescricao(request.getDataPrescricao())
+                .prontPrescricao(request.getPrescricao())
+                // exames
+                .prontExameOutros(request.getExame())
+                // controle
+                .prontDataFinalizado(request.getDataFinalizado())
+                .prontTempoDuracao(request.getTempoDuracao())
+                // identificação do paciente
+                .prontResponsavel(request.getResponsavel())
+                // TUSS e CID
+                .prontTussTexto(request.getTussTexto())
+                .prontCidTexto(request.getCidTexto())
+                .prontSolicitacaoExameTexto(request.getSolicitacaoExameTexto())
+                // relacionamentos
+                .profissional(profissional)
+                .consulta(consulta)
+                .build();
 
-        // Verificar se já existe prontuario para esta consulta
-        Prontuario prontuarioExistente = prontuarioRepository.findByConsulta_Id(request.consulta());
-        if (prontuarioExistente != null) {
-            log.warn("Já existe prontuario para a consulta ID: {}", request.consulta());
-            throw new IllegalStateException("Ja existe um prontuario cadastrado para esta consulta");
+        Prontuario salvo = prontuarioRepository.save(prontuario);
+        log.info("Prontuario médico salvo — id={}", salvo.getProntCodigoProntuario());
+
+        // ── Adiciona planejamentos terapêuticos ─────────────────────────────────
+        if (!CollectionUtils.isEmpty(request.getPlanejamentos())) {
+            log.info("Processando {} planejamentos", request.getPlanejamentos().size());
+            Long orgId = TenantContext.getCurrentTenant();
+            Organizacao organizacao = new Organizacao();
+            organizacao.setId(orgId);
+
+            for (CadastrarProntuarioRequest.PlanejamentoItem item : request.getPlanejamentos()) {
+                log.info("Processando planejamento: procedimento={}, valor={}, pacienteId={}", 
+                    item.getProcedimentoRealizado(), item.getValor(), item.getPacienteId());
+                
+                Paciente paciente = null;
+                if (item.getPacienteId() != null) {
+                    paciente = pacienteRepository.findById(item.getPacienteId()).orElse(null);
+                }
+
+                PlanejamentoTerapeutico planejamento = PlanejamentoTerapeutico.builder()
+                        .prontuario(salvo)  // Vincula ao prontuario médico
+                        .consulta(consulta)
+                        .paciente(paciente)
+                        .profissional(profissional)
+                        .organizacao(organizacao)
+                        .dataProcedimento(parseData(item.getDataProcedimento()).toLocalDate())
+                        .procedimentoRealizado(item.getProcedimentoRealizado())
+                        .valor(item.getValor())
+                        .statusAssinatura("PENDENTE")
+                        .build();
+                salvo.addPlanejamento(planejamento);
+                log.info("Planejamento adicionado ao prontuario");
+            }
+            prontuarioRepository.save(salvo);
+            log.info("Prontuario salvo com {} planejamentos", salvo.getPlanejamentos().size());
+            
+            // Verificação adicional
+            salvo.getPlanejamentos().forEach(p -> {
+                log.info("Planejamento salvo: ID={}, Procedimento={}, Valor={}", 
+                    p.getId(), p.getProcedimentoRealizado(), p.getValor());
+            });
+        } else {
+            log.info("Nenhum planejamento para processar");
         }
 
-        // Criar novo prontuario
-        Prontuario prontuario = new Prontuario(request, profissional, consulta);
-        Prontuario prontuarioSalvo = prontuarioRepository.save(prontuario);
-
-        // Atualizar status da consulta para REALIZADA
         consulta.setStatus(StatusConsulta.REALIZADA);
         consultaRepository.save(consulta);
         log.info("Status da consulta ID: {} atualizado para REALIZADA", consulta.getId());
 
-        // Salvar planejamentos terapêuticos se fornecidos
-        if (planejamentos != null && !planejamentos.isEmpty()) {
-            log.info("Salvando {} planejamentos terapêuticos para o prontuario", planejamentos.size());
-            salvarPlanejamentosTerapeuticos(prontuarioSalvo, request.codigoMedico(), planejamentos);
-        }
-
-        log.info("prontuario cadastrado com sucesso - ID: {}", prontuarioSalvo.getProntCodigoProntuario());
-        return prontuarioSalvo;
+        return salvo;
     }
 
     /**
-     * Salva os planejamentos terapêuticos vinculados ao prontuário médico
-     * @param prontuario Prontuário médico salvo
-     * @param profissionalId ID do profissional
-     * @param planejamentos Lista de planejamentos a serem salvos
+     * Atualiza um Prontuario médico existente.
+     *
+     * @param id      ID do Prontuario a ser atualizado
+     * @param request Dados atualizados do Prontuario
      */
     @Transactional
-    public void salvarPlanejamentosTerapeuticos(Prontuario prontuario, Long profissionalId, List<PlanejamentoTerapeuticoRequest> planejamentos) {
-        for (PlanejamentoTerapeuticoRequest planejamentoRequest : planejamentos) {
-            try {
-                // Criar request com dados do planejamento
-                PlanejamentoTerapeuticoRequest request = new PlanejamentoTerapeuticoRequest();
-                request.setConsultaId(prontuario.getConsulta().getId());
-                request.setPacienteId(prontuario.getConsulta().getPaciente().getPaciCodigo());
-                request.setDataProcedimento(planejamentoRequest.getDataProcedimento());
-                request.setProcedimentoRealizado(planejamentoRequest.getProcedimentoRealizado());
-                request.setValor(planejamentoRequest.getValor());
-                // Para prontuário médico, não vinculamos a prontuarioDentistaId
-                request.setProntuarioDentistaId(null);
+    public void atualizarProntuarioMedico(Long id, CadastrarProntuarioRequest request) {
+        log.info("Atualizando prontuario médico — id={}", id);
 
-                // Salvar planejamento usando o service existente
-                // Precisamos modificar o service para aceitar null no prontuarioDentistaId
-                // Por enquanto, vamos criar um método alternativo aqui
-                salvarPlanejamentoMedico(profissionalId, request);
-                
-            } catch (Exception e) {
-                log.error("Erro ao salvar planejamento terapêutico: {}", e.getMessage(), e);
-                // Continuar salvando os outros planejamentos
-            }
-        }
+        Prontuario prontuario = prontuarioRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Prontuario médico nao encontrado: " + id));
+
+        // ── Anamnese ──
+        prontuario.setProntQueixaPricipal(request.getQueixaPrincipal());
+        prontuario.setProntAnamnese(request.getAnamnese());
+        prontuario.setProntObservacao(request.getObservacao());
+
+        // ── Sinais Vitais ──
+        prontuario.setProntPressao(request.getPressao());
+        prontuario.setProntFrequenciaRespiratoria(request.getFrequenciaRespiratoria());
+        prontuario.setProntFrequenciaArterialSistolica(request.getFrequenciaArterialSistolica());
+        prontuario.setProntFrequenciaArterialDiastolica(request.getFrequenciaArterialDiastolica());
+        prontuario.setProntPulso(request.getPulso());
+        prontuario.setProntAltura(request.getAltura());
+        prontuario.setProntTemperatura(request.getTemperatura());
+        prontuario.setProntPeso(request.getPeso());
+        prontuario.setProntSaturacao(request.getSaturacao());
+        prontuario.setProntHemoglobina(request.getHemoglobina());
+
+        // ── Diagnóstico ──
+        prontuario.setProntDiagnostico(request.getDiagnostico());
+
+        // ── Prescrição ──
+        prontuario.setProntModeloPrescricao(request.getModeloPrescricao());
+        prontuario.setProntTituloPrescricao(request.getTituloPrescricao());
+        prontuario.setProntDataPrescricao(request.getDataPrescricao());
+        prontuario.setProntPrescricao(request.getPrescricao());
+
+        // ── Exames ──
+        prontuario.setProntExameOutros(request.getExame());
+
+        // ── TUSS e CID ──
+        prontuario.setProntTussTexto(request.getTussTexto());
+        prontuario.setProntCidTexto(request.getCidTexto());
+        prontuario.setProntSolicitacaoExameTexto(request.getSolicitacaoExameTexto());
+
+        // ── Identificação ──
+        prontuario.setProntResponsavel(request.getResponsavel());
+
+        // ── Controle ──
+        prontuario.setProntDataFinalizado(request.getDataFinalizado());
+        prontuario.setProntTempoDuracao(request.getTempoDuracao());
+
+        // ── Atualiza planejamentos terapêuticos (limpa e recria) ──
+        prontuario.getPlanejamentos().clear();
+        prontuarioRepository.saveAndFlush(prontuario);
+
+        // Note: Planejamentos não são atualizados neste método para manter consistência
+        // com o padrão do dentista onde planejamentos são tratados separadamente
+
+        prontuarioRepository.save(prontuario);
+        log.info("Prontuario médico atualizado — id={}", id);
     }
 
-    /**
-     * Salva um planejamento terapêutico para prontuário médico (sem vínculo com prontuarioDentista)
-     * @param profissionalId ID do profissional
-     * @param request Dados do planejamento
-     */
-    @Transactional
-    public void salvarPlanejamentoMedico(Long profissionalId, PlanejamentoTerapeuticoRequest request) {
-        // Criar planejamento diretamente sem usar o service odontológico
-        // Isso evita a dependência de ProntuarioDentista
-        log.info("Salvando planejamento médico - consulta: {}, procedimento: {}", 
-                request.getConsultaId(), request.getProcedimentoRealizado());
-        
-        // Aqui você pode implementar a lógica específica para prontuário médico
-        // Por enquanto, vamos apenas logar que o planejamento seria salvo
-        // Futuramente, pode ser criada uma entidade PlanejamentoMedico ou modificada a existente
+    // =========================================================================
+    // CONSULTAS
+    // =========================================================================
+
+    @Transactional(readOnly = true)
+    public Prontuario buscarPorId(Long id) {
+        return prontuarioRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Prontuario médico nao encontrado: " + id));
     }
 
     /**
@@ -177,6 +264,24 @@ public class ProntuarioService {
     public List<Prontuario> buscarPorProfissional(Long profissionalId) {
         log.debug("Buscando prontuarios do profissional ID: {}", profissionalId);
         return prontuarioRepository.findByProfissional_Id(profissionalId);
+    }
+
+    private Date parseData(Date data) {
+        return data;
+    }
+
+    private LocalDate parseDataToLocalDate(Date data) {
+        if (data == null) return null;
+        return data.toLocalDate();
+    }
+
+    private Date parseData(String data) {
+        if (data == null || data.isBlank()) return null;
+        try {
+            return Date.valueOf(data);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
 

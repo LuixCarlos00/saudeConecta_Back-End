@@ -11,6 +11,8 @@ import org.jetbrains.annotations.NotNull;
 import java.io.Serializable;
 import java.sql.Date;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 //Prontuario Médico
 @Entity
@@ -18,6 +20,7 @@ import java.time.LocalDate;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @Table(name = "prontuario")
 @EqualsAndHashCode(of = "prontCodigoProntuario")
 @JsonIgnoreProperties({"hibernateLazyInitializer"})
@@ -123,36 +126,51 @@ public class Prontuario implements Serializable {
     @Column(name = "prontSolicitacaoExameTexto", columnDefinition = "TEXT")
     private String prontSolicitacaoExameTexto;
 
+    @OneToMany(
+            mappedBy = "prontuario",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    @JsonIgnoreProperties("prontuario")
+    @Builder.Default
+    private List<PlanejamentoTerapeutico> planejamentos = new ArrayList<>();
+
     public Prontuario(@NotNull CadastrarProntuarioRequest dados, Profissional profissional, Consulta consulta) {
-        this.prontAltura = dados.altura();
-        this.prontPeso = dados.peso();
-        this.prontTemperatura = dados.temperatura();
-        this.prontSaturacao = dados.saturacao();
-        this.prontHemoglobina = dados.hemoglobina();
-        this.prontPressao = dados.pressao();
-        this.prontFrequenciaRespiratoria = dados.frequenciaRespiratoria();
-        this.prontFrequenciaArterialSistolica = dados.frequenciaArterialSistolica();
-        this.prontFrequenciaArterialDiastolica = dados.frequenciaArterialDiastolica();
-        this.prontObservacao = dados.observacao();
-        this.prontAnamnese = dados.anamnese();
-        this.prontQueixaPricipal = dados.queixaPrincipal();
-        this.prontDiagnostico = dados.diagnostico();
-        this.prontModeloPrescricao = dados.modeloPrescricao();
-        this.prontTituloPrescricao = dados.tituloPrescricao();
-        this.prontDataPrescricao = dados.dataPrescricao();
-        this.prontPrescricao = dados.prescricao();
-        this.prontDataFinalizado = dados.dataFinalizado();
+        this.prontAltura = dados.getAltura();
+        this.prontPeso = dados.getPeso();
+        this.prontTemperatura = dados.getTemperatura();
+        this.prontSaturacao = dados.getSaturacao();
+        this.prontHemoglobina = dados.getHemoglobina();
+        this.prontPressao = dados.getPressao();
+        this.prontFrequenciaRespiratoria = dados.getFrequenciaRespiratoria();
+        this.prontFrequenciaArterialSistolica = dados.getFrequenciaArterialSistolica();
+        this.prontFrequenciaArterialDiastolica = dados.getFrequenciaArterialDiastolica();
+        this.prontObservacao = dados.getObservacao();
+        this.prontAnamnese = dados.getAnamnese();
+        this.prontQueixaPricipal = dados.getQueixaPrincipal();
+        this.prontDiagnostico = dados.getDiagnostico();
+        this.prontModeloPrescricao = dados.getModeloPrescricao();
+        this.prontTituloPrescricao = dados.getTituloPrescricao();
+        this.prontDataPrescricao = dados.getDataPrescricao();
+        this.prontPrescricao = dados.getPrescricao();
+        this.prontDataFinalizado = dados.getDataFinalizado();
         this.profissional = profissional;
         this.consulta = consulta;
-        this.prontTempoDuracao = dados.tempoDuracao();
+        this.prontTempoDuracao = dados.getTempoDuracao();
         // Novos campos
-        this.prontResponsavel = dados.responsavel();
-        this.prontPulso = dados.pulso();
-        this.prontExameOutros = dados.exameOutros();
-        this.prontOrientacoes = dados.orientacoes();
-        this.prontTussTexto = dados.tussTexto();
-        this.prontCidTexto = dados.cidTexto();
-        this.prontSolicitacaoExameTexto = dados.solicitacaoExameTexto();
+        this.prontResponsavel = dados.getResponsavel();
+        this.prontPulso = dados.getPulso();
+        this.prontExameOutros = dados.getExameOutros();
+        this.prontOrientacoes = dados.getOrientacoes();
+        this.prontTussTexto = dados.getTussTexto();
+        this.prontCidTexto = dados.getCidTexto();
+        this.prontSolicitacaoExameTexto = dados.getSolicitacaoExameTexto();
+    }
+
+    public void addPlanejamento(PlanejamentoTerapeutico planejamento) {
+        planejamento.setProntuario(this);
+        this.planejamentos.add(planejamento);
     }
 
     private LocalDate parseData(String data) {

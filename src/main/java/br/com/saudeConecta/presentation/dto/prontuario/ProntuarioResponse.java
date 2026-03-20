@@ -38,12 +38,12 @@ public class ProntuarioResponse {
     private String prontTempoDuracao;
 
 
-    testar se esta cadastrando o prontuario de medico
-        + verifica os relatorio de Dentidsta e medico
-            + modificar a visualização de relatorios para tipos de profissonais
-                + puxar os dados da pagina de inicializado para o banco de dados
-                    assim quando atualizar o dados de plano atuliza a pagina de inicializado
-            +
+//    testar se esta cadastrando o prontuario de medico
+//        + verifica os relatorio de Dentidsta e medico
+//            + modificar a visualização de relatorios para tipos de profissonais
+//                + puxar os dados da pagina de inicializado para o banco de dados
+//                    assim quando atualizar o dados de plano atuliza a pagina de inicializado
+//            +
 
 
     

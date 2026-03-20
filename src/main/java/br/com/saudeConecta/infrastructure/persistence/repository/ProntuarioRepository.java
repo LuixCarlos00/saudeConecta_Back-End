@@ -23,6 +23,7 @@ public interface ProntuarioRepository extends JpaRepository<Prontuario, Long> {
            "LEFT JOIN FETCH p.consulta c " +
            "LEFT JOIN FETCH c.paciente " +
            "LEFT JOIN FETCH c.formaPagamento " +
+           "LEFT JOIN FETCH p.planejamentos " +
            "WHERE p.consulta.id = :consultaId")
     Prontuario findByConsulta_IdWithFetch(Long consultaId);
 

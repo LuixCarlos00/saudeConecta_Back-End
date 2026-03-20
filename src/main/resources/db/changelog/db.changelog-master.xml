@@ -66,12 +66,15 @@
     <include file="db/changelog/changes/031-atualizar-credenciais-super-admin.xml"/>
 
     <!-- Mensageria: FK profissional → coluna genérica destinatario_entidade_id -->
-    <include file="db/changelog/changes/032-alterar-mensageria-entidade-generica.xml"/>
+    <include file="db/changelog/03-2026/032-alterar-mensageria-entidade-generica.xml"/>
 
     <!-- Adicionar coluna ip_origem na tabela planejamento_terapeutico -->
-    <include file="db/changelog/033-adicionar-ip-origem-planejamento-terapeutico.xml"/>
+    <include file="db/changelog/03-2026/033-adicionar-ip-origem-planejamento-terapeutico.xml"/>
 
     <!-- Adicionar novos campos ao prontuário médico (paridade com odontológico) -->
-    <include file="db/changelog/changes/034-adicionar-campos-prontuario-medico.xml"/>
+    <include file="db/changelog/03-2026/034-adicionar-campos-prontuario-medico.xml"/>
+
+    <!-- Alterar planejamento terapêutico para suportar prontuário médico e dentista -->
+    <include file="db/changelog/03-2026/03-2026-alterar-planejamento-terapeutico.xml"/>
 
 </databaseChangeLog>

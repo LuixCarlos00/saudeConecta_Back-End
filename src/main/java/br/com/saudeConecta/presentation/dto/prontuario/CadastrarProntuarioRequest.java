@@ -1,58 +1,157 @@
 package br.com.saudeConecta.presentation.dto.prontuario;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import jakarta.validation.constraints.NotNull;
-
+import java.math.BigDecimal;
 import java.sql.Date;
+import java.util.List;
 
-public record CadastrarProntuarioRequest(
-        // ── Sinais Vitais ─────────────────────────────────────────────────────
-        String altura,
-        String peso,
-        String temperatura,
-        String saturacao,
-        String hemoglobina,
-        String pressao,
-        String frequenciaRespiratoria,
-        String frequenciaArterialSistolica,
-        String frequenciaArterialDiastolica,
-        String pulso,
+@Getter
+@Setter
+@NoArgsConstructor
+public class CadastrarProntuarioRequest {
+    // ── Sinais Vitais ─────────────────────────────────────────────────────
+    @JsonProperty("altura")
+    private String altura;
 
-        // ── Anamnese e Avaliação ──────────────────────────────────────────────
-        String observacao,
-        String anamnese,
-        String queixaPrincipal,
-        String diagnostico,
+    @JsonProperty("peso")
+    private String peso;
 
-        // ── Prescrição ────────────────────────────────────────────────────────
-        String modeloPrescricao,
-        String tituloPrescricao,
-        String dataPrescricao,
-        String prescricao,
+    @JsonProperty("temperatura")
+    private String temperatura;
 
-        // ── Controle ──────────────────────────────────────────────────────────
-        @NotNull(message = "Data finalizado não pode ser nula")
-        Date dataFinalizado,
-        String tempoDuracao,
+    @JsonProperty("saturacao")
+    private String saturacao;
 
+    @JsonProperty("hemoglobina")
+    private String hemoglobina;
 
-        // ── Relacionamentos ───────────────────────────────────────────────────
-        @NotNull(message = "ID do médico não pode ser nulo")
-        Long codigoMedico,
-        @NotNull(message = "ID da consulta não pode ser nulo")
-        Long consulta,
+    @JsonProperty("pressao")
+    private String pressao;
 
-        // ── Identificação do Paciente ─────────────────────────────────────────
-        String responsavel,
+    @JsonProperty("frequenciaRespiratoria")
+    private String frequenciaRespiratoria;
 
+    @JsonProperty("frequenciaArterialSistolica")
+    private String frequenciaArterialSistolica;
 
-        String exameOutros,
+    @JsonProperty("frequenciaArterialDiastolica")
+    private String frequenciaArterialDiastolica;
 
-        // ── Diagnóstico e Tratamento ──────────────────────────────────────────
-        String orientacoes,
+    @JsonProperty("pulso")
+    private String pulso;
 
-        // ── TUSS e CID ────────────────────────────────────────────────────────
-        String tussTexto,
-        String cidTexto,
-        String solicitacaoExameTexto
-) {
+    // ── Anamnese e Avaliação ──────────────────────────────────────────────
+    @JsonProperty("observacao")
+    private String observacao;
+
+    @JsonProperty("anamnese")
+    private String anamnese;
+
+    @JsonProperty("queixaPrincipal")
+    private String queixaPrincipal;
+
+    @JsonProperty("diagnostico")
+    private String diagnostico;
+
+    // ── Prescrição ────────────────────────────────────────────────────────
+    @JsonProperty("modeloPrescricao")
+    private String modeloPrescricao;
+
+    @JsonProperty("tituloPrescricao")
+    private String tituloPrescricao;
+
+    @JsonProperty("dataPrescricao")
+    private String dataPrescricao;
+
+    @JsonProperty("prescricao")
+    private String prescricao;
+
+    // ── Controle ──────────────────────────────────────────────────────────
+    @JsonProperty("dataFinalizado")
+    @NotNull(message = "Data finalizado não pode ser nula")
+    private Date dataFinalizado;
+
+    @JsonProperty("tempoDuracao")
+    private String tempoDuracao;
+
+    // ── Relacionamentos ───────────────────────────────────────────────────
+    @JsonProperty("codigoMedico")
+    @NotNull(message = "ID do médico não pode ser nulo")
+    private Long codigoMedico;
+
+    @JsonProperty("consulta")
+    @NotNull(message = "ID da consulta não pode ser nulo")
+    private Long consulta;
+
+    // ── Identificação do Paciente ─────────────────────────────────────────
+    @JsonProperty("responsavel")
+    private String responsavel;
+
+    @JsonProperty("exameOutros")
+    private String exameOutros;
+
+    // ── Exames ────────────────────────────────────────────────────────────
+    @JsonProperty("modeloExame")
+    private String modeloExame;
+
+    @JsonProperty("tituloExame")
+    private String tituloExame;
+
+    @JsonProperty("dataExame")
+    private String dataExame;
+
+    @JsonProperty("exame")
+    private String exame;
+
+    // ── Tratamento ───────────────────────────────────────────────────────
+    @JsonProperty("inicioTratamento")
+    private Date inicioTratamento;
+
+    @JsonProperty("terminoTratamento")
+    private Date terminoTratamento;
+
+    @JsonProperty("interrupcao")
+    private String interrupcao;
+
+    // ── Diagnóstico e Tratamento ──────────────────────────────────────────
+    @JsonProperty("orientacoes")
+    private String orientacoes;
+
+    // ── TUSS e CID ────────────────────────────────────────────────────────
+    @JsonProperty("tussTexto")
+    private String tussTexto;
+
+    @JsonProperty("cidTexto")
+    private String cidTexto;
+
+    @JsonProperty("solicitacaoExameTexto")
+    private String solicitacaoExameTexto;
+
+    // ── Planejamento Terapêutico ────────────────────────────────────────────
+    @JsonProperty("planejamentos")
+    private List<PlanejamentoItem> planejamentos;
+
+    // ── DTO interno para cada item de planejamento terapêutico ──────────────
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class PlanejamentoItem {
+
+        @JsonProperty("dataProcedimento")
+        private String dataProcedimento;
+
+        @JsonProperty("procedimentoRealizado")
+        private String procedimentoRealizado;
+
+        @JsonProperty("valor")
+        private BigDecimal valor;
+
+        @JsonProperty("pacienteId")
+        private Long pacienteId;
+    }
 }
