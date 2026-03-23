@@ -82,9 +82,6 @@ public class ProntuarioDentistaService {
                 .tempoDuracao(request.getTempoDuracao())
                 // identificação do paciente (endereço vem da entidade Paciente)
                 .responsavel(request.getResponsavel())
-                .inicioTratamento(parseData(request.getInicioTratamento()))
-                .terminoTratamento(parseData(request.getTerminoTratamento()))
-                .interrupcao(request.getInterrupcao())
                 // exame objetivo — sinais vitais
                 .pressaoArterial(request.getPressaoArterial())
                 .pulso(request.getPulso())
@@ -222,9 +219,6 @@ public class ProntuarioDentistaService {
 
         // ── Identificação ──
         prontuario.setResponsavel(request.getResponsavel());
-        prontuario.setInicioTratamento(parseData(request.getInicioTratamento()));
-        prontuario.setTerminoTratamento(parseData(request.getTerminoTratamento()));
-        prontuario.setInterrupcao(request.getInterrupcao());
 
         // ── Sinais Vitais ──
         prontuario.setPressaoArterial(request.getPressaoArterial());

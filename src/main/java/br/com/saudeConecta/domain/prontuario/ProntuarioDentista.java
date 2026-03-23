@@ -85,15 +85,6 @@ public class ProntuarioDentista {
     @Column(name = "prontdent_responsavel", length = 255)
     private String responsavel;
 
-    @Column(name = "prontdent_inicio_tratamento")
-    private LocalDate inicioTratamento;
-
-    @Column(name = "prontdent_termino_tratamento")
-    private LocalDate terminoTratamento;
-
-    @Column(name = "prontdent_interrupcao", length = 500)
-    private String interrupcao;
-
     // ── Exame Objetivo — Sinais Vitais ──────────────────────────────────────
     @Column(name = "prontdent_pressao_arterial", length = 250)
     private String pressaoArterial;

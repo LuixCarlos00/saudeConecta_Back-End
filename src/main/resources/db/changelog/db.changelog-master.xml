@@ -79,4 +79,7 @@
 
     <!-- Remover colunas obsoletas do prontuário -->
     <include file="db/changelog/03-2026/035-remover-colunas-obsoletas-prontuario.xml"/>
+
+    <!-- Remover colunas de tratamento do prontuario dentista -->
+    <include file="db/changelog/03-2026/036-remover-colunas-tratamento-prontuario-dentista.xml"/>
 </databaseChangeLog>

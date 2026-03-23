@@ -313,7 +313,7 @@ public class IALocalService {
         
         resumo.append("\n---\n");
         resumo.append("*Resumo gerado por análise inteligente local - ");
-        resumo.append(LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))*");
+        resumo.append(LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
         
         return resumo.toString();
     }

@@ -76,6 +76,7 @@ public class ProntuarioService {
                 .prontHemoglobina(request.getHemoglobina())
                 // diagnóstico
                 .prontDiagnostico(request.getDiagnostico())
+                .prontOrientacoes(request.getOrientacoes())
                 // prescrição
                  .prontTituloPrescricao(request.getTituloPrescricao())
                 .prontPrescricao(request.getPrescricao())

@@ -123,6 +123,18 @@ public class BuscarHistoricoCompletoPacienteMedicoUseCase {
 
                    .tempoDuracao(prontuario.getProntTempoDuracao())
 
+                   // Planejamentos Terapêuticos
+                   .planejamentos(prontuario.getPlanejamentos() != null ?
+                       prontuario.getPlanejamentos().stream()
+                           .map(p -> HistoricoConsultaPacienteResponse.PlanejamentoResponse.builder()
+                               .id(p.getId())
+                               .dataProcedimento(p.getDataProcedimento())
+                               .procedimentoRealizado(p.getProcedimentoRealizado())
+                               .valor(p.getValor())
+                               .statusAssinatura(p.getStatusAssinatura())
+                               .build())
+                           .toList() : List.of())
+
                    // Dados de Controle
                    .dataFinalizado(prontuario.getProntDataFinalizado());
         }

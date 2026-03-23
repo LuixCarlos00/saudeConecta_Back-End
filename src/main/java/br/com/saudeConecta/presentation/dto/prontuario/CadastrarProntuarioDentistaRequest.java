@@ -92,15 +92,6 @@ public class CadastrarProntuarioDentistaRequest {
     @JsonProperty("responsavel")
     private String responsavel;
 
-    @JsonProperty("inicioTratamento")
-    private String inicioTratamento;
-
-    @JsonProperty("terminoTratamento")
-    private String terminoTratamento;
-
-    @JsonProperty("interrupcao")
-    private String interrupcao;
-
     // ── Exame Objetivo — Sinais Vitais ───────────────────────────────────────
 
     @JsonProperty("pressaoArterial")
