@@ -72,14 +72,11 @@ public class Prontuario implements Serializable {
     @Column(name = "prontDiagnostico", columnDefinition = "TEXT")
     private String prontDiagnostico;
 
-    @Column(name = "prontModeloPrescricao")
-    private String prontModeloPrescricao;
 
     @Column(name = "prontTituloPrescricao")
     private String prontTituloPrescricao;
 
-    @Column(name = "prontDataPrescricao")
-    private String prontDataPrescricao;
+
 
     @Column(name = "prontPrescricao", columnDefinition = "TEXT")
     private String prontPrescricao;
@@ -109,8 +106,6 @@ public class Prontuario implements Serializable {
 
 
 
-    @Column(name = "prontExameOutros", columnDefinition = "TEXT")
-    private String prontExameOutros;
 
     // ── Diagnóstico e Tratamento ──────────────────────────────────────────────
     @Column(name = "prontOrientacoes", columnDefinition = "TEXT")
@@ -150,10 +145,9 @@ public class Prontuario implements Serializable {
         this.prontAnamnese = dados.getAnamnese();
         this.prontQueixaPricipal = dados.getQueixaPrincipal();
         this.prontDiagnostico = dados.getDiagnostico();
-        this.prontModeloPrescricao = dados.getModeloPrescricao();
+
         this.prontTituloPrescricao = dados.getTituloPrescricao();
-        this.prontDataPrescricao = dados.getDataPrescricao();
-        this.prontPrescricao = dados.getPrescricao();
+         this.prontPrescricao = dados.getPrescricao();
         this.prontDataFinalizado = dados.getDataFinalizado();
         this.profissional = profissional;
         this.consulta = consulta;
@@ -161,8 +155,7 @@ public class Prontuario implements Serializable {
         // Novos campos
         this.prontResponsavel = dados.getResponsavel();
         this.prontPulso = dados.getPulso();
-        this.prontExameOutros = dados.getExameOutros();
-        this.prontOrientacoes = dados.getOrientacoes();
+         this.prontOrientacoes = dados.getOrientacoes();
         this.prontTussTexto = dados.getTussTexto();
         this.prontCidTexto = dados.getCidTexto();
         this.prontSolicitacaoExameTexto = dados.getSolicitacaoExameTexto();

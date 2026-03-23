@@ -79,8 +79,7 @@ public class ProntuarioCompletoResponse {
     // Relacionamentos (DTOs para evitar lazy loading)
     private ProfissionalResponse profissional;
     private ConsultaResponse consulta;
-    private PacienteResponse paciente;
-    
+
     // Planejamentos terapêuticos
     private List<PlanejamentoTerapeuticoResponse> planejamentos;
 
@@ -173,17 +172,14 @@ public class ProntuarioCompletoResponse {
                 .anamnese(prontuario.getProntAnamnese())
                 .observacao(prontuario.getProntObservacao())
                 .diagnostico(prontuario.getProntDiagnostico())
-                .modeloPrescricao(prontuario.getProntModeloPrescricao())
-                .tituloPrescricao(prontuario.getProntTituloPrescricao())
-                .dataPrescricao(prontuario.getProntDataPrescricao())
-                .prescricao(prontuario.getProntPrescricao())
+                 .tituloPrescricao(prontuario.getProntTituloPrescricao())
+                 .prescricao(prontuario.getProntPrescricao())
                 .tempoDuracao(prontuario.getProntTempoDuracao())
                 .dataFinalizado(prontuario.getProntDataFinalizado())
                 // Novos campos
                 .responsavel(prontuario.getProntResponsavel())
                 .pulso(prontuario.getProntPulso())
-                .exameOutros(prontuario.getProntExameOutros())
-                .orientacoes(prontuario.getProntOrientacoes())
+                 .orientacoes(prontuario.getProntOrientacoes())
                 .tussTexto(prontuario.getProntTussTexto())
                 .cidTexto(prontuario.getProntCidTexto())
                 .solicitacaoExameTexto(prontuario.getProntSolicitacaoExameTexto())

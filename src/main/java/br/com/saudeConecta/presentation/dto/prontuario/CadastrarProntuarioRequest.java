@@ -92,8 +92,7 @@ public class CadastrarProntuarioRequest {
     @JsonProperty("responsavel")
     private String responsavel;
 
-    @JsonProperty("exameOutros")
-    private String exameOutros;
+
 
     // ── Exames ────────────────────────────────────────────────────────────
     @JsonProperty("modeloExame")
@@ -102,8 +101,6 @@ public class CadastrarProntuarioRequest {
     @JsonProperty("tituloExame")
     private String tituloExame;
 
-    @JsonProperty("dataExame")
-    private String dataExame;
 
     @JsonProperty("exame")
     private String exame;

@@ -77,13 +77,10 @@ public class ProntuarioService {
                 // diagnóstico
                 .prontDiagnostico(request.getDiagnostico())
                 // prescrição
-                .prontModeloPrescricao(request.getModeloPrescricao())
-                .prontTituloPrescricao(request.getTituloPrescricao())
-                .prontDataPrescricao(request.getDataPrescricao())
+                 .prontTituloPrescricao(request.getTituloPrescricao())
                 .prontPrescricao(request.getPrescricao())
                 // exames
-                .prontExameOutros(request.getExame())
-                // controle
+                 // controle
                 .prontDataFinalizado(request.getDataFinalizado())
                 .prontTempoDuracao(request.getTempoDuracao())
                 // identificação do paciente
@@ -149,70 +146,71 @@ public class ProntuarioService {
         return salvo;
     }
 
-    /**
-     * Atualiza um Prontuario médico existente.
-     *
-     * @param id      ID do Prontuario a ser atualizado
-     * @param request Dados atualizados do Prontuario
-     */
     @Transactional
     public void atualizarProntuarioMedico(Long id, CadastrarProntuarioRequest request) {
-        log.info("Atualizando prontuario médico — id={}", id);
+        log.info("Atualizando prontuário médico — id={}", id);
 
         Prontuario prontuario = prontuarioRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Prontuario médico nao encontrado: " + id));
+                        "Prontuário não encontrado: " + id));
 
-        // ── Anamnese ──
-        prontuario.setProntQueixaPricipal(request.getQueixaPrincipal());
-        prontuario.setProntAnamnese(request.getAnamnese());
-        prontuario.setProntObservacao(request.getObservacao());
-
-        // ── Sinais Vitais ──
+        prontuario.setProntPeso(request.getPeso());
+        prontuario.setProntAltura(request.getAltura());
+        prontuario.setProntTemperatura(request.getTemperatura());
+        prontuario.setProntSaturacao(request.getSaturacao());
+        prontuario.setProntHemoglobina(request.getHemoglobina());
         prontuario.setProntPressao(request.getPressao());
         prontuario.setProntFrequenciaRespiratoria(request.getFrequenciaRespiratoria());
         prontuario.setProntFrequenciaArterialSistolica(request.getFrequenciaArterialSistolica());
         prontuario.setProntFrequenciaArterialDiastolica(request.getFrequenciaArterialDiastolica());
         prontuario.setProntPulso(request.getPulso());
-        prontuario.setProntAltura(request.getAltura());
-        prontuario.setProntTemperatura(request.getTemperatura());
-        prontuario.setProntPeso(request.getPeso());
-        prontuario.setProntSaturacao(request.getSaturacao());
-        prontuario.setProntHemoglobina(request.getHemoglobina());
-
-        // ── Diagnóstico ──
+        prontuario.setProntObservacao(request.getObservacao());
+        prontuario.setProntAnamnese(request.getAnamnese());
+        prontuario.setProntQueixaPricipal(request.getQueixaPrincipal());
         prontuario.setProntDiagnostico(request.getDiagnostico());
-
-        // ── Prescrição ──
-        prontuario.setProntModeloPrescricao(request.getModeloPrescricao());
-        prontuario.setProntTituloPrescricao(request.getTituloPrescricao());
-        prontuario.setProntDataPrescricao(request.getDataPrescricao());
+        prontuario.setProntOrientacoes(request.getOrientacoes());
+         prontuario.setProntResponsavel(request.getResponsavel());
         prontuario.setProntPrescricao(request.getPrescricao());
-
-        // ── Exames ──
-        prontuario.setProntExameOutros(request.getExame());
-
-        // ── TUSS e CID ──
-        prontuario.setProntTussTexto(request.getTussTexto());
+        prontuario.setProntTituloPrescricao(request.getTituloPrescricao());
+         prontuario.setProntTussTexto(request.getTussTexto());
         prontuario.setProntCidTexto(request.getCidTexto());
         prontuario.setProntSolicitacaoExameTexto(request.getSolicitacaoExameTexto());
-
-        // ── Identificação ──
-        prontuario.setProntResponsavel(request.getResponsavel());
-
-        // ── Controle ──
         prontuario.setProntDataFinalizado(request.getDataFinalizado());
-        prontuario.setProntTempoDuracao(request.getTempoDuracao());
 
-        // ── Atualiza planejamentos terapêuticos (limpa e recria) ──
+        // Planejamentos: limpa e recria (mesmo padrão do dentista)
         prontuario.getPlanejamentos().clear();
         prontuarioRepository.saveAndFlush(prontuario);
 
-        // Note: Planejamentos não são atualizados neste método para manter consistência
-        // com o padrão do dentista onde planejamentos são tratados separadamente
+        if (!CollectionUtils.isEmpty(request.getPlanejamentos())) {
+            Long orgId = TenantContext.getCurrentTenant();
+            Organizacao organizacao = new Organizacao();
+            organizacao.setId(orgId);
+
+            Consulta consulta = prontuario.getConsulta();
+            Profissional profissional = prontuario.getProfissional();
+
+            for (CadastrarProntuarioRequest.PlanejamentoItem item : request.getPlanejamentos()) {
+                Paciente paciente = null;
+                if (item.getPacienteId() != null) {
+                    paciente = pacienteRepository.findById(item.getPacienteId()).orElse(null);
+                }
+                PlanejamentoTerapeutico p = PlanejamentoTerapeutico.builder()
+                        .prontuario(prontuario)
+                        .consulta(consulta)
+                        .paciente(paciente)
+                        .profissional(profissional)
+                        .organizacao(organizacao)
+                        .dataProcedimento(parseDataToLocalDate(parseData(item.getDataProcedimento())))
+                        .procedimentoRealizado(item.getProcedimentoRealizado())
+                        .valor(item.getValor())
+                        .statusAssinatura("PENDENTE")
+                        .build();
+                prontuario.addPlanejamento(p);
+            }
+        }
 
         prontuarioRepository.save(prontuario);
-        log.info("Prontuario médico atualizado — id={}", id);
+        log.info("Prontuário médico atualizado — id={}", id);
     }
 
     // =========================================================================

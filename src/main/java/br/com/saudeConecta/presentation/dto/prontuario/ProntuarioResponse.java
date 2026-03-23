@@ -73,10 +73,8 @@ public class ProntuarioResponse {
         response.setProntAnamnese(prontuario.getProntAnamnese());
         response.setProntQueixaPricipal(prontuario.getProntQueixaPricipal());
         response.setProntDiagnostico(prontuario.getProntDiagnostico());
-        response.setProntModeloPrescricao(prontuario.getProntModeloPrescricao());
-        response.setProntTituloPrescricao(prontuario.getProntTituloPrescricao());
-        response.setProntDataPrescricao(prontuario.getProntDataPrescricao());
-        response.setProntPrescricao(prontuario.getProntPrescricao());
+         response.setProntTituloPrescricao(prontuario.getProntTituloPrescricao());
+         response.setProntPrescricao(prontuario.getProntPrescricao());
         response.setProntDataFinalizado(prontuario.getProntDataFinalizado());
         response.setProntTempoDuracao(prontuario.getProntTempoDuracao());
         

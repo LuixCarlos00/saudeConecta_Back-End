@@ -118,10 +118,8 @@ public class BuscarHistoricoCompletoPacienteMedicoUseCase {
                    .diagnostico(prontuario.getProntDiagnostico())
 
                    // Prescrição Médica
-                   .modeloPrescricao(prontuario.getProntModeloPrescricao())
-                   .tituloPrescricao(prontuario.getProntTituloPrescricao())
-                   .dataPrescricao(prontuario.getProntDataPrescricao())
-                   .prescricao(prontuario.getProntPrescricao())
+                    .tituloPrescricao(prontuario.getProntTituloPrescricao())
+                    .prescricao(prontuario.getProntPrescricao())
 
                    .tempoDuracao(prontuario.getProntTempoDuracao())
 

@@ -137,4 +137,18 @@ public class ProntuarioController {
         }
     }
 
+    /**
+     * Atualiza um prontuário médico existente.
+     * PUT /prontuario/{id}
+     */
+    @PutMapping("/atualizarProntuarioMedico/{id}")
+    public ResponseEntity<Void> atualizarProntuario(
+            @PathVariable Long id,
+            @RequestBody CadastrarProntuarioRequest request) {
+
+        log.info("PUT /prontuario/{} — atualizando prontuário médico", id);
+        prontuarioService.atualizarProntuarioMedico(id, request);
+        return ResponseEntity.ok().build();
+    }
+
 }
