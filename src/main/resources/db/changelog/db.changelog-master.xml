@@ -6,63 +6,80 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <!-- Tabelas Base -->
-    <include file="db/changelog/changes/001-create-table-usuarios.xml"/>
-    <include file="db/changelog/changes/002-create-table-endereco.xml"/>
-    <include file="db/changelog/changes/004-create-table-paciente.xml"/>
+    <include file="db/changelog/01_changes/001-create-table-usuarios.xml"/>
+    <include file="db/changelog/01_changes/002-create-table-endereco.xml"/>
+    <include file="db/changelog/01_changes/004-create-table-paciente.xml"/>
 
     <!-- Multi-Tenant -->
-    <include file="db/changelog/changes/011-criar-tabelas-multi-tenant.xml"/>
-    <include file="db/changelog/changes/012-dados-iniciais-multi-tenant.xml"/>
-    <include file="db/changelog/changes/013-atualizar-tabela-usuarios.xml"/>
-    <include file="db/changelog/changes/014-criar-tabela-profissional.xml"/>
-    <include file="db/changelog/changes/015-criar-consulta-v2.xml"/>
+    <include file="db/changelog/01_changes/011-criar-tabelas-multi-tenant.xml"/>
+    <include file="db/changelog/01_changes/012-dados-iniciais-multi-tenant.xml"/>
+    <include file="db/changelog/01_changes/013-atualizar-tabela-usuarios.xml"/>
+    <include file="db/changelog/01_changes/014-criar-tabela-profissional.xml"/>
+    <include file="db/changelog/01_changes/015-criar-consulta-v2.xml"/>
     
     <!-- Prontuario (depende de profissional e consulta) -->
-    <include file="db/changelog/changes/09-create-table-prontuario.xml"/>
+    <include file="db/changelog/01_changes/09-create-table-prontuario.xml"/>
     
     <!-- Atualizar Paciente com tenant -->
-    <include file="db/changelog/changes/016-adicionar-organizacao-paciente.xml"/>
+    <include file="db/changelog/01_changes/016-adicionar-organizacao-paciente.xml"/>
     
     <!-- Tabela Secretaria -->
-    <include file="db/changelog/changes/018-criar-tabela-secretaria.xml"/>
+    <include file="db/changelog/01_changes/018-criar-tabela-secretaria.xml"/>
     
     <!-- Atualizar Status Usuario para VARCHAR -->
-    <include file="db/changelog/changes/019-alterar-status-usuarios-varchar.xml"/>
+    <include file="db/changelog/01_changes/019-alterar-status-usuarios-varchar.xml"/>
     
     <!-- Configuração de Gráficos do Dashboard -->
-    <include file="db/changelog/changes/020-criar-tabela-configuracao-grafico-dashboard.xml"/>
+    <include file="db/changelog/01_changes/020-criar-tabela-configuracao-grafico-dashboard.xml"/>
 
     <!-- Sistema de Mensageria -->
-     <include file="db/changelog/changes/021-criar-tabela-mensageria.xml"/>
+     <include file="db/changelog/01_changes/021-criar-tabela-mensageria.xml"/>
 
     <!-- Histórico de Dados Pessoais -->
-    <include file="db/changelog/changes/022-create-historico-dados-pessoais.xml"/>
+    <include file="db/changelog/01_changes/022-create-historico-dados-pessoais.xml"/>
 
     <!-- Prontuario Dentista -->
-    <include file="db/changelog/changes/023-create-prontuario-dentista.xml"/>
+    <include file="db/changelog/01_changes/023-create-prontuario-dentista.xml"/>
 
     <!-- Dados iniciais de produção -->
-    <include file="db/changelog/changes/024-dados-iniciais-producao.xml"/>
+    <include file="db/changelog/01_changes/024-dados-iniciais-producao.xml"/>
 
     <!-- Configuração de Cards do Dashboard -->
-    <include file="db/changelog/changes/025-criar-tabela-configuracao-card-dashboard.xml"/>
+    <include file="db/changelog/01_changes/025-criar-tabela-configuracao-card-dashboard.xml"/>
 
     <!-- Prontuário Odontológico: Termo, Procedimentos, Planejamento -->
-    <include file="db/changelog/changes/026-criar-tabelas-prontuario-odontologico.xml"/>
+    <include file="db/changelog/01_changes/026-criar-tabelas-prontuario-odontologico.xml"/>
 
     <!-- Planos, Assinaturas e Cobranças -->
-    <include file="db/changelog/changes/027-criar-tabelas-planos-assinaturas.xml"/>
+    <include file="db/changelog/01_changes/027-criar-tabelas-planos-assinaturas.xml"/>
 
     <!-- Plano personalizado por tenant (limites custom + valor adicional) -->
-    <include file="db/changelog/changes/028-plano-personalizado-por-tenant.xml"/>
+    <include file="db/changelog/01_changes/028-plano-personalizado-por-tenant.xml"/>
 
     <!-- Corrigir ordem de exibição dos gráficos do dashboard -->
-    <include file="db/changelog/changes/029-corrigir-ordem-graficos-dashboard.xml"/>
+    <include file="db/changelog/01_changes/029-corrigir-ordem-graficos-dashboard.xml"/>
 
     <!-- Remover coluna duplicada prontdent_oclusao -->
-    <include file="db/changelog/changes/030-remover-coluna-prontdent-oclusao.xml"/>
+    <include file="db/changelog/01_changes/030-remover-coluna-prontdent-oclusao.xml"/>
 
     <!-- Atualizar credenciais do super admin (login CPF + nova senha) -->
-    <include file="db/changelog/changes/031-atualizar-credenciais-super-admin.xml"/>
+    <include file="db/changelog/01_changes/031-atualizar-credenciais-super-admin.xml"/>
 
+    <!-- Mensageria: FK profissional → coluna genérica destinatario_entidade_id -->
+    <include file="db/changelog/03-2026/032-alterar-mensageria-entidade-generica.xml"/>
+
+    <!-- Adicionar coluna ip_origem na tabela planejamento_terapeutico -->
+    <include file="db/changelog/03-2026/033-adicionar-ip-origem-planejamento-terapeutico.xml"/>
+
+    <!-- Adicionar novos campos ao prontuário médico (paridade com odontológico) -->
+    <include file="db/changelog/03-2026/034-adicionar-campos-prontuario-medico.xml"/>
+
+    <!-- Alterar planejamento terapêutico para suportar prontuário médico e dentista -->
+    <include file="db/changelog/03-2026/03-2026-alterar-planejamento-terapeutico.xml"/>
+
+    <!-- Remover colunas obsoletas do prontuário -->
+    <include file="db/changelog/03-2026/035-remover-colunas-obsoletas-prontuario.xml"/>
+
+    <!-- Remover colunas de tratamento do prontuario dentista -->
+    <include file="db/changelog/03-2026/036-remover-colunas-tratamento-prontuario-dentista.xml"/>
 </databaseChangeLog>

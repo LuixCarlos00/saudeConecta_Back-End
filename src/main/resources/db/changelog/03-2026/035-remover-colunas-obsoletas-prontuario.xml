@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="035-remover-colunas-obsoletas-prontuario-01" author="liquibase">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="prontuario"/>
+        </preConditions>
+        
+        <comment>Remover colunas obsoletas da tabela prontuario</comment>
+        
+        <!-- Remover colunas relacionadas a exames -->
+        <dropColumn tableName="prontuario" columnName="prontExameOutros"/>
+        <dropColumn tableName="prontuario" columnName="prontExame"/>
+        <dropColumn tableName="prontuario" columnName="prontDataExame"/>
+        <dropColumn tableName="prontuario" columnName="prontTituloExame"/>
+        <dropColumn tableName="prontuario" columnName="prontModeloExame"/>
+        
+        <!-- Remover colunas relacionadas a prescrição (obsoletas) -->
+        <dropColumn tableName="prontuario" columnName="prontDataPrescricao"/>
+        <dropColumn tableName="prontuario" columnName="prontModeloPrescricao"/>
+        
+        <!-- Remover outras colunas obsoletas -->
+        <dropColumn tableName="prontuario" columnName="prontCondulta"/>
+        <dropColumn tableName="prontuario" columnName="prontSexo"/>
+    </changeSet>
+
+</databaseChangeLog>

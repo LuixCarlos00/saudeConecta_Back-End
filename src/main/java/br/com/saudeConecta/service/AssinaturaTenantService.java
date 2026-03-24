@@ -158,7 +158,7 @@ public class AssinaturaTenantService {
         assinatura.setDataProximaCobranca(LocalDate.now().plusMonths(1));
 
         AssinaturaTenant salva = assinaturaTenantRepository.save(assinatura);
-        log.info("Assinatura da org {} ativada. Próximo vencimento: {}",
+        log.info("Assinatura da org {} ativada. Proximo vencimento: {}",
                 organizacaoId, salva.getDataVencimento());
 
         return AssinaturaTenantResponse.fromEntity(salva);
@@ -261,7 +261,7 @@ public class AssinaturaTenantService {
         assinatura.setDataVencimento(LocalDate.now().plusMonths(1));
         assinatura.setDataProximaCobranca(LocalDate.now().plusMonths(1));
         assinaturaTenantRepository.save(assinatura);
-        log.info("Assinatura {} renovada. Próximo vencimento: {}",
+        log.info("Assinatura {} renovada. Proximo vencimento: {}",
                 assinaturaId, assinatura.getDataVencimento());
     }
 

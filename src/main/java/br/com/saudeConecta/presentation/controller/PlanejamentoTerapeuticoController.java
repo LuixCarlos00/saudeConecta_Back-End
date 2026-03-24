@@ -73,13 +73,18 @@ public class PlanejamentoTerapeuticoController {
 
     /**
      * Gera link de assinatura para todos os itens pendentes do prontuário.
-     * POST /planejamento-terapeutico/gerar-link/{prontuarioId}
+     * POST /planejamento-terapeutico/gerar-link/{prontuarioId}?tipo=DENTISTA|MEDICO
+     *
+     * @param prontuarioId ID do prontuário
+     * @param tipo tipo do profissional ("DENTISTA" ou "MEDICO")
      */
     @PostMapping("/gerar-link/{prontuarioId}")
-    public ResponseEntity<Map<String, String>> gerarLink(@PathVariable Long prontuarioId) {
-        log.info("POST /planejamento-terapeutico/gerar-link/{}", prontuarioId);
+    public ResponseEntity<Map<String, String>> gerarLink(
+            @PathVariable Long prontuarioId,
+            @RequestParam(defaultValue = "DENTISTA") String tipo) {
+        log.info("POST /planejamento-terapeutico/gerar-link/{} tipo={}", prontuarioId, tipo);
 
-        String token = planejamentoService.gerarLinkAssinatura(prontuarioId);
+        String token = planejamentoService.gerarLinkAssinatura(prontuarioId, tipo);
 
         Map<String, String> response = new HashMap<>();
         response.put("token", token);

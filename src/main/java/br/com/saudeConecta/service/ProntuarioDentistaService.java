@@ -42,19 +42,19 @@ public class ProntuarioDentistaService {
 
     @Transactional
     public ProntuarioDentista cadastrarProntuarioByOrg(CadastrarProntuarioDentistaRequest request) {
-        log.info("Cadastrando prontuário odontológico — consulta={}", request.getConsulta());
+        log.info("Cadastrando prontuario odontologico — consulta={}", request.getConsulta());
 
         Profissional profissional = profissionalRepository
                 .findById(request.getCodigoMedico())
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Profissional não encontrado: " + request.getCodigoMedico()));
+                        "Profissional nao encontrado: " + request.getCodigoMedico()));
 
         Consulta consulta = consultaRepository
                 .findById(request.getConsulta())
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Consulta não encontrada: " + request.getConsulta()));
+                        "Consulta nao encontrada: " + request.getConsulta()));
 
-        // ── Monta prontuário principal ────────────────────────────────────────
+        // ── Monta Prontuario principal ────────────────────────────────────────
         ProntuarioDentista prontuario = ProntuarioDentista.builder()
                 // anamnese
                 .queixaPrincipal(request.getQueixaPrincipal())
@@ -82,9 +82,6 @@ public class ProntuarioDentistaService {
                 .tempoDuracao(request.getTempoDuracao())
                 // identificação do paciente (endereço vem da entidade Paciente)
                 .responsavel(request.getResponsavel())
-                .inicioTratamento(parseData(request.getInicioTratamento()))
-                .terminoTratamento(parseData(request.getTerminoTratamento()))
-                .interrupcao(request.getInterrupcao())
                 // exame objetivo — sinais vitais
                 .pressaoArterial(request.getPressaoArterial())
                 .pulso(request.getPulso())
@@ -117,7 +114,7 @@ public class ProntuarioDentistaService {
         // ── Adiciona dentes do odontograma ────────────────────────────────────
         if (!CollectionUtils.isEmpty(request.getOdontograma())) {
             for (CadastrarProntuarioDentistaRequest.DenteRequest dr : request.getOdontograma()) {
-                // só persiste dentes alterados (sadio sem observação não agrega informação)
+                // só persiste dentes alterados (sadio sem observação nao agrega informação)
                 if ("sadio".equals(dr.getStatus()) &&
                         (dr.getObservacao() == null || dr.getObservacao().isBlank())) {
                     continue;
@@ -132,7 +129,7 @@ public class ProntuarioDentistaService {
         }
 
         ProntuarioDentista salvo = prontuarioDentistaRepository.save(prontuario);
-        log.info("Prontuário odontológico salvo — id={}, dentes={}",
+        log.info("Prontuario odontologico salvo — id={}, dentes={}",
                 salvo.getCodigo(), salvo.getDentes().size());
 
         // ── Adiciona planejamentos terapêuticos ─────────────────────────────────
@@ -176,18 +173,18 @@ public class ProntuarioDentistaService {
     // =========================================================================
 
     /**
-     * Atualiza um prontuário odontológico existente.
+     * Atualiza um Prontuario odontologico existente.
      *
-     * @param id      ID do prontuário a ser atualizado
-     * @param request Dados atualizados do prontuário
+     * @param id      ID do Prontuario a ser atualizado
+     * @param request Dados atualizados do Prontuario
      */
     @Transactional
     public void atualizarProntuario(Long id, CadastrarProntuarioDentistaRequest request) {
-        log.info("Atualizando prontuário odontológico — id={}", id);
+        log.info("Atualizando prontuario odontologico — id={}", id);
 
         ProntuarioDentista prontuario = prontuarioDentistaRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Prontuário odontológico não encontrado: " + id));
+                        "Prontuario odontologico nao encontrado: " + id));
 
         // ── Anamnese ──
         prontuario.setQueixaPrincipal(request.getQueixaPrincipal());
@@ -222,9 +219,6 @@ public class ProntuarioDentistaService {
 
         // ── Identificação ──
         prontuario.setResponsavel(request.getResponsavel());
-        prontuario.setInicioTratamento(parseData(request.getInicioTratamento()));
-        prontuario.setTerminoTratamento(parseData(request.getTerminoTratamento()));
-        prontuario.setInterrupcao(request.getInterrupcao());
 
         // ── Sinais Vitais ──
         prontuario.setPressaoArterial(request.getPressaoArterial());
@@ -267,8 +261,43 @@ public class ProntuarioDentistaService {
             }
         }
 
+        // ── Atualiza planejamentos terapêuticos (limpa e recria) ──
+        prontuario.getPlanejamentos().clear();
+        prontuarioDentistaRepository.saveAndFlush(prontuario);
+
+        if (!CollectionUtils.isEmpty(request.getPlanejamentos())) {
+            Long orgId = TenantContext.getCurrentTenant();
+            Organizacao organizacao = new Organizacao();
+            organizacao.setId(orgId);
+
+            // Busca consulta e profissional apenas uma vez
+            Consulta consulta = prontuario.getConsulta();
+            Profissional profissional = prontuario.getProfissional();
+
+            for (CadastrarProntuarioDentistaRequest.PlanejamentoItem item : request.getPlanejamentos()) {
+                Paciente paciente = null;
+                if (item.getPacienteId() != null) {
+                    paciente = pacienteRepository.findById(item.getPacienteId()).orElse(null);
+                }
+
+                PlanejamentoTerapeutico planejamento = PlanejamentoTerapeutico.builder()
+                        .prontuarioDentista(prontuario)
+                        .consulta(consulta)
+                        .paciente(paciente)
+                        .profissional(profissional)
+                        .organizacao(organizacao)
+                        .dataProcedimento(parseData(item.getDataProcedimento()))
+                        .procedimentoRealizado(item.getProcedimentoRealizado())
+                        .valor(item.getValor())
+                        .statusAssinatura("PENDENTE")
+                        .build();
+                prontuario.addPlanejamento(planejamento);
+            }
+            log.info("Planejamentos atualizados — total={}", request.getPlanejamentos().size());
+        }
+
         prontuarioDentistaRepository.save(prontuario);
-        log.info("Prontuário odontológico atualizado — id={}", id);
+        log.info("Prontuario odontologico atualizado — id={}", id);
     }
 
     // =========================================================================
@@ -279,7 +308,7 @@ public class ProntuarioDentistaService {
     public ProntuarioDentista buscarPorId(Long id) {
         return prontuarioDentistaRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Prontuário odontológico não encontrado: " + id));
+                        "Prontuario odontologico nao encontrado: " + id));
     }
 
     @Transactional(readOnly = true)
@@ -292,12 +321,12 @@ public class ProntuarioDentistaService {
         Long id = prontuarioDentistaRepository
                 .findIdMaisRecentePorConsulta(consultaId)
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Nenhum prontuário odontológico encontrado para consulta: " + consultaId));
+                        "Nenhum Prontuario odontologico encontrado para consulta: " + consultaId));
 
         ProntuarioDentista pd = prontuarioDentistaRepository
                 .findByIdComDentes(id)
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Prontuário odontológico não encontrado: id=" + id));
+                        "Prontuario odontologico nao encontrado: id=" + id));
 
         // Inicializa planejamentos em query separada para evitar cartesian product com dentes
         Hibernate.initialize(pd.getPlanejamentos());

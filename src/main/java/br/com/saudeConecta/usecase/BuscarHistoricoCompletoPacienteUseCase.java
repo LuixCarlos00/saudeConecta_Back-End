@@ -129,10 +129,7 @@ public class BuscarHistoricoCompletoPacienteUseCase {
 
                    // Controle e Tratamento
                    .responsavel(prontuario.getResponsavel())
-                   .inicioTratamento(prontuario.getInicioTratamento())
-                   .terminoTratamento(prontuario.getTerminoTratamento())
-                   .interrupcao(prontuario.getInterrupcao())
-                   .dataFinalizadoDentista(prontuario.getDataFinalizado())
+                     .dataFinalizadoDentista(prontuario.getDataFinalizado())
 
                    // Sinais Vitais
                    .pressao(prontuario.getPressaoArterial())

@@ -11,8 +11,7 @@ import java.time.LocalDateTime;
  *
  * @param id                        Identificador único do registro
  * @param organizacaoId             ID da organização
- * @param destinatarioProfissionalId ID do profissional destinatário (pode ser nulo)
- * @param destinatarioProfissionalNome Nome do profissional destinatário
+ * @param destinatarioEntidadeId    ID da entidade destinatária (profissional, secretária, admin ou paciente)
  * @param destinatarioEmail         Email do destinatário
  * @param destinatarioNome          Nome do destinatário
  * @param assunto                   Assunto da mensagem
@@ -28,8 +27,7 @@ import java.time.LocalDateTime;
 public record MensageriaResponse(
         Long id,
         Long organizacaoId,
-        Long destinatarioProfissionalId,
-        String destinatarioProfissionalNome,
+        Long destinatarioEntidadeId,
         String destinatarioEmail,
         String destinatarioNome,
         String assunto,
@@ -52,8 +50,7 @@ public record MensageriaResponse(
         return new MensageriaResponse(
                 mensageria.getId(),
                 mensageria.getOrganizacaoId(),
-                mensageria.getDestinatarioProfissional() != null ? mensageria.getDestinatarioProfissional().getId() : null,
-                mensageria.getDestinatarioProfissional() != null ? mensageria.getDestinatarioProfissional().getNome() : null,
+                mensageria.getDestinatarioEntidadeId(),
                 mensageria.getDestinatarioEmail(),
                 mensageria.getDestinatarioNome(),
                 mensageria.getAssunto(),

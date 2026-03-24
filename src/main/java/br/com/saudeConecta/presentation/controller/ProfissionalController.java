@@ -30,7 +30,7 @@ public class ProfissionalController {
     public ResponseEntity<ProfissionalResponse> atualizarClinicoIdByOrg(@PathVariable Long id,
                                                                      @Valid @RequestBody AtualizarClinicoRequest request) {
         try {
-            log.info("Atualizando clínico: {}", request.nome());
+            log.info("Atualizando clinico: {}", request.nome());
             Profissional atualizado = profissionalService.atualizarClinicoIdByOrg(id, request);
             return ResponseEntity.ok(ProfissionalResponse.fromEntity(atualizado));
         } catch (IllegalArgumentException e) {
@@ -42,13 +42,13 @@ public class ProfissionalController {
     @PostMapping("/cadastraClinicoByOrg")
     @Description("Cadastra médico/clínico com CPF como login e envia credenciais por email. Utilizado em: CadastroMedicoComponent")
     public ResponseEntity<?> cadastraClinicoByOrg(@Valid @RequestBody CadastrarClinicoRequest request) {
-        log.info("Cadastrando clínico: {}", request.nome());
+        log.info("Cadastrando clinico: {}", request.nome());
         try {
             Profissional profissional = profissionalService.cadastraClinicoByOrg(request);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ProfissionalResponse.fromEntity(profissional));
         } catch (IllegalStateException e) {
-            log.warn("Erro ao cadastrar clínico: {}", e.getMessage());
+            log.warn("Erro ao cadastrar clinico: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         }
     }
@@ -58,7 +58,7 @@ public class ProfissionalController {
     @GetMapping("/buscarClinicoIdByOrg/{id}")
     @Description("Busca médico/clínico por ID dentro da organização")
     public ResponseEntity<ProfissionalResponse> buscarClinicoIdByOrg(@PathVariable Long id) {
-        log.info("Buscando clínico por ID: {}", id);
+        log.info("Buscando clinico por ID: {}", id);
         return profissionalService.buscarClinicoIdByOrg(id)
                 .map(ProfissionalResponse::fromEntity)
                 .map(ResponseEntity::ok)
@@ -69,15 +69,15 @@ public class ProfissionalController {
 @DeleteMapping("/deletarClinicoIdByOrg/{id}")
     @Description("Deleta médico/clínico por ID")
     public ResponseEntity<?> deletarClinicoIdByOrg(@PathVariable Long id) {
-        log.info("Deletando clínico ID: {}", id);
+        log.info("Deletando clinico ID: {}", id);
         try {
             profissionalService.deletarClinicoIdByOrg(id);
             return ResponseEntity.ok().build();
         } catch (IllegalStateException e) {
-            log.warn("Erro ao deletar clínico: {}", e.getMessage());
+            log.warn("Erro ao deletar clinico: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         } catch (IllegalArgumentException e) {
-            log.warn("Clínico não encontrado: {}", e.getMessage());
+            log.warn("Clinico nao encontrado: {}", e.getMessage());
             return ResponseEntity.notFound().build();
         }
     }

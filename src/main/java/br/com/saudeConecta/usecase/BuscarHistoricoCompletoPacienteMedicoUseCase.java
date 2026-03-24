@@ -110,28 +110,30 @@ public class BuscarHistoricoCompletoPacienteMedicoUseCase {
                    .frequenciaArterialSistolica(prontuario.getProntFrequenciaArterialSistolica())
                    .frequenciaArterialDiastolica(prontuario.getProntFrequenciaArterialDiastolica())
 
-                   // Dados Demográficos
-                   .sexo(prontuario.getProntSexo())
 
                    // Anamnese e Avaliação
                    .queixaPrincipal(prontuario.getProntQueixaPricipal())
                    .anamnese(prontuario.getProntAnamnese())
-                   .conduta(prontuario.getProntCondulta())
                    .observacao(prontuario.getProntObservacao())
                    .diagnostico(prontuario.getProntDiagnostico())
 
                    // Prescrição Médica
-                   .modeloPrescricao(prontuario.getProntModeloPrescricao())
-                   .tituloPrescricao(prontuario.getProntTituloPrescricao())
-                   .dataPrescricao(prontuario.getProntDataPrescricao())
-                   .prescricao(prontuario.getProntPrescricao())
+                    .tituloPrescricao(prontuario.getProntTituloPrescricao())
+                    .prescricao(prontuario.getProntPrescricao())
 
-                   // Exames
-                   .modeloExame(prontuario.getProntModeloExame())
-                   .tituloExame(prontuario.getProntTituloExame())
-                   .dataExame(prontuario.getProntDataExame())
-                   .exame(prontuario.getProntExame())
                    .tempoDuracao(prontuario.getProntTempoDuracao())
+
+                   // Planejamentos Terapêuticos
+                   .planejamentos(prontuario.getPlanejamentos() != null ?
+                       prontuario.getPlanejamentos().stream()
+                           .map(p -> HistoricoConsultaPacienteResponse.PlanejamentoResponse.builder()
+                               .id(p.getId())
+                               .dataProcedimento(p.getDataProcedimento())
+                               .procedimentoRealizado(p.getProcedimentoRealizado())
+                               .valor(p.getValor())
+                               .statusAssinatura(p.getStatusAssinatura())
+                               .build())
+                           .toList() : List.of())
 
                    // Dados de Controle
                    .dataFinalizado(prontuario.getProntDataFinalizado());

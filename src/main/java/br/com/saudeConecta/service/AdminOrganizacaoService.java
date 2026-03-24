@@ -140,7 +140,8 @@ public class AdminOrganizacaoService {
                 request.nome(),
                 cpfLimpo,
                 senhaGerada,
-                organizacaoId
+                organizacaoId,
+                admin.getId()
         );
 
         return admin;
@@ -157,7 +158,7 @@ public class AdminOrganizacaoService {
     public void atualizarMeusDadosAdminOrg(Long adminId, AtualizarAdminOrgCompletoRequest request) {
         Long orgId = tenantHelper.getCurrentTenantId();
         Long userId = tenantHelper.getCurrentUserId();
-        log.info("Admin Org atualizando seus próprios dados. AdminID: {}, OrgID: {}", adminId, orgId);
+        log.info("Admin Org atualizando seus proprios dados. AdminID: {}, OrgID: {}", adminId, orgId);
 
         AdminOrganizacao admin = adminOrganizacaoRepository.findByIdWithOrgAndEndereco(adminId)
                 .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
@@ -385,7 +386,7 @@ public class AdminOrganizacaoService {
     @Transactional
     public AdminOrganizacao cadastrarAdminOrgCompleto(CadastrarAdminOrgCompletoRequest request) {
         String cnpjLimpo = limparCnpj(request.cnpj());
-        log.info("Cadastrando Admin Org completo. CNPJ: {}, Clínica: {}", cnpjLimpo, request.nomeClinica());
+        log.info("Cadastrando Admin Org completo. CNPJ: {}, Clinica: {}", cnpjLimpo, request.nomeClinica());
 
         if (usuarioRepository.existsByLogin(cnpjLimpo)) {
             throw new IllegalStateException("CNPJ já cadastrado como login no sistema");
@@ -445,7 +446,8 @@ public class AdminOrganizacaoService {
                 request.nome(),
                 cnpjLimpo,
                 senhaGerada,
-                organizacao.getId()
+                organizacao.getId(),
+                admin.getId()
         );
 
         log.info("Admin Org criado com sucesso. ID: {}, Org: {}", admin.getId(), organizacao.getId());

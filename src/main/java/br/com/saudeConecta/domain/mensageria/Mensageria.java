@@ -1,7 +1,6 @@
 package br.com.saudeConecta.domain.mensageria;
 
 import br.com.saudeConecta.domain.organizacao.Organizacao;
-import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.infra.tenant.TenantAware;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -37,10 +36,8 @@ public class Mensageria implements Serializable, TenantAware {
     @JsonIgnore
     private Organizacao organizacao;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "destinatario_profissional_id")
-    @JsonIgnore
-    private Profissional destinatarioProfissional;
+    @Column(name = "destinatario_entidade_id")
+    private Long destinatarioEntidadeId;
 
     @Column(name = "destinatario_email", nullable = false, length = 200)
     private String destinatarioEmail;

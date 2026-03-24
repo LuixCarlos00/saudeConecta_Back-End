@@ -24,7 +24,7 @@ public class OrganizacaoController {
 
     @GetMapping("/minha")
     public ResponseEntity<OrganizacaoResponse> buscarMinhaOrganizacao() {
-        log.debug("Buscando organização do usuário atual");
+        log.debug("Buscando organizacao do usuario atual");
         return organizacaoService.buscarAtual()
             .map(OrganizacaoResponse::fromEntity)
             .map(ResponseEntity::ok)
@@ -33,7 +33,7 @@ public class OrganizacaoController {
 
     @GetMapping
     public ResponseEntity<List<OrganizacaoResponse>> listarTodas() {
-        log.debug("Listando todas as organizações");
+        log.debug("Listando todas as organizacoes");
         List<OrganizacaoResponse> response = organizacaoService.listarTodas()
             .stream()
             .map(OrganizacaoResponse::fromEntity)
@@ -43,7 +43,7 @@ public class OrganizacaoController {
 
     @GetMapping("/ativas")
     public ResponseEntity<List<OrganizacaoResponse>> listarAtivas() {
-        log.debug("Listando organizações ativas");
+        log.debug("Listando organizacoes ativas");
         List<OrganizacaoResponse> response = organizacaoService.listarAtivas()
             .stream()
             .map(OrganizacaoResponse::fromEntity)
@@ -53,7 +53,7 @@ public class OrganizacaoController {
 
     @GetMapping("/{id}")
     public ResponseEntity<OrganizacaoResponse> buscarPorId(@PathVariable Long id) {
-        log.debug("Buscando organização por ID: {}", id);
+        log.debug("Buscando organizacao por ID: {}", id);
         return organizacaoService.buscarPorId(id)
             .map(OrganizacaoResponse::fromEntity)
             .map(ResponseEntity::ok)
@@ -62,7 +62,7 @@ public class OrganizacaoController {
 
     @PostMapping
     public ResponseEntity<OrganizacaoResponse> criar(@Valid @RequestBody CriarOrganizacaoRequest request) {
-        log.info("Criando nova organização: {}", request.nome());
+        log.info("Criando nova organizacao: {}", request.nome());
         Organizacao org = organizacaoService.criar(request);
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(OrganizacaoResponse.fromEntity(org));
@@ -72,21 +72,21 @@ public class OrganizacaoController {
     public ResponseEntity<OrganizacaoResponse> atualizar(
             @PathVariable Long id,
             @Valid @RequestBody AtualizarOrganizacaoRequest request) {
-        log.info("Atualizando organização ID: {}", id);
+        log.info("Atualizando organizacao ID: {}", id);
         Organizacao org = organizacaoService.atualizar(id, request);
         return ResponseEntity.ok(OrganizacaoResponse.fromEntity(org));
     }
 
     @PutMapping("/{id}/ativar")
     public ResponseEntity<Void> ativar(@PathVariable Long id) {
-        log.info("Ativando organização ID: {}", id);
+        log.info("Ativando organizacao ID: {}", id);
         organizacaoService.ativar(id);
         return ResponseEntity.ok().build();
     }
 
     @PutMapping("/{id}/inativar")
     public ResponseEntity<Void> inativar(@PathVariable Long id) {
-        log.info("Inativando organização ID: {}", id);
+        log.info("Inativando organizacao ID: {}", id);
         organizacaoService.inativar(id);
         return ResponseEntity.ok().build();
     }

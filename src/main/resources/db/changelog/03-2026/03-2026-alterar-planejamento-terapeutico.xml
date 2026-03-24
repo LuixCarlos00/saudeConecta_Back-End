@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.0.xsd">
+
+    <changeSet id="03-2026-alterar-planejamento-terapeutico-1" author="system">
+        <comment>Adicionar coluna prontuario_id para suportar prontuário médico</comment>
+        <addColumn tableName="tb_planejamento_terapeutico">
+            <column name="prontuario_id" type="BIGINT"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="03-2026-alterar-planejamento-terapeutico-2" author="system">
+        <comment>Remover constraint existente da coluna prontuario_dentista_id</comment>
+        <dropForeignKeyConstraint 
+            baseTableName="tb_planejamento_terapeutico"
+            constraintName="fk_planejamento_prontuario_dentista"/>
+    </changeSet>
+
+    <changeSet id="03-2026-alterar-planejamento-terapeutico-3" author="system">
+        <comment>Tornar coluna prontuario_dentista_id opcional usando SQL puro</comment>
+        <sql>
+            ALTER TABLE tb_planejamento_terapeutico MODIFY COLUMN prontuario_dentista_id BIGINT NULL;
+        </sql>
+    </changeSet>
+
+    <changeSet id="03-2026-alterar-planejamento-terapeutico-4" author="system">
+        <comment>Adicionar foreign key para prontuario_id</comment>
+        <addForeignKeyConstraint 
+            baseTableName="tb_planejamento_terapeutico"
+            baseColumnNames="prontuario_id"
+            referencedTableName="prontuario"
+            referencedColumnNames="prontCodigoProntuario"
+            constraintName="fk_planejamento_prontuario_medico"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="03-2026-alterar-planejamento-terapeutico-5" author="system">
+        <comment>Recriar foreign key para prontuario_dentista_id (agora opcional)</comment>
+        <addForeignKeyConstraint 
+            baseTableName="tb_planejamento_terapeutico"
+            baseColumnNames="prontuario_dentista_id"
+            referencedTableName="prontuario_dentista"
+            referencedColumnNames="prontdent_codigo"
+            constraintName="fk_planejamento_prontuario_dentista_v2"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+</databaseChangeLog>

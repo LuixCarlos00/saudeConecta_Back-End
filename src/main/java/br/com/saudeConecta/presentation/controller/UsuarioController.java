@@ -83,7 +83,7 @@ public class UsuarioController {
     @Transactional
     @Description( "Busca perfil completo do usuário por ID com dados específicos baseados no tipo (PROFISSIONAL, ADMIN_ORG, RECEPCIONISTA) incluindo endereço quando existir. Utilizado em: UserProfileComponent, UserService")
     public ResponseEntity<UsuarioPerfilCompletoResponse> buscarPerfilCompleto(@PathVariable Long id) {
-        log.debug("Buscando perfil completo do usuário por ID: {}", id);
+        log.debug("Buscando perfil completo do usuario por ID: {}", id);
         return usuarioService.buscarPerfilCompleto(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());

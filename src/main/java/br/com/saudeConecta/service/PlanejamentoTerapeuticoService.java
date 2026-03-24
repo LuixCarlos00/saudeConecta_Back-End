@@ -31,14 +31,19 @@ public class PlanejamentoTerapeuticoService {
     private final PacienteRepository pacienteRepository;
 
     /**
-     * Lista planejamentos de um prontuário odontológico.
+     * Lista planejamentos de um prontuário (dentista ou médico).
+     * Tenta buscar primeiro por prontuário dentista, depois por prontuário médico.
      *
-     * @param prontuarioId ID do prontuário dentista
+     * @param prontuarioId ID do prontuário
      * @return lista de planejamentos
      */
     @Transactional(readOnly = true)
     public List<PlanejamentoTerapeutico> listarPorProntuario(Long prontuarioId) {
-        return planejamentoRepository.findByProntuarioId(prontuarioId);
+        List<PlanejamentoTerapeutico> lista = planejamentoRepository.findByProntuarioId(prontuarioId);
+        if (lista.isEmpty()) {
+            lista = planejamentoRepository.findByProntuarioMedicoId(prontuarioId);
+        }
+        return lista;
     }
 
     /**
@@ -56,13 +61,13 @@ public class PlanejamentoTerapeuticoService {
 
         ProntuarioDentista prontuario = prontuarioRepository.findById(request.getProntuarioDentistaId())
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Prontuário não encontrado: " + request.getProntuarioDentistaId()));
+                        "prontuario nao encontrado: " + request.getProntuarioDentistaId()));
 
         Profissional profissional = profissionalRepository.findById(profissionalId)
-                .orElseThrow(() -> new IllegalArgumentException("Profissional não encontrado: " + profissionalId));
+                .orElseThrow(() -> new IllegalArgumentException("Profissional nao encontrado: " + profissionalId));
 
         Paciente paciente = pacienteRepository.findById(request.getPacienteId())
-                .orElseThrow(() -> new IllegalArgumentException("Paciente não encontrado: " + request.getPacienteId()));
+                .orElseThrow(() -> new IllegalArgumentException("Paciente nao encontrado: " + request.getPacienteId()));
 
         Organizacao organizacao = new Organizacao();
         organizacao.setId(orgId);
@@ -97,7 +102,7 @@ public class PlanejamentoTerapeuticoService {
     @Transactional
     public void remover(Long id) {
         if (!planejamentoRepository.existsById(id)) {
-            throw new IllegalArgumentException("Planejamento não encontrado: " + id);
+            throw new IllegalArgumentException("Planejamento nao encontrado: " + id);
         }
         planejamentoRepository.deleteById(id);
         log.info("Planejamento removido — id={}", id);
@@ -105,18 +110,26 @@ public class PlanejamentoTerapeuticoService {
 
     /**
      * Gera um token de assinatura para todos os itens do planejamento de um prontuário.
+     * Busca diretamente na coluna correta conforme o tipo do profissional.
      *
-     * @param prontuarioId ID do prontuário dentista
+     * @param prontuarioId ID do prontuário (dentista ou médico)
+     * @param tipo "DENTISTA" ou "MEDICO"
      * @return token gerado
      */
     @Transactional
-    public String gerarLinkAssinatura(Long prontuarioId) {
-        log.info("Gerando link de assinatura para prontuario={}", prontuarioId);
+    public String gerarLinkAssinatura(Long prontuarioId, String tipo) {
+        log.info("Gerando link de assinatura para prontuario={}, tipo={}", prontuarioId, tipo);
 
-        List<PlanejamentoTerapeutico> planejamentos = planejamentoRepository.findByProntuarioId(prontuarioId);
+        List<PlanejamentoTerapeutico> planejamentos;
+
+        if ("MEDICO".equalsIgnoreCase(tipo)) {
+            planejamentos = planejamentoRepository.findByProntuarioMedicoId(prontuarioId);
+        } else {
+            planejamentos = planejamentoRepository.findByProntuarioId(prontuarioId);
+        }
 
         if (planejamentos.isEmpty()) {
-            throw new IllegalStateException("Nenhum planejamento encontrado para este prontuário.");
+            throw new IllegalStateException("Nenhum planejamento encontrado para este prontuario.");
         }
 
         // Gera um único token para todos os itens pendentes
@@ -143,7 +156,7 @@ public class PlanejamentoTerapeuticoService {
     public List<PlanejamentoTerapeutico> buscarPorToken(String token) {
         List<PlanejamentoTerapeutico> lista = planejamentoRepository.findByTokenAssinatura(token);
         if (lista.isEmpty()) {
-            throw new IllegalArgumentException("Link inválido ou não encontrado.");
+            throw new IllegalArgumentException("Link invalido ou nao encontrado.");
         }
 
         return lista;
@@ -154,12 +167,13 @@ public class PlanejamentoTerapeuticoService {
      *
      * @param token token de assinatura
      * @param assinaturaBase64 assinatura digital em base64
+     * @param ipOrigem IP de origem da assinatura
      */
     @Transactional
-    public void assinarPorToken(String token, String assinaturaBase64) {
-        log.info("Assinando planejamento — token={}", token);
+    public void assinarPorToken(String token, String assinaturaBase64, String ipOrigem) {
+        log.info("Assinando planejamento — token={}, ip={}", token, ipOrigem);
 
-        int atualizados = planejamentoRepository.assinarPorToken(token, assinaturaBase64);
+        int atualizados = planejamentoRepository.assinarPorToken(token, assinaturaBase64, ipOrigem);
         if (atualizados == 0) {
             throw new IllegalArgumentException("Nenhum planejamento encontrado para o token informado.");
         }

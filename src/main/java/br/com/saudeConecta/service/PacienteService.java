@@ -37,7 +37,7 @@ public class PacienteService  {
     @RequiresTenant
     public Paciente cadastrarPacientebyOrg(CadastrarPacienteCompletoRequest request) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Cadastrando paciente: {} na organização: {}", request.nome(), orgId);
+        log.info("Cadastrando paciente: {} na organizacao: {}", request.nome(), orgId);
 
         String cpfLimpo = limparCpf(request.cpf());
 
@@ -46,7 +46,7 @@ public class PacienteService  {
         }
 
         Organizacao organizacao = organizacaoRepository.findById(orgId)
-            .orElseThrow(() -> new IllegalStateException("Organização não encontrada"));
+            .orElseThrow(() -> new IllegalStateException("organizacao não encontrada"));
 
         Endereco endereco = Endereco.builder()
                 .endNacionalidade(request.nacionalidade())
@@ -90,7 +90,7 @@ public class PacienteService  {
     @RequiresTenant
     public Optional<Paciente> buscarrPacientebyOrg(Long id) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando paciente ID: {} da organização: {}", id, orgId);
+        log.debug("Buscando paciente ID: {} da organizacao: {}", id, orgId);
            return   pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(id, orgId);
     }
 
@@ -192,12 +192,12 @@ public class PacienteService  {
         try {
             // 1. Deletar o paciente primeiro (remove a FK)
             pacienteRepository.deleteById(id);
-            log.info("Paciente ID: {} excluído com sucesso", id);
+            log.info("Paciente ID: {} excluido com sucesso", id);
 
             // 2. Deletar o endereço associado
             if (endereco != null) {
                 enderecoRepository.deleteById(endereco.getEndCodigo());
-                log.info("Endereço ID: {} associado ao paciente excluído com sucesso", endereco.getEndCodigo());
+                log.info("Endereco ID: {} associado ao paciente excluido com sucesso", endereco.getEndCodigo());
             }
         } catch (Exception e) {
             log.error("Erro ao excluir paciente ID: {}", id, e);
@@ -238,7 +238,7 @@ public class PacienteService  {
     @Transactional(readOnly = true)
     public List<Paciente> buscarListaPacientesPorNomeComFiltro(String pesquisa, String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando pacientes por nome: {} na organização: {} com filtro: {}", pesquisa, orgId, filtro);
+        log.debug("Buscando pacientes por nome: {} na organizacao: {} com filtro: {}", pesquisa, orgId, filtro);
         
         if ("ATIVO".equals(filtro)) {
             return pacienteRepository.findByOrganizacaoIdAndNomeContainingWithFiltro(orgId, pesquisa, filtro, "ATIVO");
@@ -254,7 +254,7 @@ public class PacienteService  {
     @Transactional(readOnly = true)
     public List<Paciente> buscarListaPacientesPorCPFComFiltro(String pesquisa, String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando pacientes por CPF: {} na organização: {} com filtro: {}", pesquisa, orgId, filtro);
+        log.debug("Buscando pacientes por CPF: {} na organizacao: {} com filtro: {}", pesquisa, orgId, filtro);
         
         if ("ATIVO".equals(filtro)) {
             return pacienteRepository.findByOrganizacaoIdAndCpfContainingWithFiltro(orgId, pesquisa, filtro, "ATIVO");
@@ -270,7 +270,7 @@ public class PacienteService  {
     @Transactional(readOnly = true)
     public List<Paciente> buscarListaPacientesPorRGComFiltro(String pesquisa, String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando pacientes por RG: {} na organização: {} com filtro: {}", pesquisa, orgId, filtro);
+        log.debug("Buscando pacientes por RG: {} na organizacao: {} com filtro: {}", pesquisa, orgId, filtro);
         
         if ("ATIVO".equals(filtro)) {
             return pacienteRepository.findByOrganizacaoIdAndRgContainingWithFiltro(orgId, pesquisa, filtro, "ATIVO");
@@ -286,7 +286,7 @@ public class PacienteService  {
     @Transactional(readOnly = true)
     public List<Paciente> buscarListaPacientesPorTelefoneComFiltro(String pesquisa, String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando pacientes por telefone: {} na organização: {} com filtro: {}", pesquisa, orgId, filtro);
+        log.debug("Buscando pacientes por telefone: {} na organizacao: {} com filtro: {}", pesquisa, orgId, filtro);
         
         if ("ATIVO".equals(filtro)) {
             return pacienteRepository.findByOrganizacaoIdAndTelefoneContainingWithFiltro(orgId, pesquisa, filtro, "ATIVO");
@@ -300,7 +300,7 @@ public class PacienteService  {
     @Transactional(readOnly = true)
     public List<Paciente> buscarTodosPacientesComFiltro(String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando todos os pacientes na organização: {} com filtro: {}", orgId, filtro);
+        log.debug("Buscando todos os pacientes na organizacao: {} com filtro: {}", orgId, filtro);
         
         if ("ATIVO".equals(filtro)) {
             return pacienteRepository.findByOrganizacao_IdWithFiltro(orgId, filtro, "ATIVO");

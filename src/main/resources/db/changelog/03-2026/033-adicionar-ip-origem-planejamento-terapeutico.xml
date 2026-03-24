@@ -1,0 +1,19 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="033-adicionar-ip-origem-planejamento-terapeutico" author="luiz.carlos">
+        <addColumn tableName="tb_planejamento_terapeutico">
+            <column name="ip_origem" type="VARCHAR(45)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        
+        <rollback>
+            <dropColumn tableName="tb_planejamento_terapeutico" columnName="ip_origem"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

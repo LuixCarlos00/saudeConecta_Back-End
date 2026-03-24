@@ -62,7 +62,7 @@ public class MensageriaController {
         try {
             return ResponseEntity.ok(mensageriaService.buscarPorId(id));
         } catch (IllegalArgumentException e) {
-            log.warn("Mensagem não encontrada: {}", id);
+            log.warn("Mensagem nao encontrada: {}", id);
             return ResponseEntity.notFound().build();
         }
     }
@@ -74,7 +74,7 @@ public class MensageriaController {
      */
     @GetMapping("/falhas-pendentes")
     public ResponseEntity<List<MensageriaResponse>> listarFalhasPendentes() {
-        log.info("Listando falhas pendentes de notificação");
+        log.info("Listando falhas pendentes de notificacao");
         return ResponseEntity.ok(mensageriaService.listarFalhasPendentesNotificacao());
     }
 

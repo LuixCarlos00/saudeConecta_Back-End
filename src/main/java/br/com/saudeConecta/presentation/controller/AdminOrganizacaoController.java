@@ -45,7 +45,7 @@ public class AdminOrganizacaoController {
         log.debug("Cadastrando administrador : {}", request.nome());
 
         if (organizacaoId == null) {
-            log.warn("Organização não encontrada no contexto");
+            log.warn("Organização nao encontrada no contexto");
             return ResponseEntity.badRequest().body("Organização não identificada");
         }
 
@@ -56,7 +56,7 @@ public class AdminOrganizacaoController {
             log.warn("Erro ao cadastrar administrador: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         } catch (IllegalArgumentException e) {
-            log.warn("Erro de validação: {}", e.getMessage());
+            log.warn("Erro de validacao: {}", e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
@@ -89,7 +89,7 @@ public class AdminOrganizacaoController {
             log.warn("Conflito ao cadastrar Admin Org: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         } catch (IllegalArgumentException e) {
-            log.warn("Erro de validação ao cadastrar Admin Org: {}", e.getMessage());
+            log.warn("Erro de validacao ao cadastrar Admin Org: {}", e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
@@ -103,7 +103,7 @@ public class AdminOrganizacaoController {
             AdminOrgCompletoResponse response = adminOrganizacaoService.buscarAdminOrgCompleto(id);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
-            log.warn("AdminOrg não encontrado: {}", e.getMessage());
+            log.warn("AdminOrg nao encontrado: {}", e.getMessage());
             return ResponseEntity.notFound().build();
         }
     }
@@ -126,7 +126,7 @@ public class AdminOrganizacaoController {
     @Transactional
     @Description("Atualiza dados pessoais do Admin Org logado + organização + endereço. Utilizado em: DadosPessoaisComponent")
     public ResponseEntity<?> atualizarMeusDados(@PathVariable Long id, @RequestBody AtualizarAdminOrgCompletoRequest request) {
-        log.debug("Admin Org atualizando seus próprios dados. AdminID: {}", id);
+        log.debug("Admin Org atualizando seus proprios dados. AdminID: {}", id);
         try {
             adminOrganizacaoService.atualizarMeusDadosAdminOrg(id, request);
             return ResponseEntity.ok().build();
@@ -148,7 +148,7 @@ public class AdminOrganizacaoController {
             log.warn("Erro ao deletar administrador: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         } catch (IllegalArgumentException e) {
-            log.warn("Administrador não encontrado: {}", e.getMessage());
+            log.warn("Administrador nao encontrado: {}", e.getMessage());
             return ResponseEntity.notFound().build();
         }
     }

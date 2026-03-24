@@ -3,26 +3,24 @@ package br.com.saudeConecta.service;
 import br.com.saudeConecta.domain.common.Sexo;
 import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.historicodadospessoais.EntidadeTipo;
+import br.com.saudeConecta.domain.mensageria.Mensageria;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.profissional.Especialidade;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.profissional.StatusProfissional;
 import br.com.saudeConecta.domain.profissional.TipoProfissional;
+import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infra.tenant.RequiresTenant;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.presentation.dto.profissional.AtualizarClinicoRequest;
 import br.com.saudeConecta.presentation.dto.profissional.CadastrarClinicoRequest;
-import br.com.saudeConecta.presentation.dto.profissional.ProfissionalResponse;
 import br.com.saudeConecta.util.EmailUnicoService;
 import br.com.saudeConecta.util.SnapshotUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,7 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.util.HashSet;
-import java.util.stream.Collectors;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -51,6 +48,7 @@ public class ProfissionalService {
     private final EmailUnicoService emailUnicoService;
     private final HistoricoDadosPessoaisService historicoDadosPessoaisService;
     private final LimitePlanoService limitePlanoService;
+    private final MensageriaRepository mensageriaRepository;
 
 
     private static final String CARACTERES_SENHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*";
@@ -67,7 +65,8 @@ public class ProfissionalService {
             EmailNotificacaoService emailNotificacaoService,
             EmailUnicoService emailUnicoService,
             HistoricoDadosPessoaisService historicoDadosPessoaisService,
-            LimitePlanoService limitePlanoService
+            LimitePlanoService limitePlanoService,
+            MensageriaRepository mensageriaRepository
     ) {
         this.profissionalRepository = profissionalRepository;
         this.tipoProfissionalRepository = tipoProfissionalRepository;
@@ -81,6 +80,7 @@ public class ProfissionalService {
         this.emailUnicoService = emailUnicoService;
         this.historicoDadosPessoaisService = historicoDadosPessoaisService;
         this.limitePlanoService = limitePlanoService;
+        this.mensageriaRepository = mensageriaRepository;
     }
 
 
@@ -90,29 +90,29 @@ public class ProfissionalService {
     @Transactional
     public Profissional cadastraClinicoByOrg(CadastrarClinicoRequest request) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Cadastrando clínico: {} na organização: {}", request.nome(), orgId);
+        log.info("Cadastrando clinico: {} na organizacao: {}", request.nome(), orgId);
 
         limitePlanoService.validarLimiteProfissional(orgId);
 
         String cpfLimpo = limparCpf(request.cpf());
 
         if (usuarioRepository.existsByLogin(request.cpf())) {
-            throw new IllegalStateException("CPF já cadastrado no sistema");
+            throw new IllegalStateException("CPF ja cadastrado no sistema");
         }
 
-        // Verificar se o email já existe em qualquer tabela
+        // Verificar se o email ja existe em qualquer tabela
         if (emailUnicoService.emailJaExiste(request.email())) {
             String tabela = emailUnicoService.ondeEmailFoiEncontrado(request.email());
-            throw new IllegalStateException("Email já cadastrado no sistema como " + tabela);
+            throw new IllegalStateException("Email ja cadastrado no sistema como " + tabela);
         }
 
         Organizacao organizacao = organizacaoRepository.findById(orgId)
-            .orElseThrow(() -> new IllegalStateException("Organização não encontrada"));
+            .orElseThrow(() -> new IllegalStateException("Organização nao encontrada"));
 
         // Determina o tipo profissional com base no request
         String tipoCodigo = request.tipoProfissional() != null ? request.tipoProfissional() : "MEDICO";
         TipoProfissional tipoProfissional = tipoProfissionalRepository.findByCodigo(tipoCodigo)
-            .orElseThrow(() -> new IllegalStateException("Tipo " + tipoCodigo + " não encontrado"));
+            .orElseThrow(() -> new IllegalStateException("Tipo " + tipoCodigo + " nao encontrado"));
 
         String senhaGerada = gerarSenhaAleatoria();
         String senhaCriptografada = passwordEncoder.encode(senhaGerada);
@@ -152,7 +152,7 @@ public class ProfissionalService {
                 .ifPresentOrElse(
                     especialidades::add,
                     () -> {
-                        // Se não encontrar, cria nova especialidade
+                        // Se nao encontrar, cria nova especialidade
                         log.info("Criando nova especialidade: {} para tipo: {}", nomeEspecialidade, tipoProfissional.getCodigo());
                         Especialidade novaEspecialidade = Especialidade.builder()
                             .tipoProfissional(tipoProfissional)
@@ -188,7 +188,7 @@ public class ProfissionalService {
             .build();
 
         Profissional salvo = profissionalRepository.save(profissional);
-        log.info("Clínico cadastrado com sucesso. ID: {}", salvo.getId());
+        log.info("Clinico cadastrado com sucesso. ID: {}", salvo.getId());
 
         emailNotificacaoService.enviarCredenciaisClinico(
             request.email(),
@@ -218,7 +218,7 @@ public class ProfissionalService {
         Long orgId = tenantHelper.getCurrentTenantId();
 
         Profissional antes = profissionalRepository.buscarClinicoIdByOrg(id, orgId)
-                .orElseThrow(() -> new IllegalArgumentException("Profissional não encontrado"));
+                .orElseThrow(() -> new IllegalArgumentException("Profissional nao encontrado"));
 
         Profissional snapshot = SnapshotUtil.copiarSnapshot(antes);
 
@@ -239,7 +239,7 @@ public class ProfissionalService {
         if (dadosAtualizados.tipoProfissional() != null && !dadosAtualizados.tipoProfissional().isEmpty()) {
             String tipoCodigo = dadosAtualizados.tipoProfissional();
             TipoProfissional tipoProfissional = tipoProfissionalRepository.findByCodigo(tipoCodigo)
-                .orElseThrow(() -> new IllegalStateException("Tipo " + tipoCodigo + " não encontrado"));
+                .orElseThrow(() -> new IllegalStateException("Tipo " + tipoCodigo + " nao encontrado"));
             antes.setTipoProfissional(tipoProfissional);
         }
 
@@ -257,7 +257,7 @@ public class ProfissionalService {
                         antes.setEspecialidades(especialidades);
                     },
                     () -> {
-                        // Se não encontrar, cria nova especialidade
+                        // Se nao encontrar, cria nova especialidade
                         log.info("Criando nova especialidade: {} para tipo: {}", nomeEspecialidade, tipoProfissional.getCodigo());
                         Especialidade novaEspecialidade = Especialidade.builder()
                             .tipoProfissional(tipoProfissional)
@@ -314,26 +314,33 @@ return resultado ;
 
         // 1. Buscar o profissional na tabela profissional
         Profissional profissional = profissionalRepository.buscarClinicoIdByOrg(idProfissional, orgId)
-                .orElseThrow(() -> new IllegalArgumentException("Profissional não encontrado"));
+                .orElseThrow(() -> new IllegalArgumentException("Profissional nao encontrado"));
 
         Usuario usuario = profissional.getUsuario();
         if (usuario == null) {
-            throw new IllegalStateException("Profissional não possui usuário associado");
+            throw new IllegalStateException("Profissional nao possui usuario associado");
         }
 
         try {
-            // 2. Deletar o registro de profissional na tabela profissional primeiro
+            // 2. Deletar registros relacionados na tabela mensageria primeiro
+            List<Mensageria> mensagens = mensageriaRepository.findByDestinatarioEntidadeId(profissional.getId());
+            if (!mensagens.isEmpty()) {
+                log.info("Deletando {} registros de mensageria do profissional ID: {}", mensagens.size(), idProfissional);
+                mensageriaRepository.deleteAll(mensagens);
+            }
+
+            // 3. Deletar o registro de profissional na tabela profissional
             profissionalRepository.delete(profissional);
-            
-            // 3. Deletar o usuário da tabela usuario
+
+            // 4. Deletar o usuario da tabela usuario
             usuarioRepository.delete(usuario);
             
-            log.info("Profissional e usuário deletados com sucesso. ID Profissional: {}, ID Usuário: {}", 
+            log.info("Profissional e usuario deletados com sucesso. ID Profissional: {}, ID usuario: {}", 
                     idProfissional, usuario.getId());
                     
         } catch (Exception e) {
-            // 4. Caso haja relacionamento que impeça o delete, cancelar e avisar
-            String errorMessage = "Não foi possível deletar o profissional devido a relacionamentos existentes: " + e.getMessage();
+            // 5. Caso haja relacionamento que impeça o delete, cancelar e avisar
+            String errorMessage = "nao foi possível deletar o profissional devido a relacionamentos existentes: " + e.getMessage();
             log.error(errorMessage);
             throw new IllegalStateException(errorMessage);
         }
@@ -421,13 +428,8 @@ return resultado ;
 
 
     // ========== MÉTODOS DE BUSCA PARA AUTOCOMPLETE COM FILTRO ==========
-    
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public List<Profissional> buscarPorNome(String nome) {
-        return buscarPorNomeComFiltro(nome, "ALL");
-    }
-    
+
+
     @RequiresTenant
     @Transactional(readOnly = true)
     public List<Profissional> buscarPorNomeComFiltro(String nome, String filtro) {
@@ -441,13 +443,7 @@ return resultado ;
             return profissionalRepository.findByOrganizacaoIdAndNomeContaining(orgId, nome);
         }
     }
-    
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public List<Profissional> buscarPorCRM(String crm) {
-        return buscarPorCRMComFiltro(crm, "ALL");
-    }
-    
+
     @RequiresTenant
     @Transactional(readOnly = true)
     public List<Profissional> buscarPorCRMComFiltro(String crm, String filtro) {
@@ -461,13 +457,8 @@ return resultado ;
             return profissionalRepository.findByOrganizacaoIdAndCrmContaining(orgId, crm);
         }
     }
-    
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public List<Profissional> buscarPorCidade(String cidade) {
-        return buscarPorCidadeComFiltro(cidade, "ALL");
-    }
-    
+
+
     @RequiresTenant
     @Transactional(readOnly = true)
     public List<Profissional> buscarPorCidadeComFiltro(String cidade, String filtro) {
@@ -481,13 +472,8 @@ return resultado ;
             return profissionalRepository.findByOrganizacaoIdAndCidadeContaining(orgId, cidade);
         }
     }
-    
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public List<Profissional> buscarPorEspecialidade(String especialidade) {
-        return buscarPorEspecialidadeComFiltro(especialidade, "ALL");
-    }
-    
+
+
     @RequiresTenant
     @Transactional(readOnly = true)
     public List<Profissional> buscarPorEspecialidadeComFiltro(String especialidade, String filtro) {
@@ -501,13 +487,8 @@ return resultado ;
             return profissionalRepository.findByOrganizacaoIdAndEspecialidadeContaining(orgId, especialidade);
         }
     }
-    
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public List<Profissional> buscarTodos() {
-        return buscarTodosComFiltro("ALL");
-    }
-    
+
+
     @RequiresTenant
     @Transactional(readOnly = true)
     public List<Profissional> buscarTodosComFiltro(String filtro) {

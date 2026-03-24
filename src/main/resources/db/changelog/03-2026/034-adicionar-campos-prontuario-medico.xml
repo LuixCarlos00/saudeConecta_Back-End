@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="034-adicionar-campos-prontuario-medico" author="equipe-sentinela">
+        <comment>
+            Adiciona novos campos ao prontuário médico para paridade com o prontuário odontológico.
+            Inclui: identificação do paciente, exame extrabucal/intrabucal, exame clínico,
+            TUSS/CID, orientações e planejamento.
+        </comment>
+
+        <!-- ══════════════════════════════════════════════════════════════════
+             IDENTIFICAÇÃO DO PACIENTE
+        ══════════════════════════════════════════════════════════════════ -->
+        <addColumn tableName="prontuario">
+            <column name="prontResponsavel" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- ══════════════════════════════════════════════════════════════════
+             SINAIS VITAIS (campo faltante)
+        ══════════════════════════════════════════════════════════════════ -->
+        <addColumn tableName="prontuario">
+            <column name="prontPulso" type="VARCHAR(250)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+
+        <addColumn tableName="prontuario">
+            <column name="prontExameOutros" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+
+        <!-- ══════════════════════════════════════════════════════════════════
+             DIAGNÓSTICO E TRATAMENTO
+        ══════════════════════════════════════════════════════════════════ -->
+        <addColumn tableName="prontuario">
+            <column name="prontOrientacoes" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- ══════════════════════════════════════════════════════════════════
+             TUSS E CID
+        ══════════════════════════════════════════════════════════════════ -->
+        <addColumn tableName="prontuario">
+            <column name="prontTussTexto" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="prontuario">
+            <column name="prontCidTexto" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="prontuario">
+            <column name="prontSolicitacaoExameTexto" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- ══════════════════════════════════════════════════════════════════
+             AMPLIAR CAMPOS TEXTO EXISTENTES (de VARCHAR para TEXT)
+        ══════════════════════════════════════════════════════════════════ -->
+        <modifyDataType tableName="prontuario" columnName="prontObservacao" newDataType="TEXT"/>
+        <modifyDataType tableName="prontuario" columnName="prontAnamnese" newDataType="TEXT"/>
+        <modifyDataType tableName="prontuario" columnName="prontQueixaPricipal" newDataType="TEXT"/>
+        <modifyDataType tableName="prontuario" columnName="prontDiagnostico" newDataType="TEXT"/>
+        <modifyDataType tableName="prontuario" columnName="prontPrescricao" newDataType="TEXT"/>
+
+    </changeSet>
+
+</databaseChangeLog>

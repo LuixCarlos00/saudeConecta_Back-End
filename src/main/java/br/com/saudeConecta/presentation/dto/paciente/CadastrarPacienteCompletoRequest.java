@@ -1,5 +1,6 @@
 package br.com.saudeConecta.presentation.dto.paciente;
 
+import br.com.saudeConecta.util.validation.SafeInput;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -11,6 +12,7 @@ import java.time.LocalDate;
 public record CadastrarPacienteCompletoRequest(
         @NotBlank(message = "Nome não pode ser vazio")
         @Size(max = 100, message = "Nome deve ter no máximo 100 caracteres")
+        @SafeInput
         String nome,
 
         @NotBlank(message = "Sexo não pode ser vazio")
@@ -36,6 +38,7 @@ public record CadastrarPacienteCompletoRequest(
         String telefone,
 
         @Size(max = 50, message = "Nacionalidade deve ter no máximo 50 caracteres")
+        @SafeInput
         String nacionalidade,
 
         @Size(max = 2, message = "UF deve ter no máximo 2 caracteres")
@@ -44,10 +47,12 @@ public record CadastrarPacienteCompletoRequest(
 
         @NotBlank(message = "Município não pode ser vazio")
         @Size(max = 100, message = "Município deve ter no máximo 100 caracteres")
+        @SafeInput
         String municipio,
 
         @NotBlank(message = "Bairro não pode ser vazio")
         @Size(max = 100, message = "Bairro deve ter no máximo 100 caracteres")
+        @SafeInput
         String bairro,
 
         @NotBlank(message = "CEP não pode ser vazio")
@@ -56,11 +61,13 @@ public record CadastrarPacienteCompletoRequest(
 
         @NotBlank(message = "Rua não pode ser vazia")
         @Size(max = 200, message = "Rua deve ter no máximo 200 caracteres")
+        @SafeInput
         String rua,
 
         @NotNull(message = "Número não pode ser nulo")
         Integer numero,
 
         @Size(max = 100, message = "Complemento deve ter no máximo 100 caracteres")
+        @SafeInput
         String complemento
 ) {}

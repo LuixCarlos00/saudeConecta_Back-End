@@ -67,6 +67,11 @@ public interface PlanejamentoTerapeuticoRepository extends JpaRepository<Planeja
            "ORDER BY p.dataProcedimento DESC")
     List<PlanejamentoTerapeutico> findByProntuarioId(@Param("prontuarioId") Long prontuarioId);
 
+    @Query("SELECT p FROM PlanejamentoTerapeutico p " +
+           "WHERE p.prontuario.prontCodigoProntuario = :prontuarioId " +
+           "ORDER BY p.dataProcedimento DESC")
+    List<PlanejamentoTerapeutico> findByProntuarioMedicoId(@Param("prontuarioId") Long prontuarioId);
+
 
     @Query("SELECT p FROM PlanejamentoTerapeutico p " +
            "LEFT JOIN FETCH p.paciente " +
@@ -81,9 +86,10 @@ public interface PlanejamentoTerapeuticoRepository extends JpaRepository<Planeja
     @Query("UPDATE PlanejamentoTerapeutico p " +
            "SET p.statusAssinatura = 'ASSINADO', " +
            "    p.assinaturaBase64 = :assinatura, " +
-           "    p.dataAssinatura = CURRENT_TIMESTAMP " +
+           "    p.dataAssinatura = CURRENT_TIMESTAMP, " +
+           "    p.ipOrigem = :ipOrigem " +
            "WHERE p.tokenAssinatura = :token")
-    int assinarPorToken(@Param("token") String token, @Param("assinatura") String assinatura);
+    int assinarPorToken(@Param("token") String token, @Param("assinatura") String assinatura, @Param("ipOrigem") String ipOrigem);
 
     /**
      * Exclui planejamentos terapêuticos vinculados diretamente a uma consulta.

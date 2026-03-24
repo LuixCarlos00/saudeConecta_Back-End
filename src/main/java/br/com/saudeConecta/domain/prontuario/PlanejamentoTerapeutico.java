@@ -28,7 +28,12 @@ public class PlanejamentoTerapeutico {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "prontuario_dentista_id", nullable = false)
+    @JoinColumn(name = "prontuario_id")
+    @JsonIgnore
+    private Prontuario prontuario;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "prontuario_dentista_id")
     @JsonIgnore
     private ProntuarioDentista prontuarioDentista;
 
@@ -74,6 +79,9 @@ public class PlanejamentoTerapeutico {
     @Builder.Default
     private String statusAssinatura = "PENDENTE";
 
+    @Column(name = "ip_origem", length = 45)
+    private String ipOrigem;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -97,5 +105,13 @@ public class PlanejamentoTerapeutico {
 
     public boolean isAssinado() {
         return "ASSINADO".equals(this.statusAssinatura);
+    }
+
+    public void setProntuario(Prontuario prontuario) {
+        this.prontuario = prontuario;
+    }
+
+    public void setProntuarioDentista(ProntuarioDentista prontuarioDentista) {
+        this.prontuarioDentista = prontuarioDentista;
     }
 }

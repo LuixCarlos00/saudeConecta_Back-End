@@ -89,14 +89,14 @@ public class ConsultaController {
     public ResponseEntity<ConsultaResponse> atualizarConsultabyOrg(
             @PathVariable Long id,
             @Valid @RequestBody AtualizarConsultaRequest request) {
-        log.debug("- Iniciando atualização de consulta - atualizarConsultabyOrg" );
+        log.debug("- Iniciando atualizacao de consulta - atualizarConsultabyOrg" );
         Consulta consulta = consultaService.atualizarConsultaByOrg(id, request);
         return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
     }
 
     @PutMapping("/concluirConsultabyOrg/{id}")
     public ResponseEntity<ConsultaResponse> concluirConsultabyOrg(@PathVariable Long id) {
-        log.debug("- Iniciando conclusão de consulta - concluirConsultabyOrg" );
+        log.debug("- Iniciando conclusao de consulta - concluirConsultabyOrg" );
         Consulta consulta = consultaService.concluirConsultabyOrg(id);
         return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
     }
@@ -111,15 +111,15 @@ public class ConsultaController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deletarConsulta(@PathVariable Long id) {
-        log.info("Solicitação de exclusão da consulta {}", id);
+        log.info("Solicitacao de exclusao da consulta {}", id);
         try {
             consultaService.deletarConsulta(id);
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException e) {
-            log.warn("Consulta não encontrada para exclusão: {}", e.getMessage());
+            log.warn("Consulta nao encontrada para exclusao: {}", e.getMessage());
             return ResponseEntity.notFound().build();
         } catch (IllegalStateException e) {
-            log.warn("Exclusão bloqueada para consulta {}: {}", id, e.getMessage());
+            log.warn("Exclusao bloqueada para consulta {}: {}", id, e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         } catch (Exception e) {
             log.error("Erro ao excluir consulta {}: {}", id, e.getMessage(), e);
@@ -155,10 +155,10 @@ public class ConsultaController {
             Consulta consulta = consultaService.atualizarStatus(id, novoStatus, motivo);
             return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
         } catch (IllegalArgumentException e) {
-            log.warn("Status inválido ou consulta não encontrada: {}", e.getMessage());
+            log.warn("Status invalido ou consulta nao encontrada: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         } catch (IllegalStateException e) {
-            log.warn("Transição de status inválida: {}", e.getMessage());
+            log.warn("Transicao de status invalida: {}", e.getMessage());
             return ResponseEntity.unprocessableEntity().build();
         }
     }
@@ -177,7 +177,7 @@ public class ConsultaController {
     public ResponseEntity<List<String>> buscarHorariosOcupados(
             @RequestParam Long medicoId,
             @RequestParam String data) {
-        log.debug("- Iniciando busca de horários ocupados - buscarHorariosOcupados" );
+        log.debug("- Iniciando busca de horarios ocupados - buscarHorariosOcupados" );
         List<String> horariosOcupados = consultaService.buscarHorariosOcupados(medicoId, data);
         return ResponseEntity.ok(horariosOcupados);
     }
@@ -196,7 +196,7 @@ public class ConsultaController {
             @RequestParam String data,
             @RequestParam String horario,
             @RequestParam Long medicoId) {
-        log.debug("- Iniciando verificação de disponibilidade -verificarDisponibilidade" );
+        log.debug("- Iniciando verificacao de disponibilidade -verificarDisponibilidade" );
         boolean existeConsulta = consultaService.verificarDisponibilidade(data, horario, medicoId);
         return ResponseEntity.ok(existeConsulta);
     }
@@ -222,7 +222,7 @@ public class ConsultaController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal,
             @RequestParam(required = false) String status) {
         
-        log.info("Endpoint /buscar - profissionalId: {}, especialidade: {}, período: {} a {}, status: {}",
+        log.info("Endpoint /buscar - profissionalId: {}, especialidade: {}, periodo: {} a {}, status: {}",
                 profissionalId, especialidade, dataInicial, dataFinal, status);
         
         // Converter datas para LocalDateTime
@@ -294,7 +294,7 @@ public class ConsultaController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal,
             @RequestParam(required = false) String status) {
-        log.debug("Buscando consultas para usuário {} entre {} e {} com status {}", 
+        log.debug("Buscando consultas para usuario {} entre {} e {} com status {}", 
                   profissionalId, dataInicial, dataFinal, status);
         List<ConsultaResponse> response = consultaService.pesquisarClinicasEmIntervaloDeDatas(
                         profissionalId, dataInicial, dataFinal, status).stream()
@@ -310,7 +310,7 @@ public class ConsultaController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal,
             @RequestParam(required = false) String status) {
-        log.debug("- Iniciando pesquisa de médico e especialidade em intervalo de datas - pesquisarMedicoEspecialidadeEmIntervaloDeDatas" );
+        log.debug("- Iniciando pesquisa de medico e especialidade em intervalo de datas - pesquisarMedicoEspecialidadeEmIntervaloDeDatas" );
         List<ConsultaResponse> response = consultaService.pesquisarMedicoEspecialidadeEmIntervaloDeDatas(
                         profissionalId, especialidade, dataInicial, dataFinal, status).stream()
                 .map(ConsultaResponse::fromEntity)
@@ -361,7 +361,7 @@ public class ConsultaController {
             @PathVariable Long organizacaoId,
             @PathVariable String especialidade,
             @RequestParam(required = false) String status) {
-        log.debug("- Iniciando pesquisa de especialidade e organização - pesquisarPorEspecialidadeEOrganizacao" );
+        log.debug("- Iniciando pesquisa de especialidade e organizacao - pesquisarPorEspecialidadeEOrganizacao" );
         List<ConsultaResponse> response = consultaService.pesquisarPorEspecialidadeEOrganizacao(
                         organizacaoId, especialidade, status).stream()
                 .map(ConsultaResponse::fromEntity)
@@ -478,7 +478,7 @@ public class ConsultaController {
     public ResponseEntity<List<ConsultaResponse>> buscarAgendaMedicoPorPeriodo(
             @PathVariable Long usuarioId,
             @RequestParam(defaultValue = "diario") String tipoPeriodo) {
-        log.debug("Buscando consultas para usuário {} com período {}", usuarioId, tipoPeriodo);
+        log.debug("Buscando consultas para usuario {} com periodo {}", usuarioId, tipoPeriodo);
         List<ConsultaResponse> response = consultaService.buscarConsultasPorMedicoEPeriodo(usuarioId, tipoPeriodo)
                 .stream()
                 .map(ConsultaResponse::fromEntity)
@@ -502,7 +502,7 @@ public class ConsultaController {
     public ResponseEntity<EstatisticasDashboardAdminOrgResponse> getEstatisticasDashboardAdminOrg(
             @PathVariable Long organizacaoId) {
 
-        log.debug("Buscando estatísticas de dashboard para organização {}", organizacaoId);
+        log.debug("Buscando estatisticas de dashboard para organizacao {}", organizacaoId);
 
         EstatisticasDashboardAdminOrgResponse response =
             consultaService.getEstatisticasDashboardAdminOrg(organizacaoId);
@@ -525,7 +525,7 @@ public class ConsultaController {
     @GetMapping("/estatisticas/dashboard/profissional")
     public ResponseEntity<EstatisticasDashboardAdminOrgResponse> getEstatisticasDashboardProfissional(
             @RequestParam Long usuarioId) {
-        log.debug("Buscando estatísticas de dashboard para profissional usuarioId={}", usuarioId);
+        log.debug("Buscando estatisticas de dashboard para profissional usuarioId={}", usuarioId);
         return ResponseEntity.ok(consultaService.getEstatisticasDashboardProfissional(usuarioId));
     }
 
@@ -542,7 +542,7 @@ public class ConsultaController {
      */
     @GetMapping("/estatisticas/dashboard/super-admin")
     public ResponseEntity<EstatisticasDashboardAdminOrgResponse> getEstatisticasDashboardSuperAdmin() {
-        log.debug("Buscando estatísticas de dashboard global para SuperAdmin");
+        log.debug("Buscando estatisticas de dashboard global para SuperAdmin");
         return ResponseEntity.ok(consultaService.getEstatisticasDashboardSuperAdmin());
     }
 
@@ -567,7 +567,7 @@ public class ConsultaController {
     public ResponseEntity<Long> getEstatisticasSemanaPorOrganizacao(
             @PathVariable Long organizacaoId) {
 
-        log.debug("Contando consultas da semana para organização {}", organizacaoId);
+        log.debug("Contando consultas da semana para organizacao {}", organizacaoId);
 
         Long quantidade = consultaService.getEstatisticasSemanaPorOrganizacao(organizacaoId);
 
@@ -605,7 +605,7 @@ public class ConsultaController {
     public ResponseEntity<Long> contarConsultasHojePorProfissional(@PathVariable Long usuarioId) {
         Long organizacaoId = TenantContext.getCurrentTenant();
         if (organizacaoId == null) {
-            log.error("Organização não identificada no contexto");
+            log.error("Organizacao nao identificada no contexto");
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok(consultaService.contarConsultasHojePorUsuarioEOrg(organizacaoId, usuarioId));
@@ -622,7 +622,7 @@ public class ConsultaController {
     public ResponseEntity<Long> contarConsultasRealizadasHojePorProfissional(@PathVariable Long usuarioId) {
         Long organizacaoId = TenantContext.getCurrentTenant();
         if (organizacaoId == null) {
-            log.error("Organização não identificada no contexto");
+            log.error("Organizacao nao identificada no contexto");
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok(consultaService.contarConsultasRealizadasHojePorUsuarioEOrg(organizacaoId, usuarioId));
@@ -639,7 +639,7 @@ public class ConsultaController {
     public ResponseEntity<Long> contarConsultasAgendadasHojePorProfissional(@PathVariable Long usuarioId) {
         Long organizacaoId = TenantContext.getCurrentTenant();
         if (organizacaoId == null) {
-            log.error("Organização não identificada no contexto");
+            log.error("Organizacao nao identificada no contexto");
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok(consultaService.contarConsultasAgendadasHojePorUsuarioEOrg(organizacaoId, usuarioId));
@@ -690,12 +690,12 @@ public class ConsultaController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal) {
         
-        log.debug("Buscando estatísticas para usuário {} entre {} e {}", medicoId, dataInicial, dataFinal);
+        log.debug("Buscando estatisticas para usuario {} entre {} e {}", medicoId, dataInicial, dataFinal);
         
         Long organizacaoId = TenantContext.getCurrentTenant();
         
         if (organizacaoId == null) {
-            log.error("Organização não identificada no contexto");
+            log.error("Organizacao nao identificada no contexto");
             return ResponseEntity.badRequest().build();
         }
         
@@ -726,7 +726,7 @@ public class ConsultaController {
         Long organizacaoId = TenantContext.getCurrentTenant();
 
         if (organizacaoId == null) {
-            log.error("Organização não identificada no contexto");
+            log.error("Organizacao nao identificada no contexto");
             return ResponseEntity.badRequest().build();
         }
 
@@ -777,12 +777,12 @@ public class ConsultaController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal) {
         
-        log.debug("Buscando durações de consultas para usuário {} entre {} e {}", medicoId, dataInicial, dataFinal);
+        log.debug("Buscando duracoes de consultas para usuario {} entre {} e {}", medicoId, dataInicial, dataFinal);
         
         Long organizacaoId = TenantContext.getCurrentTenant();
         
         if (organizacaoId == null) {
-            log.error("Organização não identificada no contexto");
+            log.error("Organizacao nao identificada no contexto");
             return ResponseEntity.badRequest().build();
         }
         
@@ -825,11 +825,11 @@ public class ConsultaController {
                 historico = buscarHistoricoCompletoPacienteMedicoUseCase.executar(pacienteId);
             }
 
-            log.info("Histórico ({}) retornado com sucesso - {} registros", tipo, historico.size());
+            log.info("Historico ({}) retornado com sucesso - {} registros", tipo, historico.size());
             return ResponseEntity.ok(historico);
 
         } catch (Exception e) {
-            log.error("Erro ao buscar histórico ({}) do paciente {}: {}", tipo, pacienteId, e.getMessage(), e);
+            log.error("Erro ao buscar historico ({}) do paciente {}: {}", tipo, pacienteId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -858,7 +858,7 @@ public class ConsultaController {
             return ResponseEntity.badRequest().build();
         }
 
-        log.info("Saldo financeiro: orgId={}, período={} a {}, agrupamento={}",
+        log.info("Saldo financeiro: orgId={}, periodo={} a {}, agrupamento={}",
                 organizacaoId, inicio, fim, agruparPor);
 
         SaldoFinanceiroResponse response = saldoFinanceiroService

@@ -28,7 +28,7 @@ public class CepController {
     @GetMapping("/{cep}")
     public ResponseEntity<?> buscarEnderecoPorCep(@PathVariable String cep) {
         try {
-            log.debug("Buscando endereço para CEP: {}", cep);
+            log.debug("Buscando endereco para CEP: {}", cep);
             
             // Remove caracteres não numéricos do CEP
             String cepLimpo = cep.replaceAll("[^0-9]", "");
@@ -39,7 +39,7 @@ public class CepController {
             }
 
             String url = VIACEP_URL + "/" + cepLimpo + "/json";
-            log.debug("Fazendo requisição para ViaCEP: {}", url);
+            log.debug("Fazendo requisicao para ViaCEP: {}", url);
             
             ResponseEntity<Object> response = restTemplate.getForEntity(url, Object.class);
             
@@ -48,18 +48,18 @@ public class CepController {
                 
                 // Verifica se o CEP foi encontrado
                 if (responseBody.containsKey("erro") && Boolean.TRUE.equals(responseBody.get("erro"))) {
-                    log.warn("CEP não encontrado: {}", cep);
+                    log.warn("CEP nao encontrado: {}", cep);
                     return ResponseEntity.notFound().build();
                 }
                 
                 // Verifica se os campos essenciais estão vazios
                 if (!responseBody.containsKey("logradouro") && !responseBody.containsKey("localidade")) {
-                    log.warn("CEP incompleto ou inválido: {}", cep);
+                    log.warn("CEP incompleto ou invalido: {}", cep);
                     return ResponseEntity.notFound().build();
                 }
             }
             
-            log.debug("Endereço encontrado para CEP: {}", cep);
+            log.debug("Endereco encontrado para CEP: {}", cep);
             return ResponseEntity.ok(response.getBody());
             
         } catch (Exception e) {

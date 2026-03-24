@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+  <changeSet id="remover-colunas-tratamento-prontuario-dentista" author="system">
+    <preConditions onFail="MARK_RAN">
+      <tableExists tableName="prontuario_dentista"/>
+      <columnExists tableName="prontuario_dentista" columnName="prontdent_inicio_tratamento"/>
+      <columnExists tableName="prontuario_dentista" columnName="prontdent_termino_tratamento"/>
+      <columnExists tableName="prontuario_dentista" columnName="prontdent_interrupcao"/>
+    </preConditions>
+
+    <dropColumn tableName="prontuario_dentista" columnName="prontdent_inicio_tratamento"/>
+    <dropColumn tableName="prontuario_dentista" columnName="prontdent_termino_tratamento"/>
+    <dropColumn tableName="prontuario_dentista" columnName="prontdent_interrupcao"/>
+
+    <rollback>
+      <addColumn tableName="prontuario_dentista">
+        <column name="prontdent_inicio_tratamento" type="date"/>
+      </addColumn>
+      <addColumn tableName="prontuario_dentista">
+        <column name="prontdent_termino_tratamento" type="date"/>
+      </addColumn>
+      <addColumn tableName="prontuario_dentista">
+        <column name="prontdent_interrupcao" type="varchar(500)"/>
+      </addColumn>
+    </rollback>
+  </changeSet>
+
+</databaseChangeLog>

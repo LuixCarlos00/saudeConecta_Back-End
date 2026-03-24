@@ -23,7 +23,7 @@ public class DebugController {
     @GetMapping("/usuarios")
     public ResponseEntity<List<Usuario>> listarTodosUsuarios() {
         List<Usuario> usuarios = usuarioRepository.findAll();
-        log.info("Total de usuários encontrados: {}", usuarios.size());
+        log.info("Total de usuarios encontrados: {}", usuarios.size());
         return ResponseEntity.ok(usuarios);
     }
 
@@ -55,11 +55,11 @@ public class DebugController {
             boolean exists = usuarioRepository.existsByLogin(login);
             response.put("exists", exists);
             
-            log.info("Debug - Usuário {}: exists={}, usuarioEntity={}, userDetails={}", 
+            log.info("Debug - Usuario {}: exists={}, usuarioEntity={}, userDetails={}", 
                     login, exists, usuario != null, userDetails != null);
             
         } catch (Exception e) {
-            log.error("Erro ao buscar usuário: " + login, e);
+            log.error("Erro ao buscar usuario: " + login, e);
             response.put("error", e.getMessage());
         }
         

@@ -50,4 +50,7 @@ public interface MensageriaRepository extends JpaRepository<Mensageria, Long> {
 
 
     long countByAdminNotificadoFalseAndStatus(StatusMensagem status);
+
+
+    List<Mensageria> findByDestinatarioEntidadeId(Long entidadeId);
 }

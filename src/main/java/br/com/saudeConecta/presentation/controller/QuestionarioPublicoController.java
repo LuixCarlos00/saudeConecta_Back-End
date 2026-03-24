@@ -120,11 +120,13 @@ public class QuestionarioPublicoController {
      */
     @PostMapping("/planejamento/assinar")
     public ResponseEntity<Map<String, String>> assinarPlanejamento(
-            @RequestBody AssinaturaPlanjamentoRequest request) {
+            @RequestBody AssinaturaPlanjamentoRequest request,
+            HttpServletRequest httpRequest) {
 
-        log.info("POST /publico/planejamento/assinar — token={}", request.getToken());
+        String ipOrigem = obterIpOrigem(httpRequest);
+        log.info("POST /publico/planejamento/assinar — token={}, ip={}", request.getToken(), ipOrigem);
 
-        planejamentoService.assinarPorToken(request.getToken(), request.getAssinaturaBase64());
+        planejamentoService.assinarPorToken(request.getToken(), request.getAssinaturaBase64(), ipOrigem);
 
         Map<String, String> response = new HashMap<>();
         response.put("mensagem", "Planejamento terapêutico assinado com sucesso!");

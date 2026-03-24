@@ -27,7 +27,7 @@ public class EmailUnicoService {
      * @return true se o email já existir, false caso contrário
      */
     public boolean emailJaExiste(String email) {
-        log.debug("Verificando existência do email: {}", email);
+        log.debug("Verificando existencia do email: {}", email);
         
         boolean existeEmAdmin = adminOrganizacaoRepository.findByEmail(email).isPresent();
         boolean existeEmProfissional = profissionalRepository.findByEmail(email).isPresent();
@@ -36,7 +36,7 @@ public class EmailUnicoService {
         boolean emailExiste = existeEmAdmin || existeEmProfissional || existeEmSecretaria;
         
         if (emailExiste) {
-            log.warn("Email {} já está cadastrado no sistema", email);
+            log.warn("Email {} já esta cadastrado no sistema", email);
         }
         
         return emailExiste;

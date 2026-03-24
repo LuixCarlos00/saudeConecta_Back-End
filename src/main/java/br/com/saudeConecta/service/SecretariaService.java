@@ -78,7 +78,7 @@ public class SecretariaService {
         Long orgId = tenantHelper.getCurrentTenantId();
         
         Secretaria antes = secretariaRepository.findByIdAndOrganizacao_Id(id, orgId)
-            .orElseThrow(() -> new IllegalArgumentException("Secretária não encontrada"));
+            .orElseThrow(() -> new IllegalArgumentException("Secretaria nao encontrada"));
 
         Secretaria snapshot = SnapshotUtil.copiarSnapshot(antes);
 
@@ -94,7 +94,7 @@ public class SecretariaService {
             antes.setTelefone(dadosAtualizados.getTelefone());
         }
        Secretaria resultado = secretariaRepository.save(antes);
-        log.info("Secretária atualizada com sucesso. ID: {}", antes.getId());
+        log.info("Secretaria atualizada com sucesso. ID: {}", antes.getId());
 
         historicoDadosPessoaisService.registrarAlteracoesDeObjeto(
                 EntidadeTipo.SECRETARIA,
@@ -111,7 +111,7 @@ public class SecretariaService {
     @Transactional
     public Secretaria cadastrarSecretariaByOrg(CadastrarSecretariaRequest request) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Cadastrando secretária: {} na organização: {}", request.nome(), orgId);
+        log.info("Cadastrando Secretaria: {} na Organizacao: {}", request.nome(), orgId);
 
         limitePlanoService.validarLimiteSecretaria(orgId);
 
@@ -129,7 +129,7 @@ public class SecretariaService {
         }
 
         Organizacao organizacao = organizacaoRepository.findById(orgId)
-                .orElseThrow(() -> new IllegalStateException("Organização não encontrada"));
+                .orElseThrow(() -> new IllegalStateException("Organizacao nao encontrada"));
 
         String senhaGerada = gerarSenhaAleatoria();
         String senhaCriptografada = passwordEncoder.encode(senhaGerada);
@@ -155,7 +155,7 @@ public class SecretariaService {
 
         usuarioRepository.save(usuario);
         Secretaria salva = secretariaRepository.save(secretaria);
-        log.info("Secretária cadastrada com sucesso. ID: {}", salva.getId());
+        log.info("Secretaria cadastrada com sucesso. ID: {}", salva.getId());
 
         emailNotificacaoService.enviarCredenciaisSecretaria(
                 request.email(),
@@ -173,30 +173,30 @@ public class SecretariaService {
     @Transactional
     public void deletarSecretariaIdByOrg(Long idSecretaria) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Deletando secretária ID: {} da organização: {}", idSecretaria, orgId);
+        log.info("Deletando Secretaria ID: {} da Organizacao: {}", idSecretaria, orgId);
 
-        // 1. Buscar a secretária na tabela secretaria
+        // 1. Buscar a Secretaria na tabela secretaria
         Secretaria secretaria = secretariaRepository.findByIdAndOrganizacao_Id(idSecretaria, orgId)
-                .orElseThrow(() -> new IllegalArgumentException("Secretária não encontrada"));
+                .orElseThrow(() -> new IllegalArgumentException("Secretaria nao encontrada"));
 
         Usuario usuario = secretaria.getUsuario();
         if (usuario == null) {
-            throw new IllegalStateException("Secretária não possui usuário associado");
+            throw new IllegalStateException("Secretaria nao possui Usuario associado");
         }
 
         try {
             // 2. Deletar o registro de secretaria na tabela de secretaria primeiro
             secretariaRepository.delete(secretaria);
             
-            // 3. Deletar o usuário da tabela usuario
+            // 3. Deletar o Usuario da tabela usuario
             usuarioRepository.delete(usuario);
             
-            log.info("Secretária e usuário deletados com sucesso. ID Secretária: {}, ID Usuário: {}", 
+            log.info("Secretaria e Usuario deletados com sucesso. ID Secretaria: {}, ID Usuario: {}", 
                     idSecretaria, usuario.getId());
                     
         } catch (Exception e) {
             // 4. Caso haja relacionamento que impeça o delete, cancelar e avisar
-            String errorMessage = "Não foi possível deletar a secretária devido a relacionamentos existentes: " + e.getMessage();
+            String errorMessage = "Não foi possível deletar a Secretaria devido a relacionamentos existentes: " + e.getMessage();
             log.error(errorMessage);
             throw new IllegalStateException(errorMessage);
         }
