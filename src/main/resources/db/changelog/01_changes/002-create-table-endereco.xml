@@ -6,6 +6,9 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <changeSet id="002-create-table-endereco" author="saudeConecta">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="endereco"/></not>
+        </preConditions>
         <createTable tableName="endereco">
             <column name="EndCodigo" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>

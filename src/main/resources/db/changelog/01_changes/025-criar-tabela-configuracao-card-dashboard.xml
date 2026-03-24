@@ -14,6 +14,9 @@
     <!--   PROFISSIONAL        → 4 cards                                  -->
     <!-- ================================================================ -->
     <changeSet id="025-001-criar-tabela-configuracao-card-dashboard" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="configuracao_card_dashboard"/></not>
+        </preConditions>
 
         <createTable tableName="configuracao_card_dashboard">
 

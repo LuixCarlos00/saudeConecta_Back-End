@@ -9,6 +9,9 @@
     <!-- TABELA: ORGANIZACAO (TENANT)               -->
     <!-- ========================================== -->
     <changeSet id="011-001-criar-tabela-organizacao" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="organizacao"/></not>
+        </preConditions>
         <createTable tableName="organizacao">
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
@@ -52,6 +55,9 @@
     <!-- TABELA: TIPO_PROFISSIONAL                  -->
     <!-- ========================================== -->
     <changeSet id="011-002-criar-tabela-tipo-profissional" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="tipo_profissional"/></not>
+        </preConditions>
         <createTable tableName="tipo_profissional">
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
@@ -77,6 +83,9 @@
     <!-- TABELA: ESPECIALIDADE                      -->
     <!-- ========================================== -->
     <changeSet id="011-003-criar-tabela-especialidade" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="especialidade"/></not>
+        </preConditions>
         <createTable tableName="especialidade">
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
@@ -112,6 +121,9 @@
     <!-- TABELA: FORMA_PAGAMENTO                    -->
     <!-- ========================================== -->
     <changeSet id="011-004-criar-tabela-forma-pagamento" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="forma_pagamento"/></not>
+        </preConditions>
         <createTable tableName="forma_pagamento">
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
@@ -140,6 +152,9 @@
     <!-- TABELA: ADMIN_ORGANIZACAO                  -->
     <!-- ========================================== -->
     <changeSet id="011-005-criar-tabela-admin-organizacao" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="admin_organizacao"/></not>
+        </preConditions>
         <createTable tableName="admin_organizacao">
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>

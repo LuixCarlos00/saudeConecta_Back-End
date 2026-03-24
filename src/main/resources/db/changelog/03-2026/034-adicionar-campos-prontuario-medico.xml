@@ -6,6 +6,10 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <changeSet id="034-adicionar-campos-prontuario-medico" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="prontuario"/>
+            <not><columnExists tableName="prontuario" columnName="prontResponsavel"/></not>
+        </preConditions>
         <comment>
             Adiciona novos campos ao prontuário médico para paridade com o prontuário odontológico.
             Inclui: identificação do paciente, exame extrabucal/intrabucal, exame clínico,

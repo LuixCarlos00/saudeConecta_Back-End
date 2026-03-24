@@ -5,6 +5,9 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.17.xsd">
 
     <changeSet id="022-create-historico-dados-pessoais" author="luiz">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="historico_dados_pessoais"/></not>
+        </preConditions>
 
         <createTable tableName="historico_dados_pessoais">
             <column name="id" type="BIGINT" autoIncrement="true">

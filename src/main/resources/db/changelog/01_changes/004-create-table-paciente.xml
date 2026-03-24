@@ -6,6 +6,9 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <changeSet id="004-create-table-paciente" author="saudeConecta">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="paciente"/></not>
+        </preConditions>
         <createTable tableName="paciente">
             <column name="PaciCodigo" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>

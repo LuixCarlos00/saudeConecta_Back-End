@@ -6,6 +6,9 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <changeSet id="010-create-table-prontuario" author="saudeConecta">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="prontuario"/></not>
+        </preConditions>
         <createTable tableName="prontuario">
             <column name="prontCodigoProntuario" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>

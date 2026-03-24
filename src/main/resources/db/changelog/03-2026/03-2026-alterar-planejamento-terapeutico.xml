@@ -5,6 +5,9 @@
                    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.0.xsd">
 
     <changeSet id="03-2026-alterar-planejamento-terapeutico-1" author="system">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="tb_planejamento_terapeutico" columnName="prontuario_id"/></not>
+        </preConditions>
         <comment>Adicionar coluna prontuario_id para suportar prontuário médico</comment>
         <addColumn tableName="tb_planejamento_terapeutico">
             <column name="prontuario_id" type="BIGINT"/>
@@ -12,6 +15,9 @@
     </changeSet>
 
     <changeSet id="03-2026-alterar-planejamento-terapeutico-2" author="system">
+        <preConditions onFail="MARK_RAN">
+            <foreignKeyConstraintExists foreignKeyName="fk_planejamento_prontuario_dentista" foreignKeyTableName="tb_planejamento_terapeutico"/>
+        </preConditions>
         <comment>Remover constraint existente da coluna prontuario_dentista_id</comment>
         <dropForeignKeyConstraint 
             baseTableName="tb_planejamento_terapeutico"
@@ -19,6 +25,9 @@
     </changeSet>
 
     <changeSet id="03-2026-alterar-planejamento-terapeutico-3" author="system">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="tb_planejamento_terapeutico" columnName="prontuario_dentista_id"/>
+        </preConditions>
         <comment>Tornar coluna prontuario_dentista_id opcional usando SQL puro</comment>
         <sql>
             ALTER TABLE tb_planejamento_terapeutico MODIFY COLUMN prontuario_dentista_id BIGINT NULL;
@@ -26,6 +35,9 @@
     </changeSet>
 
     <changeSet id="03-2026-alterar-planejamento-terapeutico-4" author="system">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_planejamento_prontuario_medico" foreignKeyTableName="tb_planejamento_terapeutico"/></not>
+        </preConditions>
         <comment>Adicionar foreign key para prontuario_id</comment>
         <addForeignKeyConstraint 
             baseTableName="tb_planejamento_terapeutico"
@@ -37,6 +49,9 @@
     </changeSet>
 
     <changeSet id="03-2026-alterar-planejamento-terapeutico-5" author="system">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_planejamento_prontuario_dentista_v2" foreignKeyTableName="tb_planejamento_terapeutico"/></not>
+        </preConditions>
         <comment>Recriar foreign key para prontuario_dentista_id (agora opcional)</comment>
         <addForeignKeyConstraint 
             baseTableName="tb_planejamento_terapeutico"

@@ -11,6 +11,9 @@
     <!-- Limites NULL = ilimitado.                   -->
     <!-- ========================================== -->
     <changeSet id="027-001-criar-tabela-plano-assinatura" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="plano_assinatura"/></not>
+        </preConditions>
         <createTable tableName="plano_assinatura">
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
@@ -59,6 +62,9 @@
     <!-- plano e controla o ciclo de vida.           -->
     <!-- ========================================== -->
     <changeSet id="027-002-criar-tabela-assinatura-tenant" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="assinatura_tenant"/></not>
+        </preConditions>
         <createTable tableName="assinatura_tenant">
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
@@ -121,6 +127,9 @@
     <!-- tenant, com dados Pix para pagamento.       -->
     <!-- ========================================== -->
     <changeSet id="027-003-criar-tabela-cobranca-tenant" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="cobranca_tenant"/></not>
+        </preConditions>
         <createTable tableName="cobranca_tenant">
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
@@ -186,6 +195,9 @@
     <!-- Business (699)                              -->
     <!-- ========================================== -->
     <changeSet id="027-004-inserir-planos-padrao" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM plano_assinatura WHERE tipo IN ('STARTER','PROFISSIONAL','BUSINESS')</sqlCheck>
+        </preConditions>
         <insert tableName="plano_assinatura">
             <column name="nome" value="Starter"/>
             <column name="descricao" value="Ideal para consultórios e profissionais autônomos"/>

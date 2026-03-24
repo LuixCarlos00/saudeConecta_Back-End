@@ -6,6 +6,9 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <changeSet id="001-create-table-usuarios" author="saudeConecta">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="usuarios"/></not>
+        </preConditions>
         <createTable tableName="usuarios">
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
