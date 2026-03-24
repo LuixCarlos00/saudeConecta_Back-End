@@ -5,6 +5,9 @@
                    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <changeSet id="033-adicionar-ip-origem-planejamento-terapeutico" author="luiz.carlos">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="tb_planejamento_terapeutico" columnName="ip_origem"/></not>
+        </preConditions>
         <addColumn tableName="tb_planejamento_terapeutico">
             <column name="ip_origem" type="VARCHAR(45)">
                 <constraints nullable="true"/>

@@ -7,6 +7,10 @@
 
     <!-- Remove FK para profissional e renomeia coluna para destinatario_entidade_id (genérica) -->
     <changeSet id="032-alterar-mensageria-entidade-generica" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="mensageria" columnName="destinatario_profissional_id"/>
+            <not><columnExists tableName="mensageria" columnName="destinatario_entidade_id"/></not>
+        </preConditions>
 
         <!-- 1. Remover a foreign key para profissional -->
         <dropForeignKeyConstraint

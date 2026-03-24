@@ -11,6 +11,9 @@
     <!-- filtradas pelo perfil (ADMIN/SUPER_ADMIN vs MEDICO/DENTISTA)      -->
     <!-- ================================================================ -->
     <changeSet id="020-001-criar-tabela-configuracao-grafico-dashboard" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="configuracao_grafico_dashboard"/></not>
+        </preConditions>
 
         <createTable tableName="configuracao_grafico_dashboard">
 

@@ -7,6 +7,9 @@
 
     <!-- PROFISSIONAL -->
     <changeSet id="014-001-criar-tabela-profissional" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="profissional"/></not>
+        </preConditions>
         <createTable tableName="profissional">
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
@@ -86,6 +89,9 @@
 
     <!-- PROFISSIONAL_ESPECIALIDADE -->
     <changeSet id="014-002-criar-tabela-profissional-especialidade" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="profissional_especialidade"/></not>
+        </preConditions>
         <createTable tableName="profissional_especialidade">
             <column name="profissional_id" type="BIGINT">
                 <constraints nullable="false"/>

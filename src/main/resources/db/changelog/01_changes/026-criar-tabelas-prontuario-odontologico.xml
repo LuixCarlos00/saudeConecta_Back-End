@@ -10,6 +10,9 @@
     <!-- Armazena questionário de saúde + assinatura digital do paciente     -->
     <!-- ================================================================== -->
     <changeSet id="026-01-criar-tabela-termo-autorizacao" author="saudeConecta">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="tb_termo_autorizacao"/></not>
+        </preConditions>
         <createTable tableName="tb_termo_autorizacao">
 
             <column name="id" type="BIGINT" autoIncrement="true">
@@ -102,6 +105,9 @@
     <!-- Procedimentos pré-definidos por profissional (opções do select)     -->
     <!-- ================================================================== -->
     <changeSet id="026-02-criar-tabela-procedimento-padrao" author="saudeConecta">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="tb_procedimento_padrao"/></not>
+        </preConditions>
         <createTable tableName="tb_procedimento_padrao">
 
             <column name="id" type="BIGINT" autoIncrement="true">
@@ -159,6 +165,9 @@
     <!-- Registros de procedimentos realizados no planejamento               -->
     <!-- ================================================================== -->
     <changeSet id="026-03-criar-tabela-planejamento-terapeutico" author="saudeConecta">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="tb_planejamento_terapeutico"/></not>
+        </preConditions>
         <createTable tableName="tb_planejamento_terapeutico">
 
             <column name="id" type="BIGINT" autoIncrement="true">

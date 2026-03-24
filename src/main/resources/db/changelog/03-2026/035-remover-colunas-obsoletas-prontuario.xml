@@ -7,6 +7,7 @@
     <changeSet id="035-remover-colunas-obsoletas-prontuario-01" author="liquibase">
         <preConditions onFail="MARK_RAN">
             <tableExists tableName="prontuario"/>
+            <columnExists tableName="prontuario" columnName="prontExame"/>
         </preConditions>
         
         <comment>Remover colunas obsoletas da tabela prontuario</comment>

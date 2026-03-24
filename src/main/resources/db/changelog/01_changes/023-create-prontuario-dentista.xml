@@ -9,6 +9,9 @@
     <!-- Tabela principal — prontuário odontológico                          -->
     <!-- ================================================================== -->
     <changeSet id="011-create-table-prontuario-dentista" author="saudeConecta">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="prontuario_dentista"/></not>
+        </preConditions>
         <createTable tableName="prontuario_dentista">
 
             <column name="prontdent_codigo" type="BIGINT" autoIncrement="true">
@@ -197,6 +200,9 @@
     <!-- Tabela de dentes — odontograma estruturado (1 linha por dente)      -->
     <!-- ================================================================== -->
     <changeSet id="012-create-table-prontuario-dentista-dente" author="saudeConecta">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="prontuario_dentista_dente"/></not>
+        </preConditions>
         <createTable tableName="prontuario_dentista_dente">
 
             <column name="prontdentd_codigo" type="BIGINT" autoIncrement="true">

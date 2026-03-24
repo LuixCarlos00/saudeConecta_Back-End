@@ -7,6 +7,9 @@
 
     <!-- CONSULTA_V2 -->
     <changeSet id="015-001-criar-consulta-v2" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="consulta"/></not>
+        </preConditions>
         <createTable tableName="consulta">
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
@@ -100,6 +103,9 @@
 
     <!-- CONSULTA_HISTORICO -->
     <changeSet id="015-002-criar-consulta-historico" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="consulta_historico"/></not>
+        </preConditions>
         <createTable tableName="consulta_historico">
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
