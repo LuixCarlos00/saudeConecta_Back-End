@@ -31,14 +31,19 @@ public class PlanejamentoTerapeuticoService {
     private final PacienteRepository pacienteRepository;
 
     /**
-     * Lista planejamentos de um prontuario odontológico.
+     * Lista planejamentos de um prontuário (dentista ou médico).
+     * Tenta buscar primeiro por prontuário dentista, depois por prontuário médico.
      *
-     * @param prontuarioId ID do prontuario dentista
+     * @param prontuarioId ID do prontuário
      * @return lista de planejamentos
      */
     @Transactional(readOnly = true)
     public List<PlanejamentoTerapeutico> listarPorProntuario(Long prontuarioId) {
-        return planejamentoRepository.findByProntuarioId(prontuarioId);
+        List<PlanejamentoTerapeutico> lista = planejamentoRepository.findByProntuarioId(prontuarioId);
+        if (lista.isEmpty()) {
+            lista = planejamentoRepository.findByProntuarioMedicoId(prontuarioId);
+        }
+        return lista;
     }
 
     /**
@@ -104,16 +109,24 @@ public class PlanejamentoTerapeuticoService {
     }
 
     /**
-     * Gera um token de assinatura para todos os itens do planejamento de um prontuario.
+     * Gera um token de assinatura para todos os itens do planejamento de um prontuário.
+     * Busca diretamente na coluna correta conforme o tipo do profissional.
      *
-     * @param prontuarioId ID do prontuario dentista
+     * @param prontuarioId ID do prontuário (dentista ou médico)
+     * @param tipo "DENTISTA" ou "MEDICO"
      * @return token gerado
      */
     @Transactional
-    public String gerarLinkAssinatura(Long prontuarioId) {
-        log.info("Gerando link de assinatura para prontuario={}", prontuarioId);
+    public String gerarLinkAssinatura(Long prontuarioId, String tipo) {
+        log.info("Gerando link de assinatura para prontuario={}, tipo={}", prontuarioId, tipo);
 
-        List<PlanejamentoTerapeutico> planejamentos = planejamentoRepository.findByProntuarioId(prontuarioId);
+        List<PlanejamentoTerapeutico> planejamentos;
+
+        if ("MEDICO".equalsIgnoreCase(tipo)) {
+            planejamentos = planejamentoRepository.findByProntuarioMedicoId(prontuarioId);
+        } else {
+            planejamentos = planejamentoRepository.findByProntuarioId(prontuarioId);
+        }
 
         if (planejamentos.isEmpty()) {
             throw new IllegalStateException("Nenhum planejamento encontrado para este prontuario.");

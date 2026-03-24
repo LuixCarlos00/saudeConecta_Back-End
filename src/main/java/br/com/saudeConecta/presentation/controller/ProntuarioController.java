@@ -71,6 +71,23 @@ public class ProntuarioController {
     }
 
     /**
+     * Retorna o prontuário médico mais recente de uma consulta.
+     * 
+     * GET /prontuario/consulta/{consultaId}/recente
+     * 
+     * @param consultaId ID da consulta
+     * @return Prontuário mais recente encontrado
+     */
+    @GetMapping("/consulta/{consultaId}/recente")
+    public ResponseEntity<ProntuarioCompletoResponse> buscarMaisRecente(@PathVariable Long consultaId) {
+        log.info("GET /prontuario/consulta/{}/recente", consultaId);
+
+        Prontuario prontuario = prontuarioService.buscarMaisRecentePorConsulta(consultaId);
+        ProntuarioCompletoResponse response = ProntuarioCompletoResponse.fromEntity(prontuario);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * Busca todos os prontuários de um paciente (para aba Histórico)
      * 
      * @param pacienteId ID do paciente

@@ -97,6 +97,9 @@ public class ProntuarioCompletoResponse {
         private String procedimentoRealizado;
         private Double valor;
         private String statusAssinatura;
+        private String assinaturaBase64;
+        private String dataAssinatura;
+        private String ipOrigem;
     }
 
     
@@ -193,6 +196,9 @@ public class ProntuarioCompletoResponse {
                             .procedimentoRealizado(p.getProcedimentoRealizado())
                             .valor(p.getValor() != null ? p.getValor().doubleValue() : null)
                             .statusAssinatura(p.getStatusAssinatura())
+                            .assinaturaBase64(p.getAssinaturaBase64())
+                            .dataAssinatura(p.getDataAssinatura() != null ? p.getDataAssinatura().toString() : null)
+                            .ipOrigem(p.getIpOrigem())
                             .build())
                         .collect(Collectors.toList()) : null)
                 .build();

@@ -67,6 +67,11 @@ public interface PlanejamentoTerapeuticoRepository extends JpaRepository<Planeja
            "ORDER BY p.dataProcedimento DESC")
     List<PlanejamentoTerapeutico> findByProntuarioId(@Param("prontuarioId") Long prontuarioId);
 
+    @Query("SELECT p FROM PlanejamentoTerapeutico p " +
+           "WHERE p.prontuario.prontCodigoProntuario = :prontuarioId " +
+           "ORDER BY p.dataProcedimento DESC")
+    List<PlanejamentoTerapeutico> findByProntuarioMedicoId(@Param("prontuarioId") Long prontuarioId);
+
 
     @Query("SELECT p FROM PlanejamentoTerapeutico p " +
            "LEFT JOIN FETCH p.paciente " +

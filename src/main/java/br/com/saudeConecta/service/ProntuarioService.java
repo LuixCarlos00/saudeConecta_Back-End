@@ -120,7 +120,7 @@ public class ProntuarioService {
                         .paciente(paciente)
                         .profissional(profissional)
                         .organizacao(organizacao)
-                        .dataProcedimento(parseData(item.getDataProcedimento()).toLocalDate())
+                        .dataProcedimento(parseDataToLocalDate(parseData(item.getDataProcedimento())))
                         .procedimentoRealizado(item.getProcedimentoRealizado())
                         .valor(item.getValor())
                         .statusAssinatura("PENDENTE")
@@ -244,6 +244,28 @@ public class ProntuarioService {
     }
 
     /**
+     * Busca o prontuário médico mais recente de uma consulta.
+     * Usa 2 queries para evitar cartesian product com planejamentos.
+     *
+     * @param consultaId ID da consulta
+     * @return prontuário mais recente encontrado
+     */
+    @Transactional(readOnly = true)
+    public Prontuario buscarMaisRecentePorConsulta(Long consultaId) {
+        log.debug("Buscando prontuário médico mais recente para consulta ID: {}", consultaId);
+
+        Long id = prontuarioRepository
+                .findIdMaisRecentePorConsulta(consultaId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Nenhum prontuário médico encontrado para consulta: " + consultaId));
+
+        return prontuarioRepository
+                .findByIdWithFullFetch(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Prontuário médico não encontrado: id=" + id));
+    }
+
+    /**
      * Busca todos os prontuarios de um paciente
      * @param pacienteId ID do paciente
      * @return Lista de prontuarios do paciente
@@ -270,7 +292,7 @@ public class ProntuarioService {
     }
 
     private LocalDate parseDataToLocalDate(Date data) {
-        if (data == null) return null;
+        if (data == null) return LocalDate.now();
         return data.toLocalDate();
     }
 
