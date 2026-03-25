@@ -117,6 +117,9 @@ public class BuscarHistoricoCompletoPacienteMedicoUseCase {
                    .observacao(prontuario.getProntObservacao())
                    .diagnostico(prontuario.getProntDiagnostico())
 
+                   // Orientações e campos adicionais
+                   .orientacoes(prontuario.getProntOrientacoes())
+
                    // Prescrição Médica
                     .tituloPrescricao(prontuario.getProntTituloPrescricao())
                     .prescricao(prontuario.getProntPrescricao())
