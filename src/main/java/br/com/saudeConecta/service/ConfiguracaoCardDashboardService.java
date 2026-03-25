@@ -11,6 +11,8 @@ import br.com.saudeConecta.presentation.dto.dashboard.ConfiguracaoCardResponse;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -79,6 +81,7 @@ public class ConfiguracaoCardDashboardService {
      * @param usuarioId ID do usuário logado
      * @return Lista de configurações de cards
      */
+    @Cacheable(value = "configuracoes-cards", key = "'lista-' + #usuarioId")
     public List<ConfiguracaoCardResponse> listarConfiguracoes(Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
         Set<TipoCardDashboard> tiposPermitidos = resolverTiposPermitidos(
@@ -98,6 +101,7 @@ public class ConfiguracaoCardDashboardService {
      * @param usuarioId ID do usuário logado
      * @return Lista de cards ativos
      */
+    @Cacheable(value = "configuracoes-cards", key = "'ativos-' + #usuarioId")
     @Transactional
     public List<ConfiguracaoCardResponse> listarCardsAtivos(Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
@@ -136,6 +140,7 @@ public class ConfiguracaoCardDashboardService {
      * @param usuarioId ID do usuário logado (validação de posse)
      * @return Configuração atualizada
      */
+    @CacheEvict(value = "configuracoes-cards", allEntries = true)
     @Transactional
     public ConfiguracaoCardResponse atualizarConfiguracao(Long id,
                                                           AtualizarConfiguracaoCardRequest request,
@@ -160,6 +165,7 @@ public class ConfiguracaoCardDashboardService {
      * @param usuarioId ID do usuário logado
      * @return Lista de configurações atualizadas
      */
+    @CacheEvict(value = "configuracoes-cards", allEntries = true)
     @Transactional
     public List<ConfiguracaoCardResponse> atualizarMultiplasConfiguracoes(
             List<AtualizarConfiguracaoCardRequest> requests, Long usuarioId) {
@@ -184,6 +190,7 @@ public class ConfiguracaoCardDashboardService {
      *
      * @param usuarioId ID do usuário logado
      */
+    @CacheEvict(value = "configuracoes-cards", allEntries = true)
     @Transactional
     public void resetarConfiguracoesParaPadrao(Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
@@ -209,6 +216,7 @@ public class ConfiguracaoCardDashboardService {
      * @param usuarioId ID do usuário logado
      * @return Lista de configurações criadas
      */
+    @CacheEvict(value = "configuracoes-cards", allEntries = true)
     @Transactional
     public List<ConfiguracaoCardResponse> inicializarConfiguracoesPrimeiroAcesso(Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
