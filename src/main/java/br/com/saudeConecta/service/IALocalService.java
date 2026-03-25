@@ -72,9 +72,9 @@ public class IALocalService {
      */
     private List<?> buscarHistoricoPorTipo(Long pacienteId, String tipo) {
         if ("dentista".equalsIgnoreCase(tipo)) {
-            return historicoDentistaUseCase.executar(pacienteId);
+            return historicoDentistaUseCase.executar(pacienteId, null);
         } else {
-            return historicoMedicoUseCase.executar(pacienteId);
+            return historicoMedicoUseCase.executar(pacienteId, null);
         }
     }
 

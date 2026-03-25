@@ -32,15 +32,16 @@ public class BuscarHistoricoCompletoPacienteUseCase {
      * Executa a busca do histórico completo de consultas odontológicas do paciente.
      *
      * @param pacienteId ID do paciente
+     * @param profissionalId ID do profissional (opcional, null retorna todos)
      * @return Lista de DTOs com histórico completo (consulta + prontuário dentista)
      */
     @RequiresTenant
     @Transactional(readOnly = true)
-    public List<HistoricoConsultaPacienteResponse> executar(Long pacienteId) {
+    public List<HistoricoConsultaPacienteResponse> executar(Long pacienteId, Long profissionalId) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Buscando histórico odontológico do paciente ID: {} na organização ID: {}", pacienteId, orgId);
+        log.info("Buscando histórico odontológico do paciente ID: {} profissionalId: {} na organização ID: {}", pacienteId, profissionalId, orgId);
 
-        List<Consulta> consultas = consultaRepository.findHistoricoCompletoPaciente(pacienteId, orgId);
+        List<Consulta> consultas = consultaRepository.findHistoricoCompletoPaciente(pacienteId, orgId, profissionalId);
         log.debug("Encontradas {} consultas odontológicas para o paciente", consultas.size());
 
         return consultas.stream()

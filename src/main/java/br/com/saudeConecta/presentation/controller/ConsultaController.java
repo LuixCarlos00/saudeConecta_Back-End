@@ -807,22 +807,24 @@ public class ConsultaController {
      *
      * @param pacienteId ID do paciente
      * @param tipo       "medico" ou "dentista"
+     * @param profissionalId ID do profissional (opcional, null retorna todos)
      * @return Lista unificada com histórico completo
      */
     @GetMapping("/BuscandoHistoricoDeConsultasDoPaciente/{pacienteId}")
     public ResponseEntity<List<HistoricoConsultaPacienteResponse>> buscarHistoricoCompletoPaciente(
             @PathVariable Long pacienteId,
-            @RequestParam(defaultValue = "medico") String tipo) {
+            @RequestParam(defaultValue = "medico") String tipo,
+            @RequestParam(required = false) Long profissionalId) {
 
-        log.info("=== Requisição: GET /consultas/BuscandoHistoricoDeConsultasDoPaciente/{} tipo={} ===", pacienteId, tipo);
+        log.info("=== Requisição: GET /consultas/BuscandoHistoricoDeConsultasDoPaciente/{} tipo={} profissionalId={} ===", pacienteId, tipo, profissionalId);
 
         try {
             List<HistoricoConsultaPacienteResponse> historico;
 
             if ("dentista".equalsIgnoreCase(tipo)) {
-                historico = buscarHistoricoCompletoPacienteUseCase.executar(pacienteId);
+                historico = buscarHistoricoCompletoPacienteUseCase.executar(pacienteId, profissionalId);
             } else {
-                historico = buscarHistoricoCompletoPacienteMedicoUseCase.executar(pacienteId);
+                historico = buscarHistoricoCompletoPacienteMedicoUseCase.executar(pacienteId, profissionalId);
             }
 
             log.info("Historico ({}) retornado com sucesso - {} registros", tipo, historico.size());
