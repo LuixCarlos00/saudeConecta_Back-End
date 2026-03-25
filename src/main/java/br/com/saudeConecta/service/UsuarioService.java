@@ -12,6 +12,9 @@ import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.presentation.dto.usuario.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,6 +53,10 @@ public class UsuarioService   {
 
 
 
+    @Caching(evict = {
+        @CacheEvict(value = "usuarios-agrupados", allEntries = true),
+        @CacheEvict(value = "perfil-usuario", allEntries = true)
+    })
     @Transactional
     public void bloquearUsuariobyOrg(BloquearUsuarioRequest request) {
         Long organizacaoId = TenantContext.getCurrentTenant();
@@ -196,6 +203,7 @@ public class UsuarioService   {
         }
     }
 
+    @Cacheable(value = "usuarios-agrupados", key = "'super-admin'")
     @Transactional(readOnly = true)
     public TodosUsuariosAgrupadosResponse buscarTodosAdminOrgsSuperAdmin() {
         log.debug("SUPER_ADMIN: buscando todos os AdminOrgs do sistema");
@@ -206,6 +214,7 @@ public class UsuarioService   {
                 java.util.List.of(), java.util.List.of(), java.util.List.of(), administradores);
     }
 
+    @Cacheable(value = "usuarios-agrupados", key = "#organizacaoId")
     @Transactional(readOnly = true)
     public TodosUsuariosAgrupadosResponse buscarTodosAgrupados(Long organizacaoId) {
         log.debug("Buscando todos os usuarios agrupados para organizacao ID: {}", organizacaoId);
@@ -238,6 +247,7 @@ public class UsuarioService   {
 
 
 
+    @CacheEvict(value = "perfil-usuario", key = "#id")
     public void trocarSenharUsuariobyOrg(Long id, String novaSenha) {
 
         var usuarioOpt = buscarPorId(id);
@@ -260,6 +270,7 @@ public class UsuarioService   {
     }
 
 
+    @Cacheable(value = "perfil-usuario", key = "#usuarioId")
     @Transactional(readOnly = true)
     public Optional<UsuarioPerfilCompletoResponse> buscarPerfilCompleto(Long usuarioId) {
         log.debug("Buscando perfil completo do usuario ID: {}", usuarioId);

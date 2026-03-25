@@ -14,6 +14,8 @@ import br.com.saudeConecta.infrastructure.persistence.repository.PacienteReposit
 import br.com.saudeConecta.presentation.dto.mensageria.MensageriaResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -96,6 +98,7 @@ public class MensageriaService {
      *
      * @param mensageriaId ID da mensagem
      */
+    @CacheEvict(value = "mensageria-contagem", allEntries = true)
     @Transactional
     public void marcarComoNotificado(Long mensageriaId) {
         Long orgId = tenantHelper.getCurrentTenantIdOrNull();
@@ -118,6 +121,7 @@ public class MensageriaService {
      *
      * @return Quantidade de falhas pendentes
      */
+    @Cacheable(value = "mensageria-contagem", key = "'falhas-pendentes'")
     @Transactional(readOnly = true)
     public long contarFalhasPendentes() {
         Long orgId = tenantHelper.getCurrentTenantIdOrNull();
@@ -155,6 +159,7 @@ public class MensageriaService {
      *
      * @param mensageriaId ID da mensagem a ser reenviada
      */
+    @CacheEvict(value = "mensageria-contagem", allEntries = true)
     @Transactional
     public void reenviarMensagem(Long mensageriaId) {
         Long orgId = tenantHelper.getCurrentTenantIdOrNull();

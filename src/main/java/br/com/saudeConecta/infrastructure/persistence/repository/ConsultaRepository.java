@@ -625,7 +625,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
            "LEFT JOIN FETCH c.especialidade " +
            "WHERE c.organizacao.id = :organizacaoId " +
            "AND c.paciente.paciCodigo = :pacienteId " +
-           "AND (:profissionalId IS NULL OR c.profissional.id = :profissionalId) " +
+           "AND (:profissionalId IS NULL OR p.usuario.id = :profissionalId) " +
            "AND c.status IN ('REALIZADA', 'PAGO') " +
            "ORDER BY c.dataHora DESC")
     List<Consulta> findHistoricoCompletoPacienteMedico(

@@ -11,6 +11,8 @@ import br.com.saudeConecta.presentation.dto.dashboard.ConfiguracaoGraficoRespons
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -69,6 +71,7 @@ public class ConfiguracaoGraficoDashboardService {
 
     // ── Listagem ─────────────────────────────────────────────────────────────
 
+    @Cacheable(value = "configuracoes-graficos", key = "'lista-' + #usuarioId")
     public List<ConfiguracaoGraficoResponse> listarConfiguracoes(Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
         Set<TipoGraficoDashboard> tiposPermitidos = resolverTiposPermitidos(
@@ -81,6 +84,7 @@ public class ConfiguracaoGraficoDashboardService {
                 .collect(Collectors.toList());
     }
 
+    @Cacheable(value = "configuracoes-graficos", key = "'ativos-' + #usuarioId")
     @Transactional
     public List<ConfiguracaoGraficoResponse> listarGraficosAtivos(Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
@@ -111,6 +115,7 @@ public class ConfiguracaoGraficoDashboardService {
 
     // ── Atualização ──────────────────────────────────────────────────────────
 
+    @CacheEvict(value = "configuracoes-graficos", allEntries = true)
     @Transactional
     public ConfiguracaoGraficoResponse atualizarConfiguracao(Long id,
                                                              AtualizarConfiguracaoGraficoRequest request, Long usuarioId) {
@@ -128,6 +133,7 @@ public class ConfiguracaoGraficoDashboardService {
         return toResponse(configuracaoRepository.save(config));
     }
 
+    @CacheEvict(value = "configuracoes-graficos", allEntries = true)
     @Transactional
     public List<ConfiguracaoGraficoResponse> atualizarMultiplasConfiguracoes(
             List<AtualizarConfiguracaoGraficoRequest> requests, Long usuarioId) {
@@ -147,6 +153,7 @@ public class ConfiguracaoGraficoDashboardService {
 
     // ── Reset / inicialização ────────────────────────────────────────────────
 
+    @CacheEvict(value = "configuracoes-graficos", allEntries = true)
     @Transactional
     public void resetarConfiguracoesParaPadrao(Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
@@ -170,6 +177,7 @@ public class ConfiguracaoGraficoDashboardService {
         }
     }
 
+    @CacheEvict(value = "configuracoes-graficos", allEntries = true)
     @Transactional
     public List<ConfiguracaoGraficoResponse> inicializarConfiguracoesPrimeiroAcesso(Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
