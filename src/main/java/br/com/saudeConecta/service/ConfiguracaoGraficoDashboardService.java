@@ -72,6 +72,7 @@ public class ConfiguracaoGraficoDashboardService {
     // ── Listagem ─────────────────────────────────────────────────────────────
 
     @Cacheable(value = "configuracoes-graficos", key = "'lista-' + #usuarioId")
+    @Transactional(readOnly = true)
     public List<ConfiguracaoGraficoResponse> listarConfiguracoes(Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
         Set<TipoGraficoDashboard> tiposPermitidos = resolverTiposPermitidos(
@@ -84,31 +85,36 @@ public class ConfiguracaoGraficoDashboardService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Retorna apenas os gráficos ativos do usuário, ordenados por ordem de exibição.
+     * Resultado cacheado por usuarioId — invalidado quando configurações são alteradas.
+     * Sem @Transactional: o cache resolve antes de qualquer abertura de sessão JPA.
+     * No caminho de inicialização automática, a transação é gerenciada pelo método chamado.
+     *
+     * @param usuarioId ID do usuário autenticado
+     * @return lista de gráficos ativos ordenados
+     */
     @Cacheable(value = "configuracoes-graficos", key = "'ativos-' + #usuarioId")
-    @Transactional
     public List<ConfiguracaoGraficoResponse> listarGraficosAtivos(Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
         Set<TipoGraficoDashboard> tiposPermitidos = resolverTiposPermitidos(
                 usuario != null ? usuario.getTipoUsuarioNovo() : null);
 
-        var todasConfigs = configuracaoRepository.findByUsuarioIdOrderByOrdemExibicaoAsc(usuarioId)
-                .stream()
-                .filter(c -> tiposPermitidos.contains(c.getTipoGrafico()))
-                .collect(Collectors.toList());
+        List<ConfiguracaoGraficoDashboard> apenasAtivos =
+                configuracaoRepository.findByUsuarioIdAndAtivoTrueOrderByOrdemExibicaoAsc(usuarioId);
 
-        if (todasConfigs.isEmpty()) {
-            log.info("Usuário {} sem configurações de gráfico — inicializando automaticamente", usuarioId);
+        if (apenasAtivos.isEmpty()
+                && configuracaoRepository.findByUsuarioIdOrderByOrdemExibicaoAsc(usuarioId).isEmpty()) {
+            log.info("Usuario {} sem configuracoes de grafico — inicializando automaticamente", usuarioId);
             if (usuario != null) {
                 inicializarParaNovoUsuario(usuario);
+                apenasAtivos = configuracaoRepository
+                        .findByUsuarioIdAndAtivoTrueOrderByOrdemExibicaoAsc(usuarioId);
             }
-            return configuracaoRepository.findByUsuarioIdAndAtivoTrueOrderByOrdemExibicaoAsc(usuarioId)
-                    .stream()
-                    .filter(c -> tiposPermitidos.contains(c.getTipoGrafico()))
-                    .map(this::toResponse)
-                    .collect(Collectors.toList());
         }
-        return todasConfigs.stream()
-                .filter(c -> Boolean.TRUE.equals(c.getAtivo()))
+
+        return apenasAtivos.stream()
+                .filter(c -> tiposPermitidos.contains(c.getTipoGrafico()))
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }

@@ -55,7 +55,7 @@ public class UsuarioService   {
 
     @Caching(evict = {
         @CacheEvict(value = "usuarios-agrupados", allEntries = true),
-        @CacheEvict(value = "perfil-usuario", allEntries = true)
+        @CacheEvict(value = "perfil-usuario", key = "#request.codigoUsuario()")
     })
     @Transactional
     public void bloquearUsuariobyOrg(BloquearUsuarioRequest request) {
@@ -223,7 +223,7 @@ public class UsuarioService   {
                 .map(TodosUsuariosAgrupadosResponse.PacienteResumo::fromEntity)
                 .toList();
 
-        var profissionais = profissionalRepository.findByOrganizacao_IdWithUsuario(organizacaoId);
+        var profissionais = profissionalRepository.findByOrganizacao_IdParaAgrupamento(organizacaoId);
 
         var medicos = profissionais.stream()
                 .filter(p -> p.getTipoProfissional() != null &&
@@ -275,7 +275,7 @@ public class UsuarioService   {
     public Optional<UsuarioPerfilCompletoResponse> buscarPerfilCompleto(Long usuarioId) {
         log.debug("Buscando perfil completo do usuario ID: {}", usuarioId);
 
-        Optional<Usuario> usuarioOpt = buscarPorId(usuarioId);
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByIdWithOrganizacao(usuarioId);
         if (usuarioOpt.isEmpty()) {
             log.warn("Usuario nao encontrado: {}", usuarioId);
             return Optional.empty();

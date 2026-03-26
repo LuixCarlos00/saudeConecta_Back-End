@@ -14,6 +14,9 @@ import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteCompletoRe
 import br.com.saudeConecta.util.SnapshotUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +37,10 @@ public class PacienteService  {
 
     // ========== MÉTODOS COM TENANT ==========
 
+    @Caching(evict = {
+        @CacheEvict(value = "pacientes-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ATIVO'"),
+        @CacheEvict(value = "pacientes-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ALL'")
+    })
     @RequiresTenant
     public Paciente cadastrarPacientebyOrg(CadastrarPacienteCompletoRequest request) {
         Long orgId = tenantHelper.getCurrentTenantId();
@@ -96,6 +103,10 @@ public class PacienteService  {
 
 
 
+    @Caching(evict = {
+        @CacheEvict(value = "pacientes-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ATIVO'"),
+        @CacheEvict(value = "pacientes-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ALL'")
+    })
     @Transactional
     public Paciente atualizarPacientebyOrg(Long id, AtualizarPacienteRequest dados) {
         log.info("Atualizando paciente ID: {}", id);
@@ -172,6 +183,10 @@ public class PacienteService  {
 
 
 
+    @Caching(evict = {
+        @CacheEvict(value = "pacientes-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ATIVO'"),
+        @CacheEvict(value = "pacientes-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ALL'")
+    })
     public void deletarPacientebyOrg(Long id) throws Exception {
         log.info("Iniciando exclusão do paciente ID: {}", id);
 
@@ -297,6 +312,7 @@ public class PacienteService  {
     }
 
     @RequiresTenant
+    @Cacheable(value = "pacientes-org", key = "'org-' + @tenantHelper.getCurrentTenantId() + '-filtro-' + #filtro")
     @Transactional(readOnly = true)
     public List<Paciente> buscarTodosPacientesComFiltro(String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();

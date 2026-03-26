@@ -104,28 +104,25 @@ public class ConfiguracaoCardDashboardService {
     @Cacheable(value = "configuracoes-cards", key = "'ativos-' + #usuarioId")
     @Transactional
     public List<ConfiguracaoCardResponse> listarCardsAtivos(Long usuarioId) {
-        Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
-        Set<TipoCardDashboard> tiposPermitidos = resolverTiposPermitidos(
-                usuario != null ? usuario.getTipoUsuarioNovo() : null);
+        List<ConfiguracaoCardDashboard> ativosNoDb =
+                cardRepository.findByUsuarioIdAndAtivoTrueOrderByOrdemExibicaoAsc(usuarioId);
 
-        var todasConfigs = cardRepository.findByUsuarioIdOrderByOrdemExibicaoAsc(usuarioId)
-                .stream()
-                .filter(c -> tiposPermitidos.contains(c.getTipoCard()))
-                .toList();
-
-        if (todasConfigs.isEmpty()) {
-            log.info("Usuário {} sem configurações de card — inicializando automaticamente", usuarioId);
+        if (ativosNoDb.isEmpty()) {
+            log.info("Usuario {} sem configuracoes de card — inicializando automaticamente", usuarioId);
+            Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
             if (usuario != null) {
                 inicializarParaNovoUsuario(usuario);
+                Set<TipoCardDashboard> tiposPermitidos = resolverTiposPermitidos(usuario.getTipoUsuarioNovo());
+                return cardRepository.findByUsuarioIdAndAtivoTrueOrderByOrdemExibicaoAsc(usuarioId)
+                        .stream()
+                        .filter(c -> tiposPermitidos.contains(c.getTipoCard()))
+                        .map(this::toResponse)
+                        .toList();
             }
-            return cardRepository.findByUsuarioIdAndAtivoTrueOrderByOrdemExibicaoAsc(usuarioId)
-                    .stream()
-                    .filter(c -> tiposPermitidos.contains(c.getTipoCard()))
-                    .map(this::toResponse)
-                    .toList();
+            return List.of();
         }
-        return todasConfigs.stream()
-                .filter(c -> Boolean.TRUE.equals(c.getAtivo()))
+
+        return ativosNoDb.stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -140,7 +137,7 @@ public class ConfiguracaoCardDashboardService {
      * @param usuarioId ID do usuário logado (validação de posse)
      * @return Configuração atualizada
      */
-    @CacheEvict(value = "configuracoes-cards", allEntries = true)
+    @CacheEvict(value = "configuracoes-cards", key = "'ativos-' + #usuarioId")
     @Transactional
     public ConfiguracaoCardResponse atualizarConfiguracao(Long id,
                                                           AtualizarConfiguracaoCardRequest request,
@@ -165,7 +162,7 @@ public class ConfiguracaoCardDashboardService {
      * @param usuarioId ID do usuário logado
      * @return Lista de configurações atualizadas
      */
-    @CacheEvict(value = "configuracoes-cards", allEntries = true)
+    @CacheEvict(value = "configuracoes-cards", key = "'ativos-' + #usuarioId")
     @Transactional
     public List<ConfiguracaoCardResponse> atualizarMultiplasConfiguracoes(
             List<AtualizarConfiguracaoCardRequest> requests, Long usuarioId) {
@@ -190,7 +187,7 @@ public class ConfiguracaoCardDashboardService {
      *
      * @param usuarioId ID do usuário logado
      */
-    @CacheEvict(value = "configuracoes-cards", allEntries = true)
+    @CacheEvict(value = "configuracoes-cards", key = "'ativos-' + #usuarioId")
     @Transactional
     public void resetarConfiguracoesParaPadrao(Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
@@ -216,7 +213,7 @@ public class ConfiguracaoCardDashboardService {
      * @param usuarioId ID do usuário logado
      * @return Lista de configurações criadas
      */
-    @CacheEvict(value = "configuracoes-cards", allEntries = true)
+    @CacheEvict(value = "configuracoes-cards", key = "'ativos-' + #usuarioId")
     @Transactional
     public List<ConfiguracaoCardResponse> inicializarConfiguracoesPrimeiroAcesso(Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId)

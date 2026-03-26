@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Indice cobrindo a query existsByProfissional_IdAndOrganizacao_IdAndDataHoraAndStatus,
+        usada em dois contextos:
+          1. GET  /consultas/verificarDisponibilidade?horario=&data=&medicoId=
+          2. POST /consultas/cadastrarConsultaByOrg (verificacao de conflito antes de salvar)
+        Sem este indice, o banco fazia full scan filtrado por (profissional_id, organizacao_id, data_hora, status).
+        Os indices existentes (idx_consulta_profissional, idx_consulta_dashboard_prof) nao cobrem
+        organizacao_id nem status juntos, exigindo lookup adicional.
+        Covering index: (profissional_id, organizacao_id, data_hora, status) cobre o EXISTS inteiramente.
+    -->
+    <changeSet id="045-001-idx-consulta-disponibilidade" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists tableName="consulta"
+                             indexName="idx_consulta_disponibilidade"/>
+            </not>
+        </preConditions>
+        <createIndex tableName="consulta"
+                     indexName="idx_consulta_disponibilidade">
+            <column name="profissional_id"/>
+            <column name="organizacao_id"/>
+            <column name="data_hora"/>
+            <column name="status"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="consulta"
+                       indexName="idx_consulta_disponibilidade"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

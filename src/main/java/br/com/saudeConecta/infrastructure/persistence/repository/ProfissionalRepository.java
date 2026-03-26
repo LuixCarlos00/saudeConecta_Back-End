@@ -23,6 +23,16 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
     @Query("SELECT p FROM Profissional p LEFT JOIN FETCH p.usuario LEFT JOIN FETCH p.tipoProfissional LEFT JOIN FETCH p.especialidades LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :organizacaoId")
     List<Profissional> findByOrganizacao_IdWithUsuario(@Param("organizacaoId") Long organizacaoId);
 
+    /**
+     * Busca profissionais por organização carregando apenas usuario e tipoProfissional.
+     * Versão otimizada para buscarTodosAgrupados — evita JOINs desnecessários com especialidades e endereco.
+     *
+     * @param organizacaoId ID da organização
+     * @return Lista de profissionais com usuario e tipoProfissional carregados
+     */
+    @Query("SELECT p FROM Profissional p LEFT JOIN FETCH p.usuario LEFT JOIN FETCH p.tipoProfissional WHERE p.organizacao.id = :organizacaoId")
+    List<Profissional> findByOrganizacao_IdParaAgrupamento(@Param("organizacaoId") Long organizacaoId);
+
 
     @Query("SELECT p FROM Profissional p " +
            "LEFT JOIN FETCH p.tipoProfissional " +
@@ -43,7 +53,7 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
 
 
     @Query("SELECT COUNT(p) FROM Profissional p " +
-           "WHERE p.organizacao.id = :orgId AND p.status IN ('ATIVO', 'INATIVO')")
+           "WHERE p.organizacao.id = :orgId AND p.status = 'ATIVO'")
     Long countAtivosByOrganizacaoId(@Param("orgId") Long organizacaoId);
 
 

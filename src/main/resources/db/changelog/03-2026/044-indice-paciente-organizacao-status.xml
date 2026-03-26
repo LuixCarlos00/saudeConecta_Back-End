@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Indices em paciente para endpoints GET /pacientes/buscar-todos?filtro=ATIVO e buscas por filtro.
+        Queries otimizadas:
+          - findByOrganizacao_Id:              WHERE organizacao_id = :orgId
+          - findByOrganizacao_IdWithFiltro:    WHERE organizacao_id = :orgId AND paci_status = :status
+          - findByOrganizacaoIdAndNome...:     WHERE organizacao_id = :orgId AND paci_nome LIKE ...
+        Sem estes indices, todas as queries faziam full scan da tabela paciente.
+        idx_paciente_org_status: cobre o filtro ATIVO + org (caso mais comum na tela de gerenciamento).
+        idx_paciente_org_nome:   cobre buscas por nome (autocomplete) dentro da org.
+    -->
+
+    <changeSet id="044-001-idx-paciente-org-status" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists tableName="paciente"
+                             indexName="idx_paciente_org_status"/>
+            </not>
+        </preConditions>
+        <createIndex tableName="paciente"
+                     indexName="idx_paciente_org_status">
+            <column name="organizacao_id"/>
+            <column name="PaciStatus"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="paciente"
+                       indexName="idx_paciente_org_status"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="044-002-idx-paciente-org-nome" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists tableName="paciente"
+                             indexName="idx_paciente_org_nome"/>
+            </not>
+        </preConditions>
+        <createIndex tableName="paciente"
+                     indexName="idx_paciente_org_nome">
+            <column name="organizacao_id"/>
+            <column name="PaciNome"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="paciente"
+                       indexName="idx_paciente_org_nome"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

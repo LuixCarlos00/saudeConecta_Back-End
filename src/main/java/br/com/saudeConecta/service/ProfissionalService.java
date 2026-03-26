@@ -89,7 +89,12 @@ public class ProfissionalService {
 
 
 
-    @CacheEvict(value = "profissionais-org", allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull()"),
+        @CacheEvict(value = "profissionais-org", key = "'count-org-' + @tenantHelper.getCurrentTenantIdOrNull()"),
+        @CacheEvict(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ATIVO'"),
+        @CacheEvict(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ALL'")
+    })
     @RequiresTenant
     @Transactional
     public Profissional cadastraClinicoByOrg(CadastrarClinicoRequest request) {
@@ -216,7 +221,13 @@ public class ProfissionalService {
         return profissionalRepository.buscarClinicoIdByOrg(id, orgId);
     }
 
-    @CacheEvict(value = "profissionais-org", allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull()"),
+        @CacheEvict(value = "profissionais-org", key = "'count-org-' + @tenantHelper.getCurrentTenantIdOrNull()"),
+        @CacheEvict(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ATIVO'"),
+        @CacheEvict(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ALL'"),
+        @CacheEvict(value = "perfil-usuario", allEntries = true)
+    })
     @RequiresTenant
     @Transactional
     public Profissional atualizarClinicoIdByOrg(Long id, AtualizarClinicoRequest dadosAtualizados) {
@@ -311,7 +322,13 @@ return resultado ;
 
 
 
-    @CacheEvict(value = "profissionais-org", allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull()"),
+        @CacheEvict(value = "profissionais-org", key = "'count-org-' + @tenantHelper.getCurrentTenantIdOrNull()"),
+        @CacheEvict(value = "profissionais-org", key = "'count-global'"),
+        @CacheEvict(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ATIVO'"),
+        @CacheEvict(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ALL'")
+    })
     @RequiresTenant
     @Transactional
     public void deletarClinicoIdByOrg(Long idProfissional) {
@@ -380,6 +397,8 @@ return resultado ;
 
 
 
+    @Cacheable(value = "profissionais-org", key = "'count-org-' + #organizacaoId")
+    @Transactional(readOnly = true)
     public Long contarAtivosPorOrganizacao(Long organizacaoId) {
         return profissionalRepository.countAtivosByOrganizacaoId(organizacaoId);
     }
@@ -389,6 +408,8 @@ return resultado ;
      *
      * @return Quantidade total de profissionais ativos
      */
+    @Cacheable(value = "profissionais-org", key = "'count-global'")
+    @Transactional(readOnly = true)
     public Long getEstatisticasMedicosAtivosByOrg() {
         return profissionalRepository.countTodosAtivos();
     }
@@ -496,7 +517,7 @@ return resultado ;
     }
 
 
-    @Cacheable(value = "profissionais-org", key = "'tenant-filtro-' + #filtro")
+    @Cacheable(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-' + #filtro")
     @RequiresTenant
     @Transactional(readOnly = true)
     public List<Profissional> buscarTodosComFiltro(String filtro) {

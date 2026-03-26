@@ -82,4 +82,31 @@
 
     <!-- Remover colunas de tratamento do prontuario dentista -->
     <include file="db/changelog/03-2026/036-remover-colunas-tratamento-prontuario-dentista.xml"/>
+
+    <!-- Indices compostos para otimizar queries do dashboard -->
+    <include file="db/changelog/03-2026/037-indices-dashboard-consulta.xml"/>
+
+    <!-- Indice composto (usuario_id, ativo, ordem_exibicao) para endpoint de cards ativos do dashboard -->
+    <include file="db/changelog/03-2026/038-indice-configuracao-card-dashboard.xml"/>
+
+    <!-- Indice composto (usuario_id, ativo, ordem_exibicao) para endpoint de graficos ativos do dashboard -->
+    <include file="db/changelog/03-2026/039-indice-configuracao-grafico-dashboard.xml"/>
+
+    <!-- Indice (organizacao_id, data_hora) para endpoint GET /consultas/organizacao/{id}/intervalo -->
+    <include file="db/changelog/03-2026/040-indice-consulta-organizacao-intervalo.xml"/>
+
+    <!-- Indices (organizacao_id, data_criacao) e (organizacao_id, admin_notificado, status) para GET /mensageria -->
+    <include file="db/changelog/03-2026/041-indice-mensageria-organizacao-data-criacao.xml"/>
+
+    <!-- Indice unico em consulta_id para findByConsultaId em tb_termo_autorizacao (GET /prontuario-dentista/questionario-saude/{id}) -->
+    <include file="db/changelog/03-2026/042-indice-termo-autorizacao-consulta.xml"/>
+
+    <!-- Indice composto (consulta, prontDataFinalizado) para GET /prontuario/consulta/{id}/recente -->
+    <include file="db/changelog/03-2026/043-indice-prontuario-consulta.xml"/>
+
+    <!-- Indices (organizacao_id, paci_status) e (organizacao_id, paci_nome) para GET /pacientes/buscar-todos?filtro=ATIVO -->
+    <include file="db/changelog/03-2026/044-indice-paciente-organizacao-status.xml"/>
+
+    <!-- Covering index (profissional_id, organizacao_id, data_hora, status) para verificarDisponibilidade e cadastrarConsultaByOrg -->
+    <include file="db/changelog/03-2026/045-indice-consulta-disponibilidade.xml"/>
 </databaseChangeLog>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="040-indice-consulta-organizacao-intervalo" author="sentinela">
+        <!--
+            Indice composto para o endpoint GET /consultas/organizacao/{id}/intervalo.
+
+            A query findByOrganizacaoIdAndDataHoraBetweenWithRelations filtra por:
+              WHERE organizacao_id = :organizacaoId AND data_hora BETWEEN :inicio AND :fim
+              ORDER BY data_hora
+
+            O indice existente idx_consulta_dashboard_org cobre (organizacao_id, data_hora, status),
+            mas a query de intervalo nao filtra por status — o banco pode fazer key lookup desnecessario.
+            Este indice dedicado (organizacao_id, data_hora) otimiza especificamente o range scan
+            com ORDER BY eliminado (index scan ja retorna em ordem).
+
+            Usado por:
+              - GET /consultas/organizacao/{id}/intervalo (grafico-agendamentos e grafico-qnt-consultas)
+              - Ambos os graficos do dashboard chamam este endpoint simultaneamente
+        -->
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists tableName="consulta" indexName="idx_consulta_org_data_hora"/>
+            </not>
+        </preConditions>
+        <createIndex indexName="idx_consulta_org_data_hora"
+                     tableName="consulta">
+            <column name="organizacao_id"/>
+            <column name="data_hora"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="consulta" indexName="idx_consulta_org_data_hora"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

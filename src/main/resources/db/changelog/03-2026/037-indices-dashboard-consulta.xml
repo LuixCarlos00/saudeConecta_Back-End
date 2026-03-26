@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Indice composto covering para a query do dashboard AdminOrg/Profissional/SuperAdmin.
+        A query findEstatisticasDashboardByOrganizacao filtra por:
+          - organizacao_id (WHERE)
+          - data_hora      (BETWEEN inicioSemana AND fimSemana)
+          - status         (GROUP BY / SELECT)
+        O indice cobre todos os campos usados sem precisar acessar a tabela principal (covering index).
+    -->
+    <changeSet id="037-001-idx-consulta-dashboard-org" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists tableName="consulta" indexName="idx_consulta_dashboard_org"/>
+            </not>
+        </preConditions>
+        <createIndex tableName="consulta" indexName="idx_consulta_dashboard_org">
+            <column name="organizacao_id"/>
+            <column name="data_hora"/>
+            <column name="status"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="consulta" indexName="idx_consulta_dashboard_org"/>
+        </rollback>
+    </changeSet>
+
+    <!--
+        Indice para a query do dashboard do Profissional.
+        A query findEstatisticasDashboardByProfissional faz JOIN com profissional
+        e filtra por profissional_id + data_hora. Ja existe idx_consulta_profissional
+        em (profissional_id, data_hora), mas este indice adiciona status para cobrir
+        o GROUP BY sem heap fetch.
+    -->
+    <changeSet id="037-002-idx-consulta-dashboard-prof" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists tableName="consulta" indexName="idx_consulta_dashboard_prof"/>
+            </not>
+        </preConditions>
+        <createIndex tableName="consulta" indexName="idx_consulta_dashboard_prof">
+            <column name="profissional_id"/>
+            <column name="data_hora"/>
+            <column name="status"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="consulta" indexName="idx_consulta_dashboard_prof"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

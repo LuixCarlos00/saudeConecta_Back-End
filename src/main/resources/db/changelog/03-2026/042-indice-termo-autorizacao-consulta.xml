@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Indice em consulta_id para a query findByConsultaId na tabela tb_termo_autorizacao.
+        Usada pelo endpoint GET /prontuario-dentista/questionario-saude/{consultaId}.
+        A tabela so possuia indice em token; buscas por consulta_id faziam full scan.
+        Unique constraint reflete a regra de negocio: 1 consulta -> no maximo 1 termo ativo.
+    -->
+    <changeSet id="042-001-idx-termo-autorizacao-consulta" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists tableName="tb_termo_autorizacao"
+                             indexName="idx_termo_consulta_id"/>
+            </not>
+        </preConditions>
+        <createIndex tableName="tb_termo_autorizacao"
+                     indexName="idx_termo_consulta_id"
+                     unique="true">
+            <column name="consulta_id"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="tb_termo_autorizacao"
+                       indexName="idx_termo_consulta_id"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

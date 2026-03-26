@@ -9,6 +9,8 @@ import br.com.saudeConecta.infrastructure.persistence.repository.TermoAutorizaca
 import br.com.saudeConecta.presentation.dto.prontuario.QuestionarioSaudeRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,7 @@ public class TermoAutorizacaoService {
      * @param consultaId ID da consulta
      * @return token gerado
      */
+    @CacheEvict(value = "questionario-saude", key = "#consultaId")
     @Transactional
     public String gerarLinkQuestionario(Long consultaId) {
         log.info("Gerando link do questionário para consulta={}", consultaId);
@@ -100,6 +103,7 @@ public class TermoAutorizacaoService {
      */
     @Transactional
     public void responderQuestionario(QuestionarioSaudeRequest request, String ipOrigem) {
+        // @CacheEvict aplicado no final do método para garantir que o termo já foi salvo
         log.info("Recebendo respostas do questionário — token={}", request.getToken());
 
         TermoAutorizacao termo = termoRepository.findByToken(request.getToken())
@@ -121,6 +125,18 @@ public class TermoAutorizacaoService {
 
         termoRepository.save(termo);
         log.info("Questionário respondido e assinado — consulta={}", termo.getConsulta().getId());
+        evictQuestionarioCache(termo.getConsulta().getId());
+    }
+
+    /**
+     * Invalida o cache do questionário de saúde para a consulta informada.
+     * Separado para garantir execução após o flush da transação.
+     *
+     * @param consultaId ID da consulta cujo cache deve ser invalidado
+     */
+    @CacheEvict(value = "questionario-saude", key = "#consultaId")
+    public void evictQuestionarioCache(Long consultaId) {
+        log.debug("Cache questionario-saude invalidado para consulta={}", consultaId);
     }
 
     /**
@@ -129,6 +145,7 @@ public class TermoAutorizacaoService {
      * @param consultaId ID da consulta
      * @return termo com respostas ou null se nao existir
      */
+    @Cacheable(value = "questionario-saude", key = "#consultaId", unless = "#result == null")
     @Transactional(readOnly = true)
     public TermoAutorizacao buscarPorConsultaId(Long consultaId) {
         return termoRepository.findByConsultaId(consultaId).orElse(null);
