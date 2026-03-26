@@ -30,7 +30,7 @@ public class ProcedimentoPadraoService {
      * @param profissionalId ID do profissional
      * @return lista de procedimentos padrão ativos
      */
-    @Cacheable(value = "procedimentos-padrao", key = "'ativos-' + #profissionalId")
+    @Cacheable(value = "procedimentos-padrao", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-ativos-' + #profissionalId")
     @Transactional(readOnly = true)
     public List<ProcedimentoPadrao> listarPorProfissional(Long profissionalId) {
         Long orgId = TenantContext.getCurrentTenant();
@@ -74,7 +74,7 @@ public class ProcedimentoPadraoService {
      * @param profissionalId ID do profissional
      * @return lista de todos os procedimentos padrão
      */
-    @Cacheable(value = "procedimentos-padrao", key = "'todos-' + #profissionalId")
+    @Cacheable(value = "procedimentos-padrao", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-todos-' + #profissionalId")
     @Transactional(readOnly = true)
     public List<ProcedimentoPadrao> listarTodosPorProfissional(Long profissionalId) {
         Long orgId = TenantContext.getCurrentTenant();

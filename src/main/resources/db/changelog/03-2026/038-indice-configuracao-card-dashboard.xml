@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Indice composto covering para a query findByUsuarioIdAndAtivoTrueOrderByOrdemExibicaoAsc.
+        Usada pelo endpoint GET /dashboard/configuracoes-cards/ativos.
+        Cobre: usuario_id (WHERE) + ativo (WHERE = true) + ordem_exibicao (ORDER BY)
+        sem precisar acessar a tabela principal (heap fetch).
+        O indice simples idx_config_card_usuario em (usuario_id) ja existe —
+        este acrescenta ativo e ordem_exibicao para eliminar o sort e o filtro de ativo no banco.
+    -->
+    <changeSet id="038-001-idx-config-card-usuario-ativo-ordem" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists tableName="configuracao_card_dashboard"
+                             indexName="idx_config_card_usuario_ativo_ordem"/>
+            </not>
+        </preConditions>
+        <createIndex tableName="configuracao_card_dashboard"
+                     indexName="idx_config_card_usuario_ativo_ordem">
+            <column name="usuario_id"/>
+            <column name="ativo"/>
+            <column name="ordem_exibicao"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="configuracao_card_dashboard"
+                       indexName="idx_config_card_usuario_ativo_ordem"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

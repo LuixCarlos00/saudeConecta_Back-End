@@ -17,6 +17,8 @@ import br.com.saudeConecta.presentation.dto.prontuario.PlanejamentoTerapeuticoRe
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -43,6 +45,7 @@ public class ProntuarioService {
      * @param request Dados do prontuario a ser cadastrado
      * @return prontuario cadastrado
      */
+    @CacheEvict(value = "prontuario-recente", key = "#request.getConsulta()")
     @Transactional
     public Prontuario cadastrarProntuarioMedico(CadastrarProntuarioRequest request) {
         log.info("Cadastrando prontuario médico — consulta={}", request.getConsulta());
@@ -154,6 +157,7 @@ public class ProntuarioService {
         Prontuario prontuario = prontuarioRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Prontuário não encontrado: " + id));
+        evictProntuarioRecenteCache(prontuario.getConsulta().getId());
 
         prontuario.setProntPeso(request.getPeso());
         prontuario.setProntAltura(request.getAltura());
@@ -250,6 +254,7 @@ public class ProntuarioService {
      * @param consultaId ID da consulta
      * @return prontuário mais recente encontrado
      */
+    @Cacheable(value = "prontuario-recente", key = "#consultaId")
     @Transactional(readOnly = true)
     public Prontuario buscarMaisRecentePorConsulta(Long consultaId) {
         log.debug("Buscando prontuário médico mais recente para consulta ID: {}", consultaId);
@@ -285,6 +290,16 @@ public class ProntuarioService {
     public List<Prontuario> buscarPorProfissional(Long profissionalId) {
         log.debug("Buscando prontuarios do profissional ID: {}", profissionalId);
         return prontuarioRepository.findByProfissional_Id(profissionalId);
+    }
+
+    /**
+     * Invalida o cache do prontuário mais recente para a consulta informada.
+     *
+     * @param consultaId ID da consulta cujo cache deve ser invalidado
+     */
+    @CacheEvict(value = "prontuario-recente", key = "#consultaId")
+    public void evictProntuarioRecenteCache(Long consultaId) {
+        log.debug("Cache prontuario-recente invalidado para consulta={}", consultaId);
     }
 
     private Date parseData(Date data) {

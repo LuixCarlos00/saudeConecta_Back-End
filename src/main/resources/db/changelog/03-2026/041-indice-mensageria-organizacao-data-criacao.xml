@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="041-indice-mensageria-organizacao-data-criacao" author="sentinela">
+        <!--
+            Indice composto para o endpoint GET /mensageria?page=0&size=20.
+
+            A query findByOrganizacaoIdWithFilters filtra por organizacao_id
+            e ordena por data_criacao DESC. Sem este indice, o banco realiza
+            full-table scan + file-sort em cada paginação.
+
+            O indice cobre:
+              WHERE organizacao_id = :orgId  → column prefix lookup
+              ORDER BY data_criacao DESC     → evita file-sort (index scan DESC)
+
+            Também beneficia:
+              - findByOrganizacao_IdAndAdminNotificadoFalseAndStatus (falhas-pendentes)
+              - countByOrganizacao_IdAndAdminNotificadoFalseAndStatus (contagem-falhas)
+        -->
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists tableName="mensageria" indexName="idx_mensageria_org_data_criacao"/>
+            </not>
+        </preConditions>
+        <createIndex indexName="idx_mensageria_org_data_criacao"
+                     tableName="mensageria">
+            <column name="organizacao_id"/>
+            <column name="data_criacao" descending="true"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="mensageria" indexName="idx_mensageria_org_data_criacao"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="041-indice-mensageria-admin-notificado-status" author="sentinela">
+        <!--
+            Indice para as queries de falhas pendentes por organização.
+            Cobre: WHERE organizacao_id = :orgId AND admin_notificado = false AND status = 'FALHOU'
+            Usado por: contarFalhasPendentes, listarFalhasPendentesNotificacao
+        -->
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists tableName="mensageria" indexName="idx_mensageria_org_admin_status"/>
+            </not>
+        </preConditions>
+        <createIndex indexName="idx_mensageria_org_admin_status"
+                     tableName="mensageria">
+            <column name="organizacao_id"/>
+            <column name="admin_notificado"/>
+            <column name="status"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="mensageria" indexName="idx_mensageria_org_admin_status"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -2,10 +2,13 @@ package br.com.saudeConecta.infrastructure.persistence.repository;
 
 import br.com.saudeConecta.domain.usuario.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
@@ -18,5 +21,14 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     
     List<Usuario> findByOrganizacao_Id(Long organizacaoId);
 
+    /**
+     * Busca usuário por ID carregando Organização em JOIN FETCH.
+     * Evita lazy load de organizacao no buscarPerfilCompleto, reduzindo de 2 queries para 1.
+     *
+     * @param id ID do usuário
+     * @return Optional com Usuario e Organizacao já carregados
+     */
+    @Query("SELECT u FROM Usuario u LEFT JOIN FETCH u.organizacao WHERE u.id = :id")
+    Optional<Usuario> findByIdWithOrganizacao(@Param("id") Long id);
 
 }

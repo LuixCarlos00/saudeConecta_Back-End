@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Indice em consulta (FK) na tabela prontuario.
+        Usado pelo endpoint GET /prontuario/consulta/{consultaId}/recente:
+          - findIdMaisRecentePorConsulta: WHERE p.consulta.id = :consultaId ORDER BY prontDataFinalizado DESC LIMIT 1
+          - findByConsulta_IdWithFetch:   WHERE p.consulta.id = :consultaId
+        Sem este indice, ambas as queries faziam full scan da tabela prontuario.
+        Indice composto (consulta, prontDataFinalizado) cobre o WHERE + ORDER BY da query de ID mais recente.
+    -->
+    <changeSet id="043-001-idx-prontuario-consulta-data" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists tableName="prontuario"
+                             indexName="idx_prontuario_consulta_data"/>
+            </not>
+        </preConditions>
+        <createIndex tableName="prontuario"
+                     indexName="idx_prontuario_consulta_data">
+            <column name="consulta"/>
+            <column name="prontDataFinalizado"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="prontuario"
+                       indexName="idx_prontuario_consulta_data"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

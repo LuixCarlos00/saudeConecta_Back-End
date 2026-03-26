@@ -78,6 +78,7 @@ public class ConsultaService {
     }
     
     @RequiresTenant
+    @Cacheable(value = "consultas-hoje-org", key = "@tenantHelper.getCurrentTenantId()")
     @Transactional(readOnly = true)
     public List<Consulta> buscarConsultasHoje() {
         Long orgId = tenantHelper.getCurrentTenantId();
@@ -85,6 +86,7 @@ public class ConsultaService {
     }
     
     @RequiresTenant
+    @Cacheable(value = "consultas-semana-org", key = "@tenantHelper.getCurrentTenantId()")
     @Transactional(readOnly = true)
     public List<Consulta> buscarConsultasDaSemanaAtual() {
         Long orgId = tenantHelper.getCurrentTenantId();
@@ -95,6 +97,7 @@ public class ConsultaService {
     }
     
     @RequiresTenant
+    @Cacheable(value = "consultas-mes-org", key = "@tenantHelper.getCurrentTenantId()")
     @Transactional(readOnly = true)
     public List<Consulta> buscarConsultasDoMesAtual() {
         Long orgId = tenantHelper.getCurrentTenantId();
@@ -105,6 +108,7 @@ public class ConsultaService {
     }
     
     @RequiresTenant
+    @Cacheable(value = "consultas-ano-org", key = "@tenantHelper.getCurrentTenantId()")
     @Transactional(readOnly = true)
     public List<Consulta> buscarConsultasDoAnoAtual() {
         Long orgId = tenantHelper.getCurrentTenantId();
@@ -179,7 +183,9 @@ public class ConsultaService {
     }
 
     @RequiresTenant
-    @CacheEvict(value = "dashboard-admin-org", allEntries = true)
+    @CacheEvict(value = {"dashboard-admin-org", "dashboard-super-admin", "consultas-intervalo-org",
+                          "consultas-hoje-org", "consultas-semana-org", "consultas-mes-org", "consultas-ano-org",
+                          "horarios-ocupados-org", "disponibilidade-consulta"}, allEntries = true)
     @Transactional
     public Consulta cadastrarConsultaByOrg(AgendarConsultaRequest request) {
         Long orgId = tenantHelper.getCurrentTenantId();
@@ -240,7 +246,9 @@ public class ConsultaService {
 
 
     @RequiresTenant
-    @CacheEvict(value = "dashboard-admin-org", allEntries = true)
+    @CacheEvict(value = {"dashboard-admin-org", "dashboard-profissional", "dashboard-super-admin", "consultas-intervalo-org",
+                          "consultas-hoje-org", "consultas-semana-org", "consultas-mes-org", "consultas-ano-org",
+                          "horarios-ocupados-org", "disponibilidade-consulta"}, allEntries = true)
     @Transactional
     public Consulta concluirConsultabyOrg(Long id) {
 
@@ -280,7 +288,9 @@ public class ConsultaService {
      * @return Consulta atualizada
      */
     @RequiresTenant
-    @CacheEvict(value = "dashboard-admin-org", allEntries = true)
+    @CacheEvict(value = {"dashboard-admin-org", "dashboard-profissional", "dashboard-super-admin", "consultas-intervalo-org",
+                          "consultas-hoje-org", "consultas-semana-org", "consultas-mes-org", "consultas-ano-org",
+                          "horarios-ocupados-org", "disponibilidade-consulta"}, allEntries = true)
     @Transactional
     public Consulta atualizarStatus(Long id, StatusConsulta novoStatus, String motivo) {
         Consulta consulta = buscarPorId(id)
@@ -373,7 +383,9 @@ public class ConsultaService {
 
 
     @RequiresTenant
-    @CacheEvict(value = "dashboard-admin-org", allEntries = true)
+    @CacheEvict(value = {"dashboard-admin-org", "dashboard-profissional", "dashboard-super-admin", "consultas-intervalo-org",
+                          "consultas-hoje-org", "consultas-semana-org", "consultas-mes-org", "consultas-ano-org",
+                          "horarios-ocupados-org", "disponibilidade-consulta"}, allEntries = true)
     @Transactional
     public Consulta atualizarConsultaByOrg(Long id, AtualizarConsultaRequest request) {
         Consulta consulta = buscarPorId(id)
@@ -581,6 +593,7 @@ public class ConsultaService {
      * @return DTO com consultasHoje, consultasAguardando, consultasAtendidas,
      *         consultasSemana, canceladosSemana e confirmadosSemana
      */
+    @Cacheable(value = "dashboard-profissional", key = "#usuarioId")
     @Transactional(readOnly = true)
     public EstatisticasDashboardAdminOrgResponse getEstatisticasDashboardProfissional(Long usuarioId) {
         LocalDate hoje = LocalDate.now();
@@ -650,6 +663,7 @@ public class ConsultaService {
      * @return DTO com consultasHoje, consultasAguardando, consultasAtendidas,
      *         consultasSemana, canceladosSemana e confirmadosSemana
      */
+    @Cacheable(value = "dashboard-super-admin", key = "'global'")
     @Transactional(readOnly = true)
     public EstatisticasDashboardAdminOrgResponse getEstatisticasDashboardSuperAdmin() {
         LocalDate hoje = LocalDate.now();
@@ -739,6 +753,7 @@ public class ConsultaService {
         );
     }
 
+    @Cacheable(value = "consultas-intervalo-org", key = "#organizacaoId + '-' + #dataInicio + '-' + #dataFim")
     @Transactional(readOnly = true)
     public List<Consulta> buscarConsultasPorOrganizacaoEIntervalo(Long organizacaoId, LocalDate dataInicio, LocalDate dataFim) {
         return consultaRepository.findByOrganizacaoIdAndDataHoraBetweenWithRelations(
@@ -1129,6 +1144,8 @@ public class ConsultaService {
     // ========== MÉTODO PARA BUSCAR HORÁRIOS OCUPADOS ==========
 
     @RequiresTenant
+    @Cacheable(value = "horarios-ocupados-org",
+               key = "@tenantHelper.getCurrentTenantId() + '-' + #profissionalId + '-' + #data")
     @Transactional(readOnly = true)
     public List<String> buscarHorariosOcupados(Long profissionalId, String data) {
         Long orgId = tenantHelper.getCurrentTenantId();
@@ -1141,6 +1158,8 @@ public class ConsultaService {
     }
 
     @RequiresTenant
+    @Cacheable(value = "disponibilidade-consulta",
+               key = "@tenantHelper.getCurrentTenantId() + '-' + #medicoId + '-' + #data + '-' + #horario")
     @Transactional(readOnly = true)
     public boolean verificarDisponibilidade(String data, String horario, Long medicoId) {
         Long orgId = tenantHelper.getCurrentTenantId();
@@ -1282,7 +1301,9 @@ public class ConsultaService {
      * @throws IllegalStateException se a consulta possuir prontuário (concluída)
      */
     @RequiresTenant
-    @CacheEvict(value = "dashboard-admin-org", allEntries = true)
+    @CacheEvict(value = {"dashboard-admin-org", "dashboard-profissional", "dashboard-super-admin", "consultas-intervalo-org",
+                          "consultas-hoje-org", "consultas-semana-org", "consultas-mes-org", "consultas-ano-org",
+                          "horarios-ocupados-org", "disponibilidade-consulta"}, allEntries = true)
     @Transactional
     public void deletarConsulta(Long consultaId) {
         Long orgId = tenantHelper.getCurrentTenantId();

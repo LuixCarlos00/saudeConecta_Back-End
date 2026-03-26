@@ -54,6 +54,13 @@ public class MensageriaService {
      * @param pageable Configuração de paginação
      * @return Página de mensagens
      */
+    @Cacheable(
+        value = "mensageria-lista",
+        key = "(@tenantHelper.getCurrentTenantIdOrNull() != null ? 'org-' + @tenantHelper.getCurrentTenantIdOrNull() : 'super-admin')"
+            + " + '-s:' + (#status != null ? #status.name() : 'ALL')"
+            + " + '-t:' + (#tipo != null ? #tipo.name() : 'ALL')"
+            + " + '-p:' + #pageable.pageNumber + '-sz:' + #pageable.pageSize"
+    )
     @Transactional(readOnly = true)
     public Page<MensageriaResponse> listarMensagens(StatusMensagem status, TipoMensagem tipo, Pageable pageable) {
         Long orgId = tenantHelper.getCurrentTenantIdOrNull();
@@ -98,7 +105,7 @@ public class MensageriaService {
      *
      * @param mensageriaId ID da mensagem
      */
-    @CacheEvict(value = "mensageria-contagem", allEntries = true)
+    @CacheEvict(value = {"mensageria-contagem", "mensageria-lista"}, allEntries = true)
     @Transactional
     public void marcarComoNotificado(Long mensageriaId) {
         Long orgId = tenantHelper.getCurrentTenantIdOrNull();
@@ -121,7 +128,7 @@ public class MensageriaService {
      *
      * @return Quantidade de falhas pendentes
      */
-    @Cacheable(value = "mensageria-contagem", key = "'falhas-pendentes'")
+    @Cacheable(value = "mensageria-contagem", key = "(@tenantHelper.getCurrentTenantIdOrNull() != null ? 'org-' + @tenantHelper.getCurrentTenantIdOrNull() : 'super-admin') + '-falhas-pendentes'")
     @Transactional(readOnly = true)
     public long contarFalhasPendentes() {
         Long orgId = tenantHelper.getCurrentTenantIdOrNull();
@@ -159,7 +166,7 @@ public class MensageriaService {
      *
      * @param mensageriaId ID da mensagem a ser reenviada
      */
-    @CacheEvict(value = "mensageria-contagem", allEntries = true)
+    @CacheEvict(value = {"mensageria-contagem", "mensageria-lista"}, allEntries = true)
     @Transactional
     public void reenviarMensagem(Long mensageriaId) {
         Long orgId = tenantHelper.getCurrentTenantIdOrNull();
