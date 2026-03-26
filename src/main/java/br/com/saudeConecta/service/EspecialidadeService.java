@@ -6,6 +6,9 @@ import br.com.saudeConecta.infrastructure.persistence.repository.EspecialidadeRe
 import br.com.saudeConecta.infrastructure.persistence.repository.TipoProfissionalRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,6 +26,7 @@ public class EspecialidadeService {
         return especialidadeRepository.findAll();
     }
     
+    @Cacheable(value = "especialidades", key = "'todas-ativas'")
     public List<Especialidade> carregarEspecialidades() {
         return especialidadeRepository.findAllAtivasWithTipoProfissional();
     }
@@ -31,10 +35,12 @@ public class EspecialidadeService {
         return especialidadeRepository.findById(id);
     }
     
+    @Cacheable(value = "especialidades", key = "'tipo-' + #tipoCodigo.toUpperCase()")
     public List<Especialidade> listarPorTipo(String tipoCodigo) {
         return especialidadeRepository.findAtivasByTipoProfissionalCodigo(tipoCodigo.toUpperCase());
     }
     
+    @Cacheable(value = "especialidades", key = "'tipo-id-' + #tipoId")
     public List<Especialidade> listarPorTipoId(Long tipoId) {
         return especialidadeRepository.findByTipoProfissional_IdAndStatus(tipoId, (byte) 1);
     }
@@ -47,6 +53,7 @@ public class EspecialidadeService {
         return listarPorTipo("DENTISTA");
     }
     
+    @Cacheable(value = "especialidades", key = "'tipos-profissional'")
     public List<TipoProfissional> listarTiposProfissional() {
         return tipoProfissionalRepository.findByStatusOrderByNomeAsc((byte) 1);
     }
@@ -59,6 +66,9 @@ public class EspecialidadeService {
         return tipoProfissionalRepository.findByCodigo(codigo.toUpperCase());
     }
     
+    @Caching(evict = {
+        @CacheEvict(value = "especialidades", allEntries = true)
+    })
     public Especialidade criar(Long tipoProfissionalId, String nome, String codigo) {
         TipoProfissional tipoProfissional = tipoProfissionalRepository.findById(tipoProfissionalId)
             .orElseThrow(() -> new IllegalArgumentException("Tipo profissional não encontrado"));
@@ -77,6 +87,7 @@ public class EspecialidadeService {
         return especialidadeRepository.save(especialidade);
     }
     
+    @CacheEvict(value = "especialidades", allEntries = true)
     public Especialidade atualizar(Long id, String nome, String codigo, Byte status) {
         Especialidade especialidade = especialidadeRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Especialidade não encontrada"));
@@ -97,6 +108,7 @@ public class EspecialidadeService {
         return especialidadeRepository.save(especialidade);
     }
     
+    @CacheEvict(value = "especialidades", allEntries = true)
     public void deletar(Long id) {
         Especialidade especialidade = especialidadeRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Especialidade não encontrada"));

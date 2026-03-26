@@ -8,6 +8,8 @@ import br.com.saudeConecta.presentation.dto.planos.PlanoAssinaturaRequest;
 import br.com.saudeConecta.presentation.dto.planos.PlanoAssinaturaResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +32,7 @@ public class PlanoAssinaturaService {
      *
      * @return lista de PlanoAssinaturaResponse
      */
+    @Cacheable(value = "planos", key = "'ativos'")
     @Transactional(readOnly = true)
     public List<PlanoAssinaturaResponse> listarPlanosAtivos() {
         return planoAssinaturaRepository.findByAtivoTrue()
@@ -44,6 +47,7 @@ public class PlanoAssinaturaService {
      * @param id ID do plano
      * @return PlanoAssinaturaResponse
      */
+    @Cacheable(value = "planos", key = "'id-' + #id")
     @Transactional(readOnly = true)
     public PlanoAssinaturaResponse buscarPorId(Long id) {
         PlanoAssinatura plano = planoAssinaturaRepository.findByIdAndAtivoTrue(id)
@@ -59,6 +63,7 @@ public class PlanoAssinaturaService {
      * @param tipo TipoPlano
      * @return PlanoAssinaturaResponse
      */
+    @Cacheable(value = "planos", key = "'tipo-' + #tipo.name()")
     @Transactional(readOnly = true)
     public PlanoAssinaturaResponse buscarPorTipo(TipoPlano tipo) {
         PlanoAssinatura plano = planoAssinaturaRepository.findByTipo(tipo)
@@ -108,6 +113,7 @@ public class PlanoAssinaturaService {
      * @param request dados atualizados
      * @return PlanoAssinaturaResponse do plano atualizado
      */
+    @CacheEvict(value = "planos", allEntries = true)
     @Transactional
     public PlanoAssinaturaResponse atualizarPlano(Long id, PlanoAssinaturaRequest request) {
         PlanoAssinatura plano = planoAssinaturaRepository.findById(id)
@@ -135,6 +141,7 @@ public class PlanoAssinaturaService {
      *
      * @param id ID do plano
      */
+    @CacheEvict(value = "planos", allEntries = true)
     @Transactional
     public void desativarPlano(Long id) {
         PlanoAssinatura plano = planoAssinaturaRepository.findById(id)
