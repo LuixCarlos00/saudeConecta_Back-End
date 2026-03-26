@@ -21,6 +21,9 @@ import br.com.saudeConecta.presentation.dto.profissional.CadastrarClinicoRequest
 import br.com.saudeConecta.util.EmailUnicoService;
 import br.com.saudeConecta.util.SnapshotUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -86,6 +89,7 @@ public class ProfissionalService {
 
 
 
+    @CacheEvict(value = "profissionais-org", allEntries = true)
     @RequiresTenant
     @Transactional
     public Profissional cadastraClinicoByOrg(CadastrarClinicoRequest request) {
@@ -212,6 +216,7 @@ public class ProfissionalService {
         return profissionalRepository.buscarClinicoIdByOrg(id, orgId);
     }
 
+    @CacheEvict(value = "profissionais-org", allEntries = true)
     @RequiresTenant
     @Transactional
     public Profissional atualizarClinicoIdByOrg(Long id, AtualizarClinicoRequest dadosAtualizados) {
@@ -306,6 +311,7 @@ return resultado ;
 
 
 
+    @CacheEvict(value = "profissionais-org", allEntries = true)
     @RequiresTenant
     @Transactional
     public void deletarClinicoIdByOrg(Long idProfissional) {
@@ -388,6 +394,7 @@ return resultado ;
     }
 
 
+    @Cacheable(value = "profissionais-org", key = "'org-' + #organizacaoId")
     @Transactional(readOnly = true)
     public List<Profissional> buscarPorOrganizacao(Long organizacaoId) {
         return profissionalRepository.findByOrganizacaoIdAndStatusWithRelations(organizacaoId, StatusProfissional.ATIVO);
@@ -489,6 +496,7 @@ return resultado ;
     }
 
 
+    @Cacheable(value = "profissionais-org", key = "'tenant-filtro-' + #filtro")
     @RequiresTenant
     @Transactional(readOnly = true)
     public List<Profissional> buscarTodosComFiltro(String filtro) {

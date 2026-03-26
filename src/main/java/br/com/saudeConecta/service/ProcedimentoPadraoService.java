@@ -9,6 +9,8 @@ import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.presentation.dto.prontuario.ProcedimentoPadraoRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +30,7 @@ public class ProcedimentoPadraoService {
      * @param profissionalId ID do profissional
      * @return lista de procedimentos padrão ativos
      */
+    @Cacheable(value = "procedimentos-padrao", key = "'ativos-' + #profissionalId")
     @Transactional(readOnly = true)
     public List<ProcedimentoPadrao> listarPorProfissional(Long profissionalId) {
         Long orgId = TenantContext.getCurrentTenant();
@@ -41,6 +44,7 @@ public class ProcedimentoPadraoService {
      * @param request dados do procedimento
      * @return procedimento criado
      */
+    @CacheEvict(value = "procedimentos-padrao", allEntries = true)
     @Transactional
     public ProcedimentoPadrao criar(Long profissionalId, ProcedimentoPadraoRequest request) {
         Long orgId = TenantContext.getCurrentTenant();
@@ -70,6 +74,7 @@ public class ProcedimentoPadraoService {
      * @param profissionalId ID do profissional
      * @return lista de todos os procedimentos padrão
      */
+    @Cacheable(value = "procedimentos-padrao", key = "'todos-' + #profissionalId")
     @Transactional(readOnly = true)
     public List<ProcedimentoPadrao> listarTodosPorProfissional(Long profissionalId) {
         Long orgId = TenantContext.getCurrentTenant();
@@ -82,6 +87,7 @@ public class ProcedimentoPadraoService {
      * @param id ID do procedimento
      * @return procedimento com status atualizado
      */
+    @CacheEvict(value = "procedimentos-padrao", allEntries = true)
     @Transactional
     public ProcedimentoPadrao toggleAtivo(Long id) {
         ProcedimentoPadrao procedimento = procedimentoRepository.findById(id)
@@ -100,6 +106,7 @@ public class ProcedimentoPadraoService {
      * @param request dados atualizados
      * @return procedimento atualizado
      */
+    @CacheEvict(value = "procedimentos-padrao", allEntries = true)
     @Transactional
     public ProcedimentoPadrao atualizar(Long id, ProcedimentoPadraoRequest request) {
         ProcedimentoPadrao procedimento = procedimentoRepository.findById(id)
@@ -116,6 +123,7 @@ public class ProcedimentoPadraoService {
      *
      * @param id ID do procedimento
      */
+    @CacheEvict(value = "procedimentos-padrao", allEntries = true)
     @Transactional
     public void desativar(Long id) {
         ProcedimentoPadrao procedimento = procedimentoRepository.findById(id)

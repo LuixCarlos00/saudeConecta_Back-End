@@ -22,6 +22,8 @@ import br.com.saudeConecta.domain.prontuario.Prontuario;
 import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -177,6 +179,7 @@ public class ConsultaService {
     }
 
     @RequiresTenant
+    @CacheEvict(value = "dashboard-admin-org", allEntries = true)
     @Transactional
     public Consulta cadastrarConsultaByOrg(AgendarConsultaRequest request) {
         Long orgId = tenantHelper.getCurrentTenantId();
@@ -237,6 +240,7 @@ public class ConsultaService {
 
 
     @RequiresTenant
+    @CacheEvict(value = "dashboard-admin-org", allEntries = true)
     @Transactional
     public Consulta concluirConsultabyOrg(Long id) {
 
@@ -276,6 +280,7 @@ public class ConsultaService {
      * @return Consulta atualizada
      */
     @RequiresTenant
+    @CacheEvict(value = "dashboard-admin-org", allEntries = true)
     @Transactional
     public Consulta atualizarStatus(Long id, StatusConsulta novoStatus, String motivo) {
         Consulta consulta = buscarPorId(id)
@@ -368,6 +373,7 @@ public class ConsultaService {
 
 
     @RequiresTenant
+    @CacheEvict(value = "dashboard-admin-org", allEntries = true)
     @Transactional
     public Consulta atualizarConsultaByOrg(Long id, AtualizarConsultaRequest request) {
         Consulta consulta = buscarPorId(id)
@@ -500,6 +506,7 @@ public class ConsultaService {
      * @return DTO com consultasHoje, consultasAguardando, consultasAtendidas,
      *         consultasSemana, canceladosSemana e confirmadosSemana
      */
+    @Cacheable(value = "dashboard-admin-org", key = "#organizacaoId")
     @Transactional(readOnly = true)
     public EstatisticasDashboardAdminOrgResponse getEstatisticasDashboardAdminOrg(Long organizacaoId) {
         LocalDate hoje = LocalDate.now();
@@ -1275,6 +1282,7 @@ public class ConsultaService {
      * @throws IllegalStateException se a consulta possuir prontuário (concluída)
      */
     @RequiresTenant
+    @CacheEvict(value = "dashboard-admin-org", allEntries = true)
     @Transactional
     public void deletarConsulta(Long consultaId) {
         Long orgId = tenantHelper.getCurrentTenantId();
