@@ -56,6 +56,9 @@ public class Usuario implements Serializable, UserDetails, TenantAware {
     @Column(name = "status")
     private StatusUsuario status = StatusUsuario.ATIVO;
 
+    @Column(name = "email", nullable = true)
+    private String email;
+
     private StatusUsuario converterByteParaStatus(Byte statusByte) {
         return statusByte != null && statusByte == 1 ? StatusUsuario.ATIVO : StatusUsuario.INATIVO;
     }

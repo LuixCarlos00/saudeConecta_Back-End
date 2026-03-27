@@ -109,4 +109,7 @@
 
     <!-- Covering index (profissional_id, organizacao_id, data_hora, status) para verificarDisponibilidade e cadastrarConsultaByOrg -->
     <include file="db/changelog/03-2026/045-indice-consulta-disponibilidade.xml"/>
+
+    <!-- Adicionar coluna email na tabela usuarios + setar email do SUPER_ADMIN, apenas para o SUPER_ADMIN-->
+    <include file="db/changelog/03-2026/046-adicionar-email-usuario-super-admin.xml"/>
 </databaseChangeLog>

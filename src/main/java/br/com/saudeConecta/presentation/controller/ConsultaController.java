@@ -80,7 +80,7 @@ public class ConsultaController {
 
     @PostMapping("/cadastrarConsultaByOrg")
     public ResponseEntity<ConsultaResponse> cadastrarConsultaByOrg(@Valid @RequestBody AgendarConsultaRequest request) {
-        log.debug("- Iniciando cadastro de consulta - cadastrarConsultaByOrg");
+        log.info("- Iniciando cadastro de consulta - cadastrarConsultaByOrg");
         Consulta consulta = consultaService.cadastrarConsultaByOrg(request);
         return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
     }
@@ -89,14 +89,14 @@ public class ConsultaController {
     public ResponseEntity<ConsultaResponse> atualizarConsultabyOrg(
             @PathVariable Long id,
             @Valid @RequestBody AtualizarConsultaRequest request) {
-        log.debug("- Iniciando atualizacao de consulta - atualizarConsultabyOrg" );
+        log.info("- Iniciando atualizacao de consulta - atualizarConsultabyOrg");
         Consulta consulta = consultaService.atualizarConsultaByOrg(id, request);
         return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
     }
 
     @PutMapping("/concluirConsultabyOrg/{id}")
     public ResponseEntity<ConsultaResponse> concluirConsultabyOrg(@PathVariable Long id) {
-        log.debug("- Iniciando conclusao de consulta - concluirConsultabyOrg" );
+        log.info("- Iniciando conclusao de consulta - concluirConsultabyOrg");
         Consulta consulta = consultaService.concluirConsultabyOrg(id);
         return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
     }
@@ -177,7 +177,7 @@ public class ConsultaController {
     public ResponseEntity<List<String>> buscarHorariosOcupados(
             @RequestParam Long medicoId,
             @RequestParam String data) {
-        log.debug("- Iniciando busca de horarios ocupados - buscarHorariosOcupados" );
+        log.info("- Iniciando busca de horarios ocupados - buscarHorariosOcupados");
         List<String> horariosOcupados = consultaService.buscarHorariosOcupados(medicoId, data);
         return ResponseEntity.ok(horariosOcupados);
     }
@@ -196,7 +196,7 @@ public class ConsultaController {
             @RequestParam String data,
             @RequestParam String horario,
             @RequestParam Long medicoId) {
-        log.debug("- Iniciando verificacao de disponibilidade -verificarDisponibilidade" );
+        log.info("- Iniciando verificacao de disponibilidade - verificarDisponibilidade");
         boolean existeConsulta = consultaService.verificarDisponibilidade(data, horario, medicoId);
         return ResponseEntity.ok(existeConsulta);
     }

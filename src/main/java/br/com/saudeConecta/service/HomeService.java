@@ -45,7 +45,7 @@ public class HomeService {
 
     @Transactional
     public void recuperarSenhaPorEmail(String email) {
-        log.info("Iniciando recuperação de senha para email: {}", email);
+        log.info("Iniciando recuperacao de senha para email: {}", email);
 
         Usuario usuario = null;
         String nome = null;
@@ -70,26 +70,34 @@ public class HomeService {
                     AdminOrganizacao admin = adminOpt.get();
                     usuario = admin.getUsuario();
                     nome = admin.getNome();
+                } else {
+                    // Busca na tabela usuarios pelo campo email (para usuarios sem organizacao, ex: SUPER_ADMIN)
+                    Optional<Usuario> usuarioOpt = usuarioRepository.findByEmailAndOrganizacaoIsNull(email);
+                    if (usuarioOpt.isPresent()) {
+                        usuario = usuarioOpt.get();
+                        nome = usuario.getLogin();
+                        log.info("Usuario sem organizacao encontrado pelo email: {}", email);
+                    }
                 }
             }
         }
 
         if (usuario != null) {
-            processarRecuperacaoUsuario(usuario, nome, email);
+            processarRecuperacaoUsuario(usuario , email);
             return;
         }
 
-        log.warn("Email não encontrado no sistema: {}", email);
-        throw new EmailNaoEncontradoException("Email não encontrado no sistema");
+        log.warn("Email nao encontrado no sistema: {}", email);
+        throw new EmailNaoEncontradoException("Email nao encontrado no sistema");
     }
 
-    private void processarRecuperacaoUsuario(Usuario usuario, String nome, String email) {
+    private void processarRecuperacaoUsuario(Usuario usuario, String email) {
         String novaSenha = gerarSenhaAleatoria();
         usuario.setSenha(passwordEncoder.encode(novaSenha));
         usuarioRepository.save(usuario);
 
         Long organizacaoId = usuario.getOrganizacao() != null ? usuario.getOrganizacao().getId() : null;
-        emailNotificacaoService.enviarRecuperacaoSenha(email, nome, usuario.getLogin(), novaSenha, organizacaoId);
+        emailNotificacaoService.enviarRecuperacaoSenha(email, "Usuário", usuario.getLogin(), novaSenha, organizacaoId);
 
         log.info("Senha atualizada para: {}", email);
     }

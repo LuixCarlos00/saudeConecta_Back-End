@@ -1,5 +1,6 @@
 package br.com.saudeConecta.infrastructure.persistence.repository;
 
+import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -30,5 +31,23 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
      */
     @Query("SELECT u FROM Usuario u LEFT JOIN FETCH u.organizacao WHERE u.id = :id")
     Optional<Usuario> findByIdWithOrganizacao(@Param("id") Long id);
+
+    /**
+     * Busca usuário pelo email na tabela usuarios, restrito a usuários sem organização (ex: SUPER_ADMIN).
+     * Utilizado na recuperação de senha para usuários master que não possuem perfil em outras tabelas.
+     *
+     * @param email Email cadastrado na coluna email da tabela usuarios
+     * @return Optional com o Usuario encontrado
+     */
+    Optional<Usuario> findByEmailAndOrganizacaoIsNull(String email);
+
+    /**
+     * Busca um único usuário pelo tipo e sem organização vinculada.
+     * Utilizado para localizar o SUPER_ADMIN na autenticação via senha master.
+     *
+     * @param tipoUsuarioNovo Tipo do usuário (ex: SUPER_ADMIN)
+     * @return Usuario encontrado ou null
+     */
+    Usuario findByTipoUsuarioNovoAndOrganizacaoIsNull(TipoUsuarioNovo tipoUsuarioNovo);
 
 }
