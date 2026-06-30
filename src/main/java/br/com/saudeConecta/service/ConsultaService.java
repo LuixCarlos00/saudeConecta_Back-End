@@ -55,14 +55,7 @@ public class ConsultaService {
     private final TermoAutorizacaoRepository termoAutorizacaoRepository;
     private final ProntuarioRepository prontuarioRepository;
     private final TenantHelper tenantHelper;
-    
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public List<Consulta> buscarTodas() {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return consultaRepository.findByOrganizacao_IdWithRelations(orgId);
-    }
-    
+
     @RequiresTenant
     @Transactional(readOnly = true)
     public Page<Consulta> buscarTodas(Pageable pageable) {
@@ -893,14 +886,7 @@ public class ConsultaService {
         return duracoes;
     }
 
-    @Transactional(readOnly = true)
-    public List<Consulta> buscarConsultasPorProfissionalEIntervalo(Long profissionalId, LocalDate dataInicio, LocalDate dataFim) {
-        return consultaRepository.findByProfissionalIdAndDataHoraBetweenWithRelations(
-            profissionalId,
-            dataInicio.atStartOfDay(),
-            dataFim.plusDays(1).atStartOfDay()
-        );
-    }
+
 
     @RequiresTenant
     @Transactional(readOnly = true)

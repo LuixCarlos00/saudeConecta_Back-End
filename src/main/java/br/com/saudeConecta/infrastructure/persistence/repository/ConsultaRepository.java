@@ -378,7 +378,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
            "WHERE c.organizacao.id = :orgId " +
            "AND c.profissional.id = :profissionalId " +
            "AND DATE(c.dataHora) = DATE(:data) " +
-           "AND (c.status ='AGENDADA' OR c.status ='CONFIRMADA')" +
+           "AND (c.status ='AGENDADA' OR c.status ='CONFIRMADA')" + 
            "ORDER BY c.dataHora")
     List<String> findHorariosOcupados(@Param("orgId") Long orgId,
                                       @Param("profissionalId") Long profissionalId,

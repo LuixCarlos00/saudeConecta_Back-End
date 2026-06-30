@@ -73,38 +73,6 @@ public class PlanoAssinaturaService {
         return PlanoAssinaturaResponse.fromEntity(plano);
     }
 
-    /**
-     * Cria um novo plano de assinatura.
-     *
-     * @param request dados do plano
-     * @return PlanoAssinaturaResponse do plano criado
-     */
-    @Transactional
-    public PlanoAssinaturaResponse criarPlano(PlanoAssinaturaRequest request) {
-        if (planoAssinaturaRepository.existsByTipo(request.tipo())) {
-            throw new BusinessException(
-                    "Já existe um plano com o tipo: " + request.tipo(),
-                    HttpStatus.CONFLICT);
-        }
-
-        PlanoAssinatura plano = PlanoAssinatura.builder()
-                .nome(request.nome())
-                .descricao(request.descricao())
-                .tipo(request.tipo())
-                .valorMensal(request.valorMensal())
-                .limiteAdminOrg(request.limiteAdminOrg())
-                .limiteProfissional(request.limiteProfissional())
-                .limiteSecretaria(request.limiteSecretaria())
-                .valorAdicionalAdmin(request.valorAdicionalAdmin())
-                .valorAdicionalProfissional(request.valorAdicionalProfissional())
-                .valorAdicionalSecretaria(request.valorAdicionalSecretaria())
-                .ativo(true)
-                .build();
-
-        PlanoAssinatura salvo = planoAssinaturaRepository.save(plano);
-        log.info("Plano criado: {} ({})", salvo.getNome(), salvo.getTipo());
-        return PlanoAssinaturaResponse.fromEntity(salvo);
-    }
 
     /**
      * Atualiza um plano existente.
