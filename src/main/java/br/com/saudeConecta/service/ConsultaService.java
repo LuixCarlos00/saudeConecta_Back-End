@@ -70,34 +70,94 @@ public class ConsultaService {
         return consultaRepository.findByIdAndOrganizacao_Id(id, orgId);
     }
     
+    /**
+     * Busca as consultas do dia informado (ou do dia atual, se `data` for nulo).
+     *
+     * @param data Data de referência (opcional). Quando nula, usa a data atual do servidor.
+     * @return Lista de consultas do dia de referência
+     */
     @RequiresTenant
-    @Cacheable(value = "consultas-hoje-org", key = "@tenantHelper.getCurrentTenantId()")
+    @Cacheable(value = "consultas-hoje-org", key = "@tenantHelper.getCurrentTenantId() + '-' + (#profissionalId != null ? #profissionalId : 'all') + '-' + (#data != null ? #data : java.time.LocalDate.now())")
     @Transactional(readOnly = true)
-    public List<Consulta> buscarConsultasHoje() {
+    public List<Consulta> buscarConsultasHoje(LocalDate data, Long profissionalId) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        return consultaRepository.findConsultasHoje(orgId);
+        LocalDate referencia = data != null ? data : LocalDate.now();
+        return consultaRepository.findByOrganizacaoIdAndPeriodo(orgId, profissionalId, referencia.atStartOfDay(), referencia.atTime(23, 59, 59));
     }
-    
+
     @RequiresTenant
-    @Cacheable(value = "consultas-semana-org", key = "@tenantHelper.getCurrentTenantId()")
     @Transactional(readOnly = true)
-    public List<Consulta> buscarConsultasDaSemanaAtual() {
+    public List<Consulta> buscarConsultasHoje(LocalDate data, br.com.saudeConecta.domain.usuario.Usuario usuario) {
+        Long profissionalId = extrairProfissionalId(usuario);
+        return buscarConsultasHoje(data, profissionalId);
+    }
+
+    @Cacheable(value = "consultas-hoje-org", key = "@tenantHelper.getCurrentTenantId() + '-' + (#data != null ? #data : java.time.LocalDate.now())")
+    @Transactional(readOnly = true)
+    public List<Consulta> buscarConsultasHoje(LocalDate data) {
+        return buscarConsultasHoje(data, (Long) null);
+    }
+
+    /**
+     * Busca as consultas da semana que contém a data informada (ou a semana atual, se `data` for nulo).
+     *
+     * @param data Data de referência (opcional). Quando nula, usa a data atual do servidor.
+     * @return Lista de consultas da semana de referência
+     */
+    @RequiresTenant
+    @Cacheable(value = "consultas-semana-org", key = "@tenantHelper.getCurrentTenantId() + '-' + (#profissionalId != null ? #profissionalId : 'all') + '-' + (#data != null ? #data : java.time.LocalDate.now())")
+    @Transactional(readOnly = true)
+    public List<Consulta> buscarConsultasDaSemanaAtual(LocalDate data, Long profissionalId) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        LocalDate hoje = LocalDate.now();
-        LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1); // Segunda-feira
+        LocalDate referencia = data != null ? data : LocalDate.now();
+        LocalDate inicioSemana = referencia.minusDays(referencia.getDayOfWeek().getValue() - 1); // Segunda-feira
         LocalDate fimSemana = inicioSemana.plusDays(6); // Domingo
-        return consultaRepository.findByOrganizacaoIdAndPeriodo(orgId, inicioSemana.atStartOfDay(), fimSemana.atTime(23, 59, 59));
+        return consultaRepository.findByOrganizacaoIdAndPeriodo(orgId, profissionalId, inicioSemana.atStartOfDay(), fimSemana.atTime(23, 59, 59));
     }
-    
+
     @RequiresTenant
-    @Cacheable(value = "consultas-mes-org", key = "@tenantHelper.getCurrentTenantId()")
     @Transactional(readOnly = true)
-    public List<Consulta> buscarConsultasDoMesAtual() {
+    public List<Consulta> buscarConsultasDaSemanaAtual(LocalDate data, br.com.saudeConecta.domain.usuario.Usuario usuario) {
+        Long profissionalId = extrairProfissionalId(usuario);
+        return buscarConsultasDaSemanaAtual(data, profissionalId);
+    }
+
+    @RequiresTenant
+    @Cacheable(value = "consultas-semana-org", key = "@tenantHelper.getCurrentTenantId() + '-' + (#data != null ? #data : java.time.LocalDate.now())")
+    @Transactional(readOnly = true)
+    public List<Consulta> buscarConsultasDaSemanaAtual(LocalDate data) {
+        return buscarConsultasDaSemanaAtual(data, (Long) null);
+    }
+
+    /**
+     * Busca as consultas do mês que contém a data informada (ou o mês atual, se `data` for nulo).
+     *
+     * @param data Data de referência (opcional). Quando nula, usa a data atual do servidor.
+     * @return Lista de consultas do mês de referência
+     */
+    @RequiresTenant
+    @Cacheable(value = "consultas-mes-org", key = "@tenantHelper.getCurrentTenantId() + '-' + (#profissionalId != null ? #profissionalId : 'all') + '-' + (#data != null ? #data : java.time.LocalDate.now())")
+    @Transactional(readOnly = true)
+    public List<Consulta> buscarConsultasDoMesAtual(LocalDate data, Long profissionalId) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        LocalDate hoje = LocalDate.now();
-        LocalDate inicioMes = hoje.withDayOfMonth(1); // Primeiro dia do mês
-        LocalDate fimMes = hoje.withDayOfMonth(hoje.lengthOfMonth()); // Último dia do mês
-        return consultaRepository.findByOrganizacaoIdAndPeriodo(orgId, inicioMes.atStartOfDay(), fimMes.atTime(23, 59, 59));
+        LocalDate referencia = data != null ? data : LocalDate.now();
+        LocalDate inicioMes = referencia.withDayOfMonth(1); // Primeiro dia do mês
+        LocalDate fimMes = referencia.withDayOfMonth(referencia.lengthOfMonth()); // Último dia do mês
+        return consultaRepository.findByOrganizacaoIdAndPeriodo(orgId, profissionalId, inicioMes.atStartOfDay(), fimMes.atTime(23, 59, 59));
+    }
+
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<Consulta> buscarConsultasDoMesAtual(LocalDate data, br.com.saudeConecta.domain.usuario.Usuario usuario) {
+        Long profissionalId = extrairProfissionalId(usuario);
+        return buscarConsultasDoMesAtual(data, profissionalId);
+    }
+
+    @RequiresTenant
+    @Cacheable(value = "consultas-mes-org", key = "@tenantHelper.getCurrentTenantId() + '-' + (#data != null ? #data : java.time.LocalDate.now())")
+    @Transactional(readOnly = true)
+    public List<Consulta> buscarConsultasDoMesAtual(LocalDate data) {
+        return buscarConsultasDoMesAtual(data, (Long) null);
     }
     
     @RequiresTenant
@@ -1325,5 +1385,21 @@ public class ConsultaService {
         // 4. Consulta
         consultaRepository.delete(consulta);
         log.info("Consulta {} excluida com sucesso", consultaId);
+    }
+
+    /**
+     * Extrai o ID do profissional a partir do usuário logado.
+     * Se o usuário não for um profissional, retorna null.
+     *
+     * @param usuario Usuário logado
+     * @return ID do profissional ou null se não for profissional
+     */
+    private Long extrairProfissionalId(br.com.saudeConecta.domain.usuario.Usuario usuario) {
+        if (usuario == null || !usuario.isProfissional()) {
+            return null;
+        }
+        return profissionalRepository.findByUsuarioIdWithRelations(usuario.getId())
+                .map(Profissional::getId)
+                .orElse(null);
     }
 }

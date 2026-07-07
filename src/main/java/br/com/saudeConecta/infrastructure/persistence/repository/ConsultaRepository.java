@@ -87,6 +87,21 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
 
+    @Query("SELECT c FROM Consulta c " +
+           "LEFT JOIN FETCH c.profissional p " +
+           "LEFT JOIN FETCH p.tipoProfissional " +
+           "LEFT JOIN FETCH c.paciente " +
+           "LEFT JOIN FETCH c.especialidade " +
+           "LEFT JOIN FETCH c.formaPagamento " +
+           "WHERE c.organizacao.id = :orgId " +
+           "AND (:profissionalId IS NULL OR p.id = :profissionalId) " +
+           "AND c.dataHora BETWEEN :inicio AND :fim ORDER BY c.dataHora")
+    List<Consulta> findByOrganizacaoIdAndPeriodo(
+        @Param("orgId") Long organizacaoId,
+        @Param("profissionalId") Long profissionalId,
+        @Param("inicio") LocalDateTime inicio,
+        @Param("fim") LocalDateTime fim);
+
 
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
@@ -598,7 +613,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
            "LEFT JOIN FETCH c.especialidade " +
            "WHERE c.organizacao.id = :organizacaoId " +
            "AND c.paciente.paciCodigo = :pacienteId " +
-           "AND (:profissionalId IS NULL OR p.usuario.id = :profissionalId) " +
+           "AND (:profissionalId IS NULL OR p.id = :profissionalId) " +
            "AND c.status IN ('REALIZADA', 'PAGO') " +
            "ORDER BY c.dataHora DESC")
     List<Consulta> findHistoricoCompletoPaciente(
@@ -625,7 +640,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
            "LEFT JOIN FETCH c.especialidade " +
            "WHERE c.organizacao.id = :organizacaoId " +
            "AND c.paciente.paciCodigo = :pacienteId " +
-           "AND (:profissionalId IS NULL OR p.usuario.id = :profissionalId) " +
+           "AND (:profissionalId IS NULL OR p.id = :profissionalId) " +
            "AND c.status IN ('REALIZADA', 'PAGO') " +
            "ORDER BY c.dataHora DESC")
     List<Consulta> findHistoricoCompletoPacienteMedico(

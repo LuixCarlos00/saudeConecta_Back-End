@@ -102,7 +102,7 @@ class ConsultaControllerIntegrationTest {
         @WithMockUser(roles = "PROFISSIONAL")
         @DisplayName("Deve retornar 200 com lista de consultas de hoje")
         void deveRetornar200ComListaDeConsultasHoje() throws Exception {
-            when(consultaService.buscarConsultasHoje()).thenReturn(java.util.Collections.emptyList());
+            when(consultaService.buscarConsultasHoje(null)).thenReturn(java.util.Collections.emptyList());
 
             mockMvc.perform(get("/consultas/hoje"))
                     .andExpect(status().isOk())

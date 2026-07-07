@@ -22,7 +22,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class BuscarHistoricoCompletoPacienteUseCase {
+public class BuscarHistoricoCompletoPacienteDentistaUseCase {
 
     private final ConsultaRepository consultaRepository;
     private final ProntuarioDentistaRepository prontuarioDentistaRepository;

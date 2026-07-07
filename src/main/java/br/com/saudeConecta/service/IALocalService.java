@@ -1,7 +1,7 @@
 package br.com.saudeConecta.service;
 
 import br.com.saudeConecta.usecase.BuscarHistoricoCompletoPacienteMedicoUseCase;
-import br.com.saudeConecta.usecase.BuscarHistoricoCompletoPacienteUseCase;
+import br.com.saudeConecta.usecase.BuscarHistoricoCompletoPacienteDentistaUseCase;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 public class IALocalService {
 
     private final BuscarHistoricoCompletoPacienteMedicoUseCase historicoMedicoUseCase;
-    private final BuscarHistoricoCompletoPacienteUseCase historicoDentistaUseCase;
+    private final BuscarHistoricoCompletoPacienteDentistaUseCase historicoDentistaUseCase;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // Palavras-chave médicas para análise

@@ -47,7 +47,7 @@ class BuscarHistoricoCompletoPacienteUseCaseTest {
         @Mock private TenantHelper tenantHelper;
 
         @InjectMocks
-        private BuscarHistoricoCompletoPacienteUseCase useCase;
+        private BuscarHistoricoCompletoPacienteDentistaUseCase useCase;
 
         @Test
         @DisplayName("Deve retornar lista vazia quando não há consultas")

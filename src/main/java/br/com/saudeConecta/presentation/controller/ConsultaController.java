@@ -2,11 +2,15 @@ package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
+import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.presentation.dto.consulta.*;
 import br.com.saudeConecta.presentation.dto.dashboard.SaldoFinanceiroResponse;
 import br.com.saudeConecta.service.ConsultaService;
-import br.com.saudeConecta.usecase.BuscarHistoricoCompletoPacienteUseCase;
+import br.com.saudeConecta.usecase.BuscarHistoricoCompletoPacienteAdminUseCase;
+import br.com.saudeConecta.usecase.BuscarHistoricoCompletoPacienteDentistaUseCase;
 import br.com.saudeConecta.usecase.BuscarHistoricoCompletoPacienteMedicoUseCase;
 import br.com.saudeConecta.service.SaldoFinanceiroService;
 import jakarta.validation.Valid;
@@ -17,11 +21,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/consultas")
@@ -31,34 +37,45 @@ public class ConsultaController {
     
     private final ConsultaService consultaService;
     private final SaldoFinanceiroService saldoFinanceiroService;
-    private final BuscarHistoricoCompletoPacienteUseCase buscarHistoricoCompletoPacienteUseCase;
+    private final BuscarHistoricoCompletoPacienteDentistaUseCase buscarHistoricoCompletoPacienteDentistaUseCase;
     private final BuscarHistoricoCompletoPacienteMedicoUseCase buscarHistoricoCompletoPacienteMedicoUseCase;
+    private final BuscarHistoricoCompletoPacienteAdminUseCase buscarHistoricoCompletoPacienteAdminUseCase;
+    private final ProfissionalRepository profissionalRepository;
 
 //=================Tela de /gerenciamento =================
     @GetMapping("/hoje")
-    public ResponseEntity<List<ConsultaResponse>> listarConsultasHoje() {
-        log.debug("- Iniciando busca de consultas de hoje - listarConsultasHoje" );
-        List<ConsultaResponse> response = consultaService.buscarConsultasHoje().stream()
+    public ResponseEntity<List<ConsultaResponse>> listarConsultasHoje(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data,
+            @AuthenticationPrincipal Usuario usuarioLogado) {
+        log.debug("- Iniciando busca de consultas de hoje - listarConsultasHoje usuario={}", usuarioLogado.getId());
+
+        List<ConsultaResponse> response = consultaService.buscarConsultasHoje(data, usuarioLogado).stream()
                 .map(ConsultaResponse::fromEntity)
                 .toList();
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/semana-atual")
-    public ResponseEntity<List<ConsultaResponse>> buscarDaSemanaAtual() {
-        log.debug("- Iniciando busca de consultas da semana atual - buscarDaSemanaAtual" );
+    public ResponseEntity<List<ConsultaResponse>> buscarDaSemanaAtual(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data,
+            @AuthenticationPrincipal Usuario usuarioLogado) {
+        log.debug("- Iniciando busca de consultas da semana atual - buscarDaSemanaAtual usuario={}", usuarioLogado.getId());
+
         List<ConsultaResponse> response =
-                consultaService.buscarConsultasDaSemanaAtual().stream()
+                consultaService.buscarConsultasDaSemanaAtual(data, usuarioLogado).stream()
                 .map(ConsultaResponse::fromEntity)
                 .toList();
         return ResponseEntity.ok(response);
     }
     
     @GetMapping("/mes-atual")
-    public ResponseEntity<List<ConsultaResponse>> buscarDoMesAtual() {
-        log.debug("- Iniciando busca de consultas do mês atual - buscarDoMesAtual" );
+    public ResponseEntity<List<ConsultaResponse>> buscarDoMesAtual(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data,
+            @AuthenticationPrincipal Usuario usuarioLogado) {
+        log.debug("- Iniciando busca de consultas do mês atual - buscarDoMesAtual usuario={}", usuarioLogado.getId());
+
         List<ConsultaResponse> response =
-                consultaService.buscarConsultasDoMesAtual().stream()
+                consultaService.buscarConsultasDoMesAtual(data, usuarioLogado).stream()
                 .map(ConsultaResponse::fromEntity)
                 .toList();
         return ResponseEntity.ok(response);
@@ -800,38 +817,51 @@ public class ConsultaController {
 
 
     /**
-     * Busca histórico completo de consultas de um paciente.
-     * Usa o parâmetro tipo para decidir qual prontuário buscar:
-     * - "medico"   → prontuário médico (Prontuario)
-     * - "dentista" → prontuário odontológico (ProntuarioDentista)
+     * Busca histórico completo de consultas de um paciente, aplicando as
+     * regras de acesso conforme o perfil do usuário autenticado (token JWT):
+     * - Administrador (ADMIN_ORG/SUPER_ADMIN/GERENTE): vê o histórico completo do paciente,
+     *   combinando prontuários médicos e odontológicos de todos os profissionais.
+     * - Profissional (Médico ou Dentista): vê apenas os registros dos quais ele próprio é o autor.
      *
      * @param pacienteId ID do paciente
-     * @param tipo       "medico" ou "dentista"
-     * @param profissionalId ID do profissional (opcional, null retorna todos)
+     * @param usuarioLogado Usuário autenticado, extraído do token JWT
      * @return Lista unificada com histórico completo
      */
     @GetMapping("/BuscandoHistoricoDeConsultasDoPaciente/{pacienteId}")
     public ResponseEntity<List<HistoricoConsultaPacienteResponse>> buscarHistoricoCompletoPaciente(
             @PathVariable Long pacienteId,
-            @RequestParam(defaultValue = "medico") String tipo,
-            @RequestParam(required = false) Long profissionalId) {
+            @AuthenticationPrincipal Usuario usuarioLogado) {
 
-        log.info("=== Requisição: GET /consultas/BuscandoHistoricoDeConsultasDoPaciente/{} tipo={} profissionalId={} ===", pacienteId, tipo, profissionalId);
+        log.info("=== Requisição: GET /consultas/BuscandoHistoricoDeConsultasDoPaciente/{} usuario={} ===", pacienteId, usuarioLogado.getId());
 
         try {
             List<HistoricoConsultaPacienteResponse> historico;
 
-            if ("dentista".equalsIgnoreCase(tipo)) {
-                historico = buscarHistoricoCompletoPacienteUseCase.executar(pacienteId, profissionalId);
+            if (usuarioLogado.isProfissional()) {
+                Optional<Profissional> profissionalLogado = profissionalRepository.findByUsuarioIdWithRelations(usuarioLogado.getId());
+
+                if (profissionalLogado.isEmpty()) {
+                    log.warn("Profissional não encontrado para o usuario {}", usuarioLogado.getId());
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+                }
+
+                Profissional profissional = profissionalLogado.get();
+                Long profissionalId = profissional.getId();
+
+                if (profissional.getTipoProfissional() != null && profissional.getTipoProfissional().isDentista()) {
+                    historico = buscarHistoricoCompletoPacienteDentistaUseCase.executar(pacienteId, profissionalId);
+                } else {
+                    historico = buscarHistoricoCompletoPacienteMedicoUseCase.executar(pacienteId, profissionalId);
+                }
             } else {
-                historico = buscarHistoricoCompletoPacienteMedicoUseCase.executar(pacienteId, profissionalId);
+                historico = buscarHistoricoCompletoPacienteAdminUseCase.executar(pacienteId);
             }
 
-            log.info("Historico ({}) retornado com sucesso - {} registros", tipo, historico.size());
+            log.info("Historico retornado com sucesso - {} registros", historico.size());
             return ResponseEntity.ok(historico);
 
         } catch (Exception e) {
-            log.error("Erro ao buscar historico ({}) do paciente {}: {}", tipo, pacienteId, e.getMessage(), e);
+            log.error("Erro ao buscar historico do paciente {}: {}", pacienteId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
