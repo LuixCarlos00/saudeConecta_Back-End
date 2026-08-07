@@ -47,6 +47,7 @@ public class AdminOrganizacaoService {
     private final HistoricoDadosPessoaisService historicoDadosPessoaisService;
     private final ConfiguracaoGraficoDashboardService configuracaoGraficoDashboardService;
     private final LimitePlanoService limitePlanoService;
+    private final AssinaturaTenantService assinaturaTenantService;
 
 
 
@@ -61,7 +62,8 @@ public class AdminOrganizacaoService {
             EmailUnicoService emailUnicoService,
             HistoricoDadosPessoaisService historicoDadosPessoaisService,
             ConfiguracaoGraficoDashboardService configuracaoGraficoDashboardService,
-            LimitePlanoService limitePlanoService) {
+            LimitePlanoService limitePlanoService,
+            AssinaturaTenantService assinaturaTenantService) {
         this.adminOrganizacaoRepository = adminOrganizacaoRepository;
         this.usuarioRepository = usuarioRepository;
         this.organizacaoRepository = organizacaoRepository;
@@ -73,6 +75,7 @@ public class AdminOrganizacaoService {
         this.historicoDadosPessoaisService = historicoDadosPessoaisService;
         this.configuracaoGraficoDashboardService = configuracaoGraficoDashboardService;
         this.limitePlanoService = limitePlanoService;
+        this.assinaturaTenantService = assinaturaTenantService;
     }
 
     @Transactional(readOnly = true)
@@ -113,8 +116,7 @@ public class AdminOrganizacaoService {
         Usuario usuario = Usuario.builder()
                 .login(cpfLimpo)
                 .senha(passwordEncoder.encode(senhaGerada))
-                .tipoUsuario((byte) 1) // ADMIN_ORG
-                .tipoUsuarioNovo(TipoUsuarioNovo.ADMIN_ORG)
+                .tipoUsuarioNovo(TipoUsuarioNovo.GESTOR)
                 .status(StatusUsuario.ATIVO)
                 .organizacao(organizacao)
                 .build();
@@ -260,7 +262,7 @@ public class AdminOrganizacaoService {
         // 1. Buscar o administrador na tabela admin_organizacao
         AdminOrganizacao admin;
         if (orgId == null) {
-            log.debug("SUPER_ADMIN: deletando administrador por ID sem filtro de organizacao");
+            log.debug("ROOT: deletando administrador por ID sem filtro de organizacao");
             admin = adminOrganizacaoRepository.findById(idAdmin)
                     .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
         } else {
@@ -375,28 +377,113 @@ public class AdminOrganizacaoService {
         return AdminOrgCompletoResponse.fromEntity(salvo);
     }
 
+    private static final String TIPO_PESSOA_JURIDICA = "JURIDICA";
+    private static final String TIPO_PESSOA_FISICA = "FISICA";
+    private static final String TELEFONE_PADRAO = "11999999999";
+
     /**
      * Cadastra um Admin de Organização completo pelo SUPER_ADMIN.
-     * Cria: Endereco → Organizacao → Usuario (login e senha = CNPJ) → AdminOrganizacao.
-     * Email de credenciais é enviado para o email da clínica.
+     * Cria: Endereco → Organizacao → Usuario → AdminOrganizacao → Assinatura.
+     * Suporta Pessoa Jurídica (login = CNPJ) e Pessoa Física (login = CPF).
      *
      * @param request dados completos do admin e da organização
      * @return AdminOrganizacao criado
      */
     @Transactional
     public AdminOrganizacao cadastrarAdminOrgCompleto(CadastrarAdminOrgCompletoRequest request) {
-        String cnpjLimpo = limparCnpj(request.cnpj());
-        log.info("Cadastrando Admin Org completo. CNPJ: {}, Clinica: {}", cnpjLimpo, request.nomeClinica());
+        String tipoPessoa = request.tipoPessoa();
+        log.info("Cadastrando Admin Org completo. TipoPessoa: {}, Nome: {}, Plano: {}", tipoPessoa, request.nome(), request.planoId());
 
-        if (usuarioRepository.existsByLogin(cnpjLimpo)) {
-            throw new IllegalStateException("CNPJ já cadastrado como login no sistema");
+        validarTipoPessoa(tipoPessoa);
+        boolean isJuridica = TIPO_PESSOA_JURIDICA.equalsIgnoreCase(tipoPessoa);
+
+        if (isJuridica) {
+            validarCamposObrigatoriosJuridica(request);
         }
 
+        String login = determinarLogin(request, isJuridica);
+        validarUnicidadeLogin(login, isJuridica, request);
+
+        if (isJuridica) {
+            validarUnicidadeCnpj(request.cnpj());
+        }
+
+        Endereco endereco = criarEndereco(request);
+        Organizacao organizacao = criarOrganizacao(request, isJuridica, endereco);
+        Usuario usuario = criarUsuario(login, organizacao);
+        AdminOrganizacao admin = criarAdminOrganizacao(request, organizacao, usuario);
+
+        assinaturaTenantService.assinar(organizacao.getId(), request.planoId());
+        log.info("Plano {} associado à organização {}", request.planoId(), organizacao.getId());
+
+        configuracaoGraficoDashboardService.inicializarParaNovoUsuario(usuario);
+
+        String emailDestino = isJuridica ? request.emailClinica() : request.email();
+        String senhaGerada = gerarSenhaAleatoria();
+        emailNotificacaoService.enviarCredenciaisAdministrador(
+                emailDestino,
+                request.nome(),
+                login,
+                senhaGerada,
+                organizacao.getId(),
+                admin.getId()
+        );
+
+        log.info("Admin Org criado com sucesso. ID: {}, Org: {}, Login: {}", admin.getId(), organizacao.getId(), login);
+        return admin;
+    }
+
+    private void validarTipoPessoa(String tipoPessoa) {
+        if (!TIPO_PESSOA_JURIDICA.equalsIgnoreCase(tipoPessoa) && !TIPO_PESSOA_FISICA.equalsIgnoreCase(tipoPessoa)) {
+            throw new IllegalArgumentException("Tipo de pessoa inválido. Use FISICA ou JURIDICA");
+        }
+    }
+
+    private void validarCamposObrigatoriosJuridica(CadastrarAdminOrgCompletoRequest request) {
+        if (isBlank(request.cnpj())) {
+            throw new IllegalArgumentException("CNPJ é obrigatório para pessoa jurídica");
+        }
+        if (isBlank(request.nomeClinica())) {
+            throw new IllegalArgumentException("Nome da clínica é obrigatório para pessoa jurídica");
+        }
+        if (isBlank(request.razaoSocial())) {
+            throw new IllegalArgumentException("Razão social é obrigatória para pessoa jurídica");
+        }
+        if (isBlank(request.tipoClinica())) {
+            throw new IllegalArgumentException("Tipo da clínica é obrigatório para pessoa jurídica");
+        }
+        if (isBlank(request.emailClinica())) {
+            throw new IllegalArgumentException("Email da clínica é obrigatório para pessoa jurídica");
+        }
+        if (isBlank(request.telefone())) {
+            throw new IllegalArgumentException("Telefone é obrigatório para pessoa jurídica");
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private String determinarLogin(CadastrarAdminOrgCompletoRequest request, boolean isJuridica) {
+        return isJuridica ? limparCnpj(request.cnpj()) : limparCpf(request.cpf());
+    }
+
+    private void validarUnicidadeLogin(String login, boolean isJuridica, CadastrarAdminOrgCompletoRequest request) {
+        if (usuarioRepository.existsByLogin(login)) {
+            String documento = isJuridica ? "CNPJ" : "CPF";
+            throw new IllegalStateException(documento + " já cadastrado como login no sistema");
+        }
+    }
+
+    private void validarUnicidadeCnpj(String cnpj) {
+        String cnpjLimpo = limparCnpj(cnpj);
         if (organizacaoRepository.existsByCnpj(cnpjLimpo)) {
             throw new IllegalStateException("CNPJ já cadastrado no sistema");
         }
+    }
 
-        Endereco endereco = enderecoRepository.save(Endereco.builder()
+    private Endereco criarEndereco(CadastrarAdminOrgCompletoRequest request) {
+        return enderecoRepository.save(Endereco.builder()
                 .endCep(request.cep())
                 .endUF(request.uf())
                 .endMunicipio(request.municipio())
@@ -405,8 +492,19 @@ public class AdminOrganizacaoService {
                 .endNumero(request.numero())
                 .endComplemento(request.complemento())
                 .build());
+    }
 
-        Organizacao organizacao = organizacaoRepository.save(Organizacao.builder()
+    private Organizacao criarOrganizacao(CadastrarAdminOrgCompletoRequest request, boolean isJuridica, Endereco endereco) {
+        if (isJuridica) {
+            return criarOrganizacaoJuridica(request, endereco);
+        } else {
+            return criarOrganizacaoFisica(request, endereco);
+        }
+    }
+
+    private Organizacao criarOrganizacaoJuridica(CadastrarAdminOrgCompletoRequest request, Endereco endereco) {
+        String cnpjLimpo = limparCnpj(request.cnpj());
+        return organizacaoRepository.save(Organizacao.builder()
                 .nome(request.nomeClinica())
                 .razaoSocial(request.razaoSocial())
                 .cnpj(cnpjLimpo)
@@ -416,20 +514,34 @@ public class AdminOrganizacaoService {
                 .endereco(endereco)
                 .status(StatusOrganizacao.ATIVO)
                 .build());
+    }
 
+    private Organizacao criarOrganizacaoFisica(CadastrarAdminOrgCompletoRequest request, Endereco endereco) {
+        return organizacaoRepository.save(Organizacao.builder()
+                .nome(request.nome() + " - Consultório")
+                .razaoSocial(request.nome())
+                .cnpj(null)
+                .tipo(TipoOrganizacao.CONSULTORIO)
+                .email(request.email())
+                .telefone(request.telefone() != null ? request.telefone() : TELEFONE_PADRAO)
+                .endereco(endereco)
+                .status(StatusOrganizacao.ATIVO)
+                .build());
+    }
 
+    private Usuario criarUsuario(String login, Organizacao organizacao) {
         String senhaGerada = gerarSenhaAleatoria();
-
-        Usuario usuario = usuarioRepository.save(Usuario.builder()
-                .login(cnpjLimpo)
+        return usuarioRepository.save(Usuario.builder()
+                .login(login)
                 .senha(passwordEncoder.encode(senhaGerada))
-                .tipoUsuario((byte) 1)
-                .tipoUsuarioNovo(TipoUsuarioNovo.ADMIN_ORG)
+                .tipoUsuarioNovo(TipoUsuarioNovo.GESTOR)
                 .status(StatusUsuario.ATIVO)
                 .organizacao(organizacao)
                 .build());
+    }
 
-        AdminOrganizacao admin = adminOrganizacaoRepository.save(AdminOrganizacao.builder()
+    private AdminOrganizacao criarAdminOrganizacao(CadastrarAdminOrgCompletoRequest request, Organizacao organizacao, Usuario usuario) {
+        return adminOrganizacaoRepository.save(AdminOrganizacao.builder()
                 .organizacao(organizacao)
                 .usuario(usuario)
                 .nome(request.nome())
@@ -438,20 +550,6 @@ public class AdminOrganizacaoService {
                 .isOwner(true)
                 .status(AdminOrganizacao.StatusAdmin.ATIVO)
                 .build());
-
-        configuracaoGraficoDashboardService.inicializarParaNovoUsuario(usuario);
-
-        emailNotificacaoService.enviarCredenciaisAdministrador(
-                request.emailClinica(),
-                request.nome(),
-                cnpjLimpo,
-                senhaGerada,
-                organizacao.getId(),
-                admin.getId()
-        );
-
-        log.info("Admin Org criado com sucesso. ID: {}, Org: {}", admin.getId(), organizacao.getId());
-        return admin;
     }
 
 

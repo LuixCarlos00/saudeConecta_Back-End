@@ -47,6 +47,7 @@ class AdminOrganizacaoServiceTest {
     @Mock private HistoricoDadosPessoaisService historicoDadosPessoaisService;
     @Mock private ConfiguracaoGraficoDashboardService configuracaoGraficoDashboardService;
     @Mock private LimitePlanoService limitePlanoService;
+    @Mock private AssinaturaTenantService assinaturaTenantService;
 
     @InjectMocks
     private AdminOrganizacaoService adminOrganizacaoService;
@@ -77,7 +78,7 @@ class AdminOrganizacaoServiceTest {
 
         usuario = Usuario.builder()
                 .login("12345678900").senha("encodedPass")
-                .tipoUsuario((byte) 1).tipoUsuarioNovo(TipoUsuarioNovo.ADMIN_ORG)
+                .tipoUsuarioNovo(TipoUsuarioNovo.GESTOR)
                 .status(StatusUsuario.ATIVO).organizacao(organizacao)
                 .build();
         usuario.setId(USUARIO_ID);
@@ -98,7 +99,7 @@ class AdminOrganizacaoServiceTest {
     class BuscarrAdminByOrg {
 
         @Test
-        @DisplayName("Deve buscar admin pelo ID sem filtro de org quando SUPER_ADMIN (orgId null)")
+        @DisplayName("Deve buscar admin pelo ID sem filtro de org quando ROOT (orgId null)")
         void deveBuscarSemFiltroOrgQuandoSuperAdmin() {
             when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(null);
             when(adminOrganizacaoRepository.findById(ADMIN_ID))
@@ -191,7 +192,7 @@ class AdminOrganizacaoServiceTest {
             doNothing().when(limitePlanoService).validarLimiteAdminOrg(ORG_ID);
             when(usuarioRepository.existsByLogin("123.456.789-00")).thenReturn(false);
             when(emailUnicoService.emailJaExiste("novo@teste.com")).thenReturn(true);
-            when(emailUnicoService.ondeEmailFoiEncontrado("novo@teste.com")).thenReturn("ADMIN_ORG");
+            when(emailUnicoService.ondeEmailFoiEncontrado("novo@teste.com")).thenReturn("GESTOR");
 
             assertThatThrownBy(() -> adminOrganizacaoService.cadastrarAdminByOrg(request, ORG_ID))
                     .isInstanceOf(IllegalStateException.class)
@@ -269,7 +270,7 @@ class AdminOrganizacaoServiceTest {
     class DeletarAdmByOrg {
 
         @Test
-        @DisplayName("Deve deletar admin com sucesso quando SUPER_ADMIN (orgId null)")
+        @DisplayName("Deve deletar admin com sucesso quando ROOT (orgId null)")
         void deveDeletarAdminSuperAdmin() {
             when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(null);
             when(adminOrganizacaoRepository.findById(ADMIN_ID))
@@ -434,6 +435,25 @@ class AdminOrganizacaoServiceTest {
 
     // ========== cadastrarAdminOrgCompleto ==========
 
+
+
+    fiz o teste
+    {login: "21332036058", senha: "cpI0XLVjd4", perfil: "GESTOR"}
+    login
+:
+        "21332036058"
+    perfil
+:
+        "GESTOR"
+    senha
+:
+        "cpI0XLVjd4"
+
+    tbm nao deu
+
+
+
+
     @Nested
     @DisplayName("cadastrarAdminOrgCompleto")
     class CadastrarAdminOrgCompleto {
@@ -443,11 +463,11 @@ class AdminOrganizacaoServiceTest {
         @BeforeEach
         void setUp() {
             request = new CadastrarAdminOrgCompletoRequest(
-                    "Admin Completo", "123.456.789-00", "Gerente", "admin@nova.com",
+                    "JURIDICA", "Admin Completo", "123.456.789-00", "Gerente", "admin@nova.com",
                     "Nova Clínica", "Nova Razao Social LTDA", "12.345.678/0001-00",
                     "CLINICA", "clinica@nova.com", "11999999999",
                     "01310-100", "SP", "São Paulo", "Bela Vista",
-                    "Avenida Paulista", 1000L, null
+                    "Avenida Paulista", 1000L, null, 1L
             );
         }
 
@@ -461,6 +481,7 @@ class AdminOrganizacaoServiceTest {
             when(passwordEncoder.encode(any())).thenReturn("encodedPass");
             when(usuarioRepository.save(any(Usuario.class))).thenReturn(usuario);
             when(adminOrganizacaoRepository.save(any(AdminOrganizacao.class))).thenReturn(adminOrganizacao);
+            doNothing().when(assinaturaTenantService).assinar(any(Long.class), any(Long.class));
 
             AdminOrganizacao resultado = adminOrganizacaoService.cadastrarAdminOrgCompleto(request);
 
@@ -469,6 +490,7 @@ class AdminOrganizacaoServiceTest {
             verify(organizacaoRepository).save(any(Organizacao.class));
             verify(usuarioRepository).save(any(Usuario.class));
             verify(adminOrganizacaoRepository).save(any(AdminOrganizacao.class));
+            verify(assinaturaTenantService).assinar(eq(ORG_ID), eq(1L));
             verify(configuracaoGraficoDashboardService).inicializarParaNovoUsuario(any());
             verify(emailNotificacaoService).enviarCredenciaisAdministrador(
                     eq("clinica@nova.com"), eq("Admin Completo"), eq("12345678000100"),
@@ -494,6 +516,54 @@ class AdminOrganizacaoServiceTest {
             assertThatThrownBy(() -> adminOrganizacaoService.cadastrarAdminOrgCompleto(request))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("CNPJ já cadastrado no sistema");
+        }
+
+        @Test
+        @DisplayName("Deve cadastrar admin org pessoa física com sucesso")
+        void deveCadastrarAdminOrgPessoaFisicaComSucesso() {
+            CadastrarAdminOrgCompletoRequest requestFisica = new CadastrarAdminOrgCompletoRequest(
+                    "FISICA", "Admin Física", "987.654.321-00", "Gerente", "admin@fisica.com",
+                    null, null, null, null, null, null,
+                    "01310-100", "SP", "São Paulo", "Bela Vista",
+                    "Rua A", 100L, null, 1L
+            );
+
+            when(usuarioRepository.existsByLogin("98765432100")).thenReturn(false);
+            when(enderecoRepository.save(any(Endereco.class))).thenReturn(endereco);
+            when(organizacaoRepository.save(any(Organizacao.class))).thenReturn(organizacao);
+            when(passwordEncoder.encode(any())).thenReturn("encodedPass");
+            when(usuarioRepository.save(any(Usuario.class))).thenReturn(usuario);
+            when(adminOrganizacaoRepository.save(any(AdminOrganizacao.class))).thenReturn(adminOrganizacao);
+            doNothing().when(assinaturaTenantService).assinar(any(Long.class), any(Long.class));
+
+            AdminOrganizacao resultado = adminOrganizacaoService.cadastrarAdminOrgCompleto(requestFisica);
+
+            assertThat(resultado).isNotNull();
+            verify(enderecoRepository).save(any(Endereco.class));
+            verify(organizacaoRepository).save(any(Organizacao.class));
+            verify(usuarioRepository).save(any(Usuario.class));
+            verify(adminOrganizacaoRepository).save(any(AdminOrganizacao.class));
+            verify(assinaturaTenantService).assinar(eq(ORG_ID), eq(1L));
+            verify(configuracaoGraficoDashboardService).inicializarParaNovoUsuario(any());
+            verify(emailNotificacaoService).enviarCredenciaisAdministrador(
+                    eq("admin@fisica.com"), eq("Admin Física"), eq("98765432100"),
+                    any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Deve lançar exceção quando campos obrigatórios faltam para JURIDICA")
+        void deveLancarExcecaoQuandoCamposObrigatoriosFaltamJuridica() {
+            CadastrarAdminOrgCompletoRequest requestSemCnpj = new CadastrarAdminOrgCompletoRequest(
+                    "JURIDICA", "Admin Completo", "123.456.789-00", "Gerente", "admin@nova.com",
+                    "Nova Clínica", "Nova Razao Social LTDA", null,
+                    "CLINICA", "clinica@nova.com", "11999999999",
+                    "01310-100", "SP", "São Paulo", "Bela Vista",
+                    "Avenida Paulista", 1000L, null, 1L
+            );
+
+            assertThatThrownBy(() -> adminOrganizacaoService.cadastrarAdminOrgCompleto(requestSemCnpj))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("CNPJ é obrigatório para pessoa jurídica");
         }
     }
 

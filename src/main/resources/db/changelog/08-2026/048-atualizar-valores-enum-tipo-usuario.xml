@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Atualizar valores do enum TipoUsuarioNovo para novos nomes -->
+    <changeSet id="048-001-atualizar-valores-enum-tipo-usuario" author="equipe-sentinela">
+        <sql>
+            UPDATE usuarios 
+            SET tipo_usuario_novo = CASE 
+                WHEN tipo_usuario_novo = 'ADMIN_ORG' THEN 'GESTOR'
+                WHEN tipo_usuario_novo = 'RECEPCIONISTA' THEN 'ASSISTENTE'
+                WHEN tipo_usuario_novo = 'PROFISSIONAL' THEN 'CLINICO'
+                WHEN tipo_usuario_novo = 'SUPER_ADMIN' THEN 'ROOT'
+                ELSE tipo_usuario_novo
+            END;
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

@@ -560,7 +560,7 @@ public class ConsultaService {
     }
 
     // ===============================================================
-    // BUSCAS DE ESTATISTICAS - Dashboard - Admin_ORGANIZACAO
+    // BUSCAS DE ESTATISTICAS - Dashboard - Gestor
     // ===============================================================
 
     /**
@@ -1395,7 +1395,7 @@ public class ConsultaService {
      * @return ID do profissional ou null se não for profissional
      */
     private Long extrairProfissionalId(br.com.saudeConecta.domain.usuario.Usuario usuario) {
-        if (usuario == null || !usuario.isProfissional()) {
+        if (usuario == null || !usuario.isClinico()) {
             return null;
         }
         return profissionalRepository.findByUsuarioIdWithRelations(usuario.getId())

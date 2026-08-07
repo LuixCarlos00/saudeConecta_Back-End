@@ -110,6 +110,12 @@
     <!-- Covering index (profissional_id, organizacao_id, data_hora, status) para verificarDisponibilidade e cadastrarConsultaByOrg -->
     <include file="db/changelog/03-2026/045-indice-consulta-disponibilidade.xml"/>
 
-    <!-- Adicionar coluna email na tabela usuarios + setar email do SUPER_ADMIN, apenas para o SUPER_ADMIN-->
+    <!-- Adicionar coluna email na tabela usuarios + setar email do ROOT, apenas para o ROOT-->
     <include file="db/changelog/03-2026/046-adicionar-email-usuario-super-admin.xml"/>
+
+    <!-- Atualizar valores do enum TipoUsuarioNovo para novos nomes (ROOT, GESTOR, CLINICO, ASSISTENTE) -->
+    <include file="db/changelog/08-2026/048-atualizar-valores-enum-tipo-usuario.xml"/>
+
+    <!-- Remover coluna TipoUsuario (Byte) da tabela usuarios -->
+    <include file="db/changelog/08-2026/049-remover-coluna-tipo-usuario.xml"/>
 </databaseChangeLog>

@@ -9,9 +9,9 @@
     <!-- TABELA: CONFIGURACAO_CARD_DASHBOARD                               -->
     <!-- Cada usuário tem suas próprias configurações de cards,            -->
     <!-- filtradas pelo perfil:                                            -->
-    <!--   ADMIN_ORG / GERENTE → 7 cards                                  -->
-    <!--   SUPER_ADMIN         → 7 cards (organizacao_id = NULL)          -->
-    <!--   PROFISSIONAL        → 4 cards                                  -->
+    <!--   GESTOR / GERENTE → 7 cards                                  -->
+    <!--   ROOT         → 7 cards (organizacao_id = NULL)          -->
+    <!--   CLINICO        → 4 cards                                  -->
     <!-- ================================================================ -->
     <changeSet id="025-001-criar-tabela-configuracao-card-dashboard" author="equipe-sentinela">
         <preConditions onFail="MARK_RAN">

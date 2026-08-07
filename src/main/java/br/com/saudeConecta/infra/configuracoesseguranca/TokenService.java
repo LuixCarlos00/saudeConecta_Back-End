@@ -48,7 +48,7 @@ public class TokenService {
                 .withSubject(usuario.getUsername())
                 .withClaim(CLAIM_USER_ID, usuario.getId())
                 .withClaim(CLAIM_ORGANIZACAO_ID, organizacaoId)
-                .withClaim(CLAIM_TIPO_USUARIO, usuario.getTipoUsuario().intValue())
+                .withClaim(CLAIM_TIPO_USUARIO, usuario.getTipoUsuarioNovo().getCodigo())
                 .withClaim(CLAIM_NOME, nome)
                 .withClaim(CLAIM_PERFIL, perfil)
                 .withAudience(autorizacao)

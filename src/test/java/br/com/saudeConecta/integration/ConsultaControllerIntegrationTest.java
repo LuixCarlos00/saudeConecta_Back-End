@@ -52,7 +52,7 @@ class ConsultaControllerIntegrationTest {
     class CadastrarConsulta {
 
         @Test
-        @WithMockUser(roles = "ADMIN_ORG")
+        @WithMockUser(roles = "ADMIN")
         @DisplayName("Deve retornar 200 ao cadastrar consulta válida")
         void deveRetornar200AoCadastrarConsultaValida() throws Exception {
             AgendarConsultaRequest request = new AgendarConsultaRequest(
@@ -160,7 +160,7 @@ class ConsultaControllerIntegrationTest {
     class BuscarConsultaPorId {
 
         @Test
-        @WithMockUser(roles = "ADMIN_ORG")
+        @WithMockUser(roles = "ADMIN")
         @DisplayName("Deve retornar 200 quando consulta for encontrada")
         void deveRetornar200QuandoConsultaEncontrada() throws Exception {
             Consulta consultaMock = Consulta.builder()
@@ -176,7 +176,7 @@ class ConsultaControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(roles = "ADMIN_ORG")
+        @WithMockUser(roles = "ADMIN")
         @DisplayName("Deve retornar 404 quando consulta não existir")
         void deveRetornar404QuandoConsultaNaoExistir() throws Exception {
             when(consultaService.buscarPorId(999L)).thenReturn(java.util.Optional.empty());

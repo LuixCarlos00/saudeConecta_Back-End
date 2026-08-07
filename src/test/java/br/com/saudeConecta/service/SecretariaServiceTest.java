@@ -60,7 +60,7 @@ class SecretariaServiceTest {
 
         usuario = Usuario.builder()
                 .login("12345678900").senha("encodedPass")
-                .tipoUsuario((byte) 2).tipoUsuarioNovo(TipoUsuarioNovo.RECEPCIONISTA)
+                .tipoUsuarioNovo(TipoUsuarioNovo.ASSISTENTE)
                 .status(StatusUsuario.ATIVO).organizacao(organizacao)
                 .build();
         usuario.setId(USUARIO_ID);

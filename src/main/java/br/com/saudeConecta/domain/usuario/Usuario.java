@@ -44,9 +44,6 @@ public class Usuario implements Serializable, UserDetails, TenantAware {
 
     @Column(nullable = false, name = "senha")
     private String senha;
-
-    @Column(nullable = false, name = "TipoUsuario")
-    private Byte tipoUsuario;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_usuario_novo")
@@ -63,10 +60,10 @@ public class Usuario implements Serializable, UserDetails, TenantAware {
         return statusByte != null && statusByte == 1 ? StatusUsuario.ATIVO : StatusUsuario.INATIVO;
     }
 
-    public Usuario(CadastrarUsuarioRequest dados, String senhaCriptografada) {
+    public Usuario(CadastrarUsuarioRequest dados, String senhaCriptografada, TipoUsuarioNovo tipoNovo) {
         this.login = dados.login();
         this.senha = senhaCriptografada;
-        this.tipoUsuario = dados.tipoUsuario();
+        this.tipoUsuarioNovo = tipoNovo;
         this.status = converterByteParaStatus(dados.status());
     }
     
@@ -74,7 +71,6 @@ public class Usuario implements Serializable, UserDetails, TenantAware {
                    Organizacao organizacao, TipoUsuarioNovo tipoNovo) {
         this.login = dados.login();
         this.senha = senhaCriptografada;
-        this.tipoUsuario = dados.tipoUsuario();
         this.tipoUsuarioNovo = tipoNovo;
         this.status = converterByteParaStatus(dados.status());
         this.organizacao = organizacao;
@@ -131,22 +127,22 @@ public class Usuario implements Serializable, UserDetails, TenantAware {
     public void setOrganizacaoId(Long organizacaoId) {
     }
     
-    public boolean isSuperAdmin() {
-        return TipoUsuarioNovo.SUPER_ADMIN.equals(this.tipoUsuarioNovo);
-    }
-    
-    public boolean isAdminOrganizacao() {
-        return TipoUsuarioNovo.ADMIN_ORG.equals(this.tipoUsuarioNovo);
-    }
-    
-    public boolean isProfissional() {
-        return TipoUsuarioNovo.PROFISSIONAL.equals(this.tipoUsuarioNovo);
+    public boolean isRoot() {
+        return TipoUsuarioNovo.ROOT.equals(this.tipoUsuarioNovo);
     }
 
-    public boolean isRecepcionista() {
-        return TipoUsuarioNovo.RECEPCIONISTA.equals(this.tipoUsuarioNovo);
-     }
-    
+    public boolean isGestor() {
+        return TipoUsuarioNovo.GESTOR.equals(this.tipoUsuarioNovo);
+    }
+
+    public boolean isClinico() {
+        return TipoUsuarioNovo.CLINICO.equals(this.tipoUsuarioNovo);
+    }
+
+    public boolean isAssistente() {
+        return TipoUsuarioNovo.ASSISTENTE.equals(this.tipoUsuarioNovo);
+    }
+
     public boolean hasOrganization() {
         return this.organizacao != null;
     }

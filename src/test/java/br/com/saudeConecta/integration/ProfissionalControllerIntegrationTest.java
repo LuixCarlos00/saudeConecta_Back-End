@@ -63,7 +63,7 @@ class ProfissionalControllerIntegrationTest {
     class BuscarClinicoIdByOrg {
 
         @Test
-        @WithMockUser(roles = "ADMIN_ORG")
+        @WithMockUser(roles = "ADMIN")
         @DisplayName("Deve retornar 200 e profissional quando encontrado")
         void deveRetornar200QuandoEncontrado() throws Exception {
             when(profissionalService.buscarClinicoIdByOrg(10L)).thenReturn(Optional.of(profissionalMock));
@@ -74,7 +74,7 @@ class ProfissionalControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(roles = "ADMIN_ORG")
+        @WithMockUser(roles = "ADMIN")
         @DisplayName("Deve retornar 404 quando profissional não existir")
         void deveRetornar404QuandoNaoExistir() throws Exception {
             when(profissionalService.buscarClinicoIdByOrg(999L)).thenReturn(Optional.empty());
@@ -98,7 +98,7 @@ class ProfissionalControllerIntegrationTest {
     class DeletarClinicoIdByOrg {
 
         @Test
-        @WithMockUser(roles = "ADMIN_ORG")
+        @WithMockUser(roles = "ADMIN")
         @DisplayName("Deve retornar 200 ao deletar profissional com sucesso")
         void deveRetornar200AoDeletarComSucesso() throws Exception {
             doNothing().when(profissionalService).deletarClinicoIdByOrg(10L);
@@ -109,7 +109,7 @@ class ProfissionalControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(roles = "ADMIN_ORG")
+        @WithMockUser(roles = "ADMIN")
         @DisplayName("Deve retornar 404 quando profissional não for encontrado")
         void deveRetornar404QuandoNaoEncontrado() throws Exception {
             doThrow(new IllegalArgumentException("nao encontrado"))
@@ -121,7 +121,7 @@ class ProfissionalControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(roles = "ADMIN_ORG")
+        @WithMockUser(roles = "ADMIN")
         @DisplayName("Deve retornar 409 quando houver relacionamentos existentes")
         void deveRetornar409QuandoHouverRelacionamentos() throws Exception {
             doThrow(new IllegalStateException("relacionamentos existentes"))
@@ -140,7 +140,7 @@ class ProfissionalControllerIntegrationTest {
     class ListarPorOrganizacao {
 
         @Test
-        @WithMockUser(roles = "ADMIN_ORG")
+        @WithMockUser(roles = "ADMIN")
         @DisplayName("Deve retornar 200 com lista de profissionais da organização")
         void deveRetornar200ComListaDeProfissionaisDaOrg() throws Exception {
             when(profissionalService.buscarPorOrganizacao(1L)).thenReturn(List.of(profissionalMock));
@@ -151,7 +151,7 @@ class ProfissionalControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(roles = "ADMIN_ORG")
+        @WithMockUser(roles = "ADMIN")
         @DisplayName("Deve retornar 200 com lista vazia quando não houver profissionais")
         void deveRetornar200ComListaVazia() throws Exception {
             when(profissionalService.buscarPorOrganizacao(99L)).thenReturn(List.of());

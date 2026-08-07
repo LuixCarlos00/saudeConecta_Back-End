@@ -137,8 +137,7 @@ public class SecretariaService {
         Usuario usuario = Usuario.builder()
                 .login(cpfLimpo)
                 .senha(senhaCriptografada)
-                .tipoUsuario((byte) 2) // RECEPCIONISTA
-                .tipoUsuarioNovo(TipoUsuarioNovo.RECEPCIONISTA)
+                .tipoUsuarioNovo(TipoUsuarioNovo.ASSISTENTE)
                 .organizacao(organizacao)
                 .status(StatusUsuario.ATIVO)
                 .build();

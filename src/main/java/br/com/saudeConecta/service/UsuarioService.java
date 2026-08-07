@@ -22,8 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
-import static br.com.saudeConecta.domain.usuario.TipoUsuarioNovo.ADMIN_ORG;
-
 @Service
 @Slf4j
 public class UsuarioService   {
@@ -87,17 +85,17 @@ public class UsuarioService   {
                     });
         }
 
-        // Validação: nao pode bloquear super admin
-        if (usuario.isSuperAdmin()) {
-            throw new IllegalArgumentException("nao é possível bloquear um Super Admin");
+        // Validação: nao pode bloquear root
+        if (usuario.isRoot()) {
+            throw new IllegalArgumentException("nao é possível bloquear um Root");
         }
 
         StatusUsuario novoStatus = request.status() == 0
                 ? StatusUsuario.INATIVO
                 : StatusUsuario.ATIVO;
 
-        // 2. Se SUPER_ADMIN bloqueando AdminOrg → bloqueio em cascata (toda a organizacao)
-        if (isSuperAdmin && usuario.getTipoUsuarioNovo() == TipoUsuarioNovo.ADMIN_ORG) {
+        // 2. Se ROOT bloqueando GESTOR → bloqueio em cascata (toda a organizacao)
+        if (isSuperAdmin && usuario.getTipoUsuarioNovo() == TipoUsuarioNovo.GESTOR) {
             bloquearTenantEmCascata(usuario, request.codigo(), novoStatus);
         } else {
             // Bloqueio individual
@@ -109,7 +107,7 @@ public class UsuarioService   {
         }
 
         log.info("usuario ID: {} bloqueado com sucesso (cascata: {})", request.codigoUsuario(),
-                isSuperAdmin && usuario.getTipoUsuarioNovo() == TipoUsuarioNovo.ADMIN_ORG);
+                isSuperAdmin && usuario.getTipoUsuarioNovo() == TipoUsuarioNovo.GESTOR);
     }
 
     /**
@@ -138,7 +136,7 @@ public class UsuarioService   {
             List<Usuario> usuariosOrg = usuarioRepository.findByOrganizacao_Id(orgId);
             int count = 0;
             for (Usuario u : usuariosOrg) {
-                if (!u.getId().equals(adminUsuario.getId()) && !u.isSuperAdmin()) {
+                if (!u.getId().equals(adminUsuario.getId()) && !u.isRoot()) {
                     u.setStatus(novoStatus);
                     usuarioRepository.save(u);
                     count++;
@@ -153,7 +151,7 @@ public class UsuarioService   {
                                        TipoUsuarioNovo tipoUsuario, StatusUsuario status) {
 
         switch (tipoUsuario) {
-            case ADMIN_ORG -> {
+            case GESTOR -> {
                 adminOrganizacaoRepository.findByIdAndOrganizacao_Id(codigoPerfil, organizacaoId)
                         .ifPresentOrElse(
                                 admin -> {
@@ -168,7 +166,7 @@ public class UsuarioService   {
                         );
             }
 
-            case RECEPCIONISTA -> {
+            case ASSISTENTE -> {
                 secretariaRepository.findByIdAndOrganizacao_Id(codigoPerfil, organizacaoId)
                         .ifPresentOrElse(
                                 secretaria -> {
@@ -183,7 +181,7 @@ public class UsuarioService   {
                         );
             }
 
-            case PROFISSIONAL -> {
+            case CLINICO -> {
                 profissionalRepository.findByIdAndOrganizacao_Id(codigoPerfil, organizacaoId)
                         .ifPresentOrElse(
                                 profissional -> {
@@ -296,23 +294,23 @@ public class UsuarioService   {
         Secretaria secretaria = null;
 
         switch (tipoUsuario) {
-            case PROFISSIONAL -> {
+            case CLINICO -> {
                 profissional = profissionalRepository.findByUsuarioIdWithRelations(usuarioId).orElse(null);
                 if (profissional != null) {
-                    log.debug("Profissional encontrado ID: {} com endereço: {}", 
-                        profissional.getId(), 
+                    log.debug("Profissional encontrado ID: {} com endereço: {}",
+                        profissional.getId(),
                         profissional.getEndereco() != null ? "Sim" : "nao");
                 }
             }
             
-            case ADMIN_ORG -> {
+            case GESTOR -> {
                 admin = adminOrganizacaoRepository.findByUsuarioIdWithRelations(usuarioId).orElse(null);
                 if (admin != null) {
                     log.debug("AdminOrganizacao encontrado ID: {}", admin.getId());
                 }
             }
             
-            case RECEPCIONISTA -> {
+            case ASSISTENTE -> {
                 secretaria = secretariaRepository.findByUsuario_Id(usuarioId).orElse(null);
                 if (secretaria != null) {
                     log.debug("Secretaria encontrada ID: {}", secretaria.getId());

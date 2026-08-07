@@ -54,9 +54,9 @@ public class ConfiguracaoCardDashboardService {
 
 
     /**
-     * Recepcionista: mesmos cards do AdminOrg, exceto Clínicos Ativos.
+     * Assistente: mesmos cards do Gestor, exceto Clínicos Ativos.
      */
-    private static final Set<TipoCardDashboard> CARDS_RECEPCIONISTA = Set.of(
+    private static final Set<TipoCardDashboard> CARDS_ASSISTENTE = Set.of(
             TipoCardDashboard.CONSULTAS_HOJE,
             TipoCardDashboard.CONSULTAS_ATENDIDAS,
             TipoCardDashboard.CONSULTAS_AGUARDANDO,
@@ -65,7 +65,7 @@ public class ConfiguracaoCardDashboardService {
             TipoCardDashboard.CONFIRMADOS_SEMANA
     );
 
-    /** Profissional exibe apenas os 4 cards de suas próprias consultas. */
+    /** Clínico exibe apenas os 4 cards de suas próprias consultas. */
     private static final Set<TipoCardDashboard> CARDS_PROFISSIONAL = Set.of(
             TipoCardDashboard.CONSULTAS_HOJE,
             TipoCardDashboard.CONSULTAS_ATENDIDAS,
@@ -271,9 +271,9 @@ public class ConfiguracaoCardDashboardService {
             return CARDS_ADMIN_ORG;
         }
         return switch (tipo) {
-            case PROFISSIONAL  -> CARDS_PROFISSIONAL;
-            case SUPER_ADMIN   -> CARDS_SUPER_ADMIN;
-            case RECEPCIONISTA -> CARDS_RECEPCIONISTA;
+            case CLINICO  -> CARDS_PROFISSIONAL;
+            case ROOT   -> CARDS_SUPER_ADMIN;
+            case ASSISTENTE -> CARDS_ASSISTENTE;
             default            -> CARDS_ADMIN_ORG;
         };
     }
