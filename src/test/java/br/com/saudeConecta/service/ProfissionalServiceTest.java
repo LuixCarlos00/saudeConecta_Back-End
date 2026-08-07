@@ -50,6 +50,7 @@ class ProfissionalServiceTest {
     @Mock private HistoricoDadosPessoaisService historicoDadosPessoaisService;
     @Mock private LimitePlanoService limitePlanoService;
     @Mock private MensageriaRepository mensageriaRepository;
+    @Mock private CacheEvictionService cacheEvictionService;
 
     @InjectMocks
     private ProfissionalService profissionalService;

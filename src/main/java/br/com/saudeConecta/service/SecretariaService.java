@@ -40,6 +40,7 @@ public class SecretariaService {
     private final EmailUnicoService emailUnicoService;
     private final HistoricoDadosPessoaisService historicoDadosPessoaisService;
     private final LimitePlanoService limitePlanoService;
+    private final CacheEvictionService cacheEvictionService;
 
 
     public SecretariaService(
@@ -51,7 +52,8 @@ public class SecretariaService {
             EmailNotificacaoService emailNotificacaoService,
             EmailUnicoService emailUnicoService,
             HistoricoDadosPessoaisService historicoDadosPessoaisService,
-            LimitePlanoService limitePlanoService) {
+            LimitePlanoService limitePlanoService,
+            CacheEvictionService cacheEvictionService) {
         this.secretariaRepository = secretariaRepository;
         this.usuarioRepository = usuarioRepository;
         this.organizacaoRepository = organizacaoRepository;
@@ -61,6 +63,7 @@ public class SecretariaService {
         this.emailUnicoService = emailUnicoService;
         this.historicoDadosPessoaisService = historicoDadosPessoaisService;
         this.limitePlanoService = limitePlanoService;
+        this.cacheEvictionService = cacheEvictionService;
     }
 
 
@@ -103,6 +106,8 @@ public class SecretariaService {
                 snapshot,
                 resultado
         );
+
+        cacheEvictionService.evictPerfilEUsuariosAgrupados(resultado.getUsuario().getId(), orgId);
 
         return resultado;
     }
@@ -156,6 +161,8 @@ public class SecretariaService {
         Secretaria salva = secretariaRepository.save(secretaria);
         log.info("Secretaria cadastrada com sucesso. ID: {}", salva.getId());
 
+        cacheEvictionService.evictPerfilEUsuariosAgrupados(usuario.getId(), orgId);
+
         emailNotificacaoService.enviarCredenciaisSecretaria(
                 request.email(),
                 request.nome(),
@@ -184,12 +191,16 @@ public class SecretariaService {
         }
 
         try {
+            Long usuarioId = usuario.getId();
+
             // 2. Deletar o registro de secretaria na tabela de secretaria primeiro
             secretariaRepository.delete(secretaria);
             
             // 3. Deletar o Usuario da tabela usuario
             usuarioRepository.delete(usuario);
-            
+
+            cacheEvictionService.evictPerfilEUsuariosAgrupados(usuarioId, orgId);
+
             log.info("Secretaria e Usuario deletados com sucesso. ID Secretaria: {}, ID Usuario: {}", 
                     idSecretaria, usuario.getId());
                     

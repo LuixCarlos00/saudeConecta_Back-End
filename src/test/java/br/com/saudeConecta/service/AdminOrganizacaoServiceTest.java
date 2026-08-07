@@ -48,6 +48,7 @@ class AdminOrganizacaoServiceTest {
     @Mock private ConfiguracaoGraficoDashboardService configuracaoGraficoDashboardService;
     @Mock private LimitePlanoService limitePlanoService;
     @Mock private AssinaturaTenantService assinaturaTenantService;
+    @Mock private CacheEvictionService cacheEvictionService;
 
     @InjectMocks
     private AdminOrganizacaoService adminOrganizacaoService;
@@ -434,24 +435,6 @@ class AdminOrganizacaoServiceTest {
     }
 
     // ========== cadastrarAdminOrgCompleto ==========
-
-
-
-    fiz o teste
-    {login: "21332036058", senha: "cpI0XLVjd4", perfil: "GESTOR"}
-    login
-:
-        "21332036058"
-    perfil
-:
-        "GESTOR"
-    senha
-:
-        "cpI0XLVjd4"
-
-    tbm nao deu
-
-
 
 
     @Nested

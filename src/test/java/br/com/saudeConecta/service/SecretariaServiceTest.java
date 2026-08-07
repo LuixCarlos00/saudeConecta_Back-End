@@ -39,6 +39,7 @@ class SecretariaServiceTest {
     @Mock private EmailUnicoService emailUnicoService;
     @Mock private HistoricoDadosPessoaisService historicoDadosPessoaisService;
     @Mock private LimitePlanoService limitePlanoService;
+    @Mock private CacheEvictionService cacheEvictionService;
 
     @InjectMocks
     private SecretariaService secretariaService;

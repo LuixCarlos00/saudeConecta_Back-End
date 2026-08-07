@@ -48,6 +48,7 @@ public class AdminOrganizacaoService {
     private final ConfiguracaoGraficoDashboardService configuracaoGraficoDashboardService;
     private final LimitePlanoService limitePlanoService;
     private final AssinaturaTenantService assinaturaTenantService;
+    private final CacheEvictionService cacheEvictionService;
 
 
 
@@ -63,7 +64,8 @@ public class AdminOrganizacaoService {
             HistoricoDadosPessoaisService historicoDadosPessoaisService,
             ConfiguracaoGraficoDashboardService configuracaoGraficoDashboardService,
             LimitePlanoService limitePlanoService,
-            AssinaturaTenantService assinaturaTenantService) {
+            AssinaturaTenantService assinaturaTenantService,
+            CacheEvictionService cacheEvictionService) {
         this.adminOrganizacaoRepository = adminOrganizacaoRepository;
         this.usuarioRepository = usuarioRepository;
         this.organizacaoRepository = organizacaoRepository;
@@ -76,6 +78,7 @@ public class AdminOrganizacaoService {
         this.configuracaoGraficoDashboardService = configuracaoGraficoDashboardService;
         this.limitePlanoService = limitePlanoService;
         this.assinaturaTenantService = assinaturaTenantService;
+        this.cacheEvictionService = cacheEvictionService;
     }
 
     @Transactional(readOnly = true)
@@ -137,6 +140,8 @@ public class AdminOrganizacaoService {
         admin = adminOrganizacaoRepository.save(admin);
         log.info("Administrador cadastrado com sucesso. ID: {}", admin.getId());
 
+        cacheEvictionService.evictPerfilEUsuariosAgrupados(usuario.getId(), organizacaoId);
+
         emailNotificacaoService.enviarCredenciaisAdministrador(
                 request.email(),
                 request.nome(),
@@ -183,6 +188,8 @@ public class AdminOrganizacaoService {
         // Registra histórico do admin
         historicoDadosPessoaisService.registrarAlteracoesDeObjeto(
                 EntidadeTipo.ADMIN, resultado.getId(), userId, snapshot, resultado);
+
+        cacheEvictionService.evictPerfilEUsuariosAgrupados(userId, orgId);
 
         // Atualiza dados da organização
         Organizacao org = admin.getOrganizacao();
@@ -250,6 +257,9 @@ public class AdminOrganizacaoService {
                 snapshot,
                 resultado
         );
+
+        cacheEvictionService.evictPerfilEUsuariosAgrupados(antes.getUsuario().getId(), orgId);
+
         return antes;
     }
 
@@ -276,12 +286,17 @@ public class AdminOrganizacaoService {
         }
 
         try {
+            Long usuarioId = usuario.getId();
+            Long orgIdAfetada = admin.getOrganizacao() != null ? admin.getOrganizacao().getId() : orgId;
+
             // 2. Deletar o registro de administrador na tabela admin_organizacao primeiro
             adminOrganizacaoRepository.delete(admin);
             
             // 3. Deletar o usuário da tabela usuario
             usuarioRepository.delete(usuario);
-            
+
+            cacheEvictionService.evictPerfilEUsuariosAgrupados(usuarioId, orgIdAfetada);
+
             log.info("Administrador e usuario deletados com sucesso. ID Admin: {}, ID Usuario: {}",
                     idAdmin, usuario.getId());
                     
@@ -374,6 +389,10 @@ public class AdminOrganizacaoService {
 
         AdminOrganizacao salvo = adminOrganizacaoRepository.save(admin);
         log.info("SUPER_ADMIN: AdminOrg ID {} atualizado com sucesso", id);
+
+        Long orgIdAfetada = salvo.getOrganizacao() != null ? salvo.getOrganizacao().getId() : null;
+        cacheEvictionService.evictPerfilEUsuariosAgrupados(salvo.getUsuario().getId(), orgIdAfetada);
+
         return AdminOrgCompletoResponse.fromEntity(salvo);
     }
 
@@ -408,9 +427,11 @@ public class AdminOrganizacaoService {
             validarUnicidadeCnpj(request.cnpj());
         }
 
+        String senhaGerada = gerarSenhaAleatoria();
+
         Endereco endereco = criarEndereco(request);
         Organizacao organizacao = criarOrganizacao(request, isJuridica, endereco);
-        Usuario usuario = criarUsuario(login, organizacao);
+        Usuario usuario = criarUsuario(login, organizacao, senhaGerada);
         AdminOrganizacao admin = criarAdminOrganizacao(request, organizacao, usuario);
 
         assinaturaTenantService.assinar(organizacao.getId(), request.planoId());
@@ -418,8 +439,9 @@ public class AdminOrganizacaoService {
 
         configuracaoGraficoDashboardService.inicializarParaNovoUsuario(usuario);
 
+        cacheEvictionService.evictPerfilEUsuariosAgrupados(usuario.getId(), organizacao.getId());
+
         String emailDestino = isJuridica ? request.emailClinica() : request.email();
-        String senhaGerada = gerarSenhaAleatoria();
         emailNotificacaoService.enviarCredenciaisAdministrador(
                 emailDestino,
                 request.nome(),
@@ -529,8 +551,7 @@ public class AdminOrganizacaoService {
                 .build());
     }
 
-    private Usuario criarUsuario(String login, Organizacao organizacao) {
-        String senhaGerada = gerarSenhaAleatoria();
+    private Usuario criarUsuario(String login, Organizacao organizacao, String senhaGerada) {
         return usuarioRepository.save(Usuario.builder()
                 .login(login)
                 .senha(passwordEncoder.encode(senhaGerada))

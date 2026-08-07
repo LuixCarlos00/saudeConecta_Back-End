@@ -39,6 +39,7 @@ class UsuarioServiceTest {
     @Mock private AdminOrganizacaoRepository adminOrganizacaoRepository;
     @Mock private PacienteRepository pacienteRepository;
     @Mock private SecretariaRepository secretariaRepository;
+    @Mock private CacheEvictionService cacheEvictionService;
 
     @InjectMocks
     private UsuarioService usuarioService;

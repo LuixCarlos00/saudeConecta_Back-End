@@ -12,9 +12,7 @@ import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.presentation.dto.usuario.*;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +30,7 @@ public class UsuarioService   {
     private final AdminOrganizacaoRepository adminOrganizacaoRepository;
     private final PacienteRepository pacienteRepository;
     private final SecretariaRepository secretariaRepository;
+    private final CacheEvictionService cacheEvictionService;
 
     public UsuarioService(
              PasswordEncoder passwordEncoder,
@@ -39,22 +38,20 @@ public class UsuarioService   {
             AdminOrganizacaoRepository adminOrganizacaoRepository,
             PacienteRepository pacienteRepository,
             SecretariaRepository secretariaRepository,
-            UsuarioRepository usuarioRepository) {
+            UsuarioRepository usuarioRepository,
+            CacheEvictionService cacheEvictionService) {
          this.passwordEncoder = passwordEncoder;
          this.profissionalRepository = profissionalRepository;
         this.adminOrganizacaoRepository = adminOrganizacaoRepository;
         this.pacienteRepository = pacienteRepository;
         this.secretariaRepository = secretariaRepository;
         this.usuarioRepository = usuarioRepository;
+        this.cacheEvictionService = cacheEvictionService;
     }
 
 
 
 
-    @Caching(evict = {
-        @CacheEvict(value = "usuarios-agrupados", allEntries = true),
-        @CacheEvict(value = "perfil-usuario", key = "#request.codigoUsuario()")
-    })
     @Transactional
     public void bloquearUsuariobyOrg(BloquearUsuarioRequest request) {
         Long organizacaoId = TenantContext.getCurrentTenant();
@@ -106,6 +103,9 @@ public class UsuarioService   {
             atualizarStatusPerfil(request.codigo(), orgIdPerfil, usuario.getTipoUsuarioNovo(), novoStatus);
         }
 
+        Long orgIdAfetada = isSuperAdmin ? usuario.getOrganizacaoId() : organizacaoId;
+        cacheEvictionService.evictPerfilEUsuariosAgrupados(request.codigoUsuario(), orgIdAfetada);
+
         log.info("usuario ID: {} bloqueado com sucesso (cascata: {})", request.codigoUsuario(),
                 isSuperAdmin && usuario.getTipoUsuarioNovo() == TipoUsuarioNovo.GESTOR);
     }
@@ -131,6 +131,8 @@ public class UsuarioService   {
                     adminOrganizacaoRepository.save(admin);
                 });
 
+        cacheEvictionService.evictPerfilUsuario(adminUsuario.getId());
+
         // 2. Bloqueia/desbloqueia TODOS os outros usuarios da organizacao
         if (orgId != null) {
             List<Usuario> usuariosOrg = usuarioRepository.findByOrganizacao_Id(orgId);
@@ -139,6 +141,7 @@ public class UsuarioService   {
                 if (!u.getId().equals(adminUsuario.getId()) && !u.isRoot()) {
                     u.setStatus(novoStatus);
                     usuarioRepository.save(u);
+                    cacheEvictionService.evictPerfilUsuario(u.getId());
                     count++;
                 }
             }
@@ -245,7 +248,6 @@ public class UsuarioService   {
 
 
 
-    @CacheEvict(value = "perfil-usuario", key = "#id")
     public void trocarSenharUsuariobyOrg(Long id, String novaSenha) {
 
         var usuarioOpt = buscarPorId(id);
@@ -258,6 +260,7 @@ public class UsuarioService   {
         String senhaCriptografada = passwordEncoder.encode(novaSenha);
         usuario.setSenha(senhaCriptografada);
         usuarioRepository.save(usuario);
+        cacheEvictionService.evictPerfilUsuario(id);
         log.info("Senha do usuario ID: {} alterada com sucesso", id);
     }
 
