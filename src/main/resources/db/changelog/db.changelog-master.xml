@@ -118,4 +118,7 @@
 
     <!-- Remover coluna TipoUsuario (Byte) da tabela usuarios -->
     <include file="db/changelog/08-2026/049-remover-coluna-tipo-usuario.xml"/>
+
+    <!-- Carga completa de especialidades (Medico CFM, Dentista CFO, Nutricionista CFN) -->
+    <include file="db/changelog/08-2026/050-inserir-especialidades-completas.xml"/>
 </databaseChangeLog>

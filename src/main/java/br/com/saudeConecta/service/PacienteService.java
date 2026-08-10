@@ -34,6 +34,7 @@ public class PacienteService  {
     private final OrganizacaoRepository organizacaoRepository;
     private final TenantHelper tenantHelper;
     private final HistoricoDadosPessoaisService historicoDadosPessoaisService;
+    private final CacheEvictionService cacheEvictionService;
 
     // ========== MÉTODOS COM TENANT ==========
 
@@ -223,6 +224,10 @@ public class PacienteService  {
 
 
 
+    @Caching(evict = {
+        @CacheEvict(value = "pacientes-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ATIVO'"),
+        @CacheEvict(value = "pacientes-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ALL'")
+    })
     public void bloquearPacientebyOrg(Long id, int status) {
         log.info("Alterando status do paciente ID: {} para {}", id, status == 0 ? "INATIVO" : "ATIVO");
 
@@ -235,6 +240,10 @@ public class PacienteService  {
         var paciente = pacienteOpt.get();
         paciente.setPaciStatus(status == 0 ? "INATIVO" : "ATIVO");
         pacienteRepository.save(paciente);
+
+        cacheEvictionService.evictUsuariosAgrupados(paciente.getOrganizacaoId());
+        cacheEvictionService.evictUsuariosAgrupadosSuperAdmin();
+
         log.info("Status do paciente ID: {} alterado com sucesso", id);
     }
 
