@@ -121,4 +121,7 @@
 
     <!-- Carga completa de especialidades (Medico CFM, Dentista CFO, Nutricionista CFN) -->
     <include file="db/changelog/08-2026/050-inserir-especialidades-completas.xml"/>
+
+    <!-- Chamados de suporte (tickets) e anexos de imagem -->
+    <include file="db/changelog/08-2026/051-criar-tabelas-chamado-suporte.xml"/>
 </databaseChangeLog>

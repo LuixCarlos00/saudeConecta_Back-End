@@ -151,10 +151,11 @@ public class HomeController {
         }
 
         String nomeUsuario = getNomeUsuario(usuario);
-        String perfilProfissional = getProfissional(usuario);
+        String tipoProfissional = usuario.isClinico() ? getProfissional(usuario) : null;
         String tipoUsuario = usuario.getTipoUsuarioNovo() != null ? usuario.getTipoUsuarioNovo().name() : "GESTOR";
-        String tokenJWT = tokenService.gerarToken(usuario, organizacaoId, nomeUsuario, tipoUsuario);
-        log.info("Login realizado: {} | Org: {} | Nome: {} | Tipo: {}", usuario.getLogin(), organizacaoId, nomeUsuario, tipoUsuario);
+        String tokenJWT = tokenService.gerarToken(usuario, organizacaoId, nomeUsuario, tipoUsuario, tipoProfissional);
+        log.info("Login realizado: {} | Org: {} | Nome: {} | Tipo: {} | TipoProfissional: {}",
+                usuario.getLogin(), organizacaoId, nomeUsuario, tipoUsuario, tipoProfissional);
 
         return ResponseEntity.ok(new DadosTokenJWT(tokenJWT));
     }

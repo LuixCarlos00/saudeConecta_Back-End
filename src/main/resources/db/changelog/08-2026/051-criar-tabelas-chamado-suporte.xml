@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Remove a versao inicial das tabelas (criada com PK BIGINT auto increment)
+        para recriar com identificador textual aleatorio. Feature nova, sem dados em producao.
+    -->
+    <changeSet id="051-drop-tabela-chamado-suporte-anexo-legado" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="chamado_suporte_anexo"/>
+        </preConditions>
+        <dropTable tableName="chamado_suporte_anexo"/>
+    </changeSet>
+
+    <changeSet id="051-drop-tabela-chamado-suporte-legado" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="chamado_suporte"/>
+        </preConditions>
+        <dropTable tableName="chamado_suporte"/>
+    </changeSet>
+
+    <changeSet id="051-criar-tabela-chamado-suporte-id-textual" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="chamado_suporte"/></not>
+        </preConditions>
+
+        <createTable tableName="chamado_suporte">
+            <column name="id" type="VARCHAR(20)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="organizacao_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="usuario_criador_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="criador_nome" type="VARCHAR(150)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="criador_email" type="VARCHAR(200)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="titulo" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="corpo" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="categoria" type="VARCHAR(40)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="prioridade" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="EM_ANALISE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="previsao_atendimento" type="DATE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="data_criacao" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="data_atualizacao" type="DATETIME">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="chamado_suporte"
+                baseColumnNames="organizacao_id"
+                constraintName="fk_chamado_suporte_organizacao"
+                referencedTableName="organizacao"
+                referencedColumnNames="id"/>
+
+        <addForeignKeyConstraint
+                baseTableName="chamado_suporte"
+                baseColumnNames="usuario_criador_id"
+                constraintName="fk_chamado_suporte_usuario"
+                referencedTableName="usuarios"
+                referencedColumnNames="id"/>
+
+        <createIndex tableName="chamado_suporte" indexName="idx_chamado_suporte_org_data">
+            <column name="organizacao_id"/>
+            <column name="data_criacao"/>
+        </createIndex>
+
+        <createIndex tableName="chamado_suporte" indexName="idx_chamado_suporte_org_status">
+            <column name="organizacao_id"/>
+            <column name="status"/>
+        </createIndex>
+
+        <createIndex tableName="chamado_suporte" indexName="idx_chamado_suporte_usuario">
+            <column name="usuario_criador_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="051-criar-tabela-chamado-suporte-anexo-id-textual" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="chamado_suporte_anexo"/></not>
+        </preConditions>
+
+        <createTable tableName="chamado_suporte_anexo">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="chamado_id" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="nome_arquivo" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tipo_conteudo" type="VARCHAR(100)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="tamanho_bytes" type="BIGINT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="conteudo_base64" type="LONGTEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="data_criacao" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="chamado_suporte_anexo"
+                baseColumnNames="chamado_id"
+                constraintName="fk_chamado_anexo_chamado"
+                referencedTableName="chamado_suporte"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <createIndex tableName="chamado_suporte_anexo" indexName="idx_chamado_anexo_chamado">
+            <column name="chamado_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

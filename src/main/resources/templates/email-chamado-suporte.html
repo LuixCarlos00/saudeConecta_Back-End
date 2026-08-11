@@ -1,0 +1,131 @@
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Chamado registrado - Saúde Conecta</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #00a8cc;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background-color: #f9f9f9;
+            padding: 30px;
+            border: 1px solid #ddd;
+        }
+        .protocolo-box {
+            background-color: #fff;
+            border: 2px solid #00a8cc;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .protocolo-value {
+            font-size: 22px;
+            font-weight: bold;
+            color: #00a8cc;
+        }
+        .detalhes {
+            background-color: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .detalhe-item {
+            margin: 8px 0;
+        }
+        .detalhe-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .previsao {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .footer {
+            background-color: #333;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 0 0 8px 8px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>&#127973; Saúde Conecta</h1>
+        <p>Seu chamado foi registrado</p>
+    </div>
+
+    <div class="content">
+        <h2>Olá, <span th:text="${nome}">Usuário</span>!</h2>
+
+        <p>Recebemos o seu chamado técnico. Nossa equipe já foi notificada e dará andamento ao atendimento.</p>
+
+        <div class="protocolo-box">
+            <div class="detalhe-label">Protocolo do chamado</div>
+            <div class="protocolo-value" th:text="${protocolo}">#SC-0001</div>
+        </div>
+
+        <div class="detalhes">
+            <div class="detalhe-item">
+                <span class="detalhe-label">Título:</span>
+                <span th:text="${titulo}">Título do chamado</span>
+            </div>
+            <div class="detalhe-item">
+                <span class="detalhe-label">Categoria:</span>
+                <span th:text="${categoria}">Problema no sistema</span>
+            </div>
+            <div class="detalhe-item">
+                <span class="detalhe-label">Prioridade:</span>
+                <span th:text="${prioridade}">Média</span>
+            </div>
+            <div class="detalhe-item">
+                <span class="detalhe-label">Status:</span>
+                <span th:text="${status}">Em análise</span>
+            </div>
+            <div class="detalhe-item" th:if="${quantidadeAnexos != null and quantidadeAnexos > 0}">
+                <span class="detalhe-label">Anexos:</span>
+                <span th:text="${quantidadeAnexos}">0</span>
+            </div>
+            <div class="detalhe-item">
+                <span class="detalhe-label">Descrição:</span><br>
+                <span th:text="${corpo}">Descrição do chamado</span>
+            </div>
+        </div>
+
+        <div class="previsao">
+            <strong>&#128337; Previsão de atendimento:</strong>
+            <p style="margin: 8px 0 0 0;">
+                Prazo estimado de <strong th:text="${prazoDias}">3</strong> dia(s),
+                com previsão de retorno até <strong th:text="${previsaoAtendimento}">01/01/2026</strong>.
+            </p>
+        </div>
+
+        <p>Guarde o número do protocolo para acompanhar o andamento do seu chamado no sistema.</p>
+    </div>
+
+    <div class="footer">
+        <p>Este é um email automático. Por favor, não responda.</p>
+        <p>© 2026 Saúde Conecta - Todos os direitos reservados</p>
+    </div>
+</body>
+</html>
