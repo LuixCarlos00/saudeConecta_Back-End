@@ -1180,38 +1180,54 @@ class ConsultaServiceTest {
         @DisplayName("Deve buscar todas as consultas quando status for ALL")
         void deveBuscarTodasQuandoStatusAll() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndProfissionalIdAndDataHoraBetweenWithRelations(
-                    eq(ORG_ID), eq(5L), any(), any())).thenReturn(List.of(consultaAgendada));
+            when(consultaRepository.findByOrganizacaoIdAndUsuarioIdAndStatusOptionalAndDataHoraBetween(
+                    eq(ORG_ID), eq(5L), isNull(), any(), any()))
+                    .thenReturn(List.of(consultaAgendada));
 
             List<Consulta> resultado = consultaService.pesquisarClinicasEmIntervaloDeDatas(5L, INICIO, FIM, "ALL");
 
             assertThat(resultado).hasSize(1);
+            verify(consultaRepository).findByOrganizacaoIdAndUsuarioIdAndStatusOptionalAndDataHoraBetween(
+                    eq(ORG_ID), eq(5L), isNull(), any(), any());
         }
 
         @Test
         @DisplayName("Deve filtrar por status específico")
         void deveFiltrarPorStatus() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndProfissionalIdDirectAndStatusOptionalAndDataHoraBetween(
+            when(consultaRepository.findByOrganizacaoIdAndUsuarioIdAndStatusOptionalAndDataHoraBetween(
                     eq(ORG_ID), eq(5L), eq(StatusConsulta.AGENDADA), any(), any()))
                     .thenReturn(List.of(consultaAgendada));
 
             List<Consulta> resultado = consultaService.pesquisarClinicasEmIntervaloDeDatas(5L, INICIO, FIM, "AGENDADA");
 
             assertThat(resultado).hasSize(1);
+            verify(consultaRepository).findByOrganizacaoIdAndUsuarioIdAndStatusOptionalAndDataHoraBetween(
+                    eq(ORG_ID), eq(5L), eq(StatusConsulta.AGENDADA), any(), any());
         }
 
         @Test
         @DisplayName("Deve buscar sem filtro de status quando status for nulo")
         void deveBuscarSemFiltroQuandoStatusNulo() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndProfissionalIdDirectAndStatusOptionalAndDataHoraBetween(
+            when(consultaRepository.findByOrganizacaoIdAndUsuarioIdAndStatusOptionalAndDataHoraBetween(
                     eq(ORG_ID), eq(5L), isNull(), any(), any()))
                     .thenReturn(List.of(consultaAgendada));
 
             List<Consulta> resultado = consultaService.pesquisarClinicasEmIntervaloDeDatas(5L, INICIO, FIM, null);
 
             assertThat(resultado).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("Deve lancar erro quando status for invalido")
+        void deveLancarErroQuandoStatusInvalido() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+
+            assertThatThrownBy(() ->
+                    consultaService.pesquisarClinicasEmIntervaloDeDatas(5L, INICIO, FIM, "INEXISTENTE"))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Status de consulta invalido");
         }
     }
 
@@ -1745,14 +1761,15 @@ class ConsultaServiceTest {
             LocalDate fim = LocalDate.of(2024, 1, 31);
 
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndDataHoraBetweenWithRelations(
-                    eq(ORG_ID), any(), any()))
+            when(consultaRepository.findByStatusOptionalAndDataHoraBetweenWithRelations(
+                    eq(ORG_ID), isNull(), any(), any()))
                     .thenReturn(List.of(consultaAgendada));
 
             List<Consulta> resultado = consultaService.buscarConsultasPorIntervalo(inicio, fim, "ALL");
 
             assertThat(resultado).hasSize(1);
-            verify(consultaRepository).findByOrganizacaoIdAndDataHoraBetweenWithRelations(eq(ORG_ID), any(), any());
+            verify(consultaRepository).findByStatusOptionalAndDataHoraBetweenWithRelations(
+                    eq(ORG_ID), isNull(), any(), any());
         }
 
         @Test
