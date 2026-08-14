@@ -171,6 +171,7 @@ public class EmailMensageriaService {
             case "administrador" -> TipoMensagem.EMAIL_CREDENCIAIS_ADMINISTRADOR;
             case "paciente" -> TipoMensagem.EMAIL_CREDENCIAIS_PACIENTE;
             case "recuperacao" -> TipoMensagem.EMAIL_RECUPERACAO_SENHA;
+            case "chamado" -> TipoMensagem.EMAIL_CHAMADO_SUPORTE;
             default -> TipoMensagem.EMAIL_GENERICO;
         };
     }

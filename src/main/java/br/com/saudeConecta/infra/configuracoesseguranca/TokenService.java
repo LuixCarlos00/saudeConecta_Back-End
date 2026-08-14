@@ -26,6 +26,7 @@ public class TokenService {
     private static final String CLAIM_TIPO_USUARIO = "tipoUsuario";
     private static final String CLAIM_NOME = "nome";
     private static final String CLAIM_PERFIL = "perfil";
+    private static final String CLAIM_TIPO_PROFISSIONAL = "tipoProfissional";
 
     @Value("${api.security.token.secret}")
     private String secret;
@@ -41,16 +42,28 @@ public class TokenService {
                 .sign(Algorithm.HMAC256(secret));
     }
 
-    public String gerarToken(@NotNull Usuario usuario, Long organizacaoId, String nome, String perfil) {
+    /**
+     * Gera o token JWT do usuario autenticado.
+     *
+     * @param usuario          usuario autenticado
+     * @param organizacaoId    ID da organizacao (tenant)
+     * @param nome             nome exibido do usuario
+     * @param perfil           perfil geral (GESTOR, CLINICO, ASSISTENTE)
+     * @param tipoProfissional especializacao do clinico (MEDICO, DENTISTA) ou null
+     * @return token JWT assinado
+     */
+    public String gerarToken(@NotNull Usuario usuario, Long organizacaoId, String nome, String perfil,
+                             String tipoProfissional) {
         String autorizacao = usuario.getAuthorities().toString();
         return JWT.create()
                 .withIssuer(ISSUER)
                 .withSubject(usuario.getUsername())
                 .withClaim(CLAIM_USER_ID, usuario.getId())
                 .withClaim(CLAIM_ORGANIZACAO_ID, organizacaoId)
-                .withClaim(CLAIM_TIPO_USUARIO, usuario.getTipoUsuario().intValue())
+                .withClaim(CLAIM_TIPO_USUARIO, usuario.getTipoUsuarioNovo().getCodigo())
                 .withClaim(CLAIM_NOME, nome)
                 .withClaim(CLAIM_PERFIL, perfil)
+                .withClaim(CLAIM_TIPO_PROFISSIONAL, tipoProfissional)
                 .withAudience(autorizacao)
                 .withExpiresAt(calcularDataExpiracao())
                 .sign(Algorithm.HMAC256(secret));
@@ -103,6 +116,22 @@ public class TokenService {
             return jwt.getClaim(CLAIM_TIPO_USUARIO).asInt();
         } catch (Exception e) {
             log.warn("Erro ao extrair tipoUsuario do token: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Extrai a especializacao do profissional (MEDICO/DENTISTA) do token.
+     *
+     * @param token token JWT
+     * @return tipo do profissional ou null quando ausente
+     */
+    public String getTipoProfissionalFromToken(String token) {
+        try {
+            DecodedJWT jwt = decodeToken(token);
+            return jwt.getClaim(CLAIM_TIPO_PROFISSIONAL).asString();
+        } catch (Exception e) {
+            log.warn("Erro ao extrair tipoProfissional do token: {}", e.getMessage());
             return null;
         }
     }

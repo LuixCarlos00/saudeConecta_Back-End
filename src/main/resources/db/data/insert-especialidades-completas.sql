@@ -1,0 +1,155 @@
+-- ==============================================================================
+-- CARGA MANUAL DE ESPECIALIDADES
+-- Tipos cobertos: MEDICO (CFM), DENTISTA (CFO), NUTRICIONISTA (CFN)
+-- ==============================================================================
+-- Execução:  mysql -u <user> -p <database> < insert-especialidades-completas.sql
+--            ou no cliente MySQL: source insert-especialidades-completas.sql
+--
+-- Idempotente: usa INSERT IGNORE apoiado na unique key
+-- uk_especialidade_tipo_nome (tipo_profissional_id, nome).
+-- Executar mais de uma vez NÃO gera duplicatas.
+--
+-- Pré-requisito: tabela tipo_profissional já populada com os códigos
+-- 'MEDICO', 'DENTISTA' e 'NUTRICIONISTA'.
+-- ==============================================================================
+
+-- ------------------------------------------------------------------------------
+-- 1. ESPECIALIDADES MÉDICAS (CFM)
+-- ------------------------------------------------------------------------------
+INSERT IGNORE INTO especialidade (tipo_profissional_id, nome, codigo, status)
+SELECT tp.id, e.nome, e.codigo, 1
+FROM tipo_profissional tp
+JOIN (
+              SELECT 'Acupuntura' AS nome, 'MED_ACUPUNTURA' AS codigo
+    UNION ALL SELECT 'Alergia e Imunologia', 'MED_ALERGIA_IMUNOLOGIA'
+    UNION ALL SELECT 'Anestesiologia', 'MED_ANESTESIOLOGIA'
+    UNION ALL SELECT 'Angiologia', 'MED_ANGIOLOGIA'
+    UNION ALL SELECT 'Cirurgia Cardiovascular', 'MED_CIRURGIA_CARDIOVASCULAR'
+    UNION ALL SELECT 'Cirurgia da Mão', 'MED_CIRURGIA_MAO'
+    UNION ALL SELECT 'Cirurgia de Cabeça e Pescoço', 'MED_CIRURGIA_CABECA_PESCOCO'
+    UNION ALL SELECT 'Cirurgia do Aparelho Digestivo', 'MED_CIRURGIA_APARELHO_DIGESTIVO'
+    UNION ALL SELECT 'Cirurgia Geral', 'MED_CIRURGIA_GERAL'
+    UNION ALL SELECT 'Cirurgia Oncológica', 'MED_CIRURGIA_ONCOLOGICA'
+    UNION ALL SELECT 'Cirurgia Pediátrica', 'MED_CIRURGIA_PEDIATRICA'
+    UNION ALL SELECT 'Cirurgia Plástica', 'MED_CIRURGIA_PLASTICA'
+    UNION ALL SELECT 'Cirurgia Torácica', 'MED_CIRURGIA_TORACICA'
+    UNION ALL SELECT 'Cirurgia Vascular', 'MED_CIRURGIA_VASCULAR'
+    UNION ALL SELECT 'Clínica Médica', 'MED_CLINICA_MEDICA'
+    UNION ALL SELECT 'Coloproctologia', 'MED_COLOPROCTOLOGIA'
+    UNION ALL SELECT 'Endocrinologia e Metabologia', 'MED_ENDOCRINOLOGIA'
+    UNION ALL SELECT 'Endoscopia', 'MED_ENDOSCOPIA'
+    UNION ALL SELECT 'Genética Médica', 'MED_GENETICA_MEDICA'
+    UNION ALL SELECT 'Geriatria', 'MED_GERIATRIA'
+    UNION ALL SELECT 'Ginecologia e Obstetrícia', 'MED_GINECOLOGIA_OBSTETRICIA'
+    UNION ALL SELECT 'Hematologia e Hemoterapia', 'MED_HEMATOLOGIA_HEMOTERAPIA'
+    UNION ALL SELECT 'Homeopatia', 'MED_HOMEOPATIA'
+    UNION ALL SELECT 'Infectologia', 'MED_INFECTOLOGIA'
+    UNION ALL SELECT 'Mastologia', 'MED_MASTOLOGIA'
+    UNION ALL SELECT 'Medicina de Emergência', 'MED_EMERGENCIA'
+    UNION ALL SELECT 'Medicina de Família e Comunidade', 'MED_FAMILIA_COMUNIDADE'
+    UNION ALL SELECT 'Medicina do Trabalho', 'MED_TRABALHO'
+    UNION ALL SELECT 'Medicina do Tráfego', 'MED_TRAFEGO'
+    UNION ALL SELECT 'Medicina Esportiva', 'MED_ESPORTIVA'
+    UNION ALL SELECT 'Medicina Física e Reabilitação', 'MED_FISICA_REABILITACAO'
+    UNION ALL SELECT 'Medicina Intensiva', 'MED_INTENSIVA'
+    UNION ALL SELECT 'Medicina Legal e Perícia Médica', 'MED_LEGAL_PERICIA'
+    UNION ALL SELECT 'Medicina Nuclear', 'MED_NUCLEAR'
+    UNION ALL SELECT 'Medicina Preventiva e Social', 'MED_PREVENTIVA_SOCIAL'
+    UNION ALL SELECT 'Nefrologia', 'MED_NEFROLOGIA'
+    UNION ALL SELECT 'Neurocirurgia', 'MED_NEUROCIRURGIA'
+    UNION ALL SELECT 'Nutrologia', 'MED_NUTROLOGIA'
+    UNION ALL SELECT 'Oncologia Clínica', 'MED_ONCOLOGIA_CLINICA'
+    UNION ALL SELECT 'Ortopedia e Traumatologia', 'MED_ORTOPEDIA_TRAUMATOLOGIA'
+    UNION ALL SELECT 'Otorrinolaringologia', 'MED_OTORRINOLARINGOLOGIA'
+    UNION ALL SELECT 'Patologia', 'MED_PATOLOGIA'
+    UNION ALL SELECT 'Patologia Clínica e Medicina Laboratorial', 'MED_PATOLOGIA_CLINICA'
+    UNION ALL SELECT 'Pneumologia', 'MED_PNEUMOLOGIA'
+    UNION ALL SELECT 'Radiologia e Diagnóstico por Imagem', 'MED_RADIOLOGIA_IMAGEM'
+    UNION ALL SELECT 'Radioterapia', 'MED_RADIOTERAPIA'
+    UNION ALL SELECT 'Reumatologia', 'MED_REUMATOLOGIA'
+    UNION ALL SELECT 'Cardiologia', 'MED_CARDIOLOGIA'
+    UNION ALL SELECT 'Dermatologia', 'MED_DERMATOLOGIA'
+    UNION ALL SELECT 'Gastroenterologia', 'MED_GASTROENTEROLOGIA'
+    UNION ALL SELECT 'Neurologia', 'MED_NEUROLOGIA'
+    UNION ALL SELECT 'Oftalmologia', 'MED_OFTALMOLOGIA'
+    UNION ALL SELECT 'Pediatria', 'MED_PEDIATRIA'
+    UNION ALL SELECT 'Psiquiatria', 'MED_PSIQUIATRIA'
+    UNION ALL SELECT 'Urologia', 'MED_UROLOGIA'
+) e
+WHERE tp.codigo = 'MEDICO';
+
+-- ------------------------------------------------------------------------------
+-- 2. ESPECIALIDADES ODONTOLÓGICAS (CFO)
+-- ------------------------------------------------------------------------------
+INSERT IGNORE INTO especialidade (tipo_profissional_id, nome, codigo, status)
+SELECT tp.id, e.nome, e.codigo, 1
+FROM tipo_profissional tp
+JOIN (
+              SELECT 'Acupuntura' AS nome, 'ODO_ACUPUNTURA' AS codigo
+    UNION ALL SELECT 'Cirurgia e Traumatologia Bucomaxilofacial', 'ODO_CIRURGIA_TRAUMATOLOGIA_BMF'
+    UNION ALL SELECT 'Dentística', 'ODO_DENTISTICA'
+    UNION ALL SELECT 'Disfunção Temporomandibular e Dor Orofacial', 'ODO_DTM_DOR_OROFACIAL'
+    UNION ALL SELECT 'Estomatologia', 'ODO_ESTOMATOLOGIA'
+    UNION ALL SELECT 'Harmonização Orofacial', 'ODO_HARMONIZACAO_OROFACIAL'
+    UNION ALL SELECT 'Homeopatia', 'ODO_HOMEOPATIA'
+    UNION ALL SELECT 'Odontogeriatria', 'ODO_ODONTOGERIATRIA'
+    UNION ALL SELECT 'Odontologia do Esporte', 'ODO_ESPORTE'
+    UNION ALL SELECT 'Odontologia do Trabalho', 'ODO_TRABALHO'
+    UNION ALL SELECT 'Odontologia Hospitalar', 'ODO_HOSPITALAR'
+    UNION ALL SELECT 'Odontologia Legal', 'ODO_LEGAL'
+    UNION ALL SELECT 'Odontologia para Pacientes com Necessidades Especiais', 'ODO_PACIENTES_ESPECIAIS'
+    UNION ALL SELECT 'Odontologia em Saúde Coletiva', 'ODO_SAUDE_COLETIVA'
+    UNION ALL SELECT 'Ortopedia Funcional dos Maxilares', 'ODO_ORTOPEDIA_FUNCIONAL_MAXILARES'
+    UNION ALL SELECT 'Patologia Oral e Maxilofacial', 'ODO_PATOLOGIA_ORAL_MAXILOFACIAL'
+    UNION ALL SELECT 'Prótese Bucomaxilofacial', 'ODO_PROTESE_BMF'
+    UNION ALL SELECT 'Radiologia Odontológica e Imaginologia', 'ODO_RADIOLOGIA_IMAGINOLOGIA'
+    UNION ALL SELECT 'Ortodontia', 'ODO_ORTODONTIA'
+    UNION ALL SELECT 'Endodontia', 'ODO_ENDODONTIA'
+    UNION ALL SELECT 'Periodontia', 'ODO_PERIODONTIA'
+    UNION ALL SELECT 'Implantodontia', 'ODO_IMPLANTODONTIA'
+    UNION ALL SELECT 'Odontopediatria', 'ODO_ODONTOPEDIATRIA'
+    UNION ALL SELECT 'Cirurgia Bucomaxilofacial', 'ODO_CIRURGIA_BUCOMAXILOFACIAL'
+    UNION ALL SELECT 'Prótese Dentária', 'ODO_PROTESE_DENTARIA'
+    UNION ALL SELECT 'Clínico Geral', 'ODO_CLINICO_GERAL'
+) e
+WHERE tp.codigo = 'DENTISTA';
+
+-- ------------------------------------------------------------------------------
+-- 3. ESPECIALIDADES / ÁREAS DE ATUAÇÃO EM NUTRIÇÃO (CFN)
+-- ------------------------------------------------------------------------------
+INSERT IGNORE INTO especialidade (tipo_profissional_id, nome, codigo, status)
+SELECT tp.id, e.nome, e.codigo, 1
+FROM tipo_profissional tp
+JOIN (
+              SELECT 'Nutrição Clínica' AS nome, 'NUT_CLINICA' AS codigo
+    UNION ALL SELECT 'Nutrição Esportiva', 'NUT_ESPORTIVA'
+    UNION ALL SELECT 'Nutrição Materno-Infantil', 'NUT_MATERNO_INFANTIL'
+    UNION ALL SELECT 'Nutrição Pediátrica', 'NUT_PEDIATRICA'
+    UNION ALL SELECT 'Nutrição Geriátrica', 'NUT_GERIATRICA'
+    UNION ALL SELECT 'Nutrição Oncológica', 'NUT_ONCOLOGICA'
+    UNION ALL SELECT 'Nutrição Hospitalar', 'NUT_HOSPITALAR'
+    UNION ALL SELECT 'Terapia Nutricional Enteral e Parenteral', 'NUT_ENTERAL_PARENTERAL'
+    UNION ALL SELECT 'Nutrição em Saúde Coletiva', 'NUT_SAUDE_COLETIVA'
+    UNION ALL SELECT 'Nutrição Comportamental', 'NUT_COMPORTAMENTAL'
+    UNION ALL SELECT 'Nutrição Funcional', 'NUT_FUNCIONAL'
+    UNION ALL SELECT 'Nutrição Vegetariana e Vegana', 'NUT_VEGETARIANA_VEGANA'
+    UNION ALL SELECT 'Nutrição Estética', 'NUT_ESTETICA'
+    UNION ALL SELECT 'Nutrição Bariátrica', 'NUT_BARIATRICA'
+    UNION ALL SELECT 'Nutrição em Nefrologia', 'NUT_NEFROLOGIA'
+    UNION ALL SELECT 'Nutrição em Diabetes', 'NUT_DIABETES'
+    UNION ALL SELECT 'Nutrição em Doenças Crônicas Não Transmissíveis', 'NUT_DCNT'
+    UNION ALL SELECT 'Alimentação Coletiva', 'NUT_ALIMENTACAO_COLETIVA'
+    UNION ALL SELECT 'Educação Alimentar e Nutricional', 'NUT_EDUCACAO_ALIMENTAR'
+    UNION ALL SELECT 'Marketing em Alimentação e Nutrição', 'NUT_MARKETING'
+) e
+WHERE tp.codigo = 'NUTRICIONISTA';
+
+-- ------------------------------------------------------------------------------
+-- 4. CONFERÊNCIA
+-- ------------------------------------------------------------------------------
+SELECT tp.codigo AS tipo, COUNT(*) AS total_especialidades
+FROM especialidade e
+JOIN tipo_profissional tp ON tp.id = e.tipo_profissional_id
+WHERE e.status = 1
+GROUP BY tp.codigo
+ORDER BY tp.codigo;

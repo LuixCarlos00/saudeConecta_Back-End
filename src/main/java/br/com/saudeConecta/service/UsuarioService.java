@@ -12,17 +12,13 @@ import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.presentation.dto.usuario.*;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
-
-import static br.com.saudeConecta.domain.usuario.TipoUsuarioNovo.ADMIN_ORG;
 
 @Service
 @Slf4j
@@ -34,6 +30,7 @@ public class UsuarioService   {
     private final AdminOrganizacaoRepository adminOrganizacaoRepository;
     private final PacienteRepository pacienteRepository;
     private final SecretariaRepository secretariaRepository;
+    private final CacheEvictionService cacheEvictionService;
 
     public UsuarioService(
              PasswordEncoder passwordEncoder,
@@ -41,22 +38,20 @@ public class UsuarioService   {
             AdminOrganizacaoRepository adminOrganizacaoRepository,
             PacienteRepository pacienteRepository,
             SecretariaRepository secretariaRepository,
-            UsuarioRepository usuarioRepository) {
+            UsuarioRepository usuarioRepository,
+            CacheEvictionService cacheEvictionService) {
          this.passwordEncoder = passwordEncoder;
          this.profissionalRepository = profissionalRepository;
         this.adminOrganizacaoRepository = adminOrganizacaoRepository;
         this.pacienteRepository = pacienteRepository;
         this.secretariaRepository = secretariaRepository;
         this.usuarioRepository = usuarioRepository;
+        this.cacheEvictionService = cacheEvictionService;
     }
 
 
 
 
-    @Caching(evict = {
-        @CacheEvict(value = "usuarios-agrupados", allEntries = true),
-        @CacheEvict(value = "perfil-usuario", key = "#request.codigoUsuario()")
-    })
     @Transactional
     public void bloquearUsuariobyOrg(BloquearUsuarioRequest request) {
         Long organizacaoId = TenantContext.getCurrentTenant();
@@ -87,17 +82,17 @@ public class UsuarioService   {
                     });
         }
 
-        // Validação: nao pode bloquear super admin
-        if (usuario.isSuperAdmin()) {
-            throw new IllegalArgumentException("nao é possível bloquear um Super Admin");
+        // Validação: nao pode bloquear root
+        if (usuario.isRoot()) {
+            throw new IllegalArgumentException("nao é possível bloquear um Root");
         }
 
         StatusUsuario novoStatus = request.status() == 0
                 ? StatusUsuario.INATIVO
                 : StatusUsuario.ATIVO;
 
-        // 2. Se SUPER_ADMIN bloqueando AdminOrg → bloqueio em cascata (toda a organizacao)
-        if (isSuperAdmin && usuario.getTipoUsuarioNovo() == TipoUsuarioNovo.ADMIN_ORG) {
+        // 2. Se ROOT bloqueando GESTOR → bloqueio em cascata (toda a organizacao)
+        if (isSuperAdmin && usuario.getTipoUsuarioNovo() == TipoUsuarioNovo.GESTOR) {
             bloquearTenantEmCascata(usuario, request.codigo(), novoStatus);
         } else {
             // Bloqueio individual
@@ -108,8 +103,11 @@ public class UsuarioService   {
             atualizarStatusPerfil(request.codigo(), orgIdPerfil, usuario.getTipoUsuarioNovo(), novoStatus);
         }
 
+        Long orgIdAfetada = isSuperAdmin ? usuario.getOrganizacaoId() : organizacaoId;
+        cacheEvictionService.evictPerfilEUsuariosAgrupados(request.codigoUsuario(), orgIdAfetada);
+
         log.info("usuario ID: {} bloqueado com sucesso (cascata: {})", request.codigoUsuario(),
-                isSuperAdmin && usuario.getTipoUsuarioNovo() == TipoUsuarioNovo.ADMIN_ORG);
+                isSuperAdmin && usuario.getTipoUsuarioNovo() == TipoUsuarioNovo.GESTOR);
     }
 
     /**
@@ -133,14 +131,17 @@ public class UsuarioService   {
                     adminOrganizacaoRepository.save(admin);
                 });
 
+        cacheEvictionService.evictPerfilUsuario(adminUsuario.getId());
+
         // 2. Bloqueia/desbloqueia TODOS os outros usuarios da organizacao
         if (orgId != null) {
             List<Usuario> usuariosOrg = usuarioRepository.findByOrganizacao_Id(orgId);
             int count = 0;
             for (Usuario u : usuariosOrg) {
-                if (!u.getId().equals(adminUsuario.getId()) && !u.isSuperAdmin()) {
+                if (!u.getId().equals(adminUsuario.getId()) && !u.isRoot()) {
                     u.setStatus(novoStatus);
                     usuarioRepository.save(u);
+                    cacheEvictionService.evictPerfilUsuario(u.getId());
                     count++;
                 }
             }
@@ -153,7 +154,7 @@ public class UsuarioService   {
                                        TipoUsuarioNovo tipoUsuario, StatusUsuario status) {
 
         switch (tipoUsuario) {
-            case ADMIN_ORG -> {
+            case GESTOR -> {
                 adminOrganizacaoRepository.findByIdAndOrganizacao_Id(codigoPerfil, organizacaoId)
                         .ifPresentOrElse(
                                 admin -> {
@@ -168,7 +169,7 @@ public class UsuarioService   {
                         );
             }
 
-            case RECEPCIONISTA -> {
+            case ASSISTENTE -> {
                 secretariaRepository.findByIdAndOrganizacao_Id(codigoPerfil, organizacaoId)
                         .ifPresentOrElse(
                                 secretaria -> {
@@ -183,7 +184,7 @@ public class UsuarioService   {
                         );
             }
 
-            case PROFISSIONAL -> {
+            case CLINICO -> {
                 profissionalRepository.findByIdAndOrganizacao_Id(codigoPerfil, organizacaoId)
                         .ifPresentOrElse(
                                 profissional -> {
@@ -247,7 +248,6 @@ public class UsuarioService   {
 
 
 
-    @CacheEvict(value = "perfil-usuario", key = "#id")
     public void trocarSenharUsuariobyOrg(Long id, String novaSenha) {
 
         var usuarioOpt = buscarPorId(id);
@@ -260,6 +260,7 @@ public class UsuarioService   {
         String senhaCriptografada = passwordEncoder.encode(novaSenha);
         usuario.setSenha(senhaCriptografada);
         usuarioRepository.save(usuario);
+        cacheEvictionService.evictPerfilUsuario(id);
         log.info("Senha do usuario ID: {} alterada com sucesso", id);
     }
 
@@ -296,23 +297,23 @@ public class UsuarioService   {
         Secretaria secretaria = null;
 
         switch (tipoUsuario) {
-            case PROFISSIONAL -> {
+            case CLINICO -> {
                 profissional = profissionalRepository.findByUsuarioIdWithRelations(usuarioId).orElse(null);
                 if (profissional != null) {
-                    log.debug("Profissional encontrado ID: {} com endereço: {}", 
-                        profissional.getId(), 
+                    log.debug("Profissional encontrado ID: {} com endereço: {}",
+                        profissional.getId(),
                         profissional.getEndereco() != null ? "Sim" : "nao");
                 }
             }
             
-            case ADMIN_ORG -> {
+            case GESTOR -> {
                 admin = adminOrganizacaoRepository.findByUsuarioIdWithRelations(usuarioId).orElse(null);
                 if (admin != null) {
                     log.debug("AdminOrganizacao encontrado ID: {}", admin.getId());
                 }
             }
             
-            case RECEPCIONISTA -> {
+            case ASSISTENTE -> {
                 secretaria = secretariaRepository.findByUsuario_Id(usuarioId).orElse(null);
                 if (secretaria != null) {
                     log.debug("Secretaria encontrada ID: {}", secretaria.getId());

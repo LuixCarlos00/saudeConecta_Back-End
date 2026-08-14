@@ -52,6 +52,7 @@ public class ProfissionalService {
     private final HistoricoDadosPessoaisService historicoDadosPessoaisService;
     private final LimitePlanoService limitePlanoService;
     private final MensageriaRepository mensageriaRepository;
+    private final CacheEvictionService cacheEvictionService;
 
 
     private static final String CARACTERES_SENHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*";
@@ -69,7 +70,8 @@ public class ProfissionalService {
             EmailUnicoService emailUnicoService,
             HistoricoDadosPessoaisService historicoDadosPessoaisService,
             LimitePlanoService limitePlanoService,
-            MensageriaRepository mensageriaRepository
+            MensageriaRepository mensageriaRepository,
+            CacheEvictionService cacheEvictionService
     ) {
         this.profissionalRepository = profissionalRepository;
         this.tipoProfissionalRepository = tipoProfissionalRepository;
@@ -84,6 +86,7 @@ public class ProfissionalService {
         this.historicoDadosPessoaisService = historicoDadosPessoaisService;
         this.limitePlanoService = limitePlanoService;
         this.mensageriaRepository = mensageriaRepository;
+        this.cacheEvictionService = cacheEvictionService;
     }
 
 
@@ -129,8 +132,7 @@ public class ProfissionalService {
         Usuario usuario = Usuario.builder()
                 .login(cpfLimpo)
                 .senha(senhaCriptografada)
-                .tipoUsuario((byte) 3)
-                .tipoUsuarioNovo(TipoUsuarioNovo.PROFISSIONAL)
+                .tipoUsuarioNovo(TipoUsuarioNovo.CLINICO)
                 .organizacao(organizacao)
                 .status(StatusUsuario.ATIVO)
                 .build();
@@ -199,6 +201,8 @@ public class ProfissionalService {
         Profissional salvo = profissionalRepository.save(profissional);
         log.info("Clinico cadastrado com sucesso. ID: {}", salvo.getId());
 
+        cacheEvictionService.evictPerfilEUsuariosAgrupados(usuarioSalvo.getId(), orgId);
+
         emailNotificacaoService.enviarCredenciaisClinico(
             request.email(),
             request.nome(),
@@ -225,8 +229,7 @@ public class ProfissionalService {
         @CacheEvict(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull()"),
         @CacheEvict(value = "profissionais-org", key = "'count-org-' + @tenantHelper.getCurrentTenantIdOrNull()"),
         @CacheEvict(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ATIVO'"),
-        @CacheEvict(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ALL'"),
-        @CacheEvict(value = "perfil-usuario", allEntries = true)
+        @CacheEvict(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ALL'")
     })
     @RequiresTenant
     @Transactional
@@ -317,6 +320,9 @@ public class ProfissionalService {
                 snapshot,
                 resultado
         );
+
+        cacheEvictionService.evictPerfilEUsuariosAgrupados(resultado.getUsuario().getId(), orgId);
+
 return resultado ;
     }
 
@@ -345,6 +351,8 @@ return resultado ;
         }
 
         try {
+            Long usuarioId = usuario.getId();
+
             // 2. Deletar registros relacionados na tabela mensageria primeiro
             List<Mensageria> mensagens = mensageriaRepository.findByDestinatarioEntidadeId(profissional.getId());
             if (!mensagens.isEmpty()) {
@@ -357,7 +365,9 @@ return resultado ;
 
             // 4. Deletar o usuario da tabela usuario
             usuarioRepository.delete(usuario);
-            
+
+            cacheEvictionService.evictPerfilEUsuariosAgrupados(usuarioId, orgId);
+
             log.info("Profissional e usuario deletados com sucesso. ID Profissional: {}, ID usuario: {}", 
                     idProfissional, usuario.getId());
                     

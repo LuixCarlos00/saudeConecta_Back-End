@@ -1,7 +1,9 @@
 package br.com.saudeConecta.infrastructure.persistence.repository;
 
 import br.com.saudeConecta.domain.prontuario.TermoAutorizacao;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,6 +17,10 @@ public interface TermoAutorizacaoRepository extends JpaRepository<TermoAutorizac
     Optional<TermoAutorizacao> findByToken(String token);
 
     Optional<TermoAutorizacao> findByConsultaId(Long consultaId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT t FROM TermoAutorizacao t WHERE t.consulta.id = :consultaId")
+    Optional<TermoAutorizacao> findByConsultaIdWithLock(@Param("consultaId") Long consultaId);
 
     @Query("SELECT t FROM TermoAutorizacao t " +
            "LEFT JOIN FETCH t.consulta c " +

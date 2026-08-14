@@ -259,6 +259,7 @@ public class MensageriaService {
             case EMAIL_CREDENCIAIS_ADMINISTRADOR -> "administrador";
             case EMAIL_CREDENCIAIS_PACIENTE -> "paciente";
             case EMAIL_RECUPERACAO_SENHA -> "recuperacao";
+            case EMAIL_CHAMADO_SUPORTE -> "chamado";
             case EMAIL_GENERICO -> "generico";
         };
     }

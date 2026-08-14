@@ -83,10 +83,10 @@ public class EmailUnicoService {
      */
     public String ondeEmailFoiEncontrado(String email) {
         if (adminOrganizacaoRepository.findByEmail(email).isPresent()) {
-            return "ADMIN_ORG";
+            return "GESTOR";
         }
         if (profissionalRepository.findByEmail(email).isPresent()) {
-            return "PROFISSIONAL";
+            return "CLINICO";
         }
         if (secretariaRepository.findByEmail(email).isPresent()) {
             return "SECRETARIA";

@@ -46,28 +46,28 @@ public class ConfiguracaoGraficoDashboardService {
             new LinkedHashSet<>(GRAFICOS_ADMIN_ORDENADOS);
 
     /**
-     * Ordem dos gráficos no dashboard profissional:
+     * Ordem dos gráficos no dashboard clínico:
      * 1. Média de Tempo de Consulta (canto superior esquerdo)
      * 2. Meus Agendamentos por Período (canto superior direito)
      */
-    private static final List<TipoGraficoDashboard> GRAFICOS_PROFISSIONAL_ORDENADOS = List.of(
+    private static final List<TipoGraficoDashboard> GRAFICOS_CLINICO_ORDENADOS = List.of(
             TipoGraficoDashboard.MEDIA_TEMPO_CONSULTA,
             TipoGraficoDashboard.AGENDAMENTOS_MEDICO_PERIODO
     );
-    private static final Set<TipoGraficoDashboard> GRAFICOS_PROFISSIONAL =
-            new LinkedHashSet<>(GRAFICOS_PROFISSIONAL_ORDENADOS);
+    private static final Set<TipoGraficoDashboard> GRAFICOS_CLINICO =
+            new LinkedHashSet<>(GRAFICOS_CLINICO_ORDENADOS);
 
     /**
-     * Recepcionista vê apenas:
+     * Assistente vê apenas:
      * 1. Consultas por Período (canto superior esquerdo)
      * 2. Agendamentos (canto superior direito)
      */
-    private static final List<TipoGraficoDashboard> GRAFICOS_RECEPCIONISTA_ORDENADOS = List.of(
+    private static final List<TipoGraficoDashboard> GRAFICOS_ASSISTENTE_ORDENADOS = List.of(
             TipoGraficoDashboard.CONSULTAS_POR_PERIODO,
             TipoGraficoDashboard.AGENDAMENTOS_DIAS_SEMANA
     );
-    private static final Set<TipoGraficoDashboard> GRAFICOS_RECEPCIONISTA =
-            new LinkedHashSet<>(GRAFICOS_RECEPCIONISTA_ORDENADOS);
+    private static final Set<TipoGraficoDashboard> GRAFICOS_ASSISTENTE =
+            new LinkedHashSet<>(GRAFICOS_ASSISTENTE_ORDENADOS);
 
     // ── Listagem ─────────────────────────────────────────────────────────────
 
@@ -231,8 +231,8 @@ public class ConfiguracaoGraficoDashboardService {
             return GRAFICOS_ADMIN;
         }
         return switch (tipo) {
-            case PROFISSIONAL   -> GRAFICOS_PROFISSIONAL;
-            case RECEPCIONISTA  -> GRAFICOS_RECEPCIONISTA;
+            case CLINICO   -> GRAFICOS_CLINICO;
+            case ASSISTENTE  -> GRAFICOS_ASSISTENTE;
             default             -> GRAFICOS_ADMIN;
         };
     }
@@ -247,8 +247,8 @@ public class ConfiguracaoGraficoDashboardService {
             return GRAFICOS_ADMIN_ORDENADOS;
         }
         return switch (tipo) {
-            case PROFISSIONAL   -> GRAFICOS_PROFISSIONAL_ORDENADOS;
-            case RECEPCIONISTA  -> GRAFICOS_RECEPCIONISTA_ORDENADOS;
+            case CLINICO   -> GRAFICOS_CLINICO_ORDENADOS;
+            case ASSISTENTE  -> GRAFICOS_ASSISTENTE_ORDENADOS;
             default             -> GRAFICOS_ADMIN_ORDENADOS;
         };
     }

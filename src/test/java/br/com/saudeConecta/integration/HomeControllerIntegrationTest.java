@@ -52,7 +52,7 @@ class HomeControllerIntegrationTest {
         @Test
         @DisplayName("Deve retornar erro (5xx) quando credenciais inválidas disparam BadCredentialsException")
         void deveRetornarErroQuandoCredenciaisInvalidas() throws Exception {
-            DadosLoginUsuario dados = new DadosLoginUsuario("cpf_errado", "senha_errada", (byte) 3, (byte) 1);
+            DadosLoginUsuario dados = new DadosLoginUsuario("cpf_errado", "senha_errada", "GESTOR");
 
             when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                     .thenThrow(new BadCredentialsException("Credenciais inválidas"));

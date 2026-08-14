@@ -61,6 +61,23 @@ public class HomeController {
         var authentication = authenticationManager.authenticate(authenticatetoken);
 
         Usuario usuario = (Usuario) authentication.getPrincipal();
+
+        // Validar tipo de usuário selecionado no login
+        if (dados.perfil() != null && !dados.perfil().isBlank()) {
+            try {
+                TipoUsuarioNovo tipoSelecionado = TipoUsuarioNovo.valueOf(dados.perfil().toUpperCase());
+                if (!tipoSelecionado.equals(usuario.getTipoUsuarioNovo())) {
+                    log.warn("Tipo selecionado {} não corresponde ao tipo do usuário {} no banco: {}",
+                            tipoSelecionado, usuario.getLogin(), usuario.getTipoUsuarioNovo());
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(Map.of("message", "O tipo selecionado não corresponde ao tipo do usuário no sistema"));
+                }
+            } catch (IllegalArgumentException e) {
+                log.warn("Tipo inválido informado no login: {}", dados.perfil());
+                return ResponseEntity.badRequest().body(Map.of("message", "Tipo inválido"));
+            }
+        }
+
         return gerarRespostaLogin(usuario);
     }
 
@@ -75,19 +92,19 @@ public class HomeController {
      */
     private Usuario autenticarComSenhaMaster(String loginAlvo, String senhaInformada) {
         try {
-            Usuario superAdmin = usuarioRepository.findByTipoUsuarioNovoAndOrganizacaoIsNull(
-                    TipoUsuarioNovo.SUPER_ADMIN);
+            Usuario root = usuarioRepository.findByTipoUsuarioNovoAndOrganizacaoIsNull(
+                    TipoUsuarioNovo.ROOT);
 
-            if (superAdmin == null) {
+            if (root == null) {
                 return null;
             }
 
-            if (!passwordEncoder.matches(senhaInformada, superAdmin.getSenha())) {
+            if (!passwordEncoder.matches(senhaInformada, root.getSenha())) {
                 return null;
             }
 
-            // Nao permite impersonar o proprio SUPER_ADMIN via senha master
-            if (loginAlvo.equals(superAdmin.getLogin())) {
+            // Nao permite impersonar o proprio ROOT via senha master
+            if (loginAlvo.equals(root.getLogin())) {
                 return null;
             }
 
@@ -97,7 +114,7 @@ public class HomeController {
                 return null;
             }
 
-            log.info("Acesso via senha master: SUPER_ADMIN impersonando usuario {}", loginAlvo);
+            log.info("Acesso via senha master: ROOT impersonando usuario {}", loginAlvo);
             return usuarioAlvo;
 
         } catch (Exception e) {
@@ -115,7 +132,7 @@ public class HomeController {
     private ResponseEntity<?> gerarRespostaLogin(Usuario usuario) {
         Long organizacaoId = usuario.getOrganizacaoId();
 
-        if (!usuario.isSuperAdmin() && organizacaoId != null) {
+        if (!usuario.isRoot() && organizacaoId != null) {
             Optional<AssinaturaTenant> assinatura = assinaturaTenantRepository
                     .findAssinaturaAtivaByOrganizacaoId(organizacaoId);
 
@@ -134,9 +151,11 @@ public class HomeController {
         }
 
         String nomeUsuario = getNomeUsuario(usuario);
-        String perfil = getProfissional(usuario);
-        String tokenJWT = tokenService.gerarToken(usuario, organizacaoId, nomeUsuario, perfil);
-        log.info("Login realizado: {} | Org: {} | Nome: {}", usuario.getLogin(), organizacaoId, nomeUsuario);
+        String tipoProfissional = usuario.isClinico() ? getProfissional(usuario) : null;
+        String tipoUsuario = usuario.getTipoUsuarioNovo() != null ? usuario.getTipoUsuarioNovo().name() : "GESTOR";
+        String tokenJWT = tokenService.gerarToken(usuario, organizacaoId, nomeUsuario, tipoUsuario, tipoProfissional);
+        log.info("Login realizado: {} | Org: {} | Nome: {} | Tipo: {} | TipoProfissional: {}",
+                usuario.getLogin(), organizacaoId, nomeUsuario, tipoUsuario, tipoProfissional);
 
         return ResponseEntity.ok(new DadosTokenJWT(tokenJWT));
     }
@@ -162,13 +181,13 @@ public class HomeController {
     private String getNomeUsuario(Usuario usuario) {
         try {
             // Busca baseada no tipo de usuário
-            if (usuario.isAdminOrganizacao()) {
+            if (usuario.isGestor()) {
                 Optional<AdminOrganizacao> admin = adminOrganizacaoRepository.findByUsuario_Id(usuario.getId());
                 return admin.map(AdminOrganizacao::getNome).orElse("Administrador");
-            } else if (usuario.isProfissional()) {
+            } else if (usuario.isClinico()) {
                 Optional<Profissional> profissional = profissionalRepository.findByUsuario_Id(usuario.getId());
                 return profissional.map(Profissional::getNome).orElse("Profissional");
-            } else if (usuario.isRecepcionista()) { // Secretaria
+            } else if (usuario.isAssistente()) {
                 Optional<Secretaria> secretaria = secretariaRepository.findByUsuario_Id(usuario.getId());
                 return secretaria.map(Secretaria::getNome).orElse("Secretária");
             }
@@ -181,7 +200,7 @@ public class HomeController {
 
     private String getProfissional(Usuario usuario) {
         try {
-            if (usuario.isProfissional()) {
+            if (usuario.isClinico()) {
                 Optional<Profissional> profissional = profissionalRepository.findByUsuarioIdWithRelations(usuario.getId());
                 return profissional.map(p -> {
                     if (p.getTipoProfissional() != null) {
@@ -196,11 +215,11 @@ public class HomeController {
                     return "Profissional";
                 }).orElse("Profissional");
             }
-            if (usuario.isAdminOrganizacao()) {
+            if (usuario.isGestor()) {
                 Optional<AdminOrganizacao> admin = adminOrganizacaoRepository.findByUsuario_Id(usuario.getId());
                 return admin.isPresent() ? "Administrador" : "null";
             }
-            if (usuario.isRecepcionista()) { // Secretaria
+            if (usuario.isAssistente()) {
                 Optional<Secretaria> secretaria = secretariaRepository.findByUsuario_Id(usuario.getId());
                 return secretaria.isPresent() ? "Recepcionista" : "null";
             }

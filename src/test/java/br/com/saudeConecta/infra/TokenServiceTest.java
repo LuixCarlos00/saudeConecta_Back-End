@@ -35,8 +35,7 @@ class TokenServiceTest {
         usuario = Usuario.builder()
                 .login("12345678900")
                 .senha("encodedPass")
-                .tipoUsuario((byte) 3)
-                .tipoUsuarioNovo(TipoUsuarioNovo.PROFISSIONAL)
+                .tipoUsuarioNovo(TipoUsuarioNovo.CLINICO)
                 .status(StatusUsuario.ATIVO)
                 .organizacao(organizacao)
                 .build();
@@ -87,7 +86,7 @@ class TokenServiceTest {
         @Test
         @DisplayName("Deve gerar token com organizacaoId embutido")
         void deveGerarTokenComOrganizacaoId() {
-            String token = tokenService.gerarToken(usuario, 1L, "Dr. Teste", "PROFISSIONAL");
+            String token = tokenService.gerarToken(usuario, 1L, "Dr. Teste", "CLINICO", "MEDICO");
             Long orgId = tokenService.getOrganizacaoIdFromToken(token);
 
             assertThat(orgId).isEqualTo(1L);
@@ -96,7 +95,7 @@ class TokenServiceTest {
         @Test
         @DisplayName("Deve gerar token com userId embutido")
         void deveGerarTokenComUserId() {
-            String token = tokenService.gerarToken(usuario, 1L, "Dr. Teste", "PROFISSIONAL");
+            String token = tokenService.gerarToken(usuario, 1L, "Dr. Teste", "CLINICO", "MEDICO");
             Long userId = tokenService.getUserIdFromToken(token);
 
             assertThat(userId).isEqualTo(10L);
@@ -105,7 +104,7 @@ class TokenServiceTest {
         @Test
         @DisplayName("Deve gerar token com tipoUsuario embutido")
         void deveGerarTokenComTipoUsuario() {
-            String token = tokenService.gerarToken(usuario, 1L, "Dr. Teste", "PROFISSIONAL");
+            String token = tokenService.gerarToken(usuario, 1L, "Dr. Teste", "CLINICO", "MEDICO");
             Integer tipo = tokenService.getTipoUsuarioFromToken(token);
 
             assertThat(tipo).isEqualTo(3);
@@ -114,7 +113,7 @@ class TokenServiceTest {
         @Test
         @DisplayName("Deve gerar token com nome embutido")
         void deveGerarTokenComNome() {
-            String token = tokenService.gerarToken(usuario, 1L, "Dr. Teste", "PROFISSIONAL");
+            String token = tokenService.gerarToken(usuario, 1L, "Dr. Teste", "CLINICO", "MEDICO");
             String nome = tokenService.getNomeFromToken(token);
 
             assertThat(nome).isEqualTo("Dr. Teste");

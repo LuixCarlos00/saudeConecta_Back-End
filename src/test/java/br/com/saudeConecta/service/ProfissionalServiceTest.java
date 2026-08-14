@@ -50,6 +50,7 @@ class ProfissionalServiceTest {
     @Mock private HistoricoDadosPessoaisService historicoDadosPessoaisService;
     @Mock private LimitePlanoService limitePlanoService;
     @Mock private MensageriaRepository mensageriaRepository;
+    @Mock private CacheEvictionService cacheEvictionService;
 
     @InjectMocks
     private ProfissionalService profissionalService;
@@ -83,7 +84,7 @@ class ProfissionalServiceTest {
 
         usuario = Usuario.builder()
                 .login("12345678900").senha("encodedPass")
-                .tipoUsuario((byte) 3).tipoUsuarioNovo(TipoUsuarioNovo.PROFISSIONAL)
+                .tipoUsuarioNovo(TipoUsuarioNovo.CLINICO)
                 .status(StatusUsuario.ATIVO).organizacao(organizacao)
                 .build();
         usuario.setId(USUARIO_ID);

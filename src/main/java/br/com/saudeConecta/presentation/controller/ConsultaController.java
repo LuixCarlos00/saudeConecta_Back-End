@@ -504,7 +504,7 @@ public class ConsultaController {
     }
 
     // ===============================================================
-    // BUSCAS DE ESTATISTICAS - Dashboard - Admin_ORGANIZACAO
+    // BUSCAS DE ESTATISTICAS - Dashboard - Gestor
     // ===============================================================
 
     /**
@@ -819,9 +819,9 @@ public class ConsultaController {
     /**
      * Busca histórico completo de consultas de um paciente, aplicando as
      * regras de acesso conforme o perfil do usuário autenticado (token JWT):
-     * - Administrador (ADMIN_ORG/SUPER_ADMIN/GERENTE): vê o histórico completo do paciente,
+     * - Administrador (GESTOR/ROOT): vê o histórico completo do paciente,
      *   combinando prontuários médicos e odontológicos de todos os profissionais.
-     * - Profissional (Médico ou Dentista): vê apenas os registros dos quais ele próprio é o autor.
+     * - Clínico (Médico ou Dentista): vê apenas os registros dos quais ele próprio é o autor.
      *
      * @param pacienteId ID do paciente
      * @param usuarioLogado Usuário autenticado, extraído do token JWT
@@ -837,7 +837,7 @@ public class ConsultaController {
         try {
             List<HistoricoConsultaPacienteResponse> historico;
 
-            if (usuarioLogado.isProfissional()) {
+            if (usuarioLogado.isClinico()) {
                 Optional<Profissional> profissionalLogado = profissionalRepository.findByUsuarioIdWithRelations(usuarioLogado.getId());
 
                 if (profissionalLogado.isEmpty()) {

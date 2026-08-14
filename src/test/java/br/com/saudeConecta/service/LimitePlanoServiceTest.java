@@ -99,7 +99,7 @@ class LimitePlanoServiceTest {
 
             assertThatThrownBy(() -> limitePlanoService.validarLimiteAdminOrg(1L))
                     .isInstanceOf(LimitePlanoException.class)
-                    .hasMessageContaining("ADMIN_ORG");
+                    .hasMessageContaining("GESTOR");
         }
 
         @Test

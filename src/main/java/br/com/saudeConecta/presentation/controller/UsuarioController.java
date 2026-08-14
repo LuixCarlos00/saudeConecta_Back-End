@@ -80,7 +80,7 @@ public class UsuarioController {
 
 
     @GetMapping("/buscarPerfilCompleto/{id}")
-    @Description( "Busca perfil completo do usuário por ID com dados específicos baseados no tipo (PROFISSIONAL, ADMIN_ORG, RECEPCIONISTA) incluindo endereço quando existir. Utilizado em: UserProfileComponent, UserService")
+    @Description( "Busca perfil completo do usuário por ID com dados específicos baseados no tipo (CLINICO, GESTOR, ASSISTENTE) incluindo endereço quando existir. Utilizado em: UserProfileComponent, UserService")
     public ResponseEntity<UsuarioPerfilCompletoResponse> buscarPerfilCompleto(@PathVariable Long id) {
         log.debug("Buscando perfil completo do usuario por ID: {}", id);
         return usuarioService.buscarPerfilCompleto(id)

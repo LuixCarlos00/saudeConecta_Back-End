@@ -39,19 +39,6 @@ public class AssinaturaTenantController {
     }
 
     /**
-     * Associa um plano a uma organização (SUPER_ADMIN).
-     * Usado pelo SUPER_ADMIN para associar plano ao cadastrar/gerenciar tenants.
-     */
-    @PostMapping("/organizacao/{organizacaoId}/plano/{planoId}")
-    public ResponseEntity<AssinaturaTenantResponse> associarPlanoAoTenant(
-            @PathVariable Long organizacaoId,
-            @PathVariable Long planoId) {
-        log.info("SUPER_ADMIN associando plano: org={}, plano={}", organizacaoId, planoId);
-        AssinaturaTenantResponse response = assinaturaTenantService.assinar(organizacaoId, planoId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    /**
      * Troca o plano da assinatura ativa.
      */
     @PutMapping("/trocar-plano/{novoPlanoId}")

@@ -64,16 +64,16 @@ INSERT INTO organizacao (nome, razao_social, cnpj, tipo, telefone, email, endere
 --    ID 9:  Dentista Org 2 (Dra. Ana — Endodontia)
 --    ID 10: Secretária Org 2
 -- ==============================================================================
-INSERT INTO usuarios (organizacao_id, login, senha, TipoUsuario, tipo_usuario_novo, status) VALUES
-(1,    'adm',                           '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 1, 'ADMIN_ORG',    'ATIVO'),
-(1,    'med',                           '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 3, 'PROFISSIONAL', 'ATIVO'),
-(1,    'dra.maria@saudetotal.com.br',   '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 3, 'PROFISSIONAL', 'ATIVO'),
-(1,    'med2',  '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 3, 'PROFISSIONAL', 'ATIVO'),
-(1,    'sec',    '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 2, 'RECEPCIONISTA','ATIVO'),
-(2,    'admin@odontosmile.com.br',      '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 1, 'ADMIN_ORG',    'ATIVO'),
-(2,    'dr.pedro@odontosmile.com.br',   '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 3, 'PROFISSIONAL', 'ATIVO'),
-(2,    'dra.ana@odontosmile.com.br',    '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 3, 'PROFISSIONAL', 'ATIVO'),
-(2,    'atendimento@odontosmile.com.br','$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 2, 'RECEPCIONISTA','ATIVO');
+INSERT INTO usuarios (organizacao_id, login, senha, tipo_usuario_novo, status) VALUES
+(1,    'adm',                           '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 'GESTOR',    'ATIVO'),
+(1,    'med',                           '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 'CLINICO', 'ATIVO'),
+(1,    'dra.maria@saudetotal.com.br',   '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 'CLINICO', 'ATIVO'),
+(1,    'med2',  '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 'CLINICO', 'ATIVO'),
+(1,    'sec',    '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 'ASSISTENTE','ATIVO'),
+(2,    'admin@odontosmile.com.br',      '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 'GESTOR',    'ATIVO'),
+(2,    'dr.pedro@odontosmile.com.br',   '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 'CLINICO', 'ATIVO'),
+(2,    'dra.ana@odontosmile.com.br',    '$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 'CLINICO', 'ATIVO'),
+(2,    'atendimento@odontosmile.com.br','$2y$10$hubYaqDdzJx/4apNtiCoE.jAah1wlFLGJ9PoST1lsbS8u7WwnwGYK', 'ASSISTENTE','ATIVO');
 
 -- ==============================================================================
 -- 4. ADMIN ORGANIZAÇÃO (2 registros)

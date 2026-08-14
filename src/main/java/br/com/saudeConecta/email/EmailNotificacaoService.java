@@ -24,6 +24,8 @@ public class EmailNotificacaoService {
 
     private static final String TEMPLATE_CREDENCIAIS = "email-credenciais";
     private static final String TEMPLATE_RECUPERACAO = "email-recuperacao-senha";
+    private static final String TEMPLATE_CHAMADO = "email-chamado-suporte";
+    private static final String TEMPLATE_CHAMADO_STATUS = "email-chamado-status";
     private static final String ASSUNTO_CREDENCIAIS = "Bem-vindo ao Saúde Conecta - Suas credenciais de acesso";
     private static final String ASSUNTO_RECUPERACAO = "Saúde Conecta - Recuperação de Senha";
 
@@ -141,6 +143,106 @@ public class EmailNotificacaoService {
 
             } catch (Exception e) {
                 log.error("Erro ao preparar email de recuperação para {}: {}", email, e.getMessage());
+            }
+        }, emailTaskExecutor);
+    }
+
+    /**
+     * Envia a confirmação de abertura de um chamado de suporte de forma assíncrona.
+     *
+     * @param email               email do usuário que abriu o chamado
+     * @param nome                nome do usuário que abriu o chamado
+     * @param protocolo           protocolo legível do chamado
+     * @param titulo              título do chamado
+     * @param corpo               descrição do chamado
+     * @param categoria           descrição da categoria
+     * @param prioridade          descrição da prioridade
+     * @param status              descrição do status atual
+     * @param prazoDias           prazo previsto em dias
+     * @param previsaoAtendimento data prevista de atendimento formatada
+     * @param quantidadeAnexos    quantidade de imagens anexadas
+     * @param organizacaoId       ID da organização
+     */
+    @Async
+    public void enviarConfirmacaoChamadoSuporte(String email, String nome, String protocolo, String titulo,
+                                                 String corpo, String categoria, String prioridade, String status,
+                                                 int prazoDias, String previsaoAtendimento, int quantidadeAnexos,
+                                                 Long organizacaoId) {
+        if (!emailHabilitado) {
+            log.warn("Email desabilitado. Confirmacao de chamado nao enviada para: {}", email);
+            log.info("CHAMADO {} - Titulo: {}, Previsao: {}", protocolo, titulo, previsaoAtendimento);
+            return;
+        }
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                Map<String, Object> variaveis = new HashMap<>();
+                variaveis.put("nome", nome);
+                variaveis.put("protocolo", protocolo);
+                variaveis.put("titulo", titulo);
+                variaveis.put("corpo", corpo);
+                variaveis.put("categoria", categoria);
+                variaveis.put("prioridade", prioridade);
+                variaveis.put("status", status);
+                variaveis.put("prazoDias", prazoDias);
+                variaveis.put("previsaoAtendimento", previsaoAtendimento);
+                variaveis.put("quantidadeAnexos", quantidadeAnexos);
+
+                String corpoHtml = emailTemplateService.renderizar(TEMPLATE_CHAMADO, variaveis);
+                String assunto = "Saúde Conecta - Chamado " + protocolo + " registrado";
+
+                emailRetryService.executarComRetry(
+                        email, nome, assunto, corpoHtml,
+                        "chamado", organizacaoId, null);
+
+            } catch (Exception e) {
+                log.error("Erro ao preparar email de chamado {} para {}: {}", protocolo, email, e.getMessage());
+            }
+        }, emailTaskExecutor);
+    }
+
+    /**
+     * Notifica o autor do chamado sobre a atualização de status de forma assíncrona.
+     *
+     * @param email          email do autor do chamado
+     * @param nome           nome do autor do chamado
+     * @param protocolo      protocolo legível do chamado
+     * @param titulo         título do chamado
+     * @param statusAnterior descrição do status anterior
+     * @param statusAtual    descrição do novo status
+     * @param observacao     mensagem opcional da equipe de suporte
+     * @param organizacaoId  ID da organização
+     */
+    @Async
+    public void enviarAtualizacaoStatusChamado(String email, String nome, String protocolo, String titulo,
+                                                String statusAnterior, String statusAtual, String observacao,
+                                                Long organizacaoId) {
+        if (!emailHabilitado) {
+            log.warn("Email desabilitado. Atualizacao de status nao enviada para: {}", email);
+            log.info("CHAMADO {} - Status: {} -> {}", protocolo, statusAnterior, statusAtual);
+            return;
+        }
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                Map<String, Object> variaveis = new HashMap<>();
+                variaveis.put("nome", nome);
+                variaveis.put("protocolo", protocolo);
+                variaveis.put("titulo", titulo);
+                variaveis.put("statusAnterior", statusAnterior);
+                variaveis.put("statusAtual", statusAtual);
+                variaveis.put("observacao", observacao);
+
+                String corpoHtml = emailTemplateService.renderizar(TEMPLATE_CHAMADO_STATUS, variaveis);
+                String assunto = "Saúde Conecta - Chamado " + protocolo + ": " + statusAtual;
+
+                emailRetryService.executarComRetry(
+                        email, nome, assunto, corpoHtml,
+                        "chamado", organizacaoId, null);
+
+            } catch (Exception e) {
+                log.error("Erro ao preparar email de atualizacao do chamado {} para {}: {}",
+                        protocolo, email, e.getMessage());
             }
         }, emailTaskExecutor);
     }

@@ -462,27 +462,30 @@ public class ConsultaService {
             throw new IllegalStateException("Já existe consulta agendada para este horário");
         }
 
-        Especialidade especialidade = null;
-        if (request.especialidadeId() != null) {
-            especialidade = especialidadeRepository.findById(request.especialidadeId()).orElse(null);
-        }
-
-        FormaPagamento formaPagamento = null;
-        if (request.formaPagamentoId() != null) {
-            formaPagamento = formaPagamentoRepository.findById(request.formaPagamentoId()).orElse(null);
-        }
-
         StatusConsulta statusAnterior = consulta.getStatus();
 
         consulta.setProfissional(profissional);
         consulta.setPaciente(paciente);
-        consulta.setEspecialidade(especialidade);
         consulta.setDataHora(request.dataHora());
+
+        // Vinculos opcionais: quando o id nao vem no request, o valor atual e preservado
+        // para que uma edicao parcial nao apague dados ja gravados.
+        if (request.especialidadeId() != null) {
+            Especialidade especialidade = especialidadeRepository.findById(request.especialidadeId())
+                .orElseThrow(() -> new IllegalArgumentException("Especialidade nao encontrada"));
+            consulta.setEspecialidade(especialidade);
+        }
+
+        if (request.formaPagamentoId() != null) {
+            FormaPagamento formaPagamento = formaPagamentoRepository.findById(request.formaPagamentoId())
+                .orElseThrow(() -> new IllegalArgumentException("Forma de pagamento nao encontrada"));
+            consulta.setFormaPagamento(formaPagamento);
+        }
+
         if (request.duracaoMinutos() != null) {
             consulta.setDuracaoMinutos(request.duracaoMinutos());
         }
         consulta.setObservacoes(request.observacoes());
-        consulta.setFormaPagamento(formaPagamento);
         consulta.setValor(request.valor());
 
         if (request.status() != null && !request.status().isBlank()) {
@@ -560,7 +563,7 @@ public class ConsultaService {
     }
 
     // ===============================================================
-    // BUSCAS DE ESTATISTICAS - Dashboard - Admin_ORGANIZACAO
+    // BUSCAS DE ESTATISTICAS - Dashboard - Gestor
     // ===============================================================
 
     /**
@@ -956,21 +959,9 @@ public class ConsultaService {
         log.debug("Pesquisando consultas - OrgId: {}, UsuarioId: {}, Inicio: {}, Fim: {}, Status: {}", 
                   orgId, profissionalId, dataInicio, dataFim, status);
 
-        if (status != null && status.trim().equalsIgnoreCase("ALL")) {
-            return consultaRepository.findByOrganizacaoIdAndProfissionalIdAndDataHoraBetweenWithRelations(
-                orgId,
-                    profissionalId,
-                dataInicio.atStartOfDay(),
-                dataFim.plusDays(1).atStartOfDay()
-            );
-        }
+        StatusConsulta statusEnum = converterStatus(status);
 
-        StatusConsulta statusEnum = null;
-        if (status != null && !status.isBlank() && !status.trim().equalsIgnoreCase("ALL")) {
-            statusEnum = StatusConsulta.valueOf(status.trim().toUpperCase());
-        }
-
-        return consultaRepository.findByOrganizacaoIdAndProfissionalIdDirectAndStatusOptionalAndDataHoraBetween(
+        return consultaRepository.findByOrganizacaoIdAndUsuarioIdAndStatusOptionalAndDataHoraBetween(
             orgId,
             profissionalId,
             statusEnum,
@@ -1145,18 +1136,7 @@ public class ConsultaService {
     public List<Consulta> buscarConsultasPorIntervalo(LocalDate dataInicio, LocalDate dataFim, String status) {
         Long orgId = tenantHelper.getCurrentTenantId();
         
-        if (status != null && status.trim().equalsIgnoreCase("ALL")) {
-            return consultaRepository.findByOrganizacaoIdAndDataHoraBetweenWithRelations(
-                orgId,
-                dataInicio.atStartOfDay(),
-                dataFim.plusDays(1).atStartOfDay()
-            );
-        }
-
-        StatusConsulta statusEnum = null;
-        if (status != null && !status.isBlank()) {
-            statusEnum = StatusConsulta.valueOf(status.trim().toUpperCase());
-        }
+        StatusConsulta statusEnum = converterStatus(status);
 
         return consultaRepository.findByStatusOptionalAndDataHoraBetweenWithRelations(
             orgId,
@@ -1166,6 +1146,24 @@ public class ConsultaService {
         );
     }
     
+    /**
+     * Converte o status recebido na requisicao para o enum correspondente.
+     *
+     * @param status nome do status; nulo, vazio ou "ALL" significa "sem filtro de status"
+     * @return o enum correspondente ou null quando nao houver filtro
+     * @throws IllegalArgumentException se o valor informado nao for um status valido
+     */
+    private StatusConsulta converterStatus(String status) {
+        if (status == null || status.isBlank() || status.trim().equalsIgnoreCase("ALL")) {
+            return null;
+        }
+        try {
+            return StatusConsulta.valueOf(status.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Status de consulta invalido: " + status);
+        }
+    }
+
     private void registrarHistorico(Consulta consulta, StatusConsulta statusAnterior, 
                                      StatusConsulta statusNovo, String observacao, Usuario alteradoPor) {
         ConsultaHistorico historico = ConsultaHistorico.builder()
@@ -1395,7 +1393,7 @@ public class ConsultaService {
      * @return ID do profissional ou null se não for profissional
      */
     private Long extrairProfissionalId(br.com.saudeConecta.domain.usuario.Usuario usuario) {
-        if (usuario == null || !usuario.isProfissional()) {
+        if (usuario == null || !usuario.isClinico()) {
             return null;
         }
         return profissionalRepository.findByUsuarioIdWithRelations(usuario.getId())

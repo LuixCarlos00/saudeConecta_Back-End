@@ -66,7 +66,7 @@ class ConsultaFluxoE2ETest {
 
     @Test
     @Order(1)
-    @WithMockUser(roles = "ADMIN_ORG")
+    @WithMockUser(roles = "ADMIN")
     @DisplayName("Passo 1 - Agendar consulta")
     void passo1_agendarConsulta() throws Exception {
         AgendarConsultaRequest request = new AgendarConsultaRequest(
@@ -89,7 +89,7 @@ class ConsultaFluxoE2ETest {
 
     @Test
     @Order(2)
-    @WithMockUser(roles = "ADMIN_ORG")
+    @WithMockUser(roles = "ADMIN")
     @DisplayName("Passo 2 - Confirmar consulta agendada")
     void passo2_confirmarConsulta() throws Exception {
         when(consultaService.atualizarStatus(eq(CONSULTA_ID), eq(StatusConsulta.CONFIRMADA), isNull()))
@@ -120,7 +120,7 @@ class ConsultaFluxoE2ETest {
 
     @Test
     @Order(4)
-    @WithMockUser(roles = "ADMIN_ORG")
+    @WithMockUser(roles = "ADMIN")
     @DisplayName("Passo 4 - Registrar pagamento da consulta realizada")
     void passo4_pagarConsulta() throws Exception {
         when(consultaService.atualizarStatus(eq(CONSULTA_ID), eq(StatusConsulta.PAGO), isNull()))
@@ -135,7 +135,7 @@ class ConsultaFluxoE2ETest {
 
     @Test
     @Order(5)
-    @WithMockUser(roles = "ADMIN_ORG")
+    @WithMockUser(roles = "ADMIN")
     @DisplayName("Passo 5 - Tentativa de cancelar consulta PAGA deve retornar 422 (Unprocessable Entity)")
     void passo5_naoDeveCancelarConsultaPaga() throws Exception {
         when(consultaService.atualizarStatus(eq(CONSULTA_ID), eq(StatusConsulta.CANCELADA), eq("Tentativa inválida")))

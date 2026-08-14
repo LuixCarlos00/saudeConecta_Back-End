@@ -61,8 +61,8 @@ public class LimitePlanoService {
 
         Long usado = adminOrganizacaoRepository.countAtivosByOrganizacaoId(organizacaoId);
         if (usado >= limite) {
-            log.info("Limite de ADMIN_ORG atingido para org {}: {}/{}", organizacaoId, usado, limite);
-            throw new LimitePlanoException("ADMIN_ORG", limite, usado);
+            log.info("Limite de GESTOR atingido para org {}: {}/{}", organizacaoId, usado, limite);
+            throw new LimitePlanoException("GESTOR", limite, usado);
         }
     }
 

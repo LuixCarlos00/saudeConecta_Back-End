@@ -39,6 +39,7 @@ class UsuarioServiceTest {
     @Mock private AdminOrganizacaoRepository adminOrganizacaoRepository;
     @Mock private PacienteRepository pacienteRepository;
     @Mock private SecretariaRepository secretariaRepository;
+    @Mock private CacheEvictionService cacheEvictionService;
 
     @InjectMocks
     private UsuarioService usuarioService;
@@ -57,7 +58,7 @@ class UsuarioServiceTest {
 
         usuario = Usuario.builder()
                 .login("12345678900").senha("encodedPass")
-                .tipoUsuario((byte) 3).tipoUsuarioNovo(TipoUsuarioNovo.PROFISSIONAL)
+                .tipoUsuarioNovo(TipoUsuarioNovo.CLINICO)
                 .status(StatusUsuario.ATIVO).organizacao(organizacao)
                 .build();
         usuario.setId(USUARIO_ID);
@@ -169,8 +170,8 @@ class UsuarioServiceTest {
             TenantContext.setCurrentTenant(ORG_ID);
             // SuperAdmin precisa pertencer à mesma org para passar o filter e chegar na validação
             Usuario superAdmin = Usuario.builder()
-                    .login("superadmin").tipoUsuario((byte) 0)
-                    .tipoUsuarioNovo(TipoUsuarioNovo.SUPER_ADMIN)
+                    .login("superadmin")
+                    .tipoUsuarioNovo(TipoUsuarioNovo.ROOT)
                     .status(StatusUsuario.ATIVO)
                     .organizacao(organizacao)
                     .build();
@@ -217,15 +218,15 @@ class UsuarioServiceTest {
             TenantContext.clear();
 
             Usuario adminOrgUsuario = Usuario.builder()
-                    .login("cnpj").tipoUsuario((byte) 1)
-                    .tipoUsuarioNovo(TipoUsuarioNovo.ADMIN_ORG)
+                    .login("cnpj")
+                    .tipoUsuarioNovo(TipoUsuarioNovo.GESTOR)
                     .status(StatusUsuario.ATIVO).organizacao(organizacao)
                     .build();
             adminOrgUsuario.setId(USUARIO_ID);
 
             Usuario outroUsuario = Usuario.builder()
-                    .login("outro").tipoUsuario((byte) 3)
-                    .tipoUsuarioNovo(TipoUsuarioNovo.PROFISSIONAL)
+                    .login("outro")
+                    .tipoUsuarioNovo(TipoUsuarioNovo.CLINICO)
                     .status(StatusUsuario.ATIVO).organizacao(organizacao)
                     .build();
             outroUsuario.setId(99L);
@@ -288,7 +289,7 @@ class UsuarioServiceTest {
         @DisplayName("Deve retornar vazio quando tipoUsuarioNovo for nulo")
         void deveRetornarVazioQuandoTipoNulo() {
             Usuario usuarioSemTipo = Usuario.builder()
-                    .login("sem-tipo").tipoUsuario((byte) 3)
+                    .login("sem-tipo")
                     .tipoUsuarioNovo(null).status(StatusUsuario.ATIVO)
                     .build();
             usuarioSemTipo.setId(USUARIO_ID);
@@ -315,8 +316,8 @@ class UsuarioServiceTest {
         @DisplayName("Deve retornar perfil de secretaria corretamente")
         void deveRetornarPerfilSecretaria() {
             usuario = Usuario.builder()
-                    .login("sec").tipoUsuario((byte) 2)
-                    .tipoUsuarioNovo(TipoUsuarioNovo.RECEPCIONISTA)
+                    .login("sec")
+                    .tipoUsuarioNovo(TipoUsuarioNovo.ASSISTENTE)
                     .status(StatusUsuario.ATIVO).organizacao(organizacao)
                     .build();
             usuario.setId(USUARIO_ID);
