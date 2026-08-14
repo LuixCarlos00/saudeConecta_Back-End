@@ -36,6 +36,7 @@ public interface RelatorioRepository extends Repository<Consulta, Long> {
         SELECT c FROM Consulta c
         JOIN FETCH c.paciente p
         JOIN FETCH c.profissional prof
+        LEFT JOIN FETCH prof.tipoProfissional
         LEFT JOIN FETCH c.especialidade
         LEFT JOIN FETCH c.formaPagamento
         WHERE c.organizacao.id = :organizacaoId

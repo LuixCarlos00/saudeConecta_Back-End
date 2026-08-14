@@ -12,6 +12,7 @@ import java.util.List;
  * @param especialidadeNome especialidade vinculada a consulta
  * @param profissionalId    identificador do profissional responsavel
  * @param profissionalNome  nome do profissional responsavel
+ * @param tipoProfissionalNome codigo do tipo de profissional (MEDICO ou DENTISTA)
  * @param diagnostico       diagnostico registrado no prontuario, quando houver
  * @param documentos        documentos derivados do atendimento
  */
@@ -22,6 +23,7 @@ public record ConsultaRelatorioResponse(
         String especialidadeNome,
         Long profissionalId,
         String profissionalNome,
+        String tipoProfissionalNome,
         String diagnostico,
         List<DocumentoRelatorioResponse> documentos
 ) {

@@ -363,11 +363,25 @@ public class RelatorioPacienteService {
                 consulta.getEspecialidade() != null ? consulta.getEspecialidade().getNome() : null,
                 consulta.getProfissional() != null ? consulta.getProfissional().getId() : null,
                 consulta.getProfissional() != null ? consulta.getProfissional().getNome() : null,
+                resolverTipoProfissional(consulta.getProfissional()),
                 diagnosticoPorConsulta.get(consulta.getId()),
                 documentos);
     }
 
     // ── Utilitarios ────────────────────────────────────────
+
+    /**
+     * Resolve o codigo do tipo de profissional da consulta.
+     *
+     * @param profissional profissional responsavel pelo atendimento
+     * @return codigo do tipo (MEDICO ou DENTISTA) ou nulo quando indisponivel
+     */
+    private String resolverTipoProfissional(Profissional profissional) {
+        if (profissional == null || profissional.getTipoProfissional() == null) {
+            return null;
+        }
+        return profissional.getTipoProfissional().getCodigo();
+    }
 
     private void adicionar(Map<Long, List<DocumentoRelatorioResponse>> documentos,
                            Long consultaId,

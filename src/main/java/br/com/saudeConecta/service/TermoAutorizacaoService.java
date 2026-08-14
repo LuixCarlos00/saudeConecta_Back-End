@@ -41,16 +41,19 @@ public class TermoAutorizacaoService {
         Consulta consulta = consultaRepository.findById(consultaId)
                 .orElseThrow(() -> new IllegalArgumentException("Consulta nao encontrada: " + consultaId));
 
-        // Se já existe um termo para esta consulta, retorna o token existente (se nao expirado)
-        var termoExistente = termoRepository.findByConsultaId(consultaId);
+        // Usa lock pessimista para evitar race condition em requests simultâneos
+        var termoExistente = termoRepository.findByConsultaIdWithLock(consultaId);
         if (termoExistente.isPresent()) {
             TermoAutorizacao existente = termoExistente.get();
-            if (!existente.isExpirado() && existente.isPendente()) {
-                log.info("Token existente reutilizado para consulta={}", consultaId);
-                return existente.getToken();
+            // Se existe registro com status PENDENTE, deleta e cria novo
+            if (existente.isPendente()) {
+                log.info("Deletando termo pendente expirado/antigo para consulta={}", consultaId);
+                termoRepository.delete(existente);
+                termoRepository.flush(); // Flush explícito para garantir remoção antes do insert
+            } else {
+                // Se já foi assinado, não permite recriar
+                throw new IllegalStateException("Questionário já foi respondido para esta consulta.");
             }
-            // Se expirado ou já assinado, remove e cria novo
-            termoRepository.delete(existente);
         }
 
         Paciente paciente = consulta.getPaciente();
