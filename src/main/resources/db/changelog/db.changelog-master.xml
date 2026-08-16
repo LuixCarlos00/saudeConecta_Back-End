@@ -124,4 +124,13 @@
 
     <!-- Chamados de suporte (tickets) e anexos de imagem -->
     <include file="db/changelog/08-2026/051-criar-tabelas-chamado-suporte.xml"/>
+
+    <!-- Alterar coluna descricao para TEXT para suportar JSON de recursos -->
+    <include file="db/changelog/08-2026/052-alterar-coluna-descricao-text.xml"/>
+
+    <!-- Atualizar descrições com formato JSON e recursos -->
+    <include file="db/changelog/08-2026/053-atualizar-descricoes-com-recursos.xml"/>
+
+    <!-- Atualizar valores dos planos (R$149, R$279, R$549) -->
+    <include file="db/changelog/08-2026/054-atualizar-valores-planos.xml"/>
 </databaseChangeLog>

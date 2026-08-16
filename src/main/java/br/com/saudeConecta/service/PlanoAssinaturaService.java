@@ -90,7 +90,7 @@ public class PlanoAssinaturaService {
                         HttpStatus.NOT_FOUND));
 
         plano.setNome(request.nome());
-        plano.setDescricao(request.descricao());
+        plano.setDescricao(request.getDescricaoFormatada());
         plano.setValorMensal(request.valorMensal());
         plano.setLimiteAdminOrg(request.limiteAdminOrg());
         plano.setLimiteProfissional(request.limiteProfissional());

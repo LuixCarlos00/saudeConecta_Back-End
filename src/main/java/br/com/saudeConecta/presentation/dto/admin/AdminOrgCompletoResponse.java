@@ -3,6 +3,7 @@ package br.com.saudeConecta.presentation.dto.admin;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
+import br.com.saudeConecta.domain.usuario.Usuario;
 
 /**
  * DTO de resposta com dados completos do AdminOrg + Organização + Endereço.
@@ -21,6 +22,7 @@ public record AdminOrgCompletoResponse(
     String nomeClinica,
     String razaoSocial,
     String cnpj,
+    String cpf,
     String tipoClinica,
     String emailClinica,
     String telefoneClinica,
@@ -37,6 +39,11 @@ public record AdminOrgCompletoResponse(
     public static AdminOrgCompletoResponse fromEntity(AdminOrganizacao admin) {
         Organizacao org = admin.getOrganizacao();
         Endereco end = org != null ? org.getEndereco() : null;
+        Usuario usuario = admin.getUsuario();
+
+        // Se CNPJ for null ou vazio, retorna o CPF do usuário (login)
+        String cnpj = org != null ? org.getCnpj() : null;
+        String cpf = (cnpj == null || cnpj.isBlank()) && usuario != null ? usuario.getLogin() : null;
 
         return new AdminOrgCompletoResponse(
             admin.getId(),
@@ -49,7 +56,8 @@ public record AdminOrgCompletoResponse(
             org != null ? org.getId() : null,
             org != null ? org.getNome() : null,
             org != null ? org.getRazaoSocial() : null,
-            org != null ? org.getCnpj() : null,
+            cnpj,
+            cpf,
             org != null && org.getTipo() != null ? org.getTipo().name() : null,
             org != null ? org.getEmail() : null,
             org != null ? org.getTelefone() : null,

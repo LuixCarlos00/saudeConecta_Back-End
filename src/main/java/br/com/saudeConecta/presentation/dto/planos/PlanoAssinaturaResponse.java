@@ -3,6 +3,7 @@ package br.com.saudeConecta.presentation.dto.planos;
 import br.com.saudeConecta.domain.planos.PlanoAssinatura;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public record PlanoAssinaturaResponse(
         Long id,
@@ -16,7 +17,9 @@ public record PlanoAssinaturaResponse(
         BigDecimal valorAdicionalAdmin,
         BigDecimal valorAdicionalProfissional,
         BigDecimal valorAdicionalSecretaria,
-        Boolean ativo
+        Boolean ativo,
+        String titulo,
+        List<String> recursos
 ) {
 
     /**
@@ -26,6 +29,8 @@ public record PlanoAssinaturaResponse(
      * @return PlanoAssinaturaResponse
      */
     public static PlanoAssinaturaResponse fromEntity(PlanoAssinatura entity) {
+        PlanoDescricaoParser.PlanoDescricao parsed = PlanoDescricaoParser.parse(entity.getDescricao());
+        
         return new PlanoAssinaturaResponse(
                 entity.getId(),
                 entity.getNome(),
@@ -38,7 +43,9 @@ public record PlanoAssinaturaResponse(
                 entity.getValorAdicionalAdmin(),
                 entity.getValorAdicionalProfissional(),
                 entity.getValorAdicionalSecretaria(),
-                entity.getAtivo()
+                entity.getAtivo(),
+                parsed.getTitulo(),
+                parsed.getRecursos()
         );
     }
 }
