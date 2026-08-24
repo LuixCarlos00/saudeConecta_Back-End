@@ -11,4 +11,16 @@ public interface HistoricoDadosPessoaisRepository extends JpaRepository<Historic
 
     List<HistoricoDadosPessoais> findByOrganizacao_IdAndUsuario_IdOrderByCriadoEmDesc(
             Long organizacaoId, Long usuarioId);
+
+    List<HistoricoDadosPessoais> findByOrganizacao_IdAndEntidadeAndIdEntidadeOrderByCriadoEmDesc(
+            Long organizacaoId, String entidade, Long idEntidade);
+
+    // Métodos para SUPER_ADMIN (sem filtro de organização)
+    List<HistoricoDadosPessoais> findByUsuario_IdOrderByCriadoEmDesc(Long usuarioId);
+
+    List<HistoricoDadosPessoais> findByEntidadeAndIdEntidadeOrderByCriadoEmDesc(
+            String entidade, Long idEntidade);
+
+    // Busca os 10 registros mais recentes globalmente (para SUPER_ADMIN)
+    List<HistoricoDadosPessoais> findTop10ByOrderByCriadoEmDesc();
 }
