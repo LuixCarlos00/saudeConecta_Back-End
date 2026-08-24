@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public record PlanoAssinaturaRequest(
 
@@ -31,6 +32,24 @@ public record PlanoAssinaturaRequest(
 
         BigDecimal valorAdicionalProfissional,
 
-        BigDecimal valorAdicionalSecretaria
+        BigDecimal valorAdicionalSecretaria,
+
+        String titulo,
+
+        List<String> recursos
 ) {
+
+    /**
+     * Formata a descrição no padrão esperado "titulo: xxx\nRecursos: [xxx, xxx]"
+     * Se titulo e recursos forem fornecidos, usa o formatador.
+     * Caso contrário, usa a descricao original (compatibilidade com versões antigas).
+     *
+     * @return descricao formatada
+     */
+    public String getDescricaoFormatada() {
+        if (titulo != null && !titulo.trim().isEmpty() && recursos != null && !recursos.isEmpty()) {
+            return PlanoDescricaoParser.format(titulo, recursos);
+        }
+        return descricao != null ? descricao : "";
+    }
 }

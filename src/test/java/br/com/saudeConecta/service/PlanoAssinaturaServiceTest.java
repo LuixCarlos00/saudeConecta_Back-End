@@ -60,7 +60,9 @@ class PlanoAssinaturaServiceTest {
                 2,
                 BigDecimal.valueOf(50),
                 BigDecimal.valueOf(30),
-                BigDecimal.valueOf(20)
+                BigDecimal.valueOf(20),
+                "Plano básico para iniciantes",
+                List.of("Agendamento online", "Prontuário eletrônico")
         );
     }
 

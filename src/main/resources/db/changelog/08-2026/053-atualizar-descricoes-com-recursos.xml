@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ========================================== -->
+    <!-- ATUALIZAR DESCRIÇÕES COM FORMATO JSON      -->
+    <!-- Formato: titulo: <descrição> Recursos: [<recursos>] -->
+    <!-- ========================================== -->
+    <changeSet id="053-atualizar-descricoes-com-recursos" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="plano_assinatura"/>
+        </preConditions>
+        
+        <!-- Plano STARTER -->
+        <update tableName="plano_assinatura">
+            <column name="descricao" value="titulo: Ideal para consultórios e profissionais autônomos
+Recursos: [&quot;Agendamento online completo&quot;,&quot;Prontuário médico e odontológico&quot;,&quot;Odontograma digital&quot;,&quot;Cadastro ilimitado de pacientes&quot;,&quot;Dashboard com gráficos&quot;,&quot;Geração de PDF (receitas e exames)&quot;,&quot;Notificações por e-mail&quot;]"/>
+            <where>tipo = 'STARTER'</where>
+        </update>
+        
+        <!-- Plano PROFISSIONAL -->
+        <update tableName="plano_assinatura">
+            <column name="descricao" value="titulo: Perfeito para clínicas em crescimento
+Recursos: [&quot;Tudo do plano Starter&quot;,&quot;Relatórios e métricas avançadas&quot;,&quot;Mensageria com rastreio de falhas&quot;,&quot;Link direto ao WhatsApp do paciente&quot;,&quot;Suporte prioritário por e-mail (24h)&quot;]"/>
+            <where>tipo = 'PROFISSIONAL'</where>
+        </update>
+        
+        <!-- Plano BUSINESS -->
+        <update tableName="plano_assinatura">
+            <column name="descricao" value="titulo: Para clínicas de médio e grande porte
+Recursos: [&quot;Tudo do plano Profissional&quot;,&quot;Profissionais ilimitados&quot;,&quot;Secretárias ilimitadas&quot;,&quot;Gerente de conta dedicado&quot;,&quot;Treinamento da equipe incluso&quot;,&quot;Suporte prioritário por e-mail (12h)&quot;]"/>
+            <where>tipo = 'BUSINESS'</where>
+        </update>
+    </changeSet>
+
+</databaseChangeLog>

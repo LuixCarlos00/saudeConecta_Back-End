@@ -36,6 +36,7 @@ public class TenantFilter extends OncePerRequestFilter {
         "/medico/buscarPorEmail",
         "/public",
         "/publico",
+        "/planos",
         "/swagger-ui",
         "/v3/api-docs",
         "/actuator"

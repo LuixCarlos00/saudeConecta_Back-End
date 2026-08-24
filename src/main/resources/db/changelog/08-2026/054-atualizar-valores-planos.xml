@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ========================================== -->
+    <!-- ATUALIZAR VALORES DOS PLANOS               -->
+    <!-- Starter: R$149, Profissional: R$279, Business: R$549 -->
+    <!-- ========================================== -->
+    <changeSet id="054-atualizar-valores-planos" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="plano_assinatura"/>
+        </preConditions>
+        
+        <!-- Plano STARTER: R$149,00 -->
+        <update tableName="plano_assinatura">
+            <column name="valor_mensal" valueNumeric="149.00"/>
+            <where>tipo = 'STARTER'</where>
+        </update>
+        
+        <!-- Plano PROFISSIONAL: R$279,00 -->
+        <update tableName="plano_assinatura">
+            <column name="valor_mensal" valueNumeric="279.00"/>
+            <where>tipo = 'PROFISSIONAL'</where>
+        </update>
+        
+        <!-- Plano BUSINESS: R$549,00 -->
+        <update tableName="plano_assinatura">
+            <column name="valor_mensal" valueNumeric="549.00"/>
+            <where>tipo = 'BUSINESS'</where>
+        </update>
+    </changeSet>
+
+</databaseChangeLog>

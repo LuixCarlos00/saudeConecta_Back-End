@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ========================================== -->
+    <!-- ALTERAR COLUNA DESCRICAO PARA TEXT          -->
+    <!-- Permite armazenar JSON com recursos        -->
+    <!-- ========================================== -->
+    <changeSet id="052-alterar-coluna-descricao-text" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="plano_assinatura"/>
+        </preConditions>
+        <modifyDataType 
+            tableName="plano_assinatura" 
+            columnName="descricao" 
+            newDataType="TEXT"/>
+    </changeSet>
+
+</databaseChangeLog>

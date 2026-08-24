@@ -57,6 +57,8 @@ public class SecurityConfigurations {
                 .requestMatchers(HttpMethod.GET, "/Home/recuperaLogin={Id}&dados={tipoUsuario}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/publico/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/publico/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/planos").permitAll()
+                .requestMatchers(HttpMethod.GET, "/planos/**").permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .addFilterBefore(tenantFilter, UsernamePasswordAuthenticationFilter.class)
