@@ -88,7 +88,7 @@ class AdminOrganizacaoControllerIntegrationTest {
         void deveRetornar200ComDadosCompletos() throws Exception {
             AdminOrgCompletoResponse response = new AdminOrgCompletoResponse(
                     1L, "Admin", "Gerente", "admin@org.com", false, "ATIVO",
-                    1L, "Clínica A", "Razão Social", "12345678000190", "CLINICA",
+                    1L, "Clínica A", "Razão Social", "12345678000190", null, "CLINICA",
                     "clinica@org.com", "(11) 99999-0000",
                     1L, "01310-100", "SP", "São Paulo", "Centro", "Rua A", 100L, "");
             when(adminOrganizacaoService.buscarAdminOrgCompleto(1L)).thenReturn(response);
