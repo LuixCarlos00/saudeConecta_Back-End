@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ================================================================ -->
+    <!-- TABELA: CONFIGURACOES_CONSULTA                                  -->
+    <!-- Permite configurar se a organização deve pular o status inicial  -->
+    <!-- e cadastrar consultas diretamente como CONFIRMADA                -->
+    <!-- Cada organização tem sua própria configuração de fluxo           -->
+    <!-- ================================================================ -->
+    <changeSet id="056-001-criar-tabela-configuracoes-consulta" author="equipe-sentinela" runOnChange="true">
+        <comment>Criar tabela configuracoes_consulta usando SQL direto para garantir execução em produção</comment>
+        
+        <sql>
+            CREATE TABLE IF NOT EXISTS configuracoes_consulta (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                organizacao_id BIGINT NOT NULL,
+                pular_para_confirmado BOOLEAN NOT NULL DEFAULT FALSE,
+                descricao VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                CONSTRAINT uk_organizacao_fluxo UNIQUE (organizacao_id),
+                CONSTRAINT fk_config_fluxo_organizacao FOREIGN KEY (organizacao_id) REFERENCES organizacao(id) ON DELETE CASCADE
+            );
+        </sql>
+        <!-- Nao ha indice adicional: a constraint UNIQUE (organizacao_id) ja indexa a coluna no MySQL -->
+    </changeSet>
+
+</databaseChangeLog>

@@ -133,4 +133,10 @@
 
     <!-- Atualizar valores dos planos (R$149, R$279, R$549) -->
     <include file="db/changelog/08-2026/054-atualizar-valores-planos.xml"/>
+
+    <!-- Remover especialidades 'Anal' da tabela especialidade -->
+    <include file="db/changelog/08-2026/055-remover-especialidades-anal.xml"/>
+
+    <!-- Criar tabela de configurações de consulta -->
+    <include file="db/changelog/08-2026/056-criar-tabela-configuracoes-consulta.xml"/>
 </databaseChangeLog>

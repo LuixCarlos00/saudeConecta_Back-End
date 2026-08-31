@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="055-remover-especialidades-anal" author="devin">
+        <comment>Remover especialidades da tabela especialidade (IDs 19 e 20)</comment>
+        
+        <!-- Primeiro remover as referências nas consultas -->
+        <update tableName="consulta">
+            <column name="especialidade_id" valueComputed="NULL"/>
+            <where>especialidade_id = 19 OR especialidade_id = 20</where>
+        </update>
+        
+        <!-- Remover os registros da tabela profissional_especialidade (especialidade_id não pode ser NULL) -->
+        <delete tableName="profissional_especialidade">
+            <where>especialidade_id = 19 OR especialidade_id = 20</where>
+        </delete>
+        
+        <!-- Depois deletar as especialidades -->
+        <delete tableName="especialidade">
+            <where>id = 19 OR id = 20</where>
+        </delete>
+    </changeSet>
+
+</databaseChangeLog>
