@@ -22,7 +22,7 @@ public class ConfiguracoesConsultaService {
 
     /**
      * Busca a configuração de fluxo de consulta da organização atual.
-     * Se não existir, retorna a configuração padrão (pularParaAgendado = false).
+     * Se não existir, retorna a configuração padrão (pularParaConfirmado = false).
      *
      * @return ConfiguracoesConsulta ou configuração padrão
      */
@@ -33,7 +33,7 @@ public class ConfiguracoesConsultaService {
         if (config.isEmpty()) {
             log.info("Configuracao de fluxo nao encontrada para organizacao {}, retornando padrao", organizacaoId);
             return ConfiguracoesConsulta.builder()
-                    .pularParaAgendado(false)
+                    .pularParaConfirmado(false)
                     .descricao("Configuração padrão - fluxo normal")
                     .build();
         }
@@ -52,7 +52,7 @@ public class ConfiguracoesConsultaService {
         if (organizacaoId == null) {
             log.warn("Organizacao nao identificada no contexto, retornando configuracao padrao");
             return ConfiguracoesConsulta.builder()
-                    .pularParaAgendado(false)
+                    .pularParaConfirmado(false)
                     .descricao("Configuração padrão - fluxo normal")
                     .build();
         }
@@ -63,12 +63,12 @@ public class ConfiguracoesConsultaService {
      * Cria uma nova configuração de fluxo de consulta para a organização.
      *
      * @param organizacaoId ID da organização
-     * @param pularParaAgendado Se deve pular para status AGENDADO
+     * @param pularParaConfirmado Se deve pular para status CONFIRMADA
      * @param descricao Descrição da configuração
      * @return ConfiguracoesConsulta criada
      */
     @Transactional
-    public ConfiguracoesConsulta criarConfiguracao(Long organizacaoId, Boolean pularParaAgendado, String descricao) {
+    public ConfiguracoesConsulta criarConfiguracao(Long organizacaoId, Boolean pularParaConfirmado, String descricao) {
         if (configuracoesConsultaRepository.existsByOrganizacaoId(organizacaoId)) {
             throw new IllegalStateException("Já existe uma configuração de fluxo para esta organização");
         }
@@ -78,7 +78,7 @@ public class ConfiguracoesConsultaService {
 
         ConfiguracoesConsulta config = ConfiguracoesConsulta.builder()
                 .organizacao(organizacao)
-                .pularParaAgendado(pularParaAgendado != null ? pularParaAgendado : false)
+                .pularParaConfirmado(pularParaConfirmado != null ? pularParaConfirmado : false)
                 .descricao(descricao != null ? descricao : "Configuração de fluxo de consulta")
                 .build();
 
@@ -89,17 +89,17 @@ public class ConfiguracoesConsultaService {
      * Atualiza uma configuração de fluxo de consulta existente.
      *
      * @param id ID da configuração
-     * @param pularParaAgendado Se deve pular para status AGENDADO
+     * @param pularParaConfirmado Se deve pular para status CONFIRMADA
      * @param descricao Descrição da configuração
      * @return ConfiguracoesConsulta atualizada
      */
     @Transactional
-    public ConfiguracoesConsulta atualizarConfiguracao(Long id, Boolean pularParaAgendado, String descricao) {
+    public ConfiguracoesConsulta atualizarConfiguracao(Long id, Boolean pularParaConfirmado, String descricao) {
         ConfiguracoesConsulta config = configuracoesConsultaRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Configuração de fluxo não encontrada"));
 
-        if (pularParaAgendado != null) {
-            config.setPularParaAgendado(pularParaAgendado);
+        if (pularParaConfirmado != null) {
+            config.setPularParaConfirmado(pularParaConfirmado);
         }
         if (descricao != null) {
             config.setDescricao(descricao);
@@ -111,12 +111,12 @@ public class ConfiguracoesConsultaService {
     /**
      * Atualiza a configuração de fluxo de consulta da organização atual.
      *
-     * @param pularParaAgendado Se deve pular para status AGENDADO
+     * @param pularParaConfirmado Se deve pular para status CONFIRMADA
      * @param descricao Descrição da configuração
      * @return ConfiguracoesConsulta atualizada ou criada
      */
     @Transactional
-    public ConfiguracoesConsulta atualizarConfiguracaoAtual(Boolean pularParaAgendado, String descricao) {
+    public ConfiguracoesConsulta atualizarConfiguracaoAtual(Boolean pularParaConfirmado, String descricao) {
         Long organizacaoId = TenantContext.getCurrentTenant();
         if (organizacaoId == null) {
             throw new IllegalStateException("Organização não identificada no contexto");
@@ -125,12 +125,12 @@ public class ConfiguracoesConsultaService {
         Optional<ConfiguracoesConsulta> configOpt = configuracoesConsultaRepository.findByOrganizacaoId(organizacaoId);
 
         if (configOpt.isEmpty()) {
-            return criarConfiguracao(organizacaoId, pularParaAgendado, descricao);
+            return criarConfiguracao(organizacaoId, pularParaConfirmado, descricao);
         }
 
         ConfiguracoesConsulta config = configOpt.get();
-        if (pularParaAgendado != null) {
-            config.setPularParaAgendado(pularParaAgendado);
+        if (pularParaConfirmado != null) {
+            config.setPularParaConfirmado(pularParaConfirmado);
         }
         if (descricao != null) {
             config.setDescricao(descricao);
@@ -140,13 +140,13 @@ public class ConfiguracoesConsultaService {
     }
 
     /**
-     * Verifica se a organização atual deve pular para o status AGENDADO.
+     * Verifica se a organização atual deve pular para o status CONFIRMADA.
      *
-     * @return true se deve pular para AGENDADO, false caso contrário
+     * @return true se deve pular para CONFIRMADA, false caso contrário
      */
     @Transactional(readOnly = true)
-    public boolean devePularParaAgendado() {
+    public boolean devePularParaConfirmado() {
         ConfiguracoesConsulta config = buscarConfiguracaoAtual();
-        return config.getPularParaAgendado();
+        return config.getPularParaConfirmado();
     }
 }

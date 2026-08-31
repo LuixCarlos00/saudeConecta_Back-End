@@ -35,8 +35,8 @@ public class ConfiguracoesConsulta implements Serializable {
     @JoinColumn(name = "organizacao_id", nullable = false)
     private Organizacao organizacao;
 
-    @Column(nullable = false)
-    private Boolean pularParaAgendado = false;
+    @Column(name = "pular_para_confirmado", nullable = false)
+    private Boolean pularParaConfirmado = false;
 
     @Column(nullable = false, length = 255)
     private String descricao;

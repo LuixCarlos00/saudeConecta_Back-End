@@ -8,7 +8,7 @@
     <!-- ================================================================ -->
     <!-- TABELA: CONFIGURACOES_CONSULTA                                  -->
     <!-- Permite configurar se a organização deve pular o status inicial  -->
-    <!-- e cadastrar consultas diretamente como AGENDADO                  -->
+    <!-- e cadastrar consultas diretamente como CONFIRMADA                -->
     <!-- Cada organização tem sua própria configuração de fluxo           -->
     <!-- ================================================================ -->
     <changeSet id="056-001-criar-tabela-configuracoes-consulta" author="equipe-sentinela" runOnChange="true">
@@ -18,7 +18,7 @@
             CREATE TABLE IF NOT EXISTS configuracoes_consulta (
                 id BIGINT AUTO_INCREMENT PRIMARY KEY,
                 organizacao_id BIGINT NOT NULL,
-                pular_para_agendado BOOLEAN NOT NULL DEFAULT FALSE,
+                pular_para_confirmado BOOLEAN NOT NULL DEFAULT FALSE,
                 descricao VARCHAR(255) NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -26,13 +26,7 @@
                 CONSTRAINT fk_config_fluxo_organizacao FOREIGN KEY (organizacao_id) REFERENCES organizacao(id) ON DELETE CASCADE
             );
         </sql>
-        
-        <!-- Índice usando sintaxe do Liquibase (MySQL não suporta CREATE INDEX IF NOT EXISTS) -->
-        <createIndex tableName="configuracoes_consulta"
-                     indexName="idx_config_fluxo_organizacao"
-                     unique="false">
-            <column name="organizacao_id"/>
-        </createIndex>
+        <!-- Nao ha indice adicional: a constraint UNIQUE (organizacao_id) ja indexa a coluna no MySQL -->
     </changeSet>
 
 </databaseChangeLog>

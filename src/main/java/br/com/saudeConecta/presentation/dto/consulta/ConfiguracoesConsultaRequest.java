@@ -13,8 +13,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ConfiguracoesConsultaRequest {
 
-    @NotNull(message = "O campo pularParaAgendado é obrigatório")
-    private Boolean pularParaAgendado;
+    @NotNull(message = "O campo pularParaConfirmado é obrigatório")
+    private Boolean pularParaConfirmado;
 
     @NotBlank(message = "O campo descricao é obrigatório")
     private String descricao;

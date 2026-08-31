@@ -59,7 +59,7 @@ public class ConfiguracoesConsultaController {
         log.info("Criando configuracao de fluxo de consulta para organizacao {}", organizacaoId);
         ConfiguracoesConsulta config = configuracoesConsultaService.criarConfiguracao(
                 organizacaoId,
-                request.getPularParaAgendado(),
+                request.getPularParaConfirmado(),
                 request.getDescricao()
         );
         return ResponseEntity.ok(toResponse(config));
@@ -79,7 +79,7 @@ public class ConfiguracoesConsultaController {
         log.info("Atualizando configuracao de fluxo de consulta {}", id);
         ConfiguracoesConsulta config = configuracoesConsultaService.atualizarConfiguracao(
                 id,
-                request.getPularParaAgendado(),
+                request.getPularParaConfirmado(),
                 request.getDescricao()
         );
         return ResponseEntity.ok(toResponse(config));
@@ -97,21 +97,21 @@ public class ConfiguracoesConsultaController {
         Long organizacaoId = TenantContext.getCurrentTenant();
         log.info("Atualizando configuracao de fluxo de consulta da organizacao atual {}", organizacaoId);
         ConfiguracoesConsulta config = configuracoesConsultaService.atualizarConfiguracaoAtual(
-                request.getPularParaAgendado(),
+                request.getPularParaConfirmado(),
                 request.getDescricao()
         );
         return ResponseEntity.ok(toResponse(config));
     }
 
     /**
-     * Verifica se a organização atual deve pular para o status AGENDADO.
+     * Verifica se a organização atual deve pular para o status CONFIRMADA.
      *
-     * @return true se deve pular para AGENDADO, false caso contrário
+     * @return true se deve pular para CONFIRMADA, false caso contrário
      */
-    @GetMapping("/deve-pular-agendado")
-    public ResponseEntity<Boolean> devePularParaAgendado() {
-        log.info("Verificando se organizacao atual deve pular para AGENDADO");
-        boolean devePular = configuracoesConsultaService.devePularParaAgendado();
+    @GetMapping("/deve-pular-confirmado")
+    public ResponseEntity<Boolean> devePularParaConfirmado() {
+        log.info("Verificando se organizacao atual deve pular para CONFIRMADA");
+        boolean devePular = configuracoesConsultaService.devePularParaConfirmado();
         return ResponseEntity.ok(devePular);
     }
 
@@ -119,7 +119,7 @@ public class ConfiguracoesConsultaController {
         return ConfiguracoesConsultaResponse.builder()
                 .id(config.getId())
                 .organizacaoId(config.getOrganizacao() != null ? config.getOrganizacao().getId() : null)
-                .pularParaAgendado(config.getPularParaAgendado())
+                .pularParaConfirmado(config.getPularParaConfirmado())
                 .descricao(config.getDescricao())
                 .createdAt(config.getCreatedAt())
                 .updatedAt(config.getUpdatedAt())

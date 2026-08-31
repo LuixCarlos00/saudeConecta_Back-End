@@ -7,12 +7,11 @@
 
     <changeSet id="057-adicionar-coluna-pular-para-agendado" author="equipe-sentinela" runOnChange="true">
         <comment>Adicionar coluna pular_para_agendado à tabela configuracoes_consulta</comment>
-        
-        <addColumn tableName="configuracoes_consulta"
-                   columnName="pular_para_agendado"
-                   type="BOOLEAN"
-                   defaultValueBoolean="false">
-            <constraints nullable="false"/>
+
+        <addColumn tableName="configuracoes_consulta">
+            <column name="pular_para_agendado" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
         </addColumn>
     </changeSet>
 

@@ -275,8 +275,8 @@ public class ConsultaService {
             criadoPor = usuarioRepository.findById(userId).orElse(null);
         }
 
-        boolean devePularParaAgendado = configuracoesConsultaService.devePularParaAgendado();
-        StatusConsulta statusInicial = devePularParaAgendado ? StatusConsulta.AGENDADA : StatusConsulta.AGENDADA;
+        boolean devePularParaConfirmado = configuracoesConsultaService.devePularParaConfirmado();
+        StatusConsulta statusInicial = devePularParaConfirmado ? StatusConsulta.CONFIRMADA : StatusConsulta.AGENDADA;
         
         Consulta consulta = Consulta.builder()
             .organizacao(organizacao)
@@ -293,8 +293,8 @@ public class ConsultaService {
             .build();
         
         Consulta salva = consultaRepository.save(consulta);
-        String mensagemHistorico = devePularParaAgendado 
-            ? "Consulta cadastrada com fluxo acelerado (status AGENDADO)" 
+        String mensagemHistorico = devePularParaConfirmado 
+            ? "Consulta cadastrada com fluxo acelerado (status CONFIRMADA)" 
             : "Consulta cadastrada";
         registrarHistorico(salva, null, statusInicial, mensagemHistorico, criadoPor);
         

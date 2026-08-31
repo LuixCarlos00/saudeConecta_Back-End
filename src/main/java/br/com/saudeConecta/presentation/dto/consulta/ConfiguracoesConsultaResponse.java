@@ -15,7 +15,7 @@ public class ConfiguracoesConsultaResponse {
 
     private Long id;
     private Long organizacaoId;
-    private Boolean pularParaAgendado;
+    private Boolean pularParaConfirmado;
     private String descricao;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
