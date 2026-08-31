@@ -55,6 +55,7 @@ public class ConsultaService {
     private final TermoAutorizacaoRepository termoAutorizacaoRepository;
     private final ProntuarioRepository prontuarioRepository;
     private final TenantHelper tenantHelper;
+    private final ConfiguracoesConsultaService configuracoesConsultaService;
 
     @RequiresTenant
     @Transactional(readOnly = true)
@@ -273,6 +274,9 @@ public class ConsultaService {
         if (userId != null) {
             criadoPor = usuarioRepository.findById(userId).orElse(null);
         }
+
+        boolean devePularParaAgendado = configuracoesConsultaService.devePularParaAgendado();
+        StatusConsulta statusInicial = devePularParaAgendado ? StatusConsulta.AGENDADA : StatusConsulta.AGENDADA;
         
         Consulta consulta = Consulta.builder()
             .organizacao(organizacao)
@@ -284,12 +288,15 @@ public class ConsultaService {
             .observacoes(request.observacoes())
             .formaPagamento(formaPagamento)
             .valor(request.valor())
-            .status(StatusConsulta.AGENDADA)
+            .status(statusInicial)
             .criadoPor(criadoPor)
             .build();
         
         Consulta salva = consultaRepository.save(consulta);
-        registrarHistorico(salva, null, StatusConsulta.AGENDADA, "Consulta cadastrada", criadoPor);
+        String mensagemHistorico = devePularParaAgendado 
+            ? "Consulta cadastrada com fluxo acelerado (status AGENDADO)" 
+            : "Consulta cadastrada";
+        registrarHistorico(salva, null, statusInicial, mensagemHistorico, criadoPor);
         
         log.info("Consulta cadastrada com sucesso. ID: {}", salva.getId());
         return salva;

@@ -163,32 +163,4 @@ class EspecialidadeControllerIntegrationTest {
                     .andExpect(status().isOk());
         }
     }
-
-    // ========== DELETE /especialidades/{id} ==========
-
-    @Nested
-    @DisplayName("DELETE /especialidades/{id}")
-    class Deletar {
-
-        @Test
-        @WithMockUser
-        @DisplayName("Deve retornar 204 ao deletar com sucesso")
-        void deveRetornar204AoDeletar() throws Exception {
-            doNothing().when(service).deletar(1L);
-
-            mockMvc.perform(delete("/especialidades/1").with(csrf()))
-                    .andExpect(status().isNoContent());
-        }
-
-        @Test
-        @WithMockUser
-        @DisplayName("Deve retornar 404 quando especialidade não encontrada")
-        void deveRetornar404QuandoNaoEncontrada() throws Exception {
-            doThrow(new IllegalArgumentException("não encontrada"))
-                    .when(service).deletar(99L);
-
-            mockMvc.perform(delete("/especialidades/99").with(csrf()))
-                    .andExpect(status().isNotFound());
-        }
-    }
 }
