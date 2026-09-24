@@ -1,0 +1,180 @@
+# Integração Mercado Pago — Assinaturas recorrentes
+
+Este documento descreve a configuração necessária para o fluxo de assinatura
+automática por cartão que substituiu o Pix estático.
+
+## 1. Visão geral do fluxo
+
+```
+Cadastro público (landing)  →  Org + Admin + AssinaturaTenant(TRIAL, 30 dias)   [sem cartão]
+                                            │
+       7 dias antes do fim do trial  →  POST /preapproval {status:"pending"}
+                                            │  → init_point (checkout hospedado)
+                                            │  → e-mail com o link de ativação
+                                            ▼
+                         Cliente cadastra o cartão no site do Mercado Pago
+                                            │
+        webhook subscription_preapproval (authorized)  → assinatura ATIVA
+        webhook subscription_authorized_payment        → CobrancaTenant PAGO / RECUSADO
+                                            │
+                       O Mercado Pago cobra sozinho todo mês
+```
+
+Cancelamento: `PUT /preapproval/{id} {"status":"cancelled"}`, disparado pelo próprio
+cliente em **Minha Assinatura** ou pelo SUPER_ADMIN.
+
+## 2. Criação da aplicação (ação manual)
+
+1. Criar conta vendedor em <https://www.mercadopago.com.br>.
+2. Em **Suas integrações** → **Criar aplicação**, escolher o produto
+   *Plans and Subscriptions (Assinaturas)*.
+3. Copiar `Access Token` e `Public Key` — comece pelas **credenciais de teste**.
+4. Criar 2 usuários de teste (vendedor e comprador) em
+   <https://www.mercadopago.com.br/developers/pt/docs/your-integrations/test/accounts>
+   e usar os cartões de teste da documentação.
+5. Em **Webhooks → Configurar notificações**, cadastrar a URL e marcar os tópicos
+   `subscription_preapproval` e `subscription_authorized_payment`.
+   Guardar o **secret** gerado — ele valida a assinatura HMAC das notificações.
+   - Desenvolvimento: `ngrok http 8080` e usar a URL pública gerada.
+   - Produção: `https://saudeconectaback-end-production.up.railway.app/publico/webhooks/mercadopago`
+
+## 3. Variáveis de ambiente
+
+Nunca versione credenciais. Os arquivos `application*.properties` apenas leem
+as variáveis abaixo:
+
+| Variável | Descrição |
+|---|---|
+| `MP_ACCESS_TOKEN` | Access Token da aplicação |
+| `MP_PUBLIC_KEY` | Public Key da aplicação |
+| `MP_WEBHOOK_SECRET` | Secret da assinatura HMAC dos webhooks |
+| `MP_BACK_URL` | URL **pública** de retorno do checkout |
+
+Sem `MP_ACCESS_TOKEN` ou `MP_BACK_URL` a API responde `503` nas rotas que dependem
+do Mercado Pago — o restante do sistema continua funcionando normalmente.
+
+### `MP_BACK_URL` não aceita localhost
+
+Validado contra a API real: `http://localhost:4200/...` e `https://localhost:4200/...`
+são recusados com `400 Invalid value for back_url, must be a valid URL`. É preciso
+uma URL pública. Em desenvolvimento, use o ngrok:
+
+```bash
+ngrok http 4200
+export MP_BACK_URL=https://<subdominio>.ngrok-free.app/assinatura/sucesso
+```
+
+Como o frontend usa `useHash: true` nas rotas, o caminho real é
+`https://.../#/assinatura/sucesso`. O Mercado Pago aceita a URL com fragmento,
+mas preserve o `#` apenas se o teste confirmar o redirecionamento correto —
+alternativamente aponte para a raiz e trate o redirecionamento no frontend.
+
+## 4. Assinatura sem plano associado — cuidado com o `payer_email`
+
+A integração usa `/preapproval` **sem plano associado**, o que permite valor
+customizado por tenant. A documentação oficial alerta:
+
+> *"For subscriptions without an associated plan, we validate during the payment
+> process that the entered email matches the payer's email. If the email addresses
+> don't match, the payment will be rejected."*
+
+Ou seja: o `payer_email` enviado (o e-mail do administrador owner da organização)
+precisa ser o e-mail da conta Mercado Pago de quem paga. A tela de ativação e o
+e-mail de ativação exibem esse aviso.
+
+Se isso gerar suporte demais, a coluna `assinatura_tenant.mp_payer_email` já existe
+e pode passar a ser editável pelo cliente.
+
+## 5. Validação de assinatura do webhook
+
+Header `x-signature`: `ts=1704908010,v1=618c8534...`
+
+Manifest assinado com HMAC-SHA256 usando `MP_WEBHOOK_SECRET`:
+
+```
+id:{data.id};request-id:{x-request-id};ts:{ts};
+```
+
+A comparação com `v1` é *time-safe* (`MessageDigest.isEqual`) e timestamps com mais
+de 5 minutos de diferença são rejeitados (mitigação de replay). Requisições sem
+assinatura válida recebem `401`.
+
+Implementação: `service/mercadopago/MercadoPagoSignatureValidator`.
+
+## 6. Idempotência
+
+Toda notificação é gravada em `mp_webhook_evento` com `UNIQUE (tipo, data_id)`
+antes de qualquer efeito colateral. O Mercado Pago reenvia a mesma notificação
+até receber um `2xx`, então eventos repetidos são descartados.
+
+O endpoint responde `200` imediatamente e processa em `@Async` — o Mercado Pago
+exige resposta em até 22 segundos.
+
+## 7. Mapeamento de status
+
+| Evento Mercado Pago | Efeito local |
+|---|---|
+| `subscription_preapproval` → `authorized` | `AssinaturaTenant.status = ATIVA`, renova vencimento |
+| `subscription_preapproval` → `cancelled` | `status = CANCELADA`, `canceladoPor = MERCADO_PAGO` |
+| `subscription_preapproval` → `paused` | `status = SUSPENSA` |
+| `subscription_authorized_payment` → `approved` | `CobrancaTenant` PAGO + `renovarAposPagamento` |
+| `subscription_authorized_payment` → `rejected` | `CobrancaTenant` RECUSADO + `status = INADIMPLENTE` |
+
+## 8. Rotinas automáticas (`CobrancaScheduler`)
+
+| Cron | Ação |
+|---|---|
+| `0 0 8 * * *` | Trials vencendo em 7 dias → cria preapproval pendente e envia o link por e-mail |
+| `0 0 9 * * *` | Régua de carência: +5d → INADIMPLENTE, +15d → SUSPENSA (pausa no MP), +30d → CANCELADA |
+| `0 0 */4 * * *` | Reconciliação com o Mercado Pago (rede de segurança para webhooks perdidos) |
+
+Assinaturas com `cortesia = true` são ignoradas por todas as rotinas.
+
+## 9. Validação manual
+
+```bash
+# Criação de preapproval (equivalente ao que o backend faz)
+curl -X POST 'https://api.mercadopago.com/preapproval' \
+  -H "Authorization: Bearer $MP_ACCESS_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "reason": "Saúde Conecta — Plano Profissional",
+    "external_reference": "ASSINATURA-42",
+    "payer_email": "test_user_123@testuser.com",
+    "auto_recurring": {
+      "frequency": 1,
+      "frequency_type": "months",
+      "transaction_amount": 279.00,
+      "currency_id": "BRL"
+    },
+    "back_url": "https://app.saudeconecta.com.br/#/assinatura/sucesso",
+    "status": "pending"
+  }'
+```
+
+Roteiro com os cartões de teste:
+
+Erros já mapeados nessa chamada:
+
+| Erro | Causa |
+|---|---|
+| `Invalid value for back_url, must be a valid URL` | `back_url` apontando para localhost |
+| `Payer and collector cannot be the same user` | `payer_email` igual à conta vendedor |
+| `User bad request` | `payer_email` não corresponde a uma conta Mercado Pago existente |
+
+| Cenário | Resultado esperado |
+|---|---|
+| Cartão aprovado | Assinatura vira `ATIVA` |
+| Recusado por saldo insuficiente | Assinatura `INADIMPLENTE`, cobrança `RECUSADO` |
+| Recusado por dados inválidos | Cobrança `RECUSADO` com `motivo_recusa` preenchido |
+| Cancelamento pelo cliente | `CANCELADA` no Saúde Conecta e no Mercado Pago |
+
+## 10. Migração do Pix
+
+- `PixServiceEstatico` e a dependência ZXing foram removidos.
+- As colunas `pix_copia_cola`, `pix_qrcode_base64` e `data_vencimento_pix` foram
+  removidas (changelog `059`).
+- A coluna `txid` foi mantida (nullable) para preservar o histórico financeiro das
+  cobranças Pix já liquidadas; elas aparecem com `forma_pagamento = 'PIX'`.
+- A chave Pix (CPF) que estava versionada foi removida dos `application*.properties`.
+  **Ela continua no histórico do git** — considere trocá-la.

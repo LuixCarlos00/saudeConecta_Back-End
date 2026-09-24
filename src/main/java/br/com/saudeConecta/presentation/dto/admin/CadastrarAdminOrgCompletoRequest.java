@@ -32,6 +32,7 @@ import jakarta.validation.constraints.Size;
  * @param numero         Número do endereço
  * @param complemento    Complemento do endereço (opcional)
  * @param planoId        ID do plano de assinatura
+ * @param cortesia       Libera o acesso sem cobrança (aceito somente de SUPER_ADMIN)
  */
 public record CadastrarAdminOrgCompletoRequest(
 
@@ -108,6 +109,18 @@ public record CadastrarAdminOrgCompletoRequest(
     String complemento,
 
     @NotNull(message = "Plano é obrigatório")
-    Long planoId
+    Long planoId,
 
-) {}
+    Boolean cortesia
+
+) {
+
+    /**
+     * Indica se o tenant deve ser criado como cortesia (sem cobrança).
+     *
+     * @return true quando o SUPER_ADMIN marcou a organização como cortesia
+     */
+    public boolean isCortesia() {
+        return Boolean.TRUE.equals(cortesia);
+    }
+}

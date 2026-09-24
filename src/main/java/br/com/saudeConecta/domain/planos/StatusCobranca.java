@@ -4,6 +4,7 @@ public enum StatusCobranca {
 
     PENDENTE("Pendente"),
     PAGO("Pago"),
+    RECUSADO("Recusado"),
     EXPIRADO("Expirado"),
     CANCELADO("Cancelado");
 

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Ative sua assinatura - Saúde Conecta</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #00d9ff 0%, #00a8cc 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .header h1 {
+            margin: 0;
+        }
+        .content {
+            background-color: #f9f9f9;
+            padding: 30px;
+            border: 1px solid #ddd;
+        }
+        .plano-box {
+            background-color: #fff;
+            border: 2px solid #00d9ff;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .plano-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .plano-value {
+            color: #00a8cc;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .footer {
+            background-color: #1a1a2e;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 0 0 8px 8px;
+            font-size: 12px;
+        }
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #00d9ff 0%, #00a8cc 100%);
+            color: white;
+            padding: 14px 28px;
+            text-decoration: none;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>💳 Saúde Conecta</h1>
+        <p>Ative sua assinatura</p>
+    </div>
+
+    <div class="content">
+        <h2>Olá, <span th:text="${nome}">Administrador</span>!</h2>
+
+        <p>
+            Seu período gratuito termina em
+            <strong th:text="${dataFimTrial}">00/00/0000</strong>.
+            Para continuar usando o Saúde Conecta sem interrupções, cadastre seu cartão
+            e ative a cobrança automática mensal.
+        </p>
+
+        <div class="plano-box">
+            <div>
+                <span class="plano-label">Plano:</span>
+                <span class="plano-value" th:text="${plano}">Profissional</span>
+            </div>
+            <div>
+                <span class="plano-label">Valor mensal:</span>
+                <span class="plano-value" th:text="${valorMensal}">R$ 0,00</span>
+            </div>
+        </div>
+
+        <p style="text-align: center;">
+            <a th:href="${initPoint}" class="btn">Cadastrar cartão e ativar</a>
+        </p>
+
+        <div class="warning">
+            <strong>⚠️ Atenção ao e-mail do pagamento:</strong>
+            <p>
+                Use a conta Mercado Pago vinculada ao e-mail
+                <strong th:text="${payerEmail}">email@exemplo.com</strong>.
+                Pagamentos realizados com outra conta serão recusados pelo Mercado Pago.
+            </p>
+        </div>
+
+        <p>Você pode cancelar a assinatura quando quiser, direto pela tela "Minha Assinatura".</p>
+    </div>
+
+    <div class="footer">
+        <p>Este é um email automático. Por favor, não responda.</p>
+        <p>© Saúde Conecta - Todos os direitos reservados</p>
+    </div>
+</body>
+</html>

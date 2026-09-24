@@ -19,6 +19,7 @@ import br.com.saudeConecta.presentation.dto.admin.AdminOrgCompletoResponse;
 import br.com.saudeConecta.presentation.dto.admin.AtualizarAdminOrgCompletoRequest;
 import br.com.saudeConecta.presentation.dto.admin.CadastrarAdminOrgCompletoRequest;
 import br.com.saudeConecta.presentation.dto.admin.CadastrarAdminRequest;
+import br.com.saudeConecta.presentation.dto.admin.CadastroSaasRequest;
 import br.com.saudeConecta.util.EmailUnicoService;
 import br.com.saudeConecta.util.SnapshotUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -410,6 +411,33 @@ public class AdminOrganizacaoService {
      */
     @Transactional
     public AdminOrganizacao cadastrarAdminOrgCompleto(CadastrarAdminOrgCompletoRequest request) {
+        return criarTenantCompleto(request, request.isCortesia());
+    }
+
+    /**
+     * Cadastra um novo tenant a partir do auto-cadastro público da landing page.
+     * Usa exatamente as mesmas validações do cadastro feito pelo SUPER_ADMIN,
+     * porém nunca permite criar assinatura de cortesia.
+     *
+     * @param request dados informados pelo visitante
+     * @return AdminOrganizacao criado
+     */
+    @Transactional
+    public AdminOrganizacao cadastrarTenantPublico(CadastroSaasRequest request) {
+        log.info("Auto-cadastro público recebido. TipoPessoa: {}, Plano: {}",
+                request.tipoPessoa(), request.planoId());
+        return criarTenantCompleto(request.toAdminOrgRequest(), false);
+    }
+
+    /**
+     * Fluxo compartilhado de criação de tenant:
+     * Endereco → Organizacao → Usuario → AdminOrganizacao → Assinatura → e-mail de credenciais.
+     *
+     * @param request  dados completos do admin e da organização
+     * @param cortesia true para criar a assinatura sem cobrança
+     * @return AdminOrganizacao criado
+     */
+    private AdminOrganizacao criarTenantCompleto(CadastrarAdminOrgCompletoRequest request, boolean cortesia) {
         String tipoPessoa = request.tipoPessoa();
         log.info("Cadastrando Admin Org completo. TipoPessoa: {}, Nome: {}, Plano: {}", tipoPessoa, request.nome(), request.planoId());
 
@@ -434,8 +462,9 @@ public class AdminOrganizacaoService {
         Usuario usuario = criarUsuario(login, organizacao, senhaGerada);
         AdminOrganizacao admin = criarAdminOrganizacao(request, organizacao, usuario);
 
-        assinaturaTenantService.assinar(organizacao.getId(), request.planoId());
-        log.info("Plano {} associado à organização {}", request.planoId(), organizacao.getId());
+        assinaturaTenantService.assinar(organizacao.getId(), request.planoId(), cortesia);
+        log.info("Plano {} associado à organização {} (cortesia={})",
+                request.planoId(), organizacao.getId(), cortesia);
 
         configuracaoGraficoDashboardService.inicializarParaNovoUsuario(usuario);
 

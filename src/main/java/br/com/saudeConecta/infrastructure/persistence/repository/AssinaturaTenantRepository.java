@@ -50,28 +50,67 @@ public interface AssinaturaTenantRepository extends JpaRepository<AssinaturaTena
             @Param("fim") LocalDate fim);
 
     /**
+     * Busca a assinatura vinculada a um preapproval do Mercado Pago.
+     * Usado pelo webhook e pela rotina de reconciliação.
+     */
+    @Query("SELECT a FROM AssinaturaTenant a " +
+           "JOIN FETCH a.planoAssinatura " +
+           "JOIN FETCH a.organizacao " +
+           "WHERE a.mpPreapprovalId = :preapprovalId")
+    Optional<AssinaturaTenant> findByMpPreapprovalId(@Param("preapprovalId") String preapprovalId);
+
+    /**
+     * Busca trials que vencem exatamente na data informada e ainda não possuem
+     * link de pagamento gerado (ignora cortesias).
+     */
+    @Query("SELECT a FROM AssinaturaTenant a " +
+           "JOIN FETCH a.planoAssinatura " +
+           "JOIN FETCH a.organizacao " +
+           "WHERE a.status = 'TRIAL' " +
+           "AND a.cortesia = false " +
+           "AND a.mpPreapprovalId IS NULL " +
+           "AND a.dataVencimento = :dataAlvo")
+    List<AssinaturaTenant> findTrialsSemLinkVencendoEm(@Param("dataAlvo") LocalDate dataAlvo);
+
+    /**
+     * Busca assinaturas já vinculadas ao Mercado Pago para reconciliação de status.
+     */
+    @Query("SELECT a FROM AssinaturaTenant a " +
+           "JOIN FETCH a.planoAssinatura " +
+           "JOIN FETCH a.organizacao " +
+           "WHERE a.mpPreapprovalId IS NOT NULL " +
+           "AND a.status <> 'CANCELADA'")
+    List<AssinaturaTenant> findComPreapprovalParaReconciliar();
+
+    /**
      * Busca assinaturas vencidas que ainda não foram marcadas como inadimplentes.
+     * Cortesias são ignoradas.
      */
     @Query("SELECT a FROM AssinaturaTenant a " +
            "JOIN FETCH a.organizacao " +
            "WHERE a.status = 'ATIVA' " +
+           "AND a.cortesia = false " +
            "AND a.dataVencimento < :hoje")
     List<AssinaturaTenant> findVencidasNaoInadimplentes(@Param("hoje") LocalDate hoje);
 
     /**
      * Busca assinaturas inadimplentes há mais de N dias (para suspender).
+     * Cortesias são ignoradas.
      */
     @Query("SELECT a FROM AssinaturaTenant a " +
            "JOIN FETCH a.organizacao " +
            "WHERE a.status = 'INADIMPLENTE' " +
+           "AND a.cortesia = false " +
            "AND a.dataVencimento < :dataLimite")
     List<AssinaturaTenant> findInadimplentesParaSuspender(@Param("dataLimite") LocalDate dataLimite);
 
     /**
      * Busca assinaturas suspensas há mais de N dias (para cancelar).
+     * Cortesias são ignoradas.
      */
     @Query("SELECT a FROM AssinaturaTenant a " +
            "WHERE a.status = 'SUSPENSA' " +
+           "AND a.cortesia = false " +
            "AND a.atualizadoEm < :dataLimite")
     List<AssinaturaTenant> findSuspensasParaCancelar(@Param("dataLimite") LocalDateTime dataLimite);
 

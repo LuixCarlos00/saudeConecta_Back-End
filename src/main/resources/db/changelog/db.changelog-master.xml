@@ -139,4 +139,10 @@
 
     <!-- Criar tabela de configurações de consulta -->
     <include file="db/changelog/08-2026/056-criar-tabela-configuracoes-consulta.xml"/>
+
+    <!-- Assinaturas automáticas por cartão via Mercado Pago (preapproval + webhooks) -->
+    <include file="db/changelog/08-2026/058-mercado-pago-assinaturas.xml"/>
+
+    <!-- Desativação do Pix estático (preserva txid para histórico) -->
+    <include file="db/changelog/08-2026/059-remover-pix-assinaturas.xml"/>
 </databaseChangeLog>

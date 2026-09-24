@@ -72,6 +72,32 @@ public class AssinaturaTenant implements Serializable {
     @Column(name = "valor_adicional_perfis", nullable = false, precision = 10, scale = 2)
     private BigDecimal valorAdicionalPerfis = BigDecimal.ZERO;
 
+    @Column(name = "mp_preapproval_id", length = 50, unique = true)
+    private String mpPreapprovalId;
+
+    @Column(name = "mp_status", length = 30)
+    private String mpStatus;
+
+    @Column(name = "mp_init_point", length = 500)
+    private String mpInitPoint;
+
+    @Column(name = "mp_payer_email", length = 150)
+    private String mpPayerEmail;
+
+    @Column(name = "mp_ultima_sincronizacao")
+    private LocalDateTime mpUltimaSincronizacao;
+
+    @Builder.Default
+    @Column(name = "cortesia", nullable = false)
+    private Boolean cortesia = false;
+
+    @Column(name = "data_cancelamento")
+    private LocalDateTime dataCancelamento;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cancelado_por", length = 20)
+    private OrigemCancelamento canceladoPor;
+
     @Column(name = "criado_em", updatable = false)
     private LocalDateTime criadoEm;
 
@@ -107,5 +133,24 @@ public class AssinaturaTenant implements Serializable {
      */
     public boolean isVencida() {
         return dataVencimento != null && LocalDate.now().isAfter(dataVencimento);
+    }
+
+    /**
+     * Indica se a assinatura é uma cortesia (liberada manualmente pelo SUPER_ADMIN).
+     * Assinaturas de cortesia são ignoradas por toda a rotina de cobrança.
+     *
+     * @return true se a assinatura não deve ser cobrada
+     */
+    public boolean isCortesia() {
+        return Boolean.TRUE.equals(cortesia);
+    }
+
+    /**
+     * Indica se a assinatura já possui um preapproval criado no Mercado Pago.
+     *
+     * @return true se existe preapproval vinculado
+     */
+    public boolean temPreapproval() {
+        return mpPreapprovalId != null && !mpPreapprovalId.isBlank();
     }
 }

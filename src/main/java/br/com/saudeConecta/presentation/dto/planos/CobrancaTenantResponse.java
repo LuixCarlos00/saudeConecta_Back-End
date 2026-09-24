@@ -3,7 +3,6 @@ package br.com.saudeConecta.presentation.dto.planos;
 import br.com.saudeConecta.domain.planos.CobrancaTenant;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public record CobrancaTenantResponse(
@@ -14,10 +13,10 @@ public record CobrancaTenantResponse(
         String planoNome,
         BigDecimal valorTotal,
         String status,
-        String pixCopiaECola,
-        String pixQrcodeBase64,
+        String formaPagamento,
+        String mpPaymentId,
+        String motivoRecusa,
         String txid,
-        LocalDate dataVencimentoPix,
         LocalDateTime dataPagamento,
         LocalDateTime criadaEm
 ) {
@@ -38,10 +37,10 @@ public record CobrancaTenantResponse(
                         ? entity.getAssinaturaTenant().getPlanoAssinatura().getNome() : null,
                 entity.getValorTotal(),
                 entity.getStatus() != null ? entity.getStatus().name() : null,
-                entity.getPixCopiaECola(),
-                entity.getPixQrcodeBase64(),
+                entity.getFormaPagamento() != null ? entity.getFormaPagamento().name() : null,
+                entity.getMpPaymentId(),
+                entity.getMotivoRecusa(),
                 entity.getTxid(),
-                entity.getDataVencimentoPix(),
                 entity.getDataPagamento(),
                 entity.getCriadaEm()
         );

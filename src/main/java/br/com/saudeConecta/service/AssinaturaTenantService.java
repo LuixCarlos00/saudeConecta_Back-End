@@ -47,6 +47,21 @@ public class AssinaturaTenantService {
      */
     @Transactional
     public AssinaturaTenantResponse assinar(Long organizacaoId, Long planoId) {
+        return assinar(organizacaoId, planoId, false);
+    }
+
+    /**
+     * Cria uma assinatura para a organização.
+     * Assinaturas de cortesia nascem ATIVAS e ficam fora da rotina de cobrança;
+     * as demais nascem em TRIAL de 30 dias, sem exigir cartão.
+     *
+     * @param organizacaoId ID da organização
+     * @param planoId       ID do plano escolhido
+     * @param cortesia      true para liberar o acesso sem cobrança
+     * @return AssinaturaTenantResponse
+     */
+    @Transactional
+    public AssinaturaTenantResponse assinar(Long organizacaoId, Long planoId, boolean cortesia) {
         // Verifica se já existe assinatura ativa
         var assinaturaExistente = assinaturaTenantRepository.findAssinaturaAtivaByOrganizacaoId(organizacaoId);
         
@@ -67,10 +82,11 @@ public class AssinaturaTenantService {
         AssinaturaTenant assinatura = AssinaturaTenant.builder()
                 .organizacao(organizacao)
                 .planoAssinatura(plano)
-                .status(StatusAssinatura.TRIAL)
+                .status(cortesia ? StatusAssinatura.ATIVA : StatusAssinatura.TRIAL)
+                .cortesia(cortesia)
                 .dataInicio(hoje)
                 .dataVencimento(hoje.plusDays(DIAS_TRIAL))
-                .dataProximaCobranca(hoje.plusDays(DIAS_TRIAL))
+                .dataProximaCobranca(cortesia ? null : hoje.plusDays(DIAS_TRIAL))
                 .valorMensal(plano.getValorMensal())
                 .qtdAdminExtra(0)
                 .qtdProfissionalExtra(0)
@@ -79,8 +95,8 @@ public class AssinaturaTenantService {
                 .build();
 
         AssinaturaTenant salva = assinaturaTenantRepository.save(assinatura);
-        log.info("Assinatura TRIAL criada para org {} no plano {} (vence em {})",
-                organizacaoId, plano.getNome(), salva.getDataVencimento());
+        log.info("Assinatura {} criada para org {} no plano {} (vence em {})",
+                salva.getStatus(), organizacaoId, plano.getNome(), salva.getDataVencimento());
 
         return AssinaturaTenantResponse.fromEntity(salva);
     }
@@ -329,6 +345,40 @@ public class AssinaturaTenantService {
             return 0;
         }
         return Math.max(0, limiteCustom - limitePlano);
+    }
+
+    /**
+     * Marca ou remove a condição de cortesia da assinatura (SUPER_ADMIN).
+     * Assinaturas de cortesia ficam fora de toda a rotina de cobrança.
+     *
+     * @param assinaturaId ID da assinatura
+     * @param cortesia     true para isentar de cobrança
+     * @return AssinaturaTenantResponse atualizada
+     */
+    @Transactional
+    public AssinaturaTenantResponse definirCortesia(Long assinaturaId, boolean cortesia) {
+        AssinaturaTenant assinatura = buscarPorId(assinaturaId);
+        assinatura.setCortesia(cortesia);
+        if (cortesia && StatusAssinatura.TRIAL.equals(assinatura.getStatus())) {
+            assinatura.setStatus(StatusAssinatura.ATIVA);
+        }
+
+        AssinaturaTenant salva = assinaturaTenantRepository.save(assinatura);
+        log.warn("Assinatura {} definida como cortesia={} (org {})",
+                assinaturaId, cortesia, salva.getOrganizacao().getId());
+
+        return AssinaturaTenantResponse.fromEntity(salva);
+    }
+
+    /**
+     * Busca a entidade AssinaturaTenant por ID.
+     *
+     * @param id ID da assinatura
+     * @return entidade encontrada
+     */
+    @Transactional(readOnly = true)
+    public AssinaturaTenant buscarEntidadePorId(Long id) {
+        return buscarPorId(id);
     }
 
     /**

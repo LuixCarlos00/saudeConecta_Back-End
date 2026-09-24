@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ================================================================ -->
+    <!-- ASSINATURAS AUTOMATICAS VIA MERCADO PAGO                         -->
+    <!-- Substitui o fluxo manual de Pix por assinaturas recorrentes      -->
+    <!-- (preapproval) cobradas pelo proprio Mercado Pago.                -->
+    <!-- ================================================================ -->
+
+    <changeSet id="058-001-assinatura-tenant-colunas-mercado-pago" author="equipe-sentinela">
+        <comment>Adiciona colunas de integracao Mercado Pago em assinatura_tenant</comment>
+
+        <addColumn tableName="assinatura_tenant">
+            <column name="mp_preapproval_id" type="VARCHAR(50)"/>
+            <column name="mp_status" type="VARCHAR(30)"/>
+            <column name="mp_init_point" type="VARCHAR(500)"/>
+            <column name="mp_payer_email" type="VARCHAR(150)"/>
+            <column name="mp_ultima_sincronizacao" type="TIMESTAMP"/>
+            <column name="cortesia" type="TINYINT(1)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="data_cancelamento" type="TIMESTAMP"/>
+            <column name="cancelado_por" type="VARCHAR(20)"/>
+        </addColumn>
+
+        <addUniqueConstraint tableName="assinatura_tenant"
+                             columnNames="mp_preapproval_id"
+                             constraintName="uk_assinatura_mp_preapproval"/>
+    </changeSet>
+
+    <changeSet id="058-002-cobranca-tenant-colunas-mercado-pago" author="equipe-sentinela">
+        <comment>Adiciona colunas de integracao Mercado Pago em cobranca_tenant</comment>
+
+        <addColumn tableName="cobranca_tenant">
+            <column name="mp_payment_id" type="VARCHAR(50)"/>
+            <column name="mp_authorized_payment_id" type="VARCHAR(50)"/>
+            <column name="forma_pagamento" type="VARCHAR(20)" defaultValue="MERCADO_PAGO"/>
+            <column name="motivo_recusa" type="VARCHAR(255)"/>
+        </addColumn>
+
+        <createIndex tableName="cobranca_tenant" indexName="idx_cobranca_mp_payment">
+            <column name="mp_payment_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="058-003-criar-tabela-mp-webhook-evento" author="equipe-sentinela">
+        <comment>Tabela de eventos de webhook do Mercado Pago (garante idempotencia)</comment>
+
+        <createTable tableName="mp_webhook_evento">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="tipo" type="VARCHAR(60)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="data_id" type="VARCHAR(60)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="payload" type="LONGTEXT"/>
+            <column name="processado" type="TINYINT(1)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="erro" type="VARCHAR(500)"/>
+            <column name="recebido_em" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Idempotencia: o Mercado Pago reenvia a mesma notificacao ate receber 2xx -->
+        <addUniqueConstraint tableName="mp_webhook_evento"
+                             columnNames="tipo, data_id"
+                             constraintName="uk_mp_webhook_tipo_data"/>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ================================================================ -->
+    <!-- DESATIVACAO DO PIX ESTATICO                                      -->
+    <!-- As colunas de payload/QR Code deixam de existir. A coluna txid   -->
+    <!-- permanece (nullable) para preservar o historico financeiro das   -->
+    <!-- cobrancas Pix ja liquidadas.                                     -->
+    <!-- ================================================================ -->
+
+    <changeSet id="059-001-remover-colunas-pix-cobranca-tenant" author="equipe-sentinela">
+        <comment>Remove payload Pix, QR Code e vencimento do Pix da tabela cobranca_tenant</comment>
+
+        <dropColumn tableName="cobranca_tenant" columnName="pix_copia_cola"/>
+        <dropColumn tableName="cobranca_tenant" columnName="pix_qrcode_base64"/>
+        <dropColumn tableName="cobranca_tenant" columnName="data_vencimento_pix"/>
+    </changeSet>
+
+    <changeSet id="059-002-backfill-forma-pagamento-historico" author="equipe-sentinela">
+        <comment>Marca as cobrancas ja existentes como PIX para preservar a leitura do historico</comment>
+
+        <sql>
+            UPDATE cobranca_tenant SET forma_pagamento = 'PIX' WHERE txid IS NOT NULL;
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

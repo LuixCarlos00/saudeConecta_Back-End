@@ -450,7 +450,7 @@ class AdminOrganizacaoServiceTest {
                     "Nova Clínica", "Nova Razao Social LTDA", "12.345.678/0001-00",
                     "CLINICA", "clinica@nova.com", "11999999999",
                     "01310-100", "SP", "São Paulo", "Bela Vista",
-                    "Avenida Paulista", 1000L, null, 1L
+                    "Avenida Paulista", 1000L, null, 1L, false
             );
         }
 
@@ -508,7 +508,7 @@ class AdminOrganizacaoServiceTest {
                     "FISICA", "Admin Física", "987.654.321-00", "Gerente", "admin@fisica.com",
                     null, null, null, null, null, null,
                     "01310-100", "SP", "São Paulo", "Bela Vista",
-                    "Rua A", 100L, null, 1L
+                    "Rua A", 100L, null, 1L, false
             );
 
             when(usuarioRepository.existsByLogin("98765432100")).thenReturn(false);
@@ -541,7 +541,7 @@ class AdminOrganizacaoServiceTest {
                     "Nova Clínica", "Nova Razao Social LTDA", null,
                     "CLINICA", "clinica@nova.com", "11999999999",
                     "01310-100", "SP", "São Paulo", "Bela Vista",
-                    "Avenida Paulista", 1000L, null, 1L
+                    "Avenida Paulista", 1000L, null, 1L, false
             );
 
             assertThatThrownBy(() -> adminOrganizacaoService.cadastrarAdminOrgCompleto(requestSemCnpj))

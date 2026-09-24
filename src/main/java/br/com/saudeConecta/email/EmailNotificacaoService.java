@@ -6,7 +6,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -26,8 +31,12 @@ public class EmailNotificacaoService {
     private static final String TEMPLATE_RECUPERACAO = "email-recuperacao-senha";
     private static final String TEMPLATE_CHAMADO = "email-chamado-suporte";
     private static final String TEMPLATE_CHAMADO_STATUS = "email-chamado-status";
+    private static final String TEMPLATE_ATIVACAO_ASSINATURA = "email-ativacao-assinatura";
+    private static final String ASSUNTO_ATIVACAO_ASSINATURA = "Saúde Conecta - Ative sua assinatura";
     private static final String ASSUNTO_CREDENCIAIS = "Bem-vindo ao Saúde Conecta - Suas credenciais de acesso";
     private static final String ASSUNTO_RECUPERACAO = "Saúde Conecta - Recuperação de Senha";
+
+    private static final DateTimeFormatter FORMATO_DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private static final String COR_ADMINISTRADOR = "#1976D2";
     private static final String COR_MEDICO = "#4CAF50";
@@ -245,6 +254,62 @@ public class EmailNotificacaoService {
                         protocolo, email, e.getMessage());
             }
         }, emailTaskExecutor);
+    }
+
+    /**
+     * Envia o link do checkout hospedado do Mercado Pago antes do fim do trial.
+     *
+     * @param email         email do administrador responsável
+     * @param nome          nome do administrador
+     * @param plano         nome do plano contratado
+     * @param valorMensal   valor que será cobrado mensalmente
+     * @param initPoint     URL do checkout do Mercado Pago
+     * @param payerEmail    e-mail que deve estar vinculado à conta Mercado Pago do pagador
+     * @param dataFimTrial  data em que o período gratuito termina
+     * @param organizacaoId ID da organização
+     * @param adminOrgId    ID do admin da organização
+     */
+    @Async
+    public void enviarLinkAtivacaoAssinatura(String email, String nome, String plano,
+                                              BigDecimal valorMensal, String initPoint, String payerEmail,
+                                              LocalDate dataFimTrial, Long organizacaoId, Long adminOrgId) {
+        if (!emailHabilitado) {
+            log.warn("Email desabilitado. Link de ativação não enviado para: {}", email);
+            log.info("ATIVAÇÃO ASSINATURA - Plano: {}, Link: {}", plano, initPoint);
+            return;
+        }
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                Map<String, Object> variaveis = new HashMap<>();
+                variaveis.put("nome", nome);
+                variaveis.put("plano", plano);
+                variaveis.put("valorMensal", formatarMoeda(valorMensal));
+                variaveis.put("initPoint", initPoint);
+                variaveis.put("payerEmail", payerEmail);
+                variaveis.put("dataFimTrial", dataFimTrial != null
+                        ? dataFimTrial.format(FORMATO_DATA) : "");
+
+                String corpoHtml = emailTemplateService.renderizar(TEMPLATE_ATIVACAO_ASSINATURA, variaveis);
+
+                emailRetryService.executarComRetry(
+                        email, nome, ASSUNTO_ATIVACAO_ASSINATURA, corpoHtml,
+                        "Administrador", organizacaoId, adminOrgId);
+
+            } catch (Exception e) {
+                log.error("Erro ao preparar email de ativação de assinatura para {}: {}", email, e.getMessage());
+            }
+        }, emailTaskExecutor);
+    }
+
+    /**
+     * Formata um valor monetário no padrão brasileiro para exibição no email.
+     */
+    private String formatarMoeda(BigDecimal valor) {
+        if (valor == null) {
+            return "R$ 0,00";
+        }
+        return NumberFormat.getCurrencyInstance(new Locale("pt", "BR")).format(valor);
     }
 
     /**

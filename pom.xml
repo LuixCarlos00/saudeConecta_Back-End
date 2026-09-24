@@ -116,18 +116,6 @@
 			<artifactId>liquibase-core</artifactId>
 		</dependency>
 
-		<!-- ZXing para geração de QR Code Pix -->
-		<dependency>
-			<groupId>com.google.zxing</groupId>
-			<artifactId>core</artifactId>
-			<version>3.5.2</version>
-		</dependency>
-		<dependency>
-			<groupId>com.google.zxing</groupId>
-			<artifactId>javase</artifactId>
-			<version>3.5.2</version>
-		</dependency>
-
 	</dependencies>
 
 	<build>
@@ -165,8 +153,10 @@
 						<exclude>br/com/saudeConecta/email/EmailTemplateService*</exclude>
 						<exclude>br/com/saudeConecta/email/EmailMensageriaService*</exclude>
 						<exclude>br/com/saudeConecta/email/EmailConfig*</exclude>
-						<!-- Gateway de pagamento Pix (integração externa) -->
-						<exclude>br/com/saudeConecta/service/pix/**/*</exclude>
+						<!-- Gateway de pagamento Mercado Pago (integração externa) -->
+						<exclude>br/com/saudeConecta/service/mercadopago/MercadoPagoClient*</exclude>
+						<exclude>br/com/saudeConecta/service/mercadopago/MercadoPagoProperties*</exclude>
+						<exclude>br/com/saudeConecta/service/mercadopago/dto/**/*</exclude>
 						<!-- Validação de anotação customizada -->
 						<exclude>br/com/saudeConecta/util/validation/**/*</exclude>
 						<!-- Utilitários com dependências de repositório/infraestrutura -->

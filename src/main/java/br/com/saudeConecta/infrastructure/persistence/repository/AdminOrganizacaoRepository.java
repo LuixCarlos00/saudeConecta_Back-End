@@ -43,6 +43,17 @@ public interface AdminOrganizacaoRepository extends JpaRepository<AdminOrganizac
            "WHERE a.id = :id")
     Optional<AdminOrganizacao> findByIdWithOrgAndEndereco(@Param("id") Long id);
 
+    /**
+     * Busca o administrador responsável (owner) da organização.
+     * Usado para determinar o pagador da assinatura no Mercado Pago.
+     */
+    @Query("SELECT a FROM AdminOrganizacao a " +
+           "WHERE a.organizacao.id = :organizacaoId " +
+           "AND a.isOwner = true " +
+           "ORDER BY a.id ASC " +
+           "LIMIT 1")
+    Optional<AdminOrganizacao> findOwnerByOrganizacaoId(@Param("organizacaoId") Long organizacaoId);
+
     @Query(value = "SELECT COUNT(*) FROM admin_organizacao a " +
            "INNER JOIN usuarios u ON a.usuario_id = u.id " +
            "WHERE a.organizacao_id = :orgId AND u.status IN ('ATIVO', 'INATIVO')",

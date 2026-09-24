@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,16 +15,11 @@ public interface CobrancaTenantRepository extends JpaRepository<CobrancaTenant, 
 
     Optional<CobrancaTenant> findByTxid(String txid);
 
-
     /**
-     * Busca cobranças com Pix expirado para regenerar.
+     * Busca a cobrança vinculada a um pagamento autorizado do Mercado Pago.
+     * Usado pelo webhook para garantir idempotência no lançamento financeiro.
      */
-    @Query("SELECT c FROM CobrancaTenant c " +
-           "JOIN FETCH c.assinaturaTenant " +
-           "JOIN FETCH c.organizacao " +
-           "WHERE c.status = 'PENDENTE' " +
-           "AND c.dataVencimentoPix < :hoje")
-    List<CobrancaTenant> findPixExpirados(@Param("hoje") LocalDate hoje);
+    Optional<CobrancaTenant> findByMpAuthorizedPaymentId(String mpAuthorizedPaymentId);
 
     /**
      * Busca cobranças por status ordenadas por data de criação (SuperAdmin).
