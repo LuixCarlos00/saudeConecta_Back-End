@@ -341,9 +341,6 @@ public class ProntuarioDentistaService {
         return pd;
     }
 
-
-
-
     @Transactional(readOnly = true)
     public List<ProntuarioDentista> listarPorProfissional(Long profissionalId) {
         return prontuarioDentistaRepository.findByProfissionalId(profissionalId, tenantHelper.getCurrentTenantId());

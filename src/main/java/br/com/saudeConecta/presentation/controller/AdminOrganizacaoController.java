@@ -52,9 +52,6 @@ public class AdminOrganizacaoController {
         try {
             AdminOrganizacao admin = adminOrganizacaoService.cadastrarAdminByOrg(request, organizacaoId);
             return ResponseEntity.status(HttpStatus.CREATED).body(admin);
-        } catch (IllegalStateException e) {
-            log.warn("Erro ao cadastrar administrador: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         } catch (IllegalArgumentException e) {
             log.warn("Erro de validacao: {}", e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -74,9 +71,6 @@ public class AdminOrganizacaoController {
         } catch (IllegalArgumentException e) {
             log.warn("Erro ao atualizar administrador: {}", e.getMessage());
             return ResponseEntity.notFound().build();
-        } catch (IllegalStateException e) {
-            log.warn("Conflito ao atualizar administrador: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         }
     }
 
@@ -90,9 +84,6 @@ public class AdminOrganizacaoController {
         try {
             AdminOrganizacao admin = adminOrganizacaoService.cadastrarAdminOrgCompleto(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(admin);
-        } catch (IllegalStateException e) {
-            log.warn("Conflito ao cadastrar Admin Org: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         } catch (IllegalArgumentException e) {
             log.warn("Erro de validacao ao cadastrar Admin Org: {}", e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -140,9 +131,6 @@ public class AdminOrganizacaoController {
         } catch (IllegalArgumentException e) {
             log.warn("Erro ao atualizar dados pessoais do admin: {}", e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
-        } catch (IllegalStateException e) {
-            log.warn("Conflito ao atualizar dados pessoais do admin: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         }
     }
 
@@ -155,9 +143,6 @@ public class AdminOrganizacaoController {
         try {
             adminOrganizacaoService.deletarAdmByOrg(id);
             return ResponseEntity.ok().build();
-        } catch (IllegalStateException e) {
-            log.warn("Erro ao deletar administrador: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         } catch (IllegalArgumentException e) {
             log.warn("Administrador nao encontrado: {}", e.getMessage());
             return ResponseEntity.notFound().build();

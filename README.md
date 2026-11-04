@@ -10,7 +10,8 @@ O SaúdeConecta é uma API REST para gerenciamento de clínicas médicas, permit
 - **Agendamento de Consultas**: CRUD completo de consultas médicas
 - **Cadastro de Profissionais**: Médicos, secretárias e administradores
 - **Cadastro de Pacientes**: Informações completas com prontuário
-- **Notificações**: Envio de emails e SMS via Twilio
+- **Notificações**: Envio de e-mails (Gmail/SMTP) com registro na mensageria
+- **Assinaturas**: Planos por clínica cobrados via Mercado Pago (régua de cobrança, webhook e reconciliação)
 - **Verificação 2FA**: Código de verificação por email
 
 ## Tecnologias
@@ -24,7 +25,8 @@ O SaúdeConecta é uma API REST para gerenciamento de clínicas médicas, permit
 | MySQL | 8.x | Banco de dados |
 | JWT (Auth0) | 4.2.1 | Tokens de autenticação |
 | Lombok | 1.18.30 | Redução de boilerplate |
-| Twilio | 8.17.0 | Envio de SMS |
+| Liquibase | - | Migrações de banco |
+| Caffeine | - | Cache em memória |
 | Thymeleaf | 3.0.5 | Templates de email |
 
 ## Pré-requisitos
@@ -33,7 +35,7 @@ O SaúdeConecta é uma API REST para gerenciamento de clínicas médicas, permit
 - Maven 3.8+
 - MySQL 8.x
 - Conta Gmail (para envio de emails)
-- Conta Twilio (para envio de SMS - opcional)
+- Conta Mercado Pago (opcional em dev; sem as chaves as rotas de assinatura respondem 503)
 
 ## Instalação
 
@@ -46,32 +48,20 @@ cd saudeConecta_Back-End/saudeConectaAPI
 
 ### 2. Configure as variáveis de ambiente
 
-Copie o arquivo de exemplo e configure suas credenciais:
+O perfil de produção (`application-prod.properties`) lê tudo de variáveis de ambiente.
+O arquivo `.env.example` traz o modelo:
 
-```bash
-cp .env.example .env
-```
+| Variável | Obrigatória | Descrição |
+|----------|-------------|-----------|
+| `MYSQLHOST`, `MYSQLPORT`, `MYSQLDATABASE`, `MYSQLUSER`, `MYSQLPASSWORD` | Sim | Conexão com o MySQL |
+| `JWT_SECRET` | Sim | Segredo do JWT (`openssl rand -base64 64`) |
+| `MAIL_USERNAME`, `MAIL_PASSWORD` | Sim | Gmail e App Password |
+| `MP_ACCESS_TOKEN`, `MP_PUBLIC_KEY`, `MP_WEBHOOK_SECRET`, `MP_BACK_URL` | Sim | Mercado Pago (`MP_BACK_URL` deve ser pública) |
+| `CORS_ALLOWED_ORIGINS` | Não | Origens liberadas no CORS, separadas por vírgula |
+| `HTTP_CONNECT_TIMEOUT`, `HTTP_READ_TIMEOUT` | Não | Timeouts das chamadas HTTP externas (padrão `5s` e `15s`) |
+| `SERVER_PORT` | Não | Porta (padrão `8080`) |
 
-Edite o arquivo `.env` com suas configurações:
-
-```properties
-# Banco de dados
-DB_URL=jdbc:mysql://localhost:3306/saudeConecta
-DB_USERNAME=seu_usuario
-DB_PASSWORD=sua_senha
-
-# JWT Secret (gere uma chave forte)
-JWT_SECRET=sua_chave_secreta_minimo_32_caracteres
-
-# Email
-MAIL_USERNAME=seu_email@gmail.com
-MAIL_PASSWORD=sua_app_password
-
-# Twilio (opcional)
-TWILIO_ACCOUNT_SID=seu_account_sid
-TWILIO_AUTH_TOKEN=seu_auth_token
-TWILIO_PHONE_NUMBER=seu_numero
-```
+Em desenvolvimento (`application.properties`) os mesmos nomes valem, com defaults locais.
 
 ### 3. Crie o banco de dados
 
@@ -91,62 +81,27 @@ A API estará disponível em `http://localhost:8080`
 
 ```
 src/main/java/br/com/saudeConecta/
-├── SaudeConectaApplication.java    # Ponto de entrada
-├── email/                          # Serviços de email
-│   ├── EnviarEmail/
-│   └── EnviarService/
-├── endpoints/                      # Módulos da API
-│   ├── administrador/              # CRUD Administrador
-│   ├── codigoVerificacao/          # Verificação 2FA
-│   ├── consulta/                   # CRUD Consultas
-│   ├── consultaStatus/             # Status de consultas
-│   ├── endereco/                   # CRUD Endereços
-│   ├── medico/                     # CRUD Médicos
-│   ├── paciente/                   # CRUD Pacientes
-│   ├── prontuario/                 # CRUD Prontuários
-│   ├── secretaria/                 # CRUD Secretárias
-│   └── usuario/                    # Autenticação
-├── infra/
-│   ├── configuracoesseguranca/     # Configurações de segurança
-│   └── exceptions/                 # Tratamento de erros
-└── util/                           # Utilitários
+├── SaudeConectaApplication.java
+├── config/            # Cache, fuso horário, async, RestTemplate
+├── domain/            # Entidades JPA e enums, por assunto
+├── presentation/      # Controllers REST e DTOs
+├── service/           # Regras de negócio (inclui mercadopago/)
+├── usecase/           # Casos de uso de histórico do paciente
+├── infrastructure/    # Persistência (repositories JPA)
+├── infra/             # Transversais: segurança, tenant, logging, exceções
+├── email/             # Envio de e-mail e retry
+└── util/              # Utilitários (MascaraLog, InputSanitizer...)
 ```
+
+Veja o `ARQUITETURA.md` para camadas, multi-tenant, segurança e cobrança.
 
 ## Endpoints Principais
 
-### Autenticação
-
-| Método | Endpoint | Descrição | Auth |
-|--------|----------|-----------|------|
-| POST | `/Home/login` | Login do usuário | Não |
-| POST | `/Home/cadastralogin` | Cadastro de usuário | Não |
-| PUT | `/Home/trocaDeSenha/{id}` | Troca de senha | Não |
-
-### Médicos
-
-| Método | Endpoint | Descrição | Auth |
-|--------|----------|-----------|------|
-| GET | `/medico/listatodosmedicos` | Lista todos médicos | Sim |
-| GET | `/medico/buscarId/{id}` | Busca médico por ID | Sim |
-| POST | `/medico/post` | Cadastra médico | Sim |
-| DELETE | `/medico/{id}` | Remove médico | Sim |
-
-### Pacientes
-
-| Método | Endpoint | Descrição | Auth |
-|--------|----------|-----------|------|
-| GET | `/paciente/listatodospacientes` | Lista todos pacientes | Sim |
-| GET | `/paciente/buscarId/{id}` | Busca paciente por ID | Sim |
-| POST | `/paciente/post` | Cadastra paciente | Sim |
-
-### Consultas
-
-| Método | Endpoint | Descrição | Auth |
-|--------|----------|-----------|------|
-| GET | `/consulta/listatodasConsulta` | Lista todas consultas | Sim |
-| POST | `/consulta/post` | Agenda consulta | Sim |
-| PUT | `/consulta/editar/{id}` | Edita consulta | Sim |
-| DELETE | `/consulta/{id}` | Cancela consulta | Sim |
+Os controllers ficam em `presentation/controller`. Os prefixos principais são:
+`/Home` (login e senha), `/usuario`, `/administrador`, `/secretaria`, `/profissionais`,
+`/pacientes`, `/consultas`, `/prontuario`, `/prontuario-dentista`, `/planejamento-terapeutico`,
+`/relatorios`, `/mensageria`, `/chamados-suporte`, `/planos`, `/assinaturas`, `/cobrancas`,
+`/publico/**` (cadastro, questionário e webhook do Mercado Pago, sem JWT).
 
 ## Autenticação
 
@@ -163,24 +118,26 @@ curl -X POST http://localhost:8080/Home/login \
 ### Usando o Token
 
 ```bash
-curl -X GET http://localhost:8080/medico/listatodosmedicos \
+curl -X GET http://localhost:8080/profissionais \
   -H "Authorization: Bearer SEU_TOKEN_JWT"
 ```
 
 ## Níveis de Acesso
 
-| Tipo | Código | Permissões |
-|------|--------|------------|
-| Admin | 1 | Acesso total |
-| Secretária | 2 | Gestão de consultas e pacientes |
-| Médico | 3 | Visualização de agenda e prontuários |
-| Paciente | 4 | Visualização própria |
+| Role | Permissões |
+|------|------------|
+| `ROLE_SUPER_ADMIN` (ROOT) | Administra todas as clínicas (planos, estatísticas globais, auditoria) |
+| `ROLE_ADMIN` | Gestor da clínica |
+| `ROLE_RECEPCIONISTA` | Secretária: agenda, pacientes, consultas |
+| `ROLE_PROFISSIONAL` | Médico/dentista: agenda e prontuários |
 
 ## Testes
 
 ```bash
-./mvnw test
+./mvnw test -Djacoco.skip=true
 ```
+
+A CI (`.github/workflows/ci.yml`) roda esse mesmo comando em push e pull request.
 
 ## Contribuição
 

@@ -281,25 +281,27 @@ class EmailNotificacaoServiceTest {
         }
 
         @Test
-        @DisplayName("Credenciais: não deve logar a senha nem o e-mail em claro, mas mantém o login")
+        @DisplayName("Credenciais: não deve logar a senha, o e-mail nem o CPF em claro (login mascarado)")
         void credenciaisNaoDevemLogarSenha() {
             emailNotificacaoService.enviarCredenciaisAdministrador(EMAIL, "Fulano", "12345678900", SENHA, 1L, 2L);
 
             assertThat(mensagens()).isNotEmpty();
             assertThat(mensagens()).noneMatch(m -> m.contains(SENHA));
             assertThat(mensagens()).noneMatch(m -> m.contains(EMAIL));
-            assertThat(mensagens()).anyMatch(m -> m.contains("12345678900"));
+            assertThat(mensagens()).noneMatch(m -> m.contains("12345678900"));
+            assertThat(mensagens()).anyMatch(m -> m.contains("***.***.***-00"));
         }
 
         @Test
-        @DisplayName("Recuperação de senha: não deve logar a senha nem o e-mail em claro, mas mantém o login")
+        @DisplayName("Recuperação de senha: não deve logar a senha, o e-mail nem o CPF em claro (login mascarado)")
         void recuperacaoNaoDeveLogarSenha() {
             emailNotificacaoService.enviarRecuperacaoSenha(EMAIL, "Fulano", "12345678900", SENHA, 1L);
 
             assertThat(mensagens()).isNotEmpty();
             assertThat(mensagens()).noneMatch(m -> m.contains(SENHA));
             assertThat(mensagens()).noneMatch(m -> m.contains(EMAIL));
-            assertThat(mensagens()).anyMatch(m -> m.contains("12345678900"));
+            assertThat(mensagens()).noneMatch(m -> m.contains("12345678900"));
+            assertThat(mensagens()).anyMatch(m -> m.contains("***.***.***-00"));
         }
     }
 }

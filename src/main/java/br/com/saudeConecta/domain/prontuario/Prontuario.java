@@ -40,7 +40,6 @@ public class Prontuario implements Serializable {
     @Column(name = "prontTemperatura")
     private String prontTemperatura;
 
-
     @Column(name = "prontSaturacao")
     private String prontSaturacao;
 
@@ -62,7 +61,6 @@ public class Prontuario implements Serializable {
     @Column(name = "prontObservacao", columnDefinition = "TEXT")
     private String prontObservacao;
 
-
     @Column(name = "prontAnamnese", columnDefinition = "TEXT")
     private String prontAnamnese;
 
@@ -72,11 +70,8 @@ public class Prontuario implements Serializable {
     @Column(name = "prontDiagnostico", columnDefinition = "TEXT")
     private String prontDiagnostico;
 
-
     @Column(name = "prontTituloPrescricao")
     private String prontTituloPrescricao;
-
-
 
     @Column(name = "prontPrescricao", columnDefinition = "TEXT")
     private String prontPrescricao;
@@ -92,7 +87,6 @@ public class Prontuario implements Serializable {
     @JoinColumn(name = "consulta")
     private Consulta consulta;
 
-
     @Column(name = "prontTempoDuracao")
     private String prontTempoDuracao;
 
@@ -103,9 +97,6 @@ public class Prontuario implements Serializable {
     // ── Sinais Vitais (campo faltante) ────────────────────────────────────────
     @Column(name = "prontPulso", length = 250)
     private String prontPulso;
-
-
-
 
     // ── Diagnóstico e Tratamento ──────────────────────────────────────────────
     @Column(name = "prontOrientacoes", columnDefinition = "TEXT")
@@ -175,15 +166,4 @@ public class Prontuario implements Serializable {
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
 

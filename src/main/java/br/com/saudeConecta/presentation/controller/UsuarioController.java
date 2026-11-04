@@ -21,8 +21,6 @@ public class UsuarioController {
 
     private final UsuarioService usuarioService;
 
-
-
     @PutMapping("/bloquearUsuariobyOrg")
     @Description("Bloqueia ou desbloqueia usuário por ID. Utilizado em: GerenciamentoUsuariosComponent")
     public ResponseEntity<Void> bloquearUsuariobyOrg(@RequestBody @Valid BloquearUsuarioRequest request) {
@@ -36,9 +34,6 @@ public class UsuarioController {
         }
     }
 
-
-
-
     @GetMapping("/buscarTodosAgrupados")
     @Description("Lista todos os usuários agrupados por tipo (paciente, medico, secretaria, administrador). Utilizado em: TabelaTodosUsuariosComponent")
     public ResponseEntity<TodosUsuariosAgrupadosResponse> buscarTodosAgrupados() {
@@ -51,7 +46,6 @@ public class UsuarioController {
 
         return ResponseEntity.ok(usuarioService.buscarTodosAgrupados(organizacaoId));
     }
-
 
     @PutMapping("/trocarSenharUsuariobyOrg/{id}")
     @Description("Troca a senha do usuário por ID. Utilizado em: TrocaSenhaUsuariosComponent")
@@ -70,7 +64,6 @@ public class UsuarioController {
         }
     }
 
-
     @GetMapping("/buscarPerfilCompleto/{id}")
     @Description( "Busca perfil completo do usuário por ID com dados específicos baseados no tipo (CLINICO, GESTOR, ASSISTENTE) incluindo endereço quando existir. Utilizado em: UserProfileComponent, UserService")
     public ResponseEntity<UsuarioPerfilCompletoResponse> buscarPerfilCompleto(@PathVariable Long id) {
@@ -80,13 +73,6 @@ public class UsuarioController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-
-
-
-
-
-
  
-
 
 }

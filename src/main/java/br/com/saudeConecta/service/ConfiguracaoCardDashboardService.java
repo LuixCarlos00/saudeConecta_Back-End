@@ -51,8 +51,6 @@ public class ConfiguracaoCardDashboardService {
             TipoCardDashboard.CONFIRMADOS_SEMANA
     );
 
-
-
     /**
      * Assistente: mesmos cards do Gestor, exceto Clínicos Ativos.
      */

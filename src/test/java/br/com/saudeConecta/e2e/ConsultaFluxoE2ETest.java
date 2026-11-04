@@ -145,6 +145,6 @@ class ConsultaFluxoE2ETest {
                         .with(csrf())
                         .param("status", "CANCELADA")
                         .param("motivo", "Tentativa inválida"))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isConflict());
     }
 }

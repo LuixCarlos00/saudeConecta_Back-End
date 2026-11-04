@@ -58,9 +58,6 @@ public class UsuarioService   {
         this.limitePlanoService = limitePlanoService;
     }
 
-
-
-
     @Transactional
     public void bloquearUsuariobyOrg(BloquearUsuarioRequest request) {
         // Falha fechada: sem tenant só passa quem tem ROLE_SUPER_ADMIN; os demais recebem 403.
@@ -294,10 +291,6 @@ public class UsuarioService   {
         return new TodosUsuariosAgrupadosResponse(pacientes, medicos, secretarias, administradores);
     }
 
-
-
-
-
     /**
      * Troca a senha de um usuário, aplicando a regra de autorização do produto:
      * qualquer usuário troca a própria senha; o gestor (admin da organização)
@@ -367,12 +360,10 @@ public class UsuarioService   {
         return new TenantAccessDeniedException("Acesso negado: sem permissao para trocar a senha deste usuario");
     }
 
-
     public Optional<Usuario> buscarPorId(Long id) {
         log.debug("Buscando usuario por ID: {}", id);
         return usuarioRepository.findById(id);
     }
-
 
     @Cacheable(value = "perfil-usuario", key = "#usuarioId")
     @Transactional(readOnly = true)
@@ -430,6 +421,5 @@ public class UsuarioService   {
 
         return Optional.of(UsuarioPerfilCompletoResponse.fromEntities(usuario, profissional, admin, secretaria));
     }
-
 
 }

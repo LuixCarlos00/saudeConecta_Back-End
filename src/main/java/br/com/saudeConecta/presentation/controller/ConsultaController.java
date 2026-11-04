@@ -98,7 +98,6 @@ public class ConsultaController {
     //=========================================Tela de /gerenciamento =========================================
 //=================================================CRUD =========================================
 
-
     @PostMapping("/cadastrarConsultaByOrg")
     public ResponseEntity<ConsultaResponse> cadastrarConsultaByOrg(@Valid @RequestBody AgendarConsultaRequest request) {
         log.info("- Iniciando cadastro de consulta - cadastrarConsultaByOrg");
@@ -122,7 +121,6 @@ public class ConsultaController {
         return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
     }
 
-
     /**
      * Exclui uma consulta e registros associados (questionário, planejamentos, histórico).
      * Consultas com prontuário (dentista ou médico) não podem ser excluídas.
@@ -145,7 +143,6 @@ public class ConsultaController {
 
     //===============================================CRUD ==================================================
     //=======================Atualizar  Status ==========================
-
 
     /**
      * Altera o status de uma consulta seguindo as regras de transição:
@@ -173,9 +170,6 @@ public class ConsultaController {
         } catch (IllegalArgumentException e) {
             log.warn("Status invalido ou consulta nao encontrada: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
-        } catch (IllegalStateException e) {
-            log.warn("Transicao de status invalida: {}", e.getMessage());
-            return ResponseEntity.unprocessableEntity().build();
         }
     }
     //=======================Atualizar  Status ==========================
@@ -232,7 +226,6 @@ public class ConsultaController {
         return ResponseEntity.ok(existeConsulta);
     }
 
-
     /**    //======================= Filtros  de pesquisas Dinamico ==========================
 
      * Endpoint dinâmico para buscar consultas com filtros opcionais
@@ -284,8 +277,6 @@ public class ConsultaController {
     }
     //======================= Filtros  de pesquisas Dinamico ==========================
 
-
-
     @GetMapping("/intervalo")
     public ResponseEntity<List<ConsultaResponse>> buscarTodasPorIntervalo(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
@@ -297,8 +288,6 @@ public class ConsultaController {
                 .toList();
         return ResponseEntity.ok(response);
     }
-
-
 
     @GetMapping("/profissional/{profissionalId}")
     public ResponseEntity<List<ConsultaResponse>> listarPorProfissional(@PathVariable Long profissionalId) {
@@ -401,45 +390,7 @@ public class ConsultaController {
         return ResponseEntity.ok(response);
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 //============================================================
-
-
-
-
 
     @GetMapping("/paginado")
     public ResponseEntity<Page<ConsultaResponse>> listarTodasPaginado(Pageable pageable) {
@@ -456,7 +407,6 @@ public class ConsultaController {
             .orElse(ResponseEntity.notFound().build());
     }
     
-
 
     
     @GetMapping("/profissional/{profissionalId}/agenda")
@@ -488,10 +438,6 @@ public class ConsultaController {
     }
 
     
-
-
-
-
 
     @GetMapping("/count/hoje")
     public ResponseEntity<Long> contarAgendadasHoje() {
@@ -592,7 +538,6 @@ public class ConsultaController {
         return ResponseEntity.ok(consultaService.getEstatisticaConsultasHojeByAdmiOrg(organizacaoId));
     }
 
-
     @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-atendidas-hoje")
     public ResponseEntity<Long> getEstatisticaConsultasAtendidasByAdmiOrg(@PathVariable Long organizacaoId) {
         tenantHelper.validateTenant(organizacaoId);
@@ -604,7 +549,6 @@ public class ConsultaController {
         tenantHelper.validateTenant(organizacaoId);
         return ResponseEntity.ok(consultaService.getEstatisticasConsultaAgendadasHojeByOrd(organizacaoId));
     }
-
 
     @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-semana")
     public ResponseEntity<Long> getEstatisticasSemanaPorOrganizacao(
@@ -618,9 +562,7 @@ public class ConsultaController {
         return ResponseEntity.ok(quantidade);
     }
 
-
     //==================================FIM=============================================
-
 
     @GetMapping("/organizacao/{organizacaoId}/intervalo")
     public ResponseEntity<List<ConsultaResponse>> buscarPorOrganizacaoEIntervalo(
@@ -791,7 +733,6 @@ public class ConsultaController {
      * @return Quantidade de consultas da semana
      */
 
-
     /**
      * Conta consultas da semana atual de todas as organizações (SuperAdmin)
      * Retorna total global de consultas na semana de segunda a domingo
@@ -846,7 +787,6 @@ public class ConsultaController {
     }
 
     // ========== ENDPOINT PARA BUSCAR HORÁRIOS OCUPADOS ==========
-
 
     /**
      * Busca histórico completo de consultas de um paciente, aplicando as

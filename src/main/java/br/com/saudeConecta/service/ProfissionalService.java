@@ -55,7 +55,6 @@ public class ProfissionalService {
     private final MensageriaRepository mensageriaRepository;
     private final CacheEvictionService cacheEvictionService;
 
-
     private static final String CARACTERES_SENHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*";
 
     public ProfissionalService(
@@ -89,9 +88,6 @@ public class ProfissionalService {
         this.mensageriaRepository = mensageriaRepository;
         this.cacheEvictionService = cacheEvictionService;
     }
-
-
-
 
     @Caching(evict = {
         @CacheEvict(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull()"),
@@ -138,7 +134,6 @@ public class ProfissionalService {
                 .organizacao(organizacao)
                 .status(StatusUsuario.ATIVO)
                 .build();
-
 
         Endereco endereco = Endereco.builder()
                 .endNacionalidade(request.nacionalidade())
@@ -217,7 +212,6 @@ public class ProfissionalService {
 
         return salvo;
     }
-
 
     
     @RequiresTenant
@@ -315,7 +309,6 @@ public class ProfissionalService {
             antes.setEndereco(endereco);
         }
 
-
         Profissional resultado =  profissionalRepository.save(antes);
         log.info("Profissional atualizado: {}", resultado);
 
@@ -331,8 +324,6 @@ public class ProfissionalService {
 
 return resultado ;
     }
-
-
 
     @Caching(evict = {
         @CacheEvict(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull()"),
@@ -414,8 +405,6 @@ return resultado ;
         };
     }
 
-
-
     @Cacheable(value = "profissionais-org", key = "'count-org-' + @tenantHelper.getCurrentTenantIdOrNull()")
     @Transactional(readOnly = true)
     public Long contarAtivosPorOrganizacao(Long organizacaoId) {
@@ -434,7 +423,6 @@ return resultado ;
         return profissionalRepository.countTodosAtivos();
     }
 
-
     @Cacheable(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull()")
     @Transactional(readOnly = true)
     public List<Profissional> buscarPorOrganizacao(Long organizacaoId) {
@@ -442,42 +430,7 @@ return resultado ;
         return profissionalRepository.findByOrganizacaoIdAndStatusWithRelations(organizacaoId, StatusProfissional.ATIVO);
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     // ========== MÉTODOS DE BUSCA PARA AUTOCOMPLETE COM FILTRO ==========
-
 
     @RequiresTenant
     @Transactional(readOnly = true)
@@ -507,7 +460,6 @@ return resultado ;
         }
     }
 
-
     @RequiresTenant
     @Transactional(readOnly = true)
     public List<Profissional> buscarPorCidadeComFiltro(String cidade, String filtro) {
@@ -521,7 +473,6 @@ return resultado ;
             return profissionalRepository.findByOrganizacaoIdAndCidadeContaining(orgId, cidade);
         }
     }
-
 
     @RequiresTenant
     @Transactional(readOnly = true)
@@ -537,7 +488,6 @@ return resultado ;
         }
     }
 
-
     @Cacheable(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-' + #filtro")
     @RequiresTenant
     @Transactional(readOnly = true)
@@ -552,8 +502,5 @@ return resultado ;
             return profissionalRepository.findByOrganizacao_IdWithUsuario(orgId);
         }
     }
-
-
-
 
 }

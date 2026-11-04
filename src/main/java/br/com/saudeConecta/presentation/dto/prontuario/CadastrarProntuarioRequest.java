@@ -92,15 +92,12 @@ public class CadastrarProntuarioRequest {
     @JsonProperty("responsavel")
     private String responsavel;
 
-
-
     // ── Exames ────────────────────────────────────────────────────────────
     @JsonProperty("modeloExame")
     private String modeloExame;
 
     @JsonProperty("tituloExame")
     private String tituloExame;
-
 
     @JsonProperty("exame")
     private String exame;

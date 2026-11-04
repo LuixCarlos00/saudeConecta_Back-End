@@ -69,8 +69,6 @@ public class PacienteService  {
                 .endComplemento(request.complemento())
                 .build();
 
-
-
         Paciente paciente = Paciente.builder()
                 .organizacao(organizacao)
                 .paciNome(request.nome())
@@ -96,15 +94,12 @@ public class PacienteService  {
         return cpf != null ? cpf.replaceAll("[^0-9]", "") : null;
     }
 
-
     @RequiresTenant
     public Optional<Paciente> buscarrPacientebyOrg(Long id) {
         Long orgId = tenantHelper.getCurrentTenantId();
         log.debug("Buscando paciente ID: {} da organizacao: {}", id, orgId);
            return   pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(id, orgId);
     }
-
-
 
     @Caching(evict = {
         @CacheEvict(value = "pacientes-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ATIVO'"),
@@ -121,7 +116,6 @@ public class PacienteService  {
                     return new IllegalArgumentException("Paciente não encontrado");
                 });
         Paciente snapshot = SnapshotUtil.copiarSnapshot(antes);
-
 
         // Atualiza o endereço se existir
         Endereco enderecoAtualizado = null;
@@ -181,11 +175,6 @@ public class PacienteService  {
         return resultado;
     }
 
-
-
-
-
-
     @Caching(evict = {
         @CacheEvict(value = "pacientes-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ATIVO'"),
         @CacheEvict(value = "pacientes-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ALL'")
@@ -219,9 +208,6 @@ public class PacienteService  {
         }
     }
 
-
-
-
     @Caching(evict = {
         @CacheEvict(value = "pacientes-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ATIVO'"),
         @CacheEvict(value = "pacientes-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ALL'")
@@ -245,16 +231,10 @@ public class PacienteService  {
         log.info("Status do paciente ID: {} alterado com sucesso", id);
     }
 
-
      public boolean existeCpfNoTenant(String cpf) {
          Long orgId = tenantHelper.getCurrentTenantId();
          return pacienteRepository.existsByPaciCpfAndOrganizacao_Id(cpf, orgId);
      }
-
-
-
-
-
 
     @RequiresTenant
     @Transactional(readOnly = true)
@@ -332,9 +312,5 @@ public class PacienteService  {
             return pacienteRepository.findByOrganizacao_Id(orgId);
         }
     }
-
-
-
-
 
 }

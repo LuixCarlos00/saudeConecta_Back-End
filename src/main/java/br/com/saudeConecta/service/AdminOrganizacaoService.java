@@ -52,8 +52,6 @@ public class AdminOrganizacaoService {
     private final AssinaturaTenantService assinaturaTenantService;
     private final CacheEvictionService cacheEvictionService;
 
-
-
     public AdminOrganizacaoService(
             AdminOrganizacaoRepository adminOrganizacaoRepository,
             UsuarioRepository usuarioRepository,
@@ -253,7 +251,6 @@ public class AdminOrganizacaoService {
         // igual a inexistente para não revelar quais IDs existem.
         AdminOrganizacao antes = adminOrganizacaoRepository.findByIdAndOrganizacao_Id(id, orgId)
             .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
-
 
         // E-mail duplicado desvia o "esqueci minha senha" (que busca por e-mail) para a conta errada
         emailUnicoService.validarEmailLivreParaAtualizacao(email, antes.getEmail(),
@@ -623,17 +620,9 @@ public class AdminOrganizacaoService {
                 .build());
     }
 
-
-
-
-
     private String limparCnpj(String cnpj) {
         return cnpj.replaceAll("[^0-9]", "");
     }
-
-
-
-
 
     private String gerarSenhaAleatoria() {
         SecureRandom random = new SecureRandom();

@@ -446,7 +446,7 @@ public class MercadoPagoWebhookService {
                 .organizacao(assinatura.getOrganizacao())
                 .valorTotal(valor)
                 .status(StatusCobranca.PENDENTE)
-                .formaPagamento(FormaPagamento.MERCADO_PAGO)
+                .formaPagamento(FormaPagamentoCobranca.MERCADO_PAGO)
                 .mpAuthorizedPaymentId(authorizedPaymentId)
                 .mpPaymentId(fatura.payment() != null && fatura.payment().id() != null
                         ? String.valueOf(fatura.payment().id()) : null)

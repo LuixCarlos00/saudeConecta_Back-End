@@ -310,9 +310,6 @@ public class ConsultaService {
         return salva;
     }
 
-
-
-
     @RequiresTenant
     @CacheEvict(value = {"dashboard-admin-org", "dashboard-profissional", "dashboard-super-admin", "consultas-intervalo-org",
                           "consultas-hoje-org", "consultas-semana-org", "consultas-mes-org", "consultas-ano-org",
@@ -341,7 +338,6 @@ public class ConsultaService {
     
 
     
-
 
     /**
      * Atualiza o status de uma consulta seguindo as regras de transição:
@@ -499,7 +495,6 @@ public class ConsultaService {
         }
     }
 
-
     @RequiresTenant
     @CacheEvict(value = {"dashboard-admin-org", "dashboard-profissional", "dashboard-super-admin", "consultas-intervalo-org",
                           "consultas-hoje-org", "consultas-semana-org", "consultas-mes-org", "consultas-ano-org",
@@ -584,7 +579,6 @@ public class ConsultaService {
         Long orgId = tenantHelper.getCurrentTenantId();
         return consultaRepository.countAgendadasHoje(orgId);
     }
-
 
     // ==========================================
     // ESTATÍSTICAS POR PROFISSIONAL (usuarioId + orgId) - HOJE
@@ -867,8 +861,6 @@ public class ConsultaService {
         );
     }
 
-
-
     public Long getEstatisticaConsultasAtendidasByAdmiOrg(Long organizacaoId) {
         LocalDate hoje = LocalDate.now();
         return consultaRepository.countByOrganizacao_IdAndStatusAndDataHoraBetween(
@@ -900,8 +892,6 @@ public class ConsultaService {
         );
     }
 
-
-
     @Transactional(readOnly = true)
     public Long getEstatisticasSemanaPorOrganizacao(Long organizacaoId) {
         LocalDate hoje = LocalDate.now();
@@ -917,7 +907,6 @@ public class ConsultaService {
                 fimSemana.atTime(23, 59, 59)
         );
     }
-
 
     //==========================================FIM=========================================
 
@@ -976,8 +965,6 @@ public class ConsultaService {
         );
     }
 
-
-
     /**
      * Conta consultas da semana atual de todas as organizações (SuperAdmin)
      *
@@ -1029,8 +1016,6 @@ public class ConsultaService {
         
         return duracoes;
     }
-
-
 
     @RequiresTenant
     @Transactional(readOnly = true)

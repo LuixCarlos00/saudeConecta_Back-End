@@ -42,7 +42,6 @@ public class SecretariaService {
     private final LimitePlanoService limitePlanoService;
     private final CacheEvictionService cacheEvictionService;
 
-
     public SecretariaService(
             SecretariaRepository secretariaRepository,
             UsuarioRepository usuarioRepository,
@@ -66,8 +65,6 @@ public class SecretariaService {
         this.cacheEvictionService = cacheEvictionService;
     }
 
-
-
     @RequiresTenant
     @Transactional(readOnly = true)
     public Optional<Secretaria> buscarSecretariaIdByOrg(Long idSecretaria) {
@@ -88,7 +85,6 @@ public class SecretariaService {
                 antes.getUsuario() != null ? antes.getUsuario().getId() : null);
 
         Secretaria snapshot = SnapshotUtil.copiarSnapshot(antes);
-
 
         // Atualiza campos permitidos (nome, email e telefone)
         if (dadosAtualizados.getNome() != null) {
@@ -125,7 +121,6 @@ public class SecretariaService {
         limitePlanoService.validarLimiteSecretaria(orgId);
 
         String cpfLimpo = limparCpf(request.cpf());
-
 
         if (usuarioRepository.existsByLogin(cpfLimpo)) {
             throw new IllegalStateException("CPF já cadastrado no sistema");

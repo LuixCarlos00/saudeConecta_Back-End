@@ -15,17 +15,12 @@ public class RecuperaSenha {
     @Autowired
     private CodigoVerificacaoRepository codigoVerificacaoRepository;
 
-
-
     private final JdbcTemplate jdbcTemplate;
-
-
 
     public RecuperaSenha(CodigoVerificacaoRepository codigoVerificacaoRepository, JdbcTemplate jdbcTemplate) {
         this.codigoVerificacaoRepository = codigoVerificacaoRepository;
         this.jdbcTemplate = jdbcTemplate;
     }
-
 
     public String gerarCodigoVerificacaoTabelaUsuarios() {
         String codigo;

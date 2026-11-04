@@ -71,7 +71,7 @@
         <dependency>
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
-            <version>RELEASE</version>
+            <version>26.0.2-1</version>
             <scope>compile</scope>
         </dependency>
 
@@ -103,11 +103,6 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-thymeleaf</artifactId>
 			<version>3.0.5</version>
-		</dependency>
-		<dependency>
-			<groupId>com.twilio.sdk</groupId>
-			<artifactId>twilio</artifactId>
-			<version>8.17.0</version>
 		</dependency>
 
 		<!-- Liquibase para gerenciamento de migrações de banco de dados -->

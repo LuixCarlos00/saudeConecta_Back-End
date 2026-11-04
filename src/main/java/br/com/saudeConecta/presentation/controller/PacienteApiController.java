@@ -42,7 +42,6 @@ public class PacienteApiController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-
     @PutMapping("/atualizarPacientebyOrg/{id}")
     public ResponseEntity<PacienteResponse> buscarrPatualizarPacientebyOrgacientebyOrg(
             @PathVariable Long id,
@@ -58,7 +57,6 @@ public class PacienteApiController {
         return ResponseEntity.ok(new PacienteResponse(paciente));
     }
 
-
     @DeleteMapping("/deletarPacientebyOrg/{id}")
     public ResponseEntity<Void> deletarPacientebyOrg(@PathVariable Long id) {
         log.info("Deletando paciente ID: {} do tenant", id);
@@ -72,12 +70,9 @@ public class PacienteApiController {
         return ResponseEntity.noContent().build();
     }
 
-
     // ==========CRUD============================
 
-
 // ============================= Pesquisas com filtros  ========================================
-
 
     // Métodos de busca para autocomplete com filtro opcional
     @GetMapping("/buscar-por-nome")
@@ -141,7 +136,6 @@ public class PacienteApiController {
 
 // ============================= Pesquisas com filtros  ========================================
 
-
     @PutMapping("/bloquearPacientebyOrg")
     public ResponseEntity<Void> bloquearPacientebyOrg(
             @RequestBody @Valid @NotNull BloquearUsuarioRequest request) {
@@ -155,11 +149,5 @@ public class PacienteApiController {
         pacienteService.bloquearPacientebyOrg(request.codigo(), request.status());
         return ResponseEntity.ok().build();
     }
-
-
-
-
-
-
 
 }

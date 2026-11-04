@@ -63,7 +63,6 @@ public interface ProntuarioDentistaRepository extends JpaRepository<ProntuarioDe
     """)
     Optional<Long> findIdMaisRecentePorConsulta(@Param("consultaId") Long consultaId, @Param("orgId") Long orgId);
 
-
     @Query("""
     SELECT DISTINCT pd FROM ProntuarioDentista pd
     LEFT JOIN FETCH pd.dentes
@@ -78,9 +77,6 @@ public interface ProntuarioDentistaRepository extends JpaRepository<ProntuarioDe
 """)
     Optional<ProntuarioDentista> findByIdComDentes(@Param("id") Long id);
 
-
-
-
     /**
      * Lista prontuários de um profissional.
      */
@@ -93,7 +89,6 @@ public interface ProntuarioDentistaRepository extends JpaRepository<ProntuarioDe
     """)
     List<ProntuarioDentista> findByProfissionalId(@Param("profissionalId") Long profissionalId,
                                                   @Param("orgId") Long orgId);
-
 
     /**
      * Lista prontuários de um paciente (via consulta → paciente) na organização informada.

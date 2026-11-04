@@ -1,7 +1,7 @@
 package br.com.saudeConecta.service;
 
 import br.com.saudeConecta.domain.planos.CobrancaTenant;
-import br.com.saudeConecta.domain.planos.FormaPagamento;
+import br.com.saudeConecta.domain.planos.FormaPagamentoCobranca;
 import br.com.saudeConecta.domain.planos.StatusCobranca;
 import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.infrastructure.persistence.repository.CobrancaTenantRepository;
@@ -58,7 +58,7 @@ public class CobrancaService {
         }
 
         cobranca.setStatus(StatusCobranca.PAGO);
-        cobranca.setFormaPagamento(FormaPagamento.MANUAL);
+        cobranca.setFormaPagamento(FormaPagamentoCobranca.MANUAL);
         cobranca.setDataPagamento(LocalDateTime.now());
         cobrancaTenantRepository.save(cobranca);
 

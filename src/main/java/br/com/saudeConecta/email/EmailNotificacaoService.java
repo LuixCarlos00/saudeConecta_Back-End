@@ -134,7 +134,7 @@ public class EmailNotificacaoService {
                                         String novaSenha, Long organizacaoId) {
         if (!emailHabilitado) {
             log.warn("Email desabilitado. Recuperação de senha não enviada. Login: {}, Email: {}",
-                    login, MascaraLog.email(email));
+                    MascaraLog.cpf(login), MascaraLog.email(email));
             return;
         }
 
@@ -363,7 +363,7 @@ public class EmailNotificacaoService {
                                     Long organizacaoId, Long entidadeId) {
         if (!emailHabilitado) {
             log.warn("Email desabilitado. Credenciais de {} não enviadas. Login: {}, Email: {}",
-                    tipoUsuario, login, MascaraLog.email(email));
+                    tipoUsuario, MascaraLog.cpf(login), MascaraLog.email(email));
             return;
         }
 

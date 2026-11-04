@@ -45,7 +45,6 @@ public class CacheConfig {
             buildCache("consultas-mes-org",   10,  300),
             buildCache("consultas-ano-org",   15,  300),
             buildCache("horarios-ocupados-org",   2, 1000),
-            buildCache("disponibilidade-consulta", 2, 1000),
             buildCache("mensageria-lista", 1, 200),
             buildCache("configuracoes-graficos", 30, 500),
             buildCache("configuracoes-cards",    30, 500),

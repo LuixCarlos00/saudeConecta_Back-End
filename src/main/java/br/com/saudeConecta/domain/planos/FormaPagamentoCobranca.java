@@ -4,7 +4,7 @@ package br.com.saudeConecta.domain.planos;
  * Forma de pagamento usada na cobrança do tenant.
  * PIX existe apenas para leitura do histórico anterior à migração.
  */
-public enum FormaPagamento {
+public enum FormaPagamentoCobranca {
 
     MERCADO_PAGO("Mercado Pago"),
     PIX("Pix"),
@@ -12,7 +12,7 @@ public enum FormaPagamento {
 
     private final String descricao;
 
-    FormaPagamento(String descricao) {
+    FormaPagamentoCobranca(String descricao) {
         this.descricao = descricao;
     }
 

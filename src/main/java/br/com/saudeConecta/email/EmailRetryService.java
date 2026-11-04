@@ -7,6 +7,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import org.slf4j.MDC;
+
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -78,9 +81,9 @@ public class EmailRetryService {
             long delayMs = DELAY_INICIAL_MS * (long) Math.pow(2, tentativa - 1);
             log.info("Próxima tentativa em {}ms para: {}", delayMs, MascaraLog.email(destinatario));
 
-            CompletableFuture.delayedExecutor(delayMs, TimeUnit.MILLISECONDS).execute(() ->
+            CompletableFuture.delayedExecutor(delayMs, TimeUnit.MILLISECONDS).execute(comMdc(() ->
                     executarTentativa(destinatario, nome, assunto, corpoHtml, tipoUsuario,
-                            organizacaoId, entidadeId, tentativa + 1));
+                            organizacaoId, entidadeId, tentativa + 1)));
         }
     }
 
@@ -130,8 +133,29 @@ public class EmailRetryService {
             long delayMs = DELAY_INICIAL_MS * (long) Math.pow(2, tentativa - 1);
             log.info("Próxima tentativa de reenvio em {}ms para: {}", delayMs, MascaraLog.email(destinatario));
 
-            CompletableFuture.delayedExecutor(delayMs, TimeUnit.MILLISECONDS).execute(() ->
-                    executarTentativaReenvio(mensageriaId, destinatario, assunto, corpoHtml, tentativa + 1));
+            CompletableFuture.delayedExecutor(delayMs, TimeUnit.MILLISECONDS).execute(comMdc(() ->
+                    executarTentativaReenvio(mensageriaId, destinatario, assunto, corpoHtml, tentativa + 1)));
         }
+    }
+
+    /**
+     * Envolve o Runnable copiando o MDC (requestId/tenantId/userId) da thread atual,
+     * pois o delayedExecutor roda em outra thread e perderia o contexto de log.
+     *
+     * @param tarefa tarefa a executar com o MDC capturado
+     * @return Runnable que restaura o MDC durante a execução e o limpa ao final
+     */
+    private static Runnable comMdc(Runnable tarefa) {
+        Map<String, String> contexto = MDC.getCopyOfContextMap();
+        return () -> {
+            if (contexto != null) {
+                MDC.setContextMap(contexto);
+            }
+            try {
+                tarefa.run();
+            } finally {
+                MDC.clear();
+            }
+        };
     }
 }

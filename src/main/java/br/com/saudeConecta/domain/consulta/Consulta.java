@@ -113,7 +113,6 @@ public class Consulta implements Serializable, TenantAware {
     }
     
 
-
     public boolean isRealizada() {
         return StatusConsulta.REALIZADA.equals(this.status);
     }

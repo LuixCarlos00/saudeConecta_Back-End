@@ -59,7 +59,7 @@ public class CobrancaTenant implements Serializable {
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "forma_pagamento", length = 20)
-    private FormaPagamento formaPagamento = FormaPagamento.MERCADO_PAGO;
+    private FormaPagamentoCobranca formaPagamento = FormaPagamentoCobranca.MERCADO_PAGO;
 
     @Column(name = "motivo_recusa", length = 255)
     private String motivoRecusa;

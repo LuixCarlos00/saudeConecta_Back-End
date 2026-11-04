@@ -19,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
  import java.math.BigDecimal;
    import java.util.*;
 
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -47,14 +46,9 @@ public class HistoricoDadosPessoaisService {
             "id", "paciCodigo", "endCodigo"
     );
 
-
     // ==========================================
     // Consultas
     // ==========================================
-
-
-
-
 
     /**
      * Busca histórico de alterações por tipo de entidade e ID da entidade.
@@ -107,15 +101,7 @@ public class HistoricoDadosPessoaisService {
         return historicoRepository.findTop10ByOrderByCriadoEmDesc();
     }
 
-
-
-
-
-
-
-
    ///=======================================
-
 
     /**
      * Compara dois objetos (antes e depois da atualização) via reflection,

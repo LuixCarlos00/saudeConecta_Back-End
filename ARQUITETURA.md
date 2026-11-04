@@ -1,313 +1,109 @@
-## 🎉 Migração Concluída com Sucesso!
+# Arquitetura do saudeConecta API
 
-A arquitetura hexagonal foi completamente implementada para o projeto SaudeConecta API. Todos os módulos principais foram migrados da estrutura vertical (endpoinst) para a estrutura hexagonal moderna.
-
-### 📋 Resumo da Implementação:
-
-**Camada Domain** ✅
-- Entidades: Administrador, Médico, Paciente, Usuario, Consulta
-- Regras de negócio preservadas
-- Relacionamentos mantidos
-
-**Camada Application** ✅  
-- Input Ports: Interfaces de entrada para cada módulo
-- Output Ports: Interfaces de saída para persistência
-- Services: Orquestradores que implementam os Input Ports
-- Adapters: Implementações concretas dos Output Ports
-
-**Camada Infrastructure** ✅
-- Repositórios JPA migrados
-- Configurações de segurança mantidas
-- Integrações com banco de dados preservadas
-
-**Camada Presentation** ✅
-- Controllers RESTful para todos os módulos
-- DTOs de request com validações
-- DTOs de response com formatação adequada
-- Tratamento de erros e status HTTP
-
-### 🔗 Fluxo Hexagonal Funcional:
+Spring Boot 3.0.5, Java 17, MySQL, Liquibase. É uma API em **camadas clássicas**
+(controller, service, repository JPA). Não é hexagonal: não existem ports/adapters.
 
 ```
-HTTP Request → Controller → Input Port → Service → Output Port → Repository → Database
-                                                    ↓
-HTTP Response ← Controller ← DTO ← Entity ←─────────────┘
+HTTP -> Controller (presentation) -> Service -> Repository JPA (infrastructure) -> MySQL
+              |                          |
+            DTOs                    entidades (domain)
 ```
 
-### 🚀 Benefícios Alcançados:
-
-- **Baixo Acoplamento**: Dependência apenas de interfaces (ports)
-- **Alta Testabilidade**: Fácil mock dos ports para testes
-- **Flexibilidade**: Fácil substituir implementações
-- **Manutenibilidade**: Código organizado e responsabilidades claras
-- **Escalabilidade**: Arquitetura preparada para crescimento
-
-A API está pronta para uso com a nova arquitetura hexagonal!
-
-## Visão Geral
-
-O projeto foi refatorado para utilizar uma **arquitetura hexagonal** (também conhecida como Ports and Adapters), que promove baixo acoplamento e alta coesão entre as camadas da aplicação.
-
-## Estrutura de Pastas
+## Pacotes
 
 ```
 br.com.saudeConecta/
-├── domain/                              # Camada de Domínio (Core)
-│   ├── medico/
-│   │   └── Medico.java                  # Entidade
-│   ├── paciente/
-│   │   └── Paciente.java
-│   ├── usuario/
-│   │   └── Usuario.java
-│   ├── endereco/
-│   │   └── Endereco.java
-│   ├── consulta/
-│   └── administrador/
-│       └── Administrador.java
-
-├── application/                         # Camada de Aplicação
-│   ├── port/                            # Ports (Interfaces)
-│   │   ├── in/                         # Input Ports
-│   │   │   ├── administrador/
-│   │   │   │   └── AdministradorInputPort.java
-│   │   │   ├── medico/
-│   │   │   └── paciente/
-│   │   └── out/                        # Output Ports
-│   │       ├── administrador/
-│   │       │   ├── AdministradorOutputPort.java
-│   │       │   └── impl/
-│   │       │       └── AdministradorOutputPortImpl.java
-│   │       ├── medico/
-│   │       └── paciente/
-│   ├── service/                         # Services (Orquestração)
-│   │   ├── AdministradorService.java
-│   │   ├── MedicoService.java
-│   │   └── PacienteService.java
-│   └── usecase/                         # Use Cases (legado - em migração)
-│       ├── administrador/
-│       ├── medico/
-│       └── paciente/
-
-├── infrastructure/                      # Camada de Infraestrutura
-│   ├── persistence/
-│   │   └── repository/
-│   │       ├── AdministradorRepository.java
-│   │       ├── MedicoRepository.java
-│   │       ├── PacienteRepository.java
-│   │       ├── UsuarioRepository.java
-│   │       └── EnderecoRepository.java
-│   ├── security/                        # Configurações de segurança
-│   └── config/                          # Outras configurações
-
-├── presentation/                        # Camada de Apresentação
-│   ├── controller/
-│   │   ├── AdministradorController.java
-│   │   ├── MedicoController.java
-│   │   └── PacienteController.java
-│   └── dto/
-│       ├── administrador/
-│       │   ├── AdministradorResponse.java
-│       │   ├── CadastrarAdministradorRequest.java
-│       │   └── AtualizarAdministradorRequest.java
-│       ├── medico/
-│       │   ├── MedicoResponse.java
-│       │   ├── CadastrarMedicoRequest.java
-│       │   └── AtualizarMedicoRequest.java
-│       └── paciente/
-│           ├── PacienteResponse.java
-│           └── CadastrarPacienteRequest.java
-
-└── SaudeConectaApplication.java         # Classe principal
+├── presentation/   controller/ (REST) e dto/ (request/response)
+├── service/        regras de negócio; mercadopago/ tem a integração com o MP
+├── domain/         entidades JPA e enums, um pacote por assunto
+├── infrastructure/ persistence/repository: interfaces Spring Data JPA
+├── infra/          transversais (ver convenção abaixo)
+├── usecase/        casos de uso que agregam histórico do paciente
+├── email/          envio de e-mail, retry com backoff e registro na mensageria
+├── config/         CacheConfig, FusoHorarioConfig, AsyncConfig, RestTemplateConfig
+└── util/           MascaraLog, InputSanitizer, EmailUnicoService...
 ```
 
-## Padrão Hexagonal (Ports and Adapters)
+### Convenção `infra` x `infrastructure`
 
-### 1. Input Ports (Interfaces de Entrada)
-Definem o contrato para operações que podem ser invocadas pela camada de apresentação:
+Existem dois pacotes de nome parecido por razão histórica. Mover um deles tem risco alto
+(muitos imports), então vale a convenção:
 
-```java
-public interface AdministradorInputPort {
-    Optional<Administrador> buscarPorId(Long id);
-    Optional<Administrador> buscarPorIdUsuario(Long usuarioId);
-    List<Administrador> buscarTodos();
-    Page<Administrador> buscarTodos(Pageable pageable);
-    Administrador cadastrar(Administrador administrador);
-    void deletar(Long id) throws Exception;
-}
-```
+- `infra/` = o que atravessa a aplicação: segurança (`configuracoesseguranca`), tenant,
+  logging (`CorrelationIdFilter`, MDC), rate limit e exceções (`exceptions`).
+- `infrastructure/` = persistência (`persistence/repository`).
 
-### 2. Output Ports (Interfaces de Saída)
-Definem o contrato para operações de persistência e integrações externas:
+Código novo segue essa divisão.
 
-```java
-public interface AdministradorOutputPort {
-    Optional<Administrador> findById(Long id);
-    Optional<Administrador> findByAdmUsuario_Id(Long usuarioId);
-    List<Administrador> findAll();
-    Page<Administrador> findAll(Pageable pageable);
-    Administrador save(Administrador administrador);
-    void deleteById(Long id);
-    boolean existsById(Long id);
-}
-```
+## Entidades principais (`domain/`)
 
-### 3. Service (Orquestração)
-Implementa o Input Port e utiliza o Output Port:
+- **Organização e pessoas**: `Organizacao`, `Usuario` (login/senha/perfil), `Profissional`
+  (médico ou dentista, por tipo), `AdminOrganizacao` (gestor), `Secretaria`, `Paciente`, `Endereco`.
+- **Atendimento**: `Consulta`, `ConfiguracoesConsulta`, `Prontuario` e `ProntuarioDentista`,
+  `PlanejamentoTerapeutico`, `TermoAutorizacao`, `FormaPagamento` (cadastro de formas de
+  pagamento da consulta).
+- **Assinatura e cobrança**: `PlanoAssinatura`, `AssinaturaTenant`, `CobrancaTenant`
+  (usa o enum `FormaPagamentoCobranca`), `MpWebhookEvento`.
+- **Comunicação e suporte**: `Mensageria`, `ChamadoSuporte`.
+- **Auditoria**: `AuditoriaAcessoMaster`, `HistoricoDadosPessoais`.
 
-```java
-@Service
-@RequiredArgsConstructor
-public class AdministradorService implements AdministradorInputPort {
-    
-    private final AdministradorOutputPort administradorOutputPort;
-    
-    @Override
-    public Optional<Administrador> buscarPorId(Long id) {
-        return administradorOutputPort.findById(id);
-    }
-    
-    // outras implementações...
-}
-```
+Banco versionado por Liquibase em `src/main/resources/db/changelog` (arquivo mestre
+`db.changelog-master.xml`).
 
-### 4. Adapter de Infraestrutura
-Implementa o Output Port utilizando o repository:
+## Multi-tenant
 
-```java
-@Component
-@RequiredArgsConstructor
-public class AdministradorOutputPortImpl implements AdministradorOutputPort {
-    
-    private final AdministradorRepository administradorRepository;
-    
-    @Override
-    public Optional<Administrador> findById(Long id) {
-        return administradorRepository.findById(id);
-    }
-    
-    // outras implementações...
-}
-```
+Cada clínica é um tenant (`Organizacao`). Não há filtro automático do Hibernate: o isolamento
+é feito de forma explícita.
 
-### 5. Controller (Adapter de Apresentação)
-Utiliza o Input Port:
+- `TenantFilter` lê a organização do JWT e a coloca no `TenantContext`.
+- `TenantHelper` expõe `getCurrentTenantId()`, `validateTenant(id)`, `isSuperAdmin()`.
+- Toda consulta de dados da clínica filtra pela organização do token direto na query
+  (ex.: `findByIdAndOrganizacao_Id`). Registro de outra clínica responde como inexistente.
+- `organizacaoId` vindo na URL e diferente do token responde 403.
+- Cache (Caffeine, `CacheConfig`): a chave inclui o tenant (`org-<id>-...`).
+  `CacheEvictionService` invalida por tenant.
 
-```java
-@RestController
-@RequiredArgsConstructor
-public class AdministradorController {
-    
-    private final AdministradorService administradorService;
-    
-    @GetMapping("/buscarId/{id}")
-    public ResponseEntity<AdministradorResponse> buscarPorId(@PathVariable Long id) {
-        return administradorService.buscarPorId(id)
-            .map(administrador -> ResponseEntity.ok(new AdministradorResponse(administrador)))
-            .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-}
-```
+## Segurança
 
-## Fluxo de Dados na Arquitetura Hexagonal
+- JWT (`TokenService`); `FiltroAcesso` autentica a cada requisição e revalida usuário
+  (apagado/bloqueado = 401) e assinatura da clínica (suspensa/cancelada = 403, exceto
+  rotas de pagamento). ROOT não depende de assinatura.
+- Roles: `ROLE_SUPER_ADMIN` (ROOT), `ROLE_ADMIN` (gestor), `ROLE_RECEPCIONISTA` (secretária),
+  `ROLE_PROFISSIONAL`. Autorização por `@PreAuthorize` nos controllers
+  (`@EnableMethodSecurity` ativo).
+- Senha master do ROOT é intencional e cada uso é auditado em `AuditoriaAcessoMaster`.
+- Links públicos (termo, planejamento) usam token de uso único com expiração.
 
-```
-HTTP Request → Controller → Input Port → Service → Output Port → Repository → Database
-                                                    ↓
-HTTP Response ← Controller ← DTO ← Entity ←─────────────┘
-```
+## Cobrança (Mercado Pago)
 
-## Benefícios da Arquitetura Hexagonal
+- `PlanoAssinatura` (STARTER/PROFISSIONAL/BUSINESS), `AssinaturaTenant` por clínica,
+  `CobrancaTenant` por fatura.
+- Webhook em `/publico/webhooks/mercadopago`, **idempotente** via `MpWebhookEvento`.
+- `CobrancaScheduler` (fuso America/Sao_Paulo): links de ativação de trial (08h), **régua de
+  carência** (09h: +5 dias INADIMPLENTE, +15 SUSPENSA, +30 suspensa CANCELADA),
+  **reconciliação** com o MP (a cada 4h) e **reprocessamento** de webhooks com erro (a cada 15 min).
 
-1. **Baixo Acoplamento**: As camadas dependem apenas de interfaces (ports)
-2. **Alta Testabilidade**: Fácil mock dos ports para testes unitários
-3. **Flexibilidade**: Fácil substituir implementações (ex: trocar banco de dados)
-4. **Manutenibilidade**: Mudanças em uma camada não afetam outras
-5. **Clareza**: Responsabilidades bem definidas para cada camada
-6. **Extensibilidade**: Fácil adicionar novos adapters
+## Erros
 
-## Comparação: Arquitetura Antiga vs Nova
+`GlobalExceptionHandler` converte exceções em `ErrorResponse` (`status`, `error`, `message`,
+`path`...). `IllegalStateException` (regra de negócio violada) vira 409; `BusinessException` traz
+o próprio status; `ResourceNotFoundException` vira 404. Controllers não devem capturar essas
+exceções para montar resposta própria.
 
-### Estrutura Antiga (Vertical)
-```
-endpoinst/
-├── administrador/
-│   ├── DTO/
-│   ├── Entity/
-│   ├── Repository/
-│   ├── Resource/
-│   └── Service/
-```
+## Logs
 
-### Estrutura Nova (Hexagonal)
-```
-domain/           → Entidades de negócio
-application/      → Regras de negócio e ports
-infrastructure/   → Implementações concretas
-presentation/     → Controllers e DTOs
-```
+- `CorrelationIdFilter` gera o `requestId`; `TenantFilter`/`FiltroAcesso` põem `tenantId` e
+  `userId` no MDC. `@Scheduled` ganha `requestId` próprio (`ScheduledMdcAspect`) e
+  tarefas assíncronas copiam o MDC (`MdcTaskDecorator`).
+- Dados sensíveis são mascarados com `MascaraLog` (CPF, e-mail, token). Nunca logar senha.
 
-## Status da Migração
+## Fuso horário
 
-### ✅ Concluído
-- **Domain**: Todas as entidades migradas (Administrador, Médico, Paciente, Usuario, Consulta)
-- **Application**: 
-  - Ports e Services para todos os módulos (Administrador, Médico, Paciente, Usuario, Consulta)
-  - Input Ports e Output Ports implementados
-  - Services orquestradores funcionais
-- **Infrastructure**: Todos os repositórios migrados
-- **Presentation**: 
-  - Controllers para todos os módulos
-  - DTOs de request e response
-  - Validações e tratamento de erros
+A JVM roda em `America/Sao_Paulo` (`FusoHorarioConfig`, definido também no Dockerfile e no
+`main`), e os `@Scheduled` usam a mesma zona.
 
-### 📊 Estatísticas da Migração
-- **5 módulos principais migrados**: Administrador, Médico, Paciente, Usuario, Consulta
-- **20+ controllers criados** com endpoints RESTful
-- **40+ DTOs implementados** para transferência de dados
-- **20+ ports criados** (input e output)
-- **5 services orquestradores** implementados
-- **6 testes unitários criados** (5 services + 1 controller)
-- **1 estrutura antiga removida** com backup preservado
+## Convenções
 
-### ⏳ Opcional (Futuro)
-- **Use Cases**: Migrar use cases legados para nova estrutura (já substituídos por services)
-- **Integrações**: Implementar ports para serviços externos (email, SMS)
-- **Testes**: Criar testes unitários e de integração
-- **Remoção**: Eliminar estrutura antiga (endpoinst) após validação completa
-
-## Próximos Passos (Opcional)
-
-1. ✅ **Migração Completa** - Todos os módulos principais migrados
-2. ✅ **Testes Unitários** - Criados para todos os services e controllers
-3. ✅ **Limpeza** - Estrutura antiga (endpoinst) removida e backup criado
-4. 🔄 **Validação** - Testar endpoints e validar funcionamento
-5. 📝 **Documentação API** - Implementar Swagger/OpenAPI
-6. 🔌 **Integrações** - Implementar ports para serviços externos (email, SMS)
-
-## 🗑️ Estrutura Antiga Removida
-
-A estrutura vertical antiga (`endpoinst`) foi completamente removida após a migração bem-sucedida:
-
-- ✅ **Backup criado**: `endpoinst_backup/` preserva o código original
-- ✅ **Remoção completa**: Pasta `endpoinst/` eliminada do projeto
-- ✅ **Estrutura limpa**: Apenas arquitetura hexagonal mantida
-
-### 📁 Estrutura Final Limpa:
-```
-br.com.saudeConecta/
-├── domain/           ✅ Entidades de negócio
-├── application/      ✅ Ports, Services e regras de negócio
-├── infrastructure/   ✅ Repositórios e adapters
-├── presentation/     ✅ Controllers e DTOs
-└── endpoinst_backup/ ✅ Backup da estrutura antiga
-```
-
-## Convenções de Nomenclatura
-
-- **Input Ports**: `[Entidade]InputPort` (ex: `AdministradorInputPort`)
-- **Output Ports**: `[Entidade]OutputPort` (ex: `AdministradorOutputPort`)
-- **Services**: `[Entidade]Service` (ex: `AdministradorService`)
-- **Adapters**: `[Entidade]OutputPortImpl` (ex: `AdministradorOutputPortImpl`)
-- **DTOs Request**: `[Ação][Entidade]Request` (ex: `CadastrarAdministradorRequest`)
-- **DTOs Response**: `[Entidade]Response` (ex: `AdministradorResponse`)
-- **Controllers**: `[Entidade]Controller` (ex: `AdministradorController`)
+- Classes `PascalCase`, métodos/variáveis `camelCase`, constantes `UPPER_CASE`.
+- Controller só orquestra HTTP; regra de negócio fica no service; acesso a dados no repository.
+- Testes: JUnit 5 + Mockito; `./mvnw test -Djacoco.skip=true`. CI em `.github/workflows/ci.yml`.

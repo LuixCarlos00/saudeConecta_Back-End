@@ -192,7 +192,7 @@ class MercadoPagoWebhookServiceTest {
 
         CobrancaTenant cobranca = captor.getValue();
         assertThat(cobranca.getStatus()).isEqualTo(StatusCobranca.PAGO);
-        assertThat(cobranca.getFormaPagamento()).isEqualTo(FormaPagamento.MERCADO_PAGO);
+        assertThat(cobranca.getFormaPagamento()).isEqualTo(FormaPagamentoCobranca.MERCADO_PAGO);
         assertThat(cobranca.getMpAuthorizedPaymentId()).isEqualTo(AUTHORIZED_PAYMENT_ID);
         assertThat(cobranca.getValorTotal()).isEqualByComparingTo(BigDecimal.valueOf(279));
         // 5.5: data do pagamento vem do Clock em America/Sao_Paulo (01h30 UTC = 22h30 do dia anterior)

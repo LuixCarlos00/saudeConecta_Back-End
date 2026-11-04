@@ -126,6 +126,4 @@ public class Profissional implements Serializable, TenantAware {
     public void setOrganizacaoId(Long organizacaoId) {
     }
 
-
-
 }

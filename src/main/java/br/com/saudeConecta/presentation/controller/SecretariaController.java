@@ -25,14 +25,9 @@ public class SecretariaController {
     @Description("Cadastra nova secretária. Utilizado em: CadastroSecretariaComponent")
     public ResponseEntity<?> cadastrarSecretariaByOrg(@RequestBody @Valid CadastrarSecretariaRequest request) {
         log.info("Cadastrando secretaria: {}", request.nome());
-        try {
-            Secretaria secretaria = secretariaService.cadastrarSecretariaByOrg(request);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(SecretariaResponse.fromEntity(secretaria));
-        } catch (IllegalStateException e) {
-            log.warn("Erro ao cadastrar secretaria: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        }
+        Secretaria secretaria = secretariaService.cadastrarSecretariaByOrg(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(SecretariaResponse.fromEntity(secretaria));
     }
 
     @GetMapping("/buscarSecretariaIdByOrg/{idSecretaria}")
@@ -54,9 +49,6 @@ public class SecretariaController {
         } catch (IllegalArgumentException e) {
             log.warn("Erro ao atualizar secretaria: {}", e.getMessage());
             return ResponseEntity.notFound().build();
-        } catch (IllegalStateException e) {
-            log.warn("Conflito ao atualizar secretaria: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         }
     }
 
@@ -67,9 +59,6 @@ public class SecretariaController {
         try {
             secretariaService.deletarSecretariaIdByOrg(id);
             return ResponseEntity.ok().build();
-        } catch (IllegalStateException e) {
-            log.warn("Erro ao deletar secretaria: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         } catch (IllegalArgumentException e) {
             log.warn("Secretaria nao encontrada: {}", e.getMessage());
             return ResponseEntity.notFound().build();
