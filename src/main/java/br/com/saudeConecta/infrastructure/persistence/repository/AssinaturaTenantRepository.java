@@ -2,7 +2,9 @@ package br.com.saudeConecta.infrastructure.persistence.repository;
 
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
 import br.com.saudeConecta.domain.planos.StatusAssinatura;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -124,4 +126,12 @@ public interface AssinaturaTenantRepository extends JpaRepository<AssinaturaTena
            "JOIN FETCH a.organizacao " +
            "ORDER BY a.criadoEm DESC")
     List<AssinaturaTenant> findAllWithRelations();
+
+    /**
+     * Relê a assinatura com lock de escrita, para a régua decidir sobre o estado atual
+     * da linha (e não sobre a foto lida no início do lote).
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT a FROM AssinaturaTenant a WHERE a.id = :id")
+    Optional<AssinaturaTenant> findByIdParaAtualizacao(@Param("id") Long id);
 }

@@ -151,4 +151,7 @@
 
     <!-- Regua de cobranca: data da suspensao, dia ancora do ciclo e reabertura de eventos MP nao finais -->
     <include file="db/changelog/08-2026/061-regua-cobranca-suspensao-e-dia-cobranca.xml"/>
+
+    <!-- Lock otimista em assinatura_tenant e reprocessamento de webhooks MP com erro -->
+    <include file="db/changelog/08-2026/062-cobranca-versao-e-reprocessamento-webhook.xml"/>
 </databaseChangeLog>

@@ -3,8 +3,10 @@ package br.com.saudeConecta.service;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService;
+import br.com.saudeConecta.service.mercadopago.MercadoPagoWebhookService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -17,8 +19,9 @@ import java.util.function.Predicate;
  * Rotinas de ciclo de vida das assinaturas.
  *
  * Quem cobra é o Mercado Pago — o scheduler apenas prepara o link de ativação
- * antes do fim do trial, aplica a régua de carência e reconcilia os status
- * como rede de segurança contra webhooks perdidos.
+ * antes do fim do trial, aplica a régua de carência, reconcilia os status
+ * e reprocessa webhooks que falharam, como rede de segurança contra pagamentos
+ * aprovados que não chegaram a ser registrados.
  *
  * Assinaturas marcadas como cortesia são ignoradas por todas as rotinas
  * (o filtro vive nas próprias queries do repositório).
@@ -42,14 +45,17 @@ public class CobrancaScheduler {
     private final AssinaturaTenantRepository assinaturaTenantRepository;
     private final AssinaturaMercadoPagoService assinaturaMercadoPagoService;
     private final ProcessadorReguaCobranca processador;
+    private final MercadoPagoWebhookService webhookService;
 
     public CobrancaScheduler(
             AssinaturaTenantRepository assinaturaTenantRepository,
             AssinaturaMercadoPagoService assinaturaMercadoPagoService,
-            ProcessadorReguaCobranca processador) {
+            ProcessadorReguaCobranca processador,
+            MercadoPagoWebhookService webhookService) {
         this.assinaturaTenantRepository = assinaturaTenantRepository;
         this.assinaturaMercadoPagoService = assinaturaMercadoPagoService;
         this.processador = processador;
+        this.webhookService = webhookService;
     }
 
     /**
@@ -67,36 +73,33 @@ public class CobrancaScheduler {
         log.info("[SCHEDULER] {} trial(s) vencendo até {} — gerando links de pagamento", trials.size(), dataAlvo);
 
         int gerados = processarCadaUm(trials, "gerar link de pagamento",
-                id -> assinaturaMercadoPagoService.gerarLinkENotificar(id) != null);
+                assinatura -> assinaturaMercadoPagoService.gerarLinkENotificar(assinatura.getId()) != null);
         log.info("[SCHEDULER] Links de pagamento gerados: {}/{}", gerados, trials.size());
     }
 
     /**
      * Aplica a régua de carência: +5 dias vencida → INADIMPLENTE,
      * +15 dias → SUSPENSA (pausada no Mercado Pago), +30 dias suspensa → CANCELADA.
+     * Antes de suspender ou cancelar, confere no MP se há fatura aprovada não registrada.
      */
     @Scheduled(cron = "0 0 9 * * *")
     public void aplicarReguaDeCarencia() {
-        List<AssinaturaTenant> vencidas = assinaturaTenantRepository.findVencidasNaoInadimplentes(
-                LocalDate.now().minusDays(DIAS_CARENCIA_INADIMPLENCIA));
-        int marcadas = processarCadaUm(vencidas, "marcar inadimplente", id -> {
-            processador.marcarInadimplente(id);
-            return true;
-        });
+        LocalDate limiteInadimplencia = LocalDate.now().minusDays(DIAS_CARENCIA_INADIMPLENCIA);
+        List<AssinaturaTenant> vencidas = assinaturaTenantRepository.findVencidasNaoInadimplentes(limiteInadimplencia);
+        int marcadas = processarCadaUm(vencidas, "marcar inadimplente",
+                assinatura -> processador.marcarInadimplente(assinatura.getId(), limiteInadimplencia));
 
-        List<AssinaturaTenant> inadimplentes = assinaturaTenantRepository.findInadimplentesParaSuspender(
-                LocalDate.now().minusDays(DIAS_CARENCIA_SUSPENSAO));
-        int suspensas = processarCadaUm(inadimplentes, "suspender", id -> {
-            processador.suspender(id);
-            return true;
-        });
+        LocalDate limiteSuspensao = LocalDate.now().minusDays(DIAS_CARENCIA_SUSPENSAO);
+        List<AssinaturaTenant> inadimplentes = assinaturaTenantRepository.findInadimplentesParaSuspender(limiteSuspensao);
+        int suspensas = processarCadaUm(inadimplentes, "suspender", assinatura ->
+                !pagamentoAprovadoRecuperado(assinatura, true)
+                        && processador.suspender(assinatura.getId(), limiteSuspensao));
 
         LocalDateTime limiteCancelamento = LocalDate.now().minusDays(DIAS_CARENCIA_CANCELAMENTO).atStartOfDay();
         List<AssinaturaTenant> suspensasAntigas = assinaturaTenantRepository.findSuspensasParaCancelar(limiteCancelamento);
-        int canceladas = processarCadaUm(suspensasAntigas, "cancelar", id -> {
-            processador.cancelar(id);
-            return true;
-        });
+        int canceladas = processarCadaUm(suspensasAntigas, "cancelar", assinatura ->
+                !pagamentoAprovadoRecuperado(assinatura, false)
+                        && processador.cancelar(assinatura.getId(), limiteCancelamento));
 
         if (marcadas + suspensas + canceladas > 0) {
             log.warn("[SCHEDULER] Régua de carência: {} INADIMPLENTE(s), {} SUSPENSA(s), {} CANCELADA(s)",
@@ -115,9 +118,67 @@ public class CobrancaScheduler {
             return;
         }
 
-        int divergentes = processarCadaUm(assinaturas, "reconciliar", processador::sincronizar);
+        int divergentes = processarCadaUm(assinaturas, "reconciliar", assinatura -> {
+            // Faturas primeiro: a renovação por pagamento aprovado reativa um preapproval pausado,
+            // e a sincronização seguinte já enxerga o status atualizado.
+            recuperarFaturasAprovadas(assinatura);
+            return processador.sincronizar(assinatura.getId());
+        });
         log.info("[SCHEDULER] Reconciliação Mercado Pago: {} divergência(s) corrigida(s) em {} assinatura(s)",
                 divergentes, assinaturas.size());
+    }
+
+    /**
+     * Reprocessa, a cada 15 minutos, as notificações do Mercado Pago cujo processamento
+     * falhou (ex.: GET da fatura com 5xx/timeout). Sem isso um pagamento aprovado cuja
+     * notificação falhou nunca seria registrado. Backoff e expiração ficam no serviço.
+     */
+    @Scheduled(cron = "0 */15 * * * *")
+    public void reprocessarWebhooksComErro() {
+        int reprocessados = webhookService.reprocessarEventosComErro();
+        if (reprocessados > 0) {
+            log.info("[SCHEDULER] {} evento(s) do Mercado Pago com erro reprocessado(s)", reprocessados);
+        }
+    }
+
+    /**
+     * Antes de suspender ou cancelar, confere no Mercado Pago se existe fatura aprovada
+     * que não chegou a ser registrada (webhook perdido) e, se existir, registra e renova.
+     *
+     * @param prosseguirSeMpFalhar comportamento quando o MP não responde: a suspensão é
+     *                             reversível (um pagamento reativa) e segue; o cancelamento
+     *                             é terminal e fica para o próximo ciclo
+     * @return true quando o item deve ser pulado (pagamento recuperado, ou MP fora do ar
+     *         em ação terminal)
+     */
+    private boolean pagamentoAprovadoRecuperado(AssinaturaTenant assinatura, boolean prosseguirSeMpFalhar) {
+        if (!assinatura.temPreapproval()) {
+            return false;
+        }
+        try {
+            int recuperadas = webhookService.recuperarFaturasAprovadas(assinatura.getMpPreapprovalId());
+            if (recuperadas > 0) {
+                log.warn("[SCHEDULER] Assinatura {}: {} fatura(s) aprovada(s) no MP sem registro local — "
+                        + "registrada(s) e régua não aplicada", assinatura.getId(), recuperadas);
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            log.warn("[SCHEDULER] Não foi possível consultar as faturas da assinatura {} no MP: {} — {}",
+                    assinatura.getId(), e.getMessage(),
+                    prosseguirSeMpFalhar ? "seguindo com a régua" : "adiado para o próximo ciclo");
+            return !prosseguirSeMpFalhar;
+        }
+    }
+
+    /** Falha aqui não impede a sincronização do preapproval logo em seguida. */
+    private void recuperarFaturasAprovadas(AssinaturaTenant assinatura) {
+        try {
+            webhookService.recuperarFaturasAprovadas(assinatura.getMpPreapprovalId());
+        } catch (Exception e) {
+            log.warn("[SCHEDULER] Reconciliação: falha ao consultar faturas da assinatura {} no MP: {}",
+                    assinatura.getId(), e.getMessage());
+        }
     }
 
     /**
@@ -126,13 +187,18 @@ public class CobrancaScheduler {
      *
      * @return quantas assinaturas tiveram a ação concluída com resultado positivo
      */
-    private int processarCadaUm(List<AssinaturaTenant> assinaturas, String acao, Predicate<Long> acaoPorId) {
+    private int processarCadaUm(List<AssinaturaTenant> assinaturas, String acao,
+                                Predicate<AssinaturaTenant> acaoPorItem) {
         int sucesso = 0;
         for (AssinaturaTenant assinatura : assinaturas) {
             try {
-                if (acaoPorId.test(assinatura.getId())) {
+                if (acaoPorItem.test(assinatura)) {
                     sucesso++;
                 }
+            } catch (OptimisticLockingFailureException e) {
+                // Outra transação (webhook/admin) alterou a assinatura; o item volta no próximo ciclo
+                log.warn("[SCHEDULER] Assinatura {} alterada concorrentemente ao {}; será retomada no próximo ciclo",
+                        assinatura.getId(), acao);
             } catch (Exception e) {
                 log.error("[SCHEDULER] Erro ao {} a assinatura {}", acao, assinatura.getId(), e);
             }

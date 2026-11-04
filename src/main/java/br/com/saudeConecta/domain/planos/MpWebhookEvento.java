@@ -48,6 +48,19 @@ public class MpWebhookEvento implements Serializable {
     @Column(name = "recebido_em", nullable = false, updatable = false)
     private LocalDateTime recebidoEm;
 
+    /** Quantas vezes o processamento falhou; base do backoff do reprocessamento. */
+    @Builder.Default
+    @Column(name = "tentativas", nullable = false)
+    private Integer tentativas = 0;
+
+    /** A partir de quando o job de reprocessamento pode tentar de novo. */
+    @Column(name = "proxima_tentativa_em")
+    private LocalDateTime proximaTentativaEm;
+
+    /** Preenchida quando o evento com erro passou do prazo de reprocessamento automático. */
+    @Column(name = "expirado_em")
+    private LocalDateTime expiradoEm;
+
     @PrePersist
     protected void onCreate() {
         if (recebidoEm == null) {
@@ -64,15 +77,6 @@ public class MpWebhookEvento implements Serializable {
     public void registrarProcessamento(boolean estadoFinal) {
         this.processado = estadoFinal;
         this.erro = null;
-    }
-
-    /**
-     * Registra a falha de processamento mantendo o evento como não processado.
-     *
-     * @param mensagem descrição do erro (truncada em 500 caracteres)
-     */
-    public void marcarErro(String mensagem) {
-        this.processado = false;
-        this.erro = mensagem == null ? null : mensagem.substring(0, Math.min(mensagem.length(), 500));
+        this.proximaTentativaEm = null;
     }
 }

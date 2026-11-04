@@ -10,6 +10,7 @@ import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepo
 import br.com.saudeConecta.presentation.dto.planos.AssinaturaTenantResponse;
 import br.com.saudeConecta.presentation.dto.planos.CustomizarPlanoTenantRequest;
 import br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService;
+import br.com.saudeConecta.service.mercadopago.MercadoPagoClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -363,9 +364,15 @@ public class AssinaturaTenantService {
      * Marca ou remove a condição de cortesia da assinatura (SUPER_ADMIN).
      * Assinaturas de cortesia ficam fora de toda a rotina de cobrança.
      *
-     * Ao remover a cortesia, a assinatura ganha um novo vencimento (hoje + 7 dias,
-     * o mesmo aviso do trial) e o link de pagamento é gerado e enviado ao administrador;
-     * sem isso o vencimento antigo a tornaria inadimplente sem nunca ter recebido o link.
+     * Ao remover a cortesia (assinatura não cancelada):
+     * <ul>
+     *   <li>com cartão já autorizado no Mercado Pago, o vencimento passa a ser a próxima
+     *       cobrança agendada no MP (next_payment_date) e o status é mantido — o próprio MP
+     *       cobra nessa data; se o MP não responder, usa hoje + 7 e mantém o status;</li>
+     *   <li>sem cartão autorizado, a assinatura volta para TRIAL com vencimento hoje + 7.
+     *       O link de pagamento é gerado logo após o commit e, se o MP falhar, a rotina
+     *       diária de links de trial ({@code findTrialsSemLinkVencendoAte}) gera depois.</li>
+     * </ul>
      *
      * @param assinaturaId ID da assinatura
      * @param cortesia     true para isentar de cobrança
@@ -374,22 +381,19 @@ public class AssinaturaTenantService {
     @Transactional
     public AssinaturaTenantResponse definirCortesia(Long assinaturaId, boolean cortesia) {
         AssinaturaTenant assinatura = buscarPorId(assinaturaId);
-        boolean removendoCortesia = !cortesia && assinatura.isCortesia();
+        boolean removendoCortesia = !cortesia && assinatura.isCortesia()
+                && !StatusAssinatura.CANCELADA.equals(assinatura.getStatus());
         assinatura.setCortesia(cortesia);
         if (cortesia && StatusAssinatura.TRIAL.equals(assinatura.getStatus())) {
             assinatura.setStatus(StatusAssinatura.ATIVA);
         }
-        if (removendoCortesia) {
-            LocalDate novoVencimento = LocalDate.now().plusDays(DIAS_PARA_PAGAR_APOS_CORTESIA);
-            assinatura.setDataVencimento(novoVencimento);
-            assinatura.setDataProximaCobranca(novoVencimento);
-        }
+        boolean precisaDeLink = removendoCortesia && !aplicarVencimentoAposCortesia(assinatura);
 
         AssinaturaTenant salva = assinaturaTenantRepository.save(assinatura);
-        log.warn("Assinatura {} definida como cortesia={} (org {})",
-                assinaturaId, cortesia, salva.getOrganizacao().getId());
+        log.warn("Assinatura {} definida como cortesia={} (org {}, status {}, vencimento {})",
+                assinaturaId, cortesia, salva.getOrganizacao().getId(), salva.getStatus(), salva.getDataVencimento());
 
-        if (removendoCortesia && !salva.temPreapproval()) {
+        if (precisaDeLink) {
             enviarLinkDePagamentoAposCommit(assinaturaId);
         }
 
@@ -397,9 +401,44 @@ public class AssinaturaTenantService {
     }
 
     /**
+     * Define vencimento e status de quem perde a cortesia.
+     *
+     * @return true quando a assinatura já tem cartão autorizado no MP (não precisa de link)
+     */
+    private boolean aplicarVencimentoAposCortesia(AssinaturaTenant assinatura) {
+        LocalDate prazoParaPagar = LocalDate.now().plusDays(DIAS_PARA_PAGAR_APOS_CORTESIA);
+
+        if (assinatura.temPreapproval() && MercadoPagoClient.STATUS_AUTHORIZED.equals(assinatura.getMpStatus())) {
+            try {
+                LocalDate proximaCobranca = assinaturaMercadoPagoService.buscarProximaCobrancaAutorizada(assinatura);
+                if (proximaCobranca != null) {
+                    definirVencimento(assinatura, proximaCobranca);
+                    return true;
+                }
+                // MP respondeu que o preapproval não está mais autorizado: segue como sem cartão
+            } catch (BusinessException e) {
+                log.warn("Assinatura {}: MP indisponível ao consultar a próxima cobrança ({}); "
+                        + "mantendo status com vencimento em {}", assinatura.getId(), e.getMessage(), prazoParaPagar);
+                definirVencimento(assinatura, prazoParaPagar);
+                return true;
+            }
+        }
+
+        assinatura.setStatus(StatusAssinatura.TRIAL);
+        assinatura.setDataSuspensao(null);
+        definirVencimento(assinatura, prazoParaPagar);
+        return false;
+    }
+
+    private static void definirVencimento(AssinaturaTenant assinatura, LocalDate vencimento) {
+        assinatura.setDataVencimento(vencimento);
+        assinatura.setDataProximaCobranca(vencimento);
+    }
+
+    /**
      * O link é gerado depois do commit: a chamada HTTP ao Mercado Pago fica fora da
      * transação, a nova transação já enxerga cortesia=false e uma falha no MP não
-     * desfaz a remoção da cortesia (o cliente ainda pode gerar o link pela tela).
+     * desfaz a remoção da cortesia (a rotina diária de links de trial tenta de novo).
      */
     private void enviarLinkDePagamentoAposCommit(Long assinaturaId) {
         Runnable envio = () -> {

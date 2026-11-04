@@ -2,6 +2,7 @@ package br.com.saudeConecta.service.mercadopago;
 
 import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.service.mercadopago.dto.AuthorizedPaymentResponse;
+import br.com.saudeConecta.service.mercadopago.dto.AuthorizedPaymentSearchResponse;
 import br.com.saudeConecta.service.mercadopago.dto.PreapprovalResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +12,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -24,6 +26,7 @@ public class MercadoPagoClient {
 
     private static final String PATH_PREAPPROVAL = "/preapproval";
     private static final String PATH_AUTHORIZED_PAYMENT = "/authorized_payments/";
+    private static final String PATH_AUTHORIZED_PAYMENT_SEARCH = "/authorized_payments/search?preapproval_id=";
     private static final String CURRENCY_BRL = "BRL";
     private static final String FREQUENCY_TYPE_MONTHS = "months";
 
@@ -126,6 +129,30 @@ public class MercadoPagoClient {
     public AuthorizedPaymentResponse buscarAuthorizedPayment(String authorizedPaymentId) {
         return executar(HttpMethod.GET, PATH_AUTHORIZED_PAYMENT + authorizedPaymentId, null,
                 AuthorizedPaymentResponse.class, "buscar authorized payment " + authorizedPaymentId);
+    }
+
+    /**
+     * Reativa uma assinatura pausada (status volta a "authorized" e o MP retoma as cobranças).
+     *
+     * @param preapprovalId identificador do preapproval
+     * @return assinatura com status authorized
+     */
+    public PreapprovalResponse reativarPreapproval(String preapprovalId) {
+        return alterarStatus(preapprovalId, STATUS_AUTHORIZED);
+    }
+
+    /**
+     * Lista as faturas (authorized payments) geradas por uma assinatura.
+     * Usado pela reconciliação para achar pagamentos aprovados cujo webhook se perdeu.
+     *
+     * @param preapprovalId identificador do preapproval
+     * @return faturas da assinatura (lista vazia quando não há nenhuma)
+     */
+    public List<AuthorizedPaymentResponse> buscarAuthorizedPaymentsDoPreapproval(String preapprovalId) {
+        AuthorizedPaymentSearchResponse resposta = executar(HttpMethod.GET,
+                PATH_AUTHORIZED_PAYMENT_SEARCH + preapprovalId, null,
+                AuthorizedPaymentSearchResponse.class, "buscar faturas do preapproval " + preapprovalId);
+        return resposta != null ? resposta.faturas() : List.of();
     }
 
     private PreapprovalResponse alterarStatus(String preapprovalId, String status) {

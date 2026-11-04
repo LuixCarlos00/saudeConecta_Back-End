@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -208,6 +209,53 @@ public class AssinaturaMercadoPagoService {
     }
 
     /**
+     * Reativa no Mercado Pago o preapproval pausado (pela suspensão) depois que um
+     * pagamento aprovado renovou a assinatura. Falha de comunicação não desfaz a
+     * renovação: fica no log para reativação manual e a reconciliação mantém o espelho.
+     *
+     * @param assinatura assinatura já renovada (gerenciada pela transação corrente)
+     */
+    public void reativarSePausado(AssinaturaTenant assinatura) {
+        if (!assinatura.temPreapproval() || !MercadoPagoClient.STATUS_PAUSED.equals(assinatura.getMpStatus())) {
+            return;
+        }
+        try {
+            PreapprovalResponse resposta = mercadoPagoClient.reativarPreapproval(assinatura.getMpPreapprovalId());
+            assinatura.setMpStatus(resposta != null && resposta.status() != null
+                    ? resposta.status() : MercadoPagoClient.STATUS_AUTHORIZED);
+            assinatura.setMpUltimaSincronizacao(LocalDateTime.now());
+            assinaturaTenantRepository.save(assinatura);
+            log.info("Preapproval {} reativado após pagamento da assinatura {}",
+                    assinatura.getMpPreapprovalId(), assinatura.getId());
+        } catch (BusinessException e) {
+            log.error("Não foi possível reativar o preapproval {} da assinatura {} após o pagamento: {} — "
+                    + "reativar manualmente no Mercado Pago", assinatura.getMpPreapprovalId(),
+                    assinatura.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Consulta no Mercado Pago a data da próxima cobrança de um preapproval com cartão
+     * autorizado. Usada ao remover a cortesia de quem já tem cartão válido: o próprio MP
+     * vai cobrar nessa data, então ela é o vencimento coerente.
+     *
+     * @param assinatura assinatura local
+     * @return next_payment_date do preapproval, ou null se não há preapproval, ele não está
+     *         authorized ou o MP não informou a data
+     * @throws BusinessException quando o Mercado Pago não responde
+     */
+    public LocalDate buscarProximaCobrancaAutorizada(AssinaturaTenant assinatura) {
+        if (!assinatura.temPreapproval()) {
+            return null;
+        }
+        PreapprovalResponse remoto = mercadoPagoClient.buscarPreapproval(assinatura.getMpPreapprovalId());
+        if (remoto == null || !MercadoPagoClient.STATUS_AUTHORIZED.equals(remoto.status())) {
+            return null;
+        }
+        return remoto.proximaCobranca();
+    }
+
+    /**
      * Reconcilia o status local com o status atual no Mercado Pago.
      * Rede de segurança para webhooks perdidos.
      *
@@ -258,7 +306,7 @@ public class AssinaturaMercadoPagoService {
         }
         switch (mpStatus) {
             case MercadoPagoClient.STATUS_PAUSED -> {
-                if (StatusAssinatura.SUSPENSA.equals(assinatura.getStatus())) {
+                if (StatusAssinatura.SUSPENSA.equals(assinatura.getStatus()) || ativaEmDia(assinatura)) {
                     return false;
                 }
                 assinatura.setStatus(StatusAssinatura.SUSPENSA);
@@ -275,6 +323,17 @@ public class AssinaturaMercadoPagoService {
                 return false;
             }
         }
+    }
+
+    /**
+     * ATIVA com vencimento hoje ou no futuro já teve a fatura do ciclo paga: uma pausa
+     * remota (ex.: pausa antiga ainda não reativada) não pode bloquear quem está em dia.
+     * Se a pausa persistir, a régua trata a assinatura quando ela vencer.
+     */
+    private static boolean ativaEmDia(AssinaturaTenant assinatura) {
+        return StatusAssinatura.ATIVA.equals(assinatura.getStatus())
+                && assinatura.getDataVencimento() != null
+                && !assinatura.getDataVencimento().isBefore(LocalDate.now());
     }
 
     /**

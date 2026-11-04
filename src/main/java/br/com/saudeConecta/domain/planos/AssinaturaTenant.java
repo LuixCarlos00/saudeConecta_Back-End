@@ -106,6 +106,14 @@ public class AssinaturaTenant implements Serializable {
     @Column(name = "dia_cobranca")
     private Integer diaCobranca;
 
+    /**
+     * Lock otimista: webhook, régua e reconciliação alteram a mesma linha em transações
+     * concorrentes; sem versão a última escrita apagaria a renovação feita pela outra.
+     */
+    @Version
+    @Column(name = "versao", nullable = false)
+    private Long versao;
+
     @Column(name = "criado_em", updatable = false)
     private LocalDateTime criadoEm;
 

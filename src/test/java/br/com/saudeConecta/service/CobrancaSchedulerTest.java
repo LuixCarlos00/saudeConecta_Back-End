@@ -7,6 +7,7 @@ import br.com.saudeConecta.domain.planos.StatusAssinatura;
 import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService;
+import br.com.saudeConecta.service.mercadopago.MercadoPagoWebhookService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.http.HttpStatus;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +42,7 @@ class CobrancaSchedulerTest {
     @Mock private AssinaturaTenantRepository assinaturaTenantRepository;
     @Mock private AssinaturaMercadoPagoService assinaturaMercadoPagoService;
     @Mock private ProcessadorReguaCobranca processador;
+    @Mock private MercadoPagoWebhookService webhookService;
 
     private CobrancaScheduler scheduler;
     private AssinaturaTenant assinatura;
@@ -47,7 +50,8 @@ class CobrancaSchedulerTest {
 
     @BeforeEach
     void setUp() {
-        scheduler = new CobrancaScheduler(assinaturaTenantRepository, assinaturaMercadoPagoService, processador);
+        scheduler = new CobrancaScheduler(assinaturaTenantRepository, assinaturaMercadoPagoService, processador,
+                webhookService);
 
         Organizacao org = new Organizacao();
         org.setId(7L);
@@ -115,9 +119,56 @@ class CobrancaSchedulerTest {
 
         scheduler.aplicarReguaDeCarencia();
 
-        verify(processador).marcarInadimplente(ASSINATURA_ID);
-        verify(processador).suspender(ASSINATURA_ID);
-        verify(processador).cancelar(ASSINATURA_ID);
+        verify(processador).marcarInadimplente(ASSINATURA_ID, LocalDate.now().minusDays(5));
+        verify(processador).suspender(ASSINATURA_ID, LocalDate.now().minusDays(15));
+        verify(processador).cancelar(ASSINATURA_ID, LocalDate.now().minusDays(30).atStartOfDay());
+    }
+
+    @Test
+    @DisplayName("H1c - Antes de suspender/cancelar, fatura aprovada não registrada no MP é recuperada e o item é pulado")
+    void reguaRecuperaFaturaAprovadaAntesDeSuspenderOuCancelar() {
+        assinatura.setMpPreapprovalId("pa-1");
+        outra.setMpPreapprovalId("pa-2");
+        when(assinaturaTenantRepository.findInadimplentesParaSuspender(any())).thenReturn(List.of(assinatura));
+        when(assinaturaTenantRepository.findSuspensasParaCancelar(any())).thenReturn(List.of(outra));
+        when(webhookService.recuperarFaturasAprovadas("pa-1")).thenReturn(1);
+        when(webhookService.recuperarFaturasAprovadas("pa-2")).thenReturn(1);
+
+        scheduler.aplicarReguaDeCarencia();
+
+        verify(processador, never()).suspender(anyLong(), any());
+        verify(processador, never()).cancelar(anyLong(), any());
+    }
+
+    @Test
+    @DisplayName("H1c - Sem fatura aprovada no MP a régua segue; sem preapproval nem consulta o MP")
+    void reguaSegueQuandoNaoHaFaturaAprovada() {
+        assinatura.setMpPreapprovalId("pa-1");
+        when(assinaturaTenantRepository.findInadimplentesParaSuspender(any())).thenReturn(List.of(assinatura, outra));
+        when(webhookService.recuperarFaturasAprovadas("pa-1")).thenReturn(0);
+
+        scheduler.aplicarReguaDeCarencia();
+
+        verify(processador).suspender(eq(ASSINATURA_ID), any());
+        verify(processador).suspender(eq(OUTRA_ID), any());
+        verify(webhookService).recuperarFaturasAprovadas("pa-1");
+        verifyNoMoreInteractions(webhookService);
+    }
+
+    @Test
+    @DisplayName("H1c - MP fora do ar: suspensão (reversível) segue; cancelamento (terminal) fica para o próximo ciclo")
+    void falhaNoMpSuspendeMasNaoCancela() {
+        assinatura.setMpPreapprovalId("pa-1");
+        outra.setMpPreapprovalId("pa-2");
+        when(assinaturaTenantRepository.findInadimplentesParaSuspender(any())).thenReturn(List.of(assinatura));
+        when(assinaturaTenantRepository.findSuspensasParaCancelar(any())).thenReturn(List.of(outra));
+        when(webhookService.recuperarFaturasAprovadas(anyString()))
+                .thenThrow(new BusinessException("MP fora", HttpStatus.BAD_GATEWAY));
+
+        scheduler.aplicarReguaDeCarencia();
+
+        verify(processador).suspender(eq(ASSINATURA_ID), any());
+        verify(processador, never()).cancelar(anyLong(), any());
     }
 
     @Test
@@ -126,15 +177,18 @@ class CobrancaSchedulerTest {
         when(assinaturaTenantRepository.findVencidasNaoInadimplentes(any())).thenReturn(List.of(assinatura, outra));
         when(assinaturaTenantRepository.findInadimplentesParaSuspender(any())).thenReturn(List.of(assinatura, outra));
         when(assinaturaTenantRepository.findSuspensasParaCancelar(any())).thenReturn(List.of(assinatura, outra));
-        doThrow(new BusinessException("falha", HttpStatus.CONFLICT)).when(processador).marcarInadimplente(ASSINATURA_ID);
-        doThrow(new BusinessException("falha", HttpStatus.CONFLICT)).when(processador).suspender(ASSINATURA_ID);
-        doThrow(new BusinessException("falha", HttpStatus.BAD_GATEWAY)).when(processador).cancelar(ASSINATURA_ID);
+        doThrow(new BusinessException("falha", HttpStatus.CONFLICT)).when(processador)
+                .marcarInadimplente(eq(ASSINATURA_ID), any());
+        doThrow(new ObjectOptimisticLockingFailureException(AssinaturaTenant.class, ASSINATURA_ID))
+                .when(processador).suspender(eq(ASSINATURA_ID), any());
+        doThrow(new BusinessException("falha", HttpStatus.BAD_GATEWAY)).when(processador)
+                .cancelar(eq(ASSINATURA_ID), any());
 
         scheduler.aplicarReguaDeCarencia();
 
-        verify(processador).marcarInadimplente(OUTRA_ID);
-        verify(processador).suspender(OUTRA_ID);
-        verify(processador).cancelar(OUTRA_ID);
+        verify(processador).marcarInadimplente(eq(OUTRA_ID), any());
+        verify(processador).suspender(eq(OUTRA_ID), any());
+        verify(processador).cancelar(eq(OUTRA_ID), any());
     }
 
     @Test
@@ -146,6 +200,31 @@ class CobrancaSchedulerTest {
         scheduler.reconciliarComMercadoPago();
 
         verify(processador).sincronizar(OUTRA_ID);
+    }
+
+    @Test
+    @DisplayName("H1b - Reconciliação recupera faturas aprovadas sem webhook antes de sincronizar o preapproval")
+    void reconciliacaoRecuperaFaturasAntesDeSincronizar() {
+        assinatura.setMpPreapprovalId("pa-1");
+        outra.setMpPreapprovalId("pa-2");
+        when(assinaturaTenantRepository.findComPreapprovalParaReconciliar()).thenReturn(List.of(assinatura, outra));
+        when(webhookService.recuperarFaturasAprovadas("pa-1")).thenThrow(new RuntimeException("timeout"));
+
+        scheduler.reconciliarComMercadoPago();
+
+        var ordem = inOrder(webhookService, processador);
+        ordem.verify(webhookService).recuperarFaturasAprovadas("pa-1");
+        ordem.verify(processador).sincronizar(ASSINATURA_ID);
+        ordem.verify(webhookService).recuperarFaturasAprovadas("pa-2");
+        ordem.verify(processador).sincronizar(OUTRA_ID);
+    }
+
+    @Test
+    @DisplayName("H1a - Job de reprocessamento delega ao serviço de webhook")
+    void reprocessaWebhooksComErro() {
+        scheduler.reprocessarWebhooksComErro();
+
+        verify(webhookService).reprocessarEventosComErro();
     }
 
     @Test

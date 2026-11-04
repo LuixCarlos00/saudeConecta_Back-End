@@ -13,18 +13,27 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("ProcessadorReguaCobranca - Testes unitários")
 class ProcessadorReguaCobrancaTest {
 
     private static final Long ID = 42L;
+    private static final LocalDate LIMITE = LocalDate.now().minusDays(5);
+    private static final LocalDateTime LIMITE_CANCELAMENTO = LocalDate.now().minusDays(30).atStartOfDay();
 
     @Mock private AssinaturaTenantRepository assinaturaTenantRepository;
     @Mock private AssinaturaTenantService assinaturaTenantService;
@@ -37,53 +46,129 @@ class ProcessadorReguaCobrancaTest {
 
     @BeforeEach
     void setUp() {
-        assinatura = AssinaturaTenant.builder().id(ID).status(StatusAssinatura.INADIMPLENTE).build();
+        assinatura = AssinaturaTenant.builder()
+                .id(ID)
+                .status(StatusAssinatura.INADIMPLENTE)
+                .dataVencimento(LIMITE.minusDays(20))
+                .build();
+        when(assinaturaTenantRepository.findByIdParaAtualizacao(ID)).thenReturn(Optional.of(assinatura));
+        when(assinaturaTenantRepository.findById(ID)).thenReturn(Optional.of(assinatura));
     }
 
     @Test
-    @DisplayName("Marcar inadimplente delega ao serviço de assinatura")
+    @DisplayName("Marcar inadimplente relê com lock e delega quando a condição ainda vale")
     void marcarInadimplente() {
-        processador.marcarInadimplente(ID);
+        assinatura.setStatus(StatusAssinatura.ATIVA);
 
+        assertThat(processador.marcarInadimplente(ID, LIMITE)).isTrue();
+
+        verify(assinaturaTenantRepository).findByIdParaAtualizacao(ID);
         verify(assinaturaTenantService).marcarInadimplente(ID);
     }
 
     @Test
-    @DisplayName("Suspender suspende localmente e pausa no MP a entidade recarregada na mesma transação")
+    @DisplayName("H2 - Marcar inadimplente ignora assinatura renovada depois da leitura do lote")
+    void marcarInadimplenteIgnoraRenovada() {
+        assinatura.setStatus(StatusAssinatura.ATIVA);
+        assinatura.setDataVencimento(LocalDate.now().plusMonths(1));
+
+        assertThat(processador.marcarInadimplente(ID, LIMITE)).isFalse();
+
+        verify(assinaturaTenantService, never()).marcarInadimplente(anyLong());
+    }
+
+    @Test
+    @DisplayName("H2 - Marcar inadimplente ignora assinatura que virou cortesia")
+    void marcarInadimplenteIgnoraCortesia() {
+        assinatura.setStatus(StatusAssinatura.TRIAL);
+        assinatura.setCortesia(true);
+
+        assertThat(processador.marcarInadimplente(ID, LIMITE)).isFalse();
+
+        verify(assinaturaTenantService, never()).marcarInadimplente(anyLong());
+    }
+
+    @Test
+    @DisplayName("Suspender suspende localmente e pausa no MP a entidade relida com lock")
     void suspender() {
-        when(assinaturaTenantRepository.findById(ID)).thenReturn(Optional.of(assinatura));
+        assertThat(processador.suspender(ID, LIMITE)).isTrue();
 
-        processador.suspender(ID);
-
-        var ordem = inOrder(assinaturaTenantService, assinaturaMercadoPagoService);
+        var ordem = inOrder(assinaturaTenantRepository, assinaturaTenantService, assinaturaMercadoPagoService);
+        ordem.verify(assinaturaTenantRepository).findByIdParaAtualizacao(ID);
         ordem.verify(assinaturaTenantService).suspender(ID);
         ordem.verify(assinaturaMercadoPagoService).pausar(assinatura);
     }
 
     @Test
-    @DisplayName("Cancelar recarrega a assinatura e cancela com origem SISTEMA")
-    void cancelar() {
-        when(assinaturaTenantRepository.findById(ID)).thenReturn(Optional.of(assinatura));
+    @DisplayName("H2 - Suspender ignora assinatura que voltou para ATIVA entre o lote e o processamento")
+    void suspenderIgnoraAtiva() {
+        assinatura.setStatus(StatusAssinatura.ATIVA);
 
-        processador.cancelar(ID);
+        assertThat(processador.suspender(ID, LIMITE)).isFalse();
+
+        verifyNoInteractions(assinaturaTenantService, assinaturaMercadoPagoService);
+    }
+
+    @Test
+    @DisplayName("H2 - Suspender ignora inadimplente cujo vencimento já não é anterior ao limite")
+    void suspenderIgnoraVencimentoNovo() {
+        assinatura.setDataVencimento(LIMITE);
+
+        assertThat(processador.suspender(ID, LIMITE)).isFalse();
+
+        verifyNoInteractions(assinaturaTenantService, assinaturaMercadoPagoService);
+    }
+
+    @Test
+    @DisplayName("Cancelar relê com lock e cancela com origem SISTEMA")
+    void cancelar() {
+        assinatura.setStatus(StatusAssinatura.SUSPENSA);
+        assinatura.setDataSuspensao(LIMITE_CANCELAMENTO.minusDays(1));
+
+        assertThat(processador.cancelar(ID, LIMITE_CANCELAMENTO)).isTrue();
 
         verify(assinaturaMercadoPagoService).cancelar(assinatura, OrigemCancelamento.SISTEMA);
     }
 
     @Test
-    @DisplayName("Sincronizar recarrega a assinatura e devolve se houve divergência")
+    @DisplayName("H2 - Cancelar ignora suspensa que foi reativada ou suspensa há menos tempo")
+    void cancelarIgnoraForaDaCondicao() {
+        assinatura.setStatus(StatusAssinatura.ATIVA);
+        assinatura.setDataSuspensao(LIMITE_CANCELAMENTO.minusDays(1));
+        assertThat(processador.cancelar(ID, LIMITE_CANCELAMENTO)).isFalse();
+
+        assinatura.setStatus(StatusAssinatura.SUSPENSA);
+        assinatura.setDataSuspensao(LIMITE_CANCELAMENTO.plusDays(1));
+        assertThat(processador.cancelar(ID, LIMITE_CANCELAMENTO)).isFalse();
+
+        verify(assinaturaMercadoPagoService, never()).cancelar(any(), any());
+    }
+
+    @Test
+    @DisplayName("Sincronizar relê com lock e devolve se houve divergência")
     void sincronizar() {
-        when(assinaturaTenantRepository.findById(ID)).thenReturn(Optional.of(assinatura));
+        assinatura.setMpPreapprovalId("pa-1");
         when(assinaturaMercadoPagoService.sincronizar(assinatura)).thenReturn(true);
 
         assertThat(processador.sincronizar(ID)).isTrue();
+        verify(assinaturaTenantRepository).findByIdParaAtualizacao(ID);
+    }
+
+    @Test
+    @DisplayName("H2 - Sincronizar ignora assinatura cancelada depois da leitura do lote")
+    void sincronizarIgnoraCancelada() {
+        assinatura.setMpPreapprovalId("pa-1");
+        assinatura.setStatus(StatusAssinatura.CANCELADA);
+
+        assertThat(processador.sincronizar(ID)).isFalse();
+        verify(assinaturaMercadoPagoService, never()).sincronizar(any());
     }
 
     @Test
     @DisplayName("Assinatura que sumiu entre a busca e o processamento gera BusinessException")
     void assinaturaInexistente() {
-        when(assinaturaTenantRepository.findById(ID)).thenReturn(Optional.empty());
+        when(assinaturaTenantRepository.findByIdParaAtualizacao(ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> processador.cancelar(ID)).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> processador.cancelar(ID, LIMITE_CANCELAMENTO)).isInstanceOf(BusinessException.class);
     }
 }

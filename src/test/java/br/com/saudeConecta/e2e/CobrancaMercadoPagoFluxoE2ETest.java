@@ -10,6 +10,7 @@ import br.com.saudeConecta.infrastructure.persistence.repository.CobrancaTenantR
 import br.com.saudeConecta.infrastructure.persistence.repository.MpWebhookEventoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.PlanoAssinaturaRepository;
+import br.com.saudeConecta.service.AssinaturaTenantService;
 import br.com.saudeConecta.service.CobrancaScheduler;
 import br.com.saudeConecta.service.mercadopago.MercadoPagoClient;
 import br.com.saudeConecta.service.mercadopago.MercadoPagoWebhookService;
@@ -23,13 +24,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -55,6 +64,8 @@ class CobrancaMercadoPagoFluxoE2ETest {
     @Autowired private MpWebhookEventoRepository eventoRepository;
     @Autowired private OrganizacaoRepository organizacaoRepository;
     @Autowired private PlanoAssinaturaRepository planoAssinaturaRepository;
+    @Autowired private AssinaturaTenantService assinaturaTenantService;
+    @Autowired private PlatformTransactionManager transactionManager;
 
     private Organizacao organizacao;
     private PlanoAssinatura plano;
@@ -179,7 +190,7 @@ class CobrancaMercadoPagoFluxoE2ETest {
         suspensa.setDataSuspensao(suspensaEm);
         assinaturaTenantRepository.save(suspensa);
         when(mercadoPagoClient.buscarPreapproval(anyString())).thenAnswer(inv -> new PreapprovalResponse(
-                inv.getArgument(0), "authorized", null, null, null, null));
+                inv.getArgument(0), "authorized", null, null, null, null, null));
 
         cobrancaScheduler.reconciliarComMercadoPago();
 
@@ -197,7 +208,7 @@ class CobrancaMercadoPagoFluxoE2ETest {
         LocalDate fimDoTrial = LocalDate.now().plusDays(6);
         AssinaturaTenant trial = salvarAssinatura(StatusAssinatura.TRIAL, PREAPPROVAL_ID, "pending", fimDoTrial);
         when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(new PreapprovalResponse(
-                PREAPPROVAL_ID, "authorized", null, null, "ASSINATURA-" + trial.getId(), null));
+                PREAPPROVAL_ID, "authorized", null, null, "ASSINATURA-" + trial.getId(), null, null));
 
         webhookService.processar(MercadoPagoWebhookService.TOPICO_PREAPPROVAL, PREAPPROVAL_ID, "{}");
 
@@ -226,5 +237,248 @@ class CobrancaMercadoPagoFluxoE2ETest {
 
         assertThat(recarregar(semPreapproval).getStatus()).isEqualTo(StatusAssinatura.CANCELADA);
         assertThat(recarregar(comFalhaNoMp).getStatus()).isEqualTo(StatusAssinatura.SUSPENSA);
+    }
+
+    // ========== Pós-revisão da Fase 2 ==========
+
+    private CobrancaTenant cobrancaDaFatura() {
+        return cobrancaTenantRepository.findByMpAuthorizedPaymentId(FATURA_ID).orElseThrow();
+    }
+
+    @Test
+    @DisplayName("H1a - GET da fatura falha 5xx no webhook; o job reprocessa após o backoff e a assinatura fica PAGA e ATIVA")
+    void jobReprocessaWebhookQueFalhou() {
+        LocalDate vencimento = LocalDate.now().minusDays(8);
+        AssinaturaTenant assinatura = salvarAssinatura(StatusAssinatura.INADIMPLENTE, PREAPPROVAL_ID, "authorized",
+                vencimento);
+        when(mercadoPagoClient.buscarAuthorizedPayment(FATURA_ID))
+                .thenThrow(new BusinessException("Não foi possível comunicar com o Mercado Pago",
+                        HttpStatus.BAD_GATEWAY))
+                .thenReturn(fatura("approved"));
+
+        webhookService.processar(MercadoPagoWebhookService.TOPICO_AUTHORIZED_PAYMENT, FATURA_ID, "{}");
+
+        MpWebhookEvento comErro = eventoDaFatura();
+        assertThat(comErro.getProcessado()).isFalse();
+        assertThat(comErro.getErro()).contains("Mercado Pago");
+        assertThat(comErro.getTentativas()).isEqualTo(1);
+        assertThat(comErro.getProximaTentativaEm()).isAfter(LocalDateTime.now());
+
+        // Dentro do backoff o job não tenta de novo
+        cobrancaScheduler.reprocessarWebhooksComErro();
+        verify(mercadoPagoClient, times(1)).buscarAuthorizedPayment(FATURA_ID);
+
+        // Passado o backoff, o job reprocessa
+        comErro.setProximaTentativaEm(LocalDateTime.now().minusMinutes(1));
+        eventoRepository.save(comErro);
+        cobrancaScheduler.reprocessarWebhooksComErro();
+
+        assertThat(cobrancaDaFatura().getStatus()).isEqualTo(StatusCobranca.PAGO);
+        AssinaturaTenant depois = recarregar(assinatura);
+        assertThat(depois.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
+        assertThat(depois.getDataVencimento()).isAfter(LocalDate.now());
+        MpWebhookEvento encerrado = eventoDaFatura();
+        assertThat(encerrado.getProcessado()).isTrue();
+        assertThat(encerrado.getErro()).isNull();
+    }
+
+    @Test
+    @DisplayName("L3 - Evento com erro mais antigo que o prazo é marcado como expirado e não é mais tentado")
+    void eventoAntigoComErroExpira() {
+        eventoRepository.save(MpWebhookEvento.builder()
+                .tipo(MercadoPagoWebhookService.TOPICO_AUTHORIZED_PAYMENT)
+                .dataId(FATURA_ID)
+                .payload("{}")
+                .processado(false)
+                .erro("timeout")
+                .tentativas(9)
+                .recebidoEm(LocalDateTime.now().minusDays(4))
+                .build());
+
+        cobrancaScheduler.reprocessarWebhooksComErro();
+
+        assertThat(eventoDaFatura().getExpiradoEm()).isNotNull();
+        assertThat(eventoDaFatura().getProcessado()).isFalse();
+        verify(mercadoPagoClient, never()).buscarAuthorizedPayment(anyString());
+    }
+
+    @Test
+    @DisplayName("H1b - Fatura aprovada no MP sem webhook: a reconciliação registra PAGO e renova")
+    void reconciliacaoRecuperaFaturaAprovadaSemWebhook() {
+        LocalDate vencimento = LocalDate.now().minusDays(8);
+        AssinaturaTenant assinatura = salvarAssinatura(StatusAssinatura.INADIMPLENTE, PREAPPROVAL_ID, "authorized",
+                vencimento);
+        when(mercadoPagoClient.buscarAuthorizedPaymentsDoPreapproval(PREAPPROVAL_ID)).thenReturn(List.of(fatura("approved")));
+        when(mercadoPagoClient.buscarAuthorizedPayment(FATURA_ID)).thenReturn(fatura("approved"));
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(new PreapprovalResponse(
+                PREAPPROVAL_ID, "authorized", null, null, null, null, null));
+
+        cobrancaScheduler.reconciliarComMercadoPago();
+
+        assertThat(cobrancaDaFatura().getStatus()).isEqualTo(StatusCobranca.PAGO);
+        AssinaturaTenant depois = recarregar(assinatura);
+        assertThat(depois.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
+        assertThat(depois.getDataVencimento()).isAfter(LocalDate.now());
+
+        // Segunda reconciliação: a fatura já está PAGA, nada é reprocessado nem renovado de novo
+        LocalDate vencimentoRenovado = depois.getDataVencimento();
+        cobrancaScheduler.reconciliarComMercadoPago();
+        verify(mercadoPagoClient, times(1)).buscarAuthorizedPayment(FATURA_ID);
+        assertThat(recarregar(assinatura).getDataVencimento()).isEqualTo(vencimentoRenovado);
+    }
+
+    @Test
+    @DisplayName("H1c - Régua não suspende quem tem fatura aprovada no MP: registra o pagamento e reativa")
+    void reguaNaoSuspendeQuemPagou() {
+        AssinaturaTenant assinatura = salvarAssinatura(StatusAssinatura.INADIMPLENTE, PREAPPROVAL_ID, "authorized",
+                LocalDate.now().minusDays(20));
+        when(mercadoPagoClient.buscarAuthorizedPaymentsDoPreapproval(PREAPPROVAL_ID)).thenReturn(List.of(fatura("approved")));
+        when(mercadoPagoClient.buscarAuthorizedPayment(FATURA_ID)).thenReturn(fatura("approved"));
+
+        cobrancaScheduler.aplicarReguaDeCarencia();
+
+        assertThat(recarregar(assinatura).getStatus()).isEqualTo(StatusAssinatura.ATIVA);
+        assertThat(cobrancaDaFatura().getStatus()).isEqualTo(StatusCobranca.PAGO);
+        verify(mercadoPagoClient, never()).pausarPreapproval(anyString());
+    }
+
+    @Test
+    @DisplayName("H2 - Item da régua renovado entre a leitura do lote e o processamento é ignorado")
+    void itemRenovadoDepoisDaLeituraDoLoteEhIgnorado() {
+        AssinaturaTenant assinatura = salvarAssinatura(StatusAssinatura.INADIMPLENTE, PREAPPROVAL_ID, "authorized",
+                LocalDate.now().minusDays(20));
+        // O lote já foi lido; enquanto o item espera, um pagamento (webhook) renova a assinatura e faz commit
+        when(mercadoPagoClient.buscarAuthorizedPaymentsDoPreapproval(PREAPPROVAL_ID)).thenAnswer(inv -> {
+            assinaturaTenantService.renovarAposPagamento(assinatura.getId());
+            return List.of();
+        });
+
+        cobrancaScheduler.aplicarReguaDeCarencia();
+
+        AssinaturaTenant depois = recarregar(assinatura);
+        assertThat(depois.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
+        assertThat(depois.getDataSuspensao()).isNull();
+        verify(mercadoPagoClient, never()).pausarPreapproval(anyString());
+    }
+
+    @Test
+    @DisplayName("M2 - Pagamento aprovado em assinatura CANCELADA registra PAGO e não reativa")
+    void pagamentoEmCanceladaNaoReativa() {
+        LocalDate vencimento = LocalDate.now().minusDays(60);
+        AssinaturaTenant cancelada = salvarAssinatura(StatusAssinatura.CANCELADA, PREAPPROVAL_ID, "cancelled",
+                vencimento);
+        when(mercadoPagoClient.buscarAuthorizedPayment(FATURA_ID)).thenReturn(fatura("approved"));
+
+        webhookService.processar(MercadoPagoWebhookService.TOPICO_AUTHORIZED_PAYMENT, FATURA_ID, "{}");
+
+        assertThat(cobrancaDaFatura().getStatus()).isEqualTo(StatusCobranca.PAGO);
+        AssinaturaTenant depois = recarregar(cancelada);
+        assertThat(depois.getStatus()).isEqualTo(StatusAssinatura.CANCELADA);
+        assertThat(depois.getDataVencimento()).isEqualTo(vencimento);
+        assertThat(eventoDaFatura().getProcessado()).isTrue();
+        verify(mercadoPagoClient, never()).reativarPreapproval(anyString());
+    }
+
+    @Test
+    @DisplayName("D2 - Remover cortesia volta para TRIAL; se o MP falhar na hora, a rotina diária de links gera depois")
+    void removerCortesiaVoltaParaTrialERotinaGeraLink() {
+        AssinaturaTenant cortesia = salvarAssinatura(StatusAssinatura.ATIVA, null, null, LocalDate.now().minusDays(100));
+        cortesia.setCortesia(true);
+        cortesia.setMpPayerEmail("pagador@clinica-e2e.com");
+        cortesia = assinaturaTenantRepository.save(cortesia);
+        when(mercadoPagoClient.criarPreapprovalPendente(anyString(), anyString(), anyString(), any()))
+                .thenThrow(new BusinessException("MP fora do ar", HttpStatus.BAD_GATEWAY))
+                .thenReturn(new PreapprovalResponse("pa-e2e-cortesia", "pending", "https://mp/checkout/cortesia",
+                        "pagador@clinica-e2e.com", "ASSINATURA-" + cortesia.getId(), null, null));
+
+        assinaturaTenantService.definirCortesia(cortesia.getId(), false);
+
+        AssinaturaTenant semCortesia = recarregar(cortesia);
+        assertThat(semCortesia.isCortesia()).isFalse();
+        assertThat(semCortesia.getStatus()).isEqualTo(StatusAssinatura.TRIAL);
+        assertThat(semCortesia.getDataVencimento()).isEqualTo(LocalDate.now().plusDays(7));
+        assertThat(semCortesia.getDataProximaCobranca()).isEqualTo(LocalDate.now().plusDays(7));
+        assertThat(semCortesia.getMpPreapprovalId()).isNull();
+
+        cobrancaScheduler.gerarLinksDeAtivacaoDeTrial();
+
+        AssinaturaTenant comLink = recarregar(cortesia);
+        assertThat(comLink.getMpPreapprovalId()).isEqualTo("pa-e2e-cortesia");
+        assertThat(comLink.getMpInitPoint()).isEqualTo("https://mp/checkout/cortesia");
+        verify(mercadoPagoClient, times(2)).criarPreapprovalPendente(anyString(), anyString(), anyString(), any());
+    }
+
+    @Test
+    @DisplayName("H3 - @Version: escrita com cópia velha falha e não apaga a renovação feita por outra transação")
+    void escritaComCopiaVelhaFalha() {
+        AssinaturaTenant assinatura = salvarAssinatura(StatusAssinatura.INADIMPLENTE, PREAPPROVAL_ID, "authorized",
+                LocalDate.now().minusDays(8));
+        AssinaturaTenant copiaVelha = recarregar(assinatura);
+
+        assinaturaTenantService.renovarAposPagamento(assinatura.getId());
+        LocalDate renovado = recarregar(assinatura).getDataVencimento();
+
+        copiaVelha.setStatus(StatusAssinatura.SUSPENSA);
+        assertThatThrownBy(() -> assinaturaTenantRepository.save(copiaVelha))
+                .isInstanceOf(ObjectOptimisticLockingFailureException.class);
+
+        AssinaturaTenant depois = recarregar(assinatura);
+        assertThat(depois.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
+        assertThat(depois.getDataVencimento()).isEqualTo(renovado);
+        assertThat(depois.getVersao()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("H3 - Webhook concorrente com outra atualização: o commit conflita, o webhook re-lê e reaplica sem perder nada")
+    void webhookReaplicaAposConflitoDeVersao() {
+        AssinaturaTenant suspensa = salvarAssinatura(StatusAssinatura.SUSPENSA, PREAPPROVAL_ID, "paused",
+                LocalDate.now().minusDays(20));
+        when(mercadoPagoClient.buscarAuthorizedPayment(FATURA_ID)).thenReturn(fatura("approved"));
+        TransactionTemplate outraTransacao = new TransactionTemplate(transactionManager);
+        outraTransacao.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        AtomicBoolean concorrenteJaRodou = new AtomicBoolean(false);
+        // Durante a 1ª tentativa do webhook (depois de ele ler a assinatura), outra transação a altera e faz commit
+        when(mercadoPagoClient.reativarPreapproval(PREAPPROVAL_ID)).thenAnswer(inv -> {
+            if (concorrenteJaRodou.compareAndSet(false, true)) {
+                outraTransacao.executeWithoutResult(status -> {
+                    AssinaturaTenant a = assinaturaTenantRepository.findById(suspensa.getId()).orElseThrow();
+                    a.setMpPayerEmail("financeiro@clinica-e2e.com");
+                    assinaturaTenantRepository.save(a);
+                });
+            }
+            return new PreapprovalResponse(PREAPPROVAL_ID, "authorized", null, null, null, null, null);
+        });
+
+        webhookService.processar(MercadoPagoWebhookService.TOPICO_AUTHORIZED_PAYMENT, FATURA_ID, "{}");
+
+        AssinaturaTenant depois = recarregar(suspensa);
+        assertThat(depois.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
+        assertThat(depois.getDataVencimento()).isAfter(LocalDate.now());
+        assertThat(depois.getMpStatus()).isEqualTo("authorized");
+        assertThat(depois.getMpPayerEmail()).isEqualTo("financeiro@clinica-e2e.com");
+        assertThat(cobrancaDaFatura().getStatus()).isEqualTo(StatusCobranca.PAGO);
+        assertThat(cobrancaTenantRepository.findAll().stream()
+                .filter(c -> FATURA_ID.equals(c.getMpAuthorizedPaymentId())).count()).isEqualTo(1);
+        assertThat(eventoDaFatura().getProcessado()).isTrue();
+        verify(mercadoPagoClient, times(2)).reativarPreapproval(PREAPPROVAL_ID);
+    }
+
+    @Test
+    @DisplayName("D1 - TRIAL vencido segue a régua da ATIVA: +5 dias INADIMPLENTE, +15 dias SUSPENSA")
+    void trialVencidoSegueARegua() {
+        AssinaturaTenant vencidoHa6Dias = salvarAssinatura(StatusAssinatura.TRIAL, null, null,
+                LocalDate.now().minusDays(6));
+        AssinaturaTenant vencidoHa16Dias = salvarAssinatura(StatusAssinatura.TRIAL, null, null,
+                LocalDate.now().minusDays(16));
+        AssinaturaTenant vencidoHa3Dias = salvarAssinatura(StatusAssinatura.TRIAL, null, null,
+                LocalDate.now().minusDays(3));
+
+        cobrancaScheduler.aplicarReguaDeCarencia();
+
+        assertThat(recarregar(vencidoHa3Dias).getStatus()).isEqualTo(StatusAssinatura.TRIAL);
+        assertThat(recarregar(vencidoHa6Dias).getStatus()).isEqualTo(StatusAssinatura.INADIMPLENTE);
+        AssinaturaTenant suspensa = recarregar(vencidoHa16Dias);
+        assertThat(suspensa.getStatus()).isEqualTo(StatusAssinatura.SUSPENSA);
+        assertThat(suspensa.getDataSuspensao()).isNotNull();
     }
 }

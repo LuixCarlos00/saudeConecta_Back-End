@@ -399,8 +399,8 @@ class AssinaturaTenantServiceTest {
     class DefinirCortesia {
 
         @Test
-        @DisplayName("2.6 - Remover cortesia define novo vencimento (hoje+7) e gera/envia o link de pagamento")
-        void removerCortesiaDefineVencimentoEGeraLink() {
+        @DisplayName("D2 - Remover cortesia sem cartão: volta para TRIAL com vencimento hoje+7 e gera/envia o link")
+        void removerCortesiaVoltaParaTrialEGeraLink() {
             AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.ATIVA);
             assinatura.setCortesia(true);
             assinatura.setDataVencimento(LocalDate.now().minusDays(200));
@@ -410,14 +410,14 @@ class AssinaturaTenantServiceTest {
             service.definirCortesia(1L, false);
 
             assertThat(assinatura.isCortesia()).isFalse();
-            assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
+            assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.TRIAL);
             assertThat(assinatura.getDataVencimento()).isEqualTo(LocalDate.now().plusDays(7));
             assertThat(assinatura.getDataProximaCobranca()).isEqualTo(LocalDate.now().plusDays(7));
             verify(assinaturaMercadoPagoService).gerarLinkENotificar(1L);
         }
 
         @Test
-        @DisplayName("2.6 - Falha ao gerar o link não desfaz a remoção da cortesia")
+        @DisplayName("2.6 - Falha ao gerar o link não desfaz a remoção da cortesia (a rotina diária de trial cobre)")
         void falhaNoLinkNaoDesfazRemocao() {
             AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.ATIVA);
             assinatura.setCortesia(true);
@@ -428,19 +428,79 @@ class AssinaturaTenantServiceTest {
 
             assertThatCode(() -> service.definirCortesia(1L, false)).doesNotThrowAnyException();
             assertThat(assinatura.isCortesia()).isFalse();
+            assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.TRIAL);
         }
 
         @Test
-        @DisplayName("Remover cortesia de quem já tem preapproval não gera link novo")
-        void removerCortesiaComPreapprovalNaoGeraLink() {
+        @DisplayName("D2 - Remover cortesia com cartão autorizado: vencimento = next_payment_date do MP, status mantido, sem link")
+        void removerCortesiaComCartaoAutorizadoUsaProximaCobrancaDoMp() {
             AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.ATIVA);
             assinatura.setCortesia(true);
             assinatura.setMpPreapprovalId("pa-1");
+            assinatura.setMpStatus("authorized");
+            LocalDate proximaCobranca = LocalDate.now().plusDays(12);
+            when(assinaturaTenantRepository.findById(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
+            when(assinaturaMercadoPagoService.buscarProximaCobrancaAutorizada(assinatura)).thenReturn(proximaCobranca);
+
+            service.definirCortesia(1L, false);
+
+            assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
+            assertThat(assinatura.getDataVencimento()).isEqualTo(proximaCobranca);
+            assertThat(assinatura.getDataProximaCobranca()).isEqualTo(proximaCobranca);
+            verify(assinaturaMercadoPagoService, never()).gerarLinkENotificar(any());
+        }
+
+        @Test
+        @DisplayName("D2 - Cartão autorizado mas MP não responde: mantém status, vencimento hoje+7, sem link")
+        void removerCortesiaComCartaoAutorizadoEMpFora() {
+            AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.ATIVA);
+            assinatura.setCortesia(true);
+            assinatura.setMpPreapprovalId("pa-1");
+            assinatura.setMpStatus("authorized");
+            when(assinaturaTenantRepository.findById(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
+            when(assinaturaMercadoPagoService.buscarProximaCobrancaAutorizada(assinatura))
+                    .thenThrow(new BusinessException("MP fora", HttpStatus.BAD_GATEWAY));
+
+            service.definirCortesia(1L, false);
+
+            assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
+            assertThat(assinatura.getDataVencimento()).isEqualTo(LocalDate.now().plusDays(7));
+            verify(assinaturaMercadoPagoService, never()).gerarLinkENotificar(any());
+        }
+
+        @Test
+        @DisplayName("D2 - Preapproval que não está authorized no MP: volta para TRIAL e gera o link")
+        void removerCortesiaComPreapprovalNaoAutorizadoVoltaParaTrial() {
+            AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.ATIVA);
+            assinatura.setCortesia(true);
+            assinatura.setMpPreapprovalId("pa-1");
+            assinatura.setMpStatus("authorized");
+            when(assinaturaTenantRepository.findById(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
+            when(assinaturaMercadoPagoService.buscarProximaCobrancaAutorizada(assinatura)).thenReturn(null);
+
+            service.definirCortesia(1L, false);
+
+            assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.TRIAL);
+            assertThat(assinatura.getDataVencimento()).isEqualTo(LocalDate.now().plusDays(7));
+            verify(assinaturaMercadoPagoService).gerarLinkENotificar(1L);
+        }
+
+        @Test
+        @DisplayName("D2 - Remover cortesia de assinatura CANCELADA não reabre nem gera link")
+        void removerCortesiaDeCanceladaNaoReabre() {
+            AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.CANCELADA);
+            assinatura.setCortesia(true);
+            LocalDate vencimento = assinatura.getDataVencimento();
             when(assinaturaTenantRepository.findById(1L)).thenReturn(Optional.of(assinatura));
             when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
 
             service.definirCortesia(1L, false);
 
+            assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.CANCELADA);
+            assertThat(assinatura.getDataVencimento()).isEqualTo(vencimento);
             verifyNoInteractions(assinaturaMercadoPagoService);
         }
 

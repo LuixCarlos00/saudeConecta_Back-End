@@ -1,5 +1,6 @@
 package br.com.saudeConecta.service.mercadopago;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
@@ -91,7 +92,7 @@ class AssinaturaMercadoPagoServiceTest {
     void deveCriarPreapprovalEPersistirLink() {
         when(mercadoPagoClient.criarPreapprovalPendente(any(), eq("ASSINATURA-42"), eq(EMAIL_ADMIN), any()))
                 .thenReturn(new PreapprovalResponse(PREAPPROVAL_ID, "pending", INIT_POINT,
-                        EMAIL_ADMIN, "ASSINATURA-42", null));
+                        EMAIL_ADMIN, "ASSINATURA-42", null, null));
 
         LinkPagamentoResponse link = service.gerarLinkPagamento(ORG_ID);
 
@@ -153,7 +154,7 @@ class AssinaturaMercadoPagoServiceTest {
         assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
         assinatura.setMpStatus("authorized");
         when(mercadoPagoClient.cancelarPreapproval(PREAPPROVAL_ID)).thenReturn(
-                new PreapprovalResponse(PREAPPROVAL_ID, "cancelled", null, EMAIL_ADMIN, null, null));
+                new PreapprovalResponse(PREAPPROVAL_ID, "cancelled", null, EMAIL_ADMIN, null, null, null));
 
         service.cancelarPeloCliente(ORG_ID);
 
@@ -180,7 +181,7 @@ class AssinaturaMercadoPagoServiceTest {
         assinatura.setMpStatus("pending");
         assinatura.setDataVencimento(vencimento);
         when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(
-                new PreapprovalResponse(PREAPPROVAL_ID, "authorized", INIT_POINT, EMAIL_ADMIN, null, null));
+                new PreapprovalResponse(PREAPPROVAL_ID, "authorized", INIT_POINT, EMAIL_ADMIN, null, null, null));
 
         boolean mudou = service.sincronizar(assinatura);
 
@@ -196,7 +197,7 @@ class AssinaturaMercadoPagoServiceTest {
         assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
         assinatura.setMpStatus("authorized");
         when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(
-                new PreapprovalResponse(PREAPPROVAL_ID, "authorized", INIT_POINT, EMAIL_ADMIN, null, null));
+                new PreapprovalResponse(PREAPPROVAL_ID, "authorized", INIT_POINT, EMAIL_ADMIN, null, null, null));
 
         assinatura.setStatus(StatusAssinatura.INADIMPLENTE);
         assertThat(service.sincronizar(assinatura)).isFalse();
@@ -217,7 +218,7 @@ class AssinaturaMercadoPagoServiceTest {
         assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
         assinatura.setMpStatus("authorized");
         when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(
-                new PreapprovalResponse(PREAPPROVAL_ID, "paused", null, EMAIL_ADMIN, null, null));
+                new PreapprovalResponse(PREAPPROVAL_ID, "paused", null, EMAIL_ADMIN, null, null, null));
 
         assertThat(service.sincronizar(assinatura)).isTrue();
         assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.SUSPENSA);
@@ -247,7 +248,7 @@ class AssinaturaMercadoPagoServiceTest {
         when(assinaturaTenantRepository.findById(ASSINATURA_ID)).thenReturn(Optional.of(assinatura));
         when(mercadoPagoClient.criarPreapprovalPendente(any(), eq("ASSINATURA-42"), eq(EMAIL_ADMIN), any()))
                 .thenReturn(new PreapprovalResponse(PREAPPROVAL_ID, "pending", INIT_POINT,
-                        EMAIL_ADMIN, "ASSINATURA-42", null));
+                        EMAIL_ADMIN, "ASSINATURA-42", null, null));
 
         LinkPagamentoResponse link = service.gerarLinkENotificar(ASSINATURA_ID);
 
@@ -255,5 +256,70 @@ class AssinaturaMercadoPagoServiceTest {
         verify(emailNotificacaoService).enviarLinkAtivacaoAssinatura(
                 eq(EMAIL_ADMIN), eq("Fulano"), eq("Profissional"), any(), eq(INIT_POINT),
                 eq(EMAIL_ADMIN), any(), eq(ORG_ID), eq(3L));
+    }
+
+    @Test
+    @DisplayName("M1 - paused não rebaixa ATIVA com vencimento no futuro (pagamento já confirmado)")
+    void pausedNaoRebaixaAtivaEmDia() {
+        assinatura.setStatus(StatusAssinatura.ATIVA);
+        assinatura.setDataVencimento(LocalDate.now().plusDays(20));
+
+        assertThat(service.aplicarStatusRemoto(assinatura, "paused")).isFalse();
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
+        assertThat(assinatura.getDataSuspensao()).isNull();
+    }
+
+    @Test
+    @DisplayName("M1 - paused ainda suspende ATIVA já vencida")
+    void pausedSuspendeAtivaVencida() {
+        assinatura.setStatus(StatusAssinatura.ATIVA);
+        assinatura.setDataVencimento(LocalDate.now().minusDays(1));
+
+        assertThat(service.aplicarStatusRemoto(assinatura, "paused")).isTrue();
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.SUSPENSA);
+    }
+
+    @Test
+    @DisplayName("M1 - Reativação de preapproval pausado: falha do MP não propaga (só log)")
+    void reativarFalhaNaoPropaga() {
+        assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
+        assinatura.setMpStatus("paused");
+        when(mercadoPagoClient.reativarPreapproval(PREAPPROVAL_ID))
+                .thenThrow(new BusinessException("MP fora", org.springframework.http.HttpStatus.BAD_GATEWAY));
+
+        assertThatCode(() -> service.reativarSePausado(assinatura)).doesNotThrowAnyException();
+        assertThat(assinatura.getMpStatus()).isEqualTo("paused");
+    }
+
+    @Test
+    @DisplayName("M1 - Preapproval que não está pausado não é reativado")
+    void naoReativaQuemNaoEstaPausado() {
+        assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
+        assinatura.setMpStatus("authorized");
+
+        service.reativarSePausado(assinatura);
+
+        verify(mercadoPagoClient, never()).reativarPreapproval(any());
+    }
+
+    @Test
+    @DisplayName("D2 - Próxima cobrança: next_payment_date quando o preapproval está authorized no MP")
+    void proximaCobrancaAutorizada() {
+        assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(new PreapprovalResponse(
+                PREAPPROVAL_ID, "authorized", null, null, null, null, "2026-11-20T10:00:00.000-04:00"));
+
+        assertThat(service.buscarProximaCobrancaAutorizada(assinatura)).isEqualTo(LocalDate.of(2026, 11, 20));
+    }
+
+    @Test
+    @DisplayName("D2 - Próxima cobrança: null quando o preapproval não está authorized ou não existe")
+    void proximaCobrancaNaoAutorizada() {
+        assertThat(service.buscarProximaCobrancaAutorizada(assinatura)).isNull();
+
+        assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(new PreapprovalResponse(
+                PREAPPROVAL_ID, "paused", null, null, null, null, "2026-11-20T10:00:00.000-04:00"));
+        assertThat(service.buscarProximaCobrancaAutorizada(assinatura)).isNull();
     }
 }
