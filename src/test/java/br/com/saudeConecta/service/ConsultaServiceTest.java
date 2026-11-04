@@ -803,16 +803,61 @@ class ConsultaServiceTest {
     @DisplayName("verificarDisponibilidade")
     class VerificarDisponibilidade {
 
+        private Consulta consultaAs(int hora, int minuto, int duracao, StatusConsulta status) {
+            return Consulta.builder().id(200L).organizacao(organizacao).profissional(profissional).paciente(paciente)
+                    .dataHora(LocalDateTime.of(2025, 12, 1, hora, minuto)).duracaoMinutos(duracao).status(status).build();
+        }
+
         @Test
-        @DisplayName("Deve retornar true quando horário está ocupado")
+        @DisplayName("Deve retornar true quando já existe consulta no mesmo horário")
         void deveRetornarTrueQuandoHorarioOcupado() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.existsByProfissional_IdAndOrganizacao_IdAndDataHoraAndStatus(
-                    eq(5L), eq(ORG_ID), any(), eq(StatusConsulta.AGENDADA))).thenReturn(true);
+            when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
+                    .thenReturn(List.of(consultaAs(10, 0, 30, StatusConsulta.AGENDADA)));
 
             boolean resultado = consultaService.verificarDisponibilidade("2025-12-01", "10:00", 5L);
 
             assertThat(resultado).isTrue();
+        }
+
+        @Test
+        @DisplayName("Fase 5 - consulta de 09:30 com 60 min ocupa 10:00 (sobreposição, não só horário exato)")
+        void deveDetectarSobreposicao() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
+                    .thenReturn(List.of(consultaAs(9, 30, 60, StatusConsulta.AGENDADA)));
+
+            assertThat(consultaService.verificarDisponibilidade("2025-12-01", "10:00", 5L)).isTrue();
+        }
+
+        @Test
+        @DisplayName("Fase 5 - consulta CONFIRMADA também ocupa o horário")
+        void confirmadaTambemOcupa() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
+                    .thenReturn(List.of(consultaAs(10, 0, 30, StatusConsulta.CONFIRMADA)));
+
+            assertThat(consultaService.verificarDisponibilidade("2025-12-01", "10:00", 5L)).isTrue();
+        }
+
+        @Test
+        @DisplayName("Fase 5 - consulta nova de 09:45 (30 min padrão) conflita com a que começa às 10:00")
+        void novaQueTerminaDentroDeOutraConflita() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
+                    .thenReturn(List.of(consultaAs(10, 0, 30, StatusConsulta.AGENDADA)));
+
+            assertThat(consultaService.verificarDisponibilidade("2025-12-01", "09:45", 5L)).isTrue();
+        }
+
+        @Test
+        @DisplayName("Fase 5 - consultas encostadas (fim == início) não conflitam")
+        void encostadaNaoConflita() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
+                    .thenReturn(List.of(consultaAs(9, 30, 30, StatusConsulta.AGENDADA)));
+
+            assertThat(consultaService.verificarDisponibilidade("2025-12-01", "10:00", 5L)).isFalse();
         }
 
         @Test

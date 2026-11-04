@@ -8,7 +8,7 @@ import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.TermoAutorizacaoRepository;
 import br.com.saudeConecta.presentation.dto.prontuario.QuestionarioSaudeRequest;
-import br.com.saudeConecta.util.TokenLogUtil;
+import br.com.saudeConecta.util.MascaraLog;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
@@ -82,7 +82,7 @@ public class TermoAutorizacaoService {
         termoRepository.save(termo);
         cacheEvictionService.evictQuestionarioSaude(orgId, consultaId);
         log.info("Token gerado={} para consulta={}, expira em {}h",
-                TokenLogUtil.mascarar(token), consultaId, HORAS_EXPIRACAO);
+                MascaraLog.token(token), consultaId, HORAS_EXPIRACAO);
 
         return token;
     }
@@ -117,7 +117,7 @@ public class TermoAutorizacaoService {
      */
     @Transactional
     public void responderQuestionario(QuestionarioSaudeRequest request, String ipOrigem) {
-        log.info("Recebendo respostas do questionário — token={}", TokenLogUtil.mascarar(request.getToken()));
+        log.info("Recebendo respostas do questionário — token={}", MascaraLog.token(request.getToken()));
 
         TermoAutorizacao termo = termoRepository.findByToken(request.getToken())
                 .orElseThrow(() -> new IllegalArgumentException("Token invalido."));

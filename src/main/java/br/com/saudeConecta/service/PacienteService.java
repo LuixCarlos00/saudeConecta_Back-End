@@ -11,7 +11,9 @@ import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepo
 import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
 import br.com.saudeConecta.presentation.dto.paciente.AtualizarPacienteRequest;
 import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteCompletoRequest;
+import br.com.saudeConecta.util.MascaraLog;
 import br.com.saudeConecta.util.SnapshotUtil;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -188,7 +190,7 @@ public class PacienteService  {
         @CacheEvict(value = "pacientes-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ATIVO'"),
         @CacheEvict(value = "pacientes-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ALL'")
     })
-    public void deletarPacientebyOrg(Long id) throws Exception {
+    public void deletarPacientebyOrg(Long id) {
         log.info("Iniciando exclusão do paciente ID: {}", id);
 
         if (id == null || id <= 0) {
@@ -199,25 +201,21 @@ public class PacienteService  {
         var pacienteOpt = this.buscarrPacientebyOrg(id);
         if (pacienteOpt.isEmpty()) {
             log.warn("Paciente não encontrado para exclusão ID: {}", id);
-            throw new Exception("Registro não encontrado");
+            throw new EntityNotFoundException("Registro não encontrado");
         }
 
         Paciente paciente = pacienteOpt.get();
         Endereco endereco = paciente.getEndereco();
 
-        try {
-            // 1. Deletar o paciente primeiro (remove a FK)
-            pacienteRepository.deleteById(id);
-            log.info("Paciente ID: {} excluido com sucesso", id);
+        // Violação de FK (paciente com consultas, etc.) sobe como DataIntegrityViolationException → 409 no handler
+        // 1. Deletar o paciente primeiro (remove a FK)
+        pacienteRepository.deleteById(id);
+        log.info("Paciente ID: {} excluido com sucesso", id);
 
-            // 2. Deletar o endereço associado
-            if (endereco != null) {
-                enderecoRepository.deleteById(endereco.getEndCodigo());
-                log.info("Endereco ID: {} associado ao paciente excluido com sucesso", endereco.getEndCodigo());
-            }
-        } catch (Exception e) {
-            log.error("Erro ao excluir paciente ID: {}", id, e);
-            throw new Exception("Violação de Integridade", e);
+        // 2. Deletar o endereço associado
+        if (endereco != null) {
+            enderecoRepository.deleteById(endereco.getEndCodigo());
+            log.info("Endereco ID: {} associado ao paciente excluido com sucesso", endereco.getEndCodigo());
         }
     }
 
@@ -278,7 +276,7 @@ public class PacienteService  {
     @Transactional(readOnly = true)
     public List<Paciente> buscarListaPacientesPorCPFComFiltro(String pesquisa, String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando pacientes por CPF: {} na organizacao: {} com filtro: {}", pesquisa, orgId, filtro);
+        log.debug("Buscando pacientes por CPF: {} na organizacao: {} com filtro: {}", MascaraLog.cpf(pesquisa), orgId, filtro);
         
         if ("ATIVO".equals(filtro)) {
             return pacienteRepository.findByOrganizacaoIdAndCpfContainingWithFiltro(orgId, pesquisa, filtro, "ATIVO");

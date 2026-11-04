@@ -145,14 +145,15 @@ class ConsultaControllerIntegrationTest {
 
         @Test
         @WithMockUser(roles = "PROFISSIONAL")
-        @DisplayName("Deve retornar 500 quando consulta não estiver em estado válido (sem try/catch no controller)")
-        void deveRetornar500QuandoConsultaNaoAgendada() throws Exception {
+        @DisplayName("Deve retornar 409 (handler global) quando consulta não estiver em estado válido")
+        void deveRetornar409QuandoConsultaNaoAgendada() throws Exception {
             when(consultaService.concluirConsultabyOrg(1L))
                     .thenThrow(new IllegalStateException("Apenas consultas AGENDADAS podem ser concluídas"));
 
             mockMvc.perform(put("/consultas/concluirConsultabyOrg/1")
                             .with(csrf()))
-                    .andExpect(status().isInternalServerError());
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.message").value("Apenas consultas AGENDADAS podem ser concluídas"));
         }
     }
 

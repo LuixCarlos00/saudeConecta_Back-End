@@ -133,18 +133,13 @@ public class ConsultaController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deletarConsulta(@PathVariable Long id) {
         log.info("Solicitacao de exclusao da consulta {}", id);
+        // Exclusão bloqueada (IllegalStateException) vira 409 com mensagem no GlobalExceptionHandler
         try {
             consultaService.deletarConsulta(id);
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException e) {
             log.warn("Consulta nao encontrada para exclusao: {}", e.getMessage());
             return ResponseEntity.notFound().build();
-        } catch (IllegalStateException e) {
-            log.warn("Exclusao bloqueada para consulta {}: {}", id, e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        } catch (Exception e) {
-            log.error("Erro ao excluir consulta {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
@@ -655,7 +650,7 @@ public class ConsultaController {
     public ResponseEntity<Long> contarConsultasHojePorProfissional(@PathVariable Long usuarioId) {
         Long organizacaoId = TenantContext.getCurrentTenant();
         if (organizacaoId == null) {
-            log.error("Organizacao nao identificada no contexto");
+            log.warn("Organizacao nao identificada no contexto");
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok(consultaService.contarConsultasHojePorUsuarioEOrg(organizacaoId, usuarioId));
@@ -672,7 +667,7 @@ public class ConsultaController {
     public ResponseEntity<Long> contarConsultasRealizadasHojePorProfissional(@PathVariable Long usuarioId) {
         Long organizacaoId = TenantContext.getCurrentTenant();
         if (organizacaoId == null) {
-            log.error("Organizacao nao identificada no contexto");
+            log.warn("Organizacao nao identificada no contexto");
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok(consultaService.contarConsultasRealizadasHojePorUsuarioEOrg(organizacaoId, usuarioId));
@@ -689,7 +684,7 @@ public class ConsultaController {
     public ResponseEntity<Long> contarConsultasAgendadasHojePorProfissional(@PathVariable Long usuarioId) {
         Long organizacaoId = TenantContext.getCurrentTenant();
         if (organizacaoId == null) {
-            log.error("Organizacao nao identificada no contexto");
+            log.warn("Organizacao nao identificada no contexto");
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok(consultaService.contarConsultasAgendadasHojePorUsuarioEOrg(organizacaoId, usuarioId));
@@ -748,7 +743,7 @@ public class ConsultaController {
         Long organizacaoId = TenantContext.getCurrentTenant();
         
         if (organizacaoId == null) {
-            log.error("Organizacao nao identificada no contexto");
+            log.warn("Organizacao nao identificada no contexto");
             return ResponseEntity.badRequest().build();
         }
         
@@ -779,7 +774,7 @@ public class ConsultaController {
         Long organizacaoId = TenantContext.getCurrentTenant();
 
         if (organizacaoId == null) {
-            log.error("Organizacao nao identificada no contexto");
+            log.warn("Organizacao nao identificada no contexto");
             return ResponseEntity.badRequest().build();
         }
 
@@ -836,7 +831,7 @@ public class ConsultaController {
         Long organizacaoId = TenantContext.getCurrentTenant();
         
         if (organizacaoId == null) {
-            log.error("Organizacao nao identificada no contexto");
+            log.warn("Organizacao nao identificada no contexto");
             return ResponseEntity.badRequest().build();
         }
         
@@ -871,36 +866,30 @@ public class ConsultaController {
 
         log.info("=== Requisição: GET /consultas/BuscandoHistoricoDeConsultasDoPaciente/{} usuario={} ===", pacienteId, usuarioLogado.getId());
 
-        try {
-            List<HistoricoConsultaPacienteResponse> historico;
+        List<HistoricoConsultaPacienteResponse> historico;
 
-            if (usuarioLogado.isClinico()) {
-                Optional<Profissional> profissionalLogado = profissionalRepository.findByUsuarioIdWithRelations(usuarioLogado.getId());
+        if (usuarioLogado.isClinico()) {
+            Optional<Profissional> profissionalLogado = profissionalRepository.findByUsuarioIdWithRelations(usuarioLogado.getId());
 
-                if (profissionalLogado.isEmpty()) {
-                    log.warn("Profissional não encontrado para o usuario {}", usuarioLogado.getId());
-                    return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-                }
-
-                Profissional profissional = profissionalLogado.get();
-                Long profissionalId = profissional.getId();
-
-                if (profissional.getTipoProfissional() != null && profissional.getTipoProfissional().isDentista()) {
-                    historico = buscarHistoricoCompletoPacienteDentistaUseCase.executar(pacienteId, profissionalId);
-                } else {
-                    historico = buscarHistoricoCompletoPacienteMedicoUseCase.executar(pacienteId, profissionalId);
-                }
-            } else {
-                historico = buscarHistoricoCompletoPacienteAdminUseCase.executar(pacienteId);
+            if (profissionalLogado.isEmpty()) {
+                log.warn("Profissional não encontrado para o usuario {}", usuarioLogado.getId());
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
 
-            log.info("Historico retornado com sucesso - {} registros", historico.size());
-            return ResponseEntity.ok(historico);
+            Profissional profissional = profissionalLogado.get();
+            Long profissionalId = profissional.getId();
 
-        } catch (Exception e) {
-            log.error("Erro ao buscar historico do paciente {}: {}", pacienteId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            if (profissional.getTipoProfissional() != null && profissional.getTipoProfissional().isDentista()) {
+                historico = buscarHistoricoCompletoPacienteDentistaUseCase.executar(pacienteId, profissionalId);
+            } else {
+                historico = buscarHistoricoCompletoPacienteMedicoUseCase.executar(pacienteId, profissionalId);
+            }
+        } else {
+            historico = buscarHistoricoCompletoPacienteAdminUseCase.executar(pacienteId);
         }
+
+        log.info("Historico retornado com sucesso - {} registros", historico.size());
+        return ResponseEntity.ok(historico);
     }
 
     // ==========================================

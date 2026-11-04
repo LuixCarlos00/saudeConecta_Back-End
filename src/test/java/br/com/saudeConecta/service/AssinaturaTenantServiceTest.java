@@ -16,11 +16,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
+import br.com.saudeConecta.config.FusoHorarioConfig;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -39,8 +42,13 @@ class AssinaturaTenantServiceTest {
     @Mock private PlanoAssinaturaService planoAssinaturaService;
     @Mock private AssinaturaMercadoPagoService assinaturaMercadoPagoService;
 
-    @InjectMocks
     private AssinaturaTenantService service;
+
+    @BeforeEach
+    void criarService() {
+        service = new AssinaturaTenantService(assinaturaTenantRepository, organizacaoRepository,
+                planoAssinaturaService, assinaturaMercadoPagoService, Clock.system(FusoHorarioConfig.ZONA));
+    }
 
     // ========== Helpers ==========
 
@@ -307,6 +315,24 @@ class AssinaturaTenantServiceTest {
             assertThat(assinatura.getDiaCobranca()).isEqualTo(LocalDate.now().getDayOfMonth());
             assertThat(assinatura.getDataVencimento()).isAfter(LocalDate.now());
             assertThat(assinatura.getDataSuspensao()).isNull();
+        }
+
+        @Test
+        @DisplayName("5.5 (M4) - Pagamento às 22h30 de Brasília (já 01h30 UTC do dia seguinte) ancora no dia de Brasília")
+        void ancoraNoDiaDeBrasiliaNaoNoUtc() {
+            // 2026-03-01T01:30Z = 2026-02-28 22:30 em São Paulo
+            Clock relogio = Clock.fixed(Instant.parse("2026-03-01T01:30:00Z"), FusoHorarioConfig.ZONA);
+            AssinaturaTenantService comRelogio = new AssinaturaTenantService(assinaturaTenantRepository,
+                    organizacaoRepository, planoAssinaturaService, assinaturaMercadoPagoService, relogio);
+            AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.INADIMPLENTE);
+            assinatura.setDataVencimento(LocalDate.of(2026, 2, 20));
+            assinatura.setDiaCobranca(null);
+            when(assinaturaTenantRepository.findById(1L)).thenReturn(Optional.of(assinatura));
+
+            comRelogio.renovarAposPagamento(1L);
+
+            assertThat(assinatura.getDiaCobranca()).isEqualTo(28);
+            assertThat(assinatura.getDataVencimento()).isEqualTo(LocalDate.of(2026, 3, 28));
         }
     }
 

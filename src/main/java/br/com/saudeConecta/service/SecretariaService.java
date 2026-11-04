@@ -210,9 +210,10 @@ public class SecretariaService {
                     
         } catch (Exception e) {
             // 4. Caso haja relacionamento que impeça o delete, cancelar e avisar
-            String errorMessage = "Não foi possível deletar a Secretaria devido a relacionamentos existentes: " + e.getMessage();
-            log.error(errorMessage);
-            throw new IllegalStateException(errorMessage);
+            // Mensagem do banco (tabela/constraint) fica só no log; a causa segue encadeada
+            String errorMessage = "Não foi possível deletar a Secretaria devido a relacionamentos existentes";
+            log.warn(errorMessage, e);
+            throw new IllegalStateException(errorMessage, e);
         }
     }
 

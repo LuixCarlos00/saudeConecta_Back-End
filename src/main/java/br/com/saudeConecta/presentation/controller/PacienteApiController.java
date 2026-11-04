@@ -29,18 +29,9 @@ public class PacienteApiController {
             @Valid @RequestBody CadastrarPacienteCompletoRequest request) {
         log.info("Cadastrando paciente: {} - Data Nascimento: {}",
                 request.nome(), request.dataNacimento());
-        try {
-            Paciente paciente = pacienteService.cadastrarPacientebyOrg(request);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(new PacienteResponse(paciente));
-        } catch (IllegalStateException e) {
-            log.warn("Erro ao cadastrar paciente: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        } catch (Exception e) {
-            log.error("Erro inesperado ao cadastrar paciente", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erro ao processar requisição: " + e.getMessage());
-        }
+        // Conflito (IllegalStateException) vira 409 e erro inesperado vira 500 no GlobalExceptionHandler
+        Paciente paciente = pacienteService.cadastrarPacientebyOrg(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new PacienteResponse(paciente));
     }
 
     @GetMapping("/buscarrPacientebyOrg/{id}")
@@ -77,13 +68,8 @@ public class PacienteApiController {
             return ResponseEntity.notFound().build();
         }
 
-        try {
-            pacienteService.deletarPacientebyOrg(id);
-            return ResponseEntity.noContent().build();
-        } catch (Exception e) {
-            log.error("Erro ao deletar paciente: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        pacienteService.deletarPacientebyOrg(id);
+        return ResponseEntity.noContent().build();
     }
 
 

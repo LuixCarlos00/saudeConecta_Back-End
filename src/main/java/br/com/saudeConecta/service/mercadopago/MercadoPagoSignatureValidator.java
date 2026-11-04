@@ -52,7 +52,9 @@ public class MercadoPagoSignatureValidator {
         String ts = extrairParte(xSignature, "ts");
         String v1 = extrairParte(xSignature, "v1");
         if (ts == null || v1 == null) {
-            log.warn("Header x-signature malformado: {}", xSignature);
+            // Só o tamanho: o header carrega o HMAC (v1), que não deve ir para o log
+            log.warn("Header x-signature malformado (tamanho {}, ts presente: {}, v1 presente: {})",
+                    xSignature.length(), ts != null, v1 != null);
             return false;
         }
         if (!isTimestampValido(ts)) {
@@ -111,7 +113,7 @@ public class MercadoPagoSignatureValidator {
             return hex.toString();
 
         } catch (Exception e) {
-            log.error("Erro ao calcular HMAC do webhook: {}", e.getMessage());
+            log.error("Erro ao calcular HMAC do webhook", e);
             return null;
         }
     }

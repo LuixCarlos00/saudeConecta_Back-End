@@ -37,6 +37,9 @@ import static org.mockito.Mockito.*;
 @DisplayName("MercadoPagoWebhookService - Testes unitários")
 class MercadoPagoWebhookServiceTest {
 
+    private static final java.time.Clock RELOGIO = java.time.Clock.fixed(
+            java.time.Instant.parse("2026-03-01T01:30:00Z"), br.com.saudeConecta.config.FusoHorarioConfig.ZONA);
+
     private static final String PREAPPROVAL_ID = "2c93808497f9d3a80197fa1234567890";
     private static final String AUTHORIZED_PAYMENT_ID = "9876543210";
     private static final Long ASSINATURA_ID = 42L;
@@ -61,7 +64,7 @@ class MercadoPagoWebhookServiceTest {
                 new MercadoPagoProperties(), emailNotificacaoService);
         service = new MercadoPagoWebhookService(eventoRepository, assinaturaTenantRepository,
                 cobrancaTenantRepository, assinaturaTenantService, mercadoPagoClient,
-                assinaturaMercadoPagoService, transactionManager);
+                assinaturaMercadoPagoService, transactionManager, RELOGIO);
 
         Organizacao org = new Organizacao();
         org.setId(7L);
@@ -192,6 +195,8 @@ class MercadoPagoWebhookServiceTest {
         assertThat(cobranca.getFormaPagamento()).isEqualTo(FormaPagamento.MERCADO_PAGO);
         assertThat(cobranca.getMpAuthorizedPaymentId()).isEqualTo(AUTHORIZED_PAYMENT_ID);
         assertThat(cobranca.getValorTotal()).isEqualByComparingTo(BigDecimal.valueOf(279));
+        // 5.5: data do pagamento vem do Clock em America/Sao_Paulo (01h30 UTC = 22h30 do dia anterior)
+        assertThat(cobranca.getDataPagamento()).isEqualTo(LocalDateTime.of(2026, 2, 28, 22, 30));
         verify(assinaturaTenantService).renovarAposPagamento(ASSINATURA_ID);
         assertThat(ultimoEventoSalvo().getProcessado()).isTrue();
     }
@@ -354,7 +359,7 @@ class MercadoPagoWebhookServiceTest {
         when(mercadoPagoClient.buscarAuthorizedPayment(AUTHORIZED_PAYMENT_ID))
                 .thenThrow(new RuntimeException("502 Bad Gateway"));
 
-        LocalDateTime antes = LocalDateTime.now();
+        LocalDateTime antes = LocalDateTime.now(RELOGIO);
         service.processar(MercadoPagoWebhookService.TOPICO_AUTHORIZED_PAYMENT, AUTHORIZED_PAYMENT_ID, "{}");
 
         ArgumentCaptor<LocalDateTime> proxima = ArgumentCaptor.forClass(LocalDateTime.class);
@@ -470,7 +475,7 @@ class MercadoPagoWebhookServiceTest {
         when(cobrancaTenantRepository.findByMpAuthorizedPaymentId(AUTHORIZED_PAYMENT_ID)).thenReturn(Optional.empty());
         when(mercadoPagoClient.buscarAuthorizedPayment(AUTHORIZED_PAYMENT_ID)).thenReturn(faturaAprovada(AUTHORIZED_PAYMENT_ID));
 
-        LocalDateTime antes = LocalDateTime.now();
+        LocalDateTime antes = LocalDateTime.now(RELOGIO);
         int reprocessados = service.reprocessarEventosComErro();
 
         assertThat(reprocessados).isEqualTo(1);

@@ -4,7 +4,6 @@ import br.com.saudeConecta.domain.usuario.Usuario;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
-import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -73,6 +72,14 @@ public class TokenService {
         return Instant.now().plus(TOKEN_EXPIRATION_HOURS, ChronoUnit.HOURS);
     }
 
+    /**
+     * Valida o token e devolve o subject (login).
+     *
+     * @param tokenJwt token recebido no header Authorization
+     * @return login do usuário
+     * @throws JWTVerificationException token expirado, adulterado, malformado ou vazio. Toda falha de
+     *         validação sai com esse tipo para o FiltroAcesso responder 401 (antes virava RuntimeException → 500)
+     */
     public String getSubject(String tokenJwt) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
@@ -81,10 +88,10 @@ public class TokenService {
                     .build()
                     .verify(tokenJwt)
                     .getSubject();
-        } catch (TokenExpiredException expiredException) {
-            throw expiredException;
-        } catch (Exception exception) {
-            throw new RuntimeException("Token invalido", exception);
+        } catch (JWTVerificationException verificacao) {
+            throw verificacao;
+        } catch (RuntimeException exception) {
+            throw new JWTVerificationException("Token invalido", exception);
         }
     }
 

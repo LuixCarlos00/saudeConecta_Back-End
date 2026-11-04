@@ -2,11 +2,14 @@ package br.com.saudeConecta.presentation.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import br.com.saudeConecta.infra.exceptions.ErrorResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
@@ -62,10 +65,12 @@ public class CepController {
             log.debug("Endereco encontrado para CEP: {}", cep);
             return ResponseEntity.ok(response.getBody());
             
-        } catch (Exception e) {
-            log.error("Erro ao buscar CEP: {}", cep, e);
-            return ResponseEntity.internalServerError()
-                .body(Map.of("error", "Erro ao consultar CEP. Tente novamente."));
+        } catch (RestClientException e) {
+            // ViaCEP fora do ar/lento é falha do serviço externo, não nossa: 502 com mensagem para o usuário
+            log.warn("ViaCEP indisponivel ao buscar CEP {}", cep, e);
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(ErrorResponse.of(HttpStatus.BAD_GATEWAY.value(), "CEP_INDISPONIVEL",
+                        "Servico de CEP indisponivel no momento. Tente novamente.", "/cep/" + cep));
         }
     }
 }

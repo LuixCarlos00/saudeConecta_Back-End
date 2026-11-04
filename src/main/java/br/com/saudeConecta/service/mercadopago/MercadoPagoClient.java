@@ -224,10 +224,10 @@ public class MercadoPagoClient {
             return resposta.getBody();
 
         } catch (RestClientException e) {
-            log.error("Falha ao {} no Mercado Pago: {}", operacao, e.getMessage());
+            log.error("Falha ao {} no Mercado Pago: {}", operacao, e.getMessage(), e);
             throw new BusinessException(
                     "Não foi possível comunicar com o Mercado Pago. Tente novamente em instantes.",
-                    HttpStatus.BAD_GATEWAY);
+                    HttpStatus.BAD_GATEWAY, e);
         }
     }
 }

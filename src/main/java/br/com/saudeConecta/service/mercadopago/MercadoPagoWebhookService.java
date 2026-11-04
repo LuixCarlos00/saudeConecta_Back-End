@@ -18,6 +18,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -64,6 +65,8 @@ public class MercadoPagoWebhookService {
     private final MercadoPagoClient mercadoPagoClient;
     private final AssinaturaMercadoPagoService assinaturaMercadoPagoService;
     private final TransactionTemplate transactionTemplate;
+    /** Relógio em America/Sao_Paulo (data de pagamento, backoff e expiração dos eventos). */
+    private final Clock clock;
 
     public MercadoPagoWebhookService(
             MpWebhookEventoRepository eventoRepository,
@@ -72,7 +75,9 @@ public class MercadoPagoWebhookService {
             AssinaturaTenantService assinaturaTenantService,
             MercadoPagoClient mercadoPagoClient,
             AssinaturaMercadoPagoService assinaturaMercadoPagoService,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager,
+            Clock clock) {
+        this.clock = clock;
         this.eventoRepository = eventoRepository;
         this.assinaturaTenantRepository = assinaturaTenantRepository;
         this.cobrancaTenantRepository = cobrancaTenantRepository;
@@ -161,7 +166,7 @@ public class MercadoPagoWebhookService {
      * @return quantos eventos foram reprocessados nesta execução (sem contar os que falharam)
      */
     public int reprocessarEventosComErro() {
-        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime agora = LocalDateTime.now(clock);
         LocalDateTime limite = agora.minusDays(PRAZO_REPROCESSAMENTO_DIAS);
 
         Integer expirados = transactionTemplate.execute(status -> eventoRepository.expirarComErroAntesDe(limite, agora));
@@ -237,7 +242,7 @@ public class MercadoPagoWebhookService {
         String mensagem = erro.getMessage() != null ? erro.getMessage() : erro.getClass().getSimpleName();
         mensagem = mensagem.substring(0, Math.min(mensagem.length(), TAMANHO_MAXIMO_ERRO));
         int tentativasAnteriores = evento.getTentativas() != null ? evento.getTentativas() : 0;
-        LocalDateTime proximaTentativa = LocalDateTime.now().plus(backoff(tentativasAnteriores));
+        LocalDateTime proximaTentativa = LocalDateTime.now(clock).plus(backoff(tentativasAnteriores));
         String erroGravado = mensagem;
         try {
             transactionTemplate.executeWithoutResult(status ->
@@ -292,7 +297,7 @@ public class MercadoPagoWebhookService {
                     .dataId(dataId)
                     .payload(payload)
                     .processado(false)
-                    .recebidoEm(LocalDateTime.now())
+                    .recebidoEm(LocalDateTime.now(clock))
                     .build());
 
         } catch (DataIntegrityViolationException e) {
@@ -327,7 +332,7 @@ public class MercadoPagoWebhookService {
 
         assinatura.setMpPreapprovalId(remoto.id());
         assinatura.setMpStatus(remoto.status());
-        assinatura.setMpUltimaSincronizacao(LocalDateTime.now());
+        assinatura.setMpUltimaSincronizacao(LocalDateTime.now(clock));
         assinaturaMercadoPagoService.aplicarStatusRemoto(assinatura, remoto.status());
 
         assinaturaTenantRepository.save(assinatura);
@@ -376,7 +381,7 @@ public class MercadoPagoWebhookService {
         if (PAGAMENTO_APROVADO.equals(statusPagamento)) {
             cobranca.setStatus(StatusCobranca.PAGO);
             cobranca.setMotivoRecusa(null);
-            cobranca.setDataPagamento(LocalDateTime.now());
+            cobranca.setDataPagamento(LocalDateTime.now(clock));
             cobrancaTenantRepository.save(cobranca);
 
             // CANCELADA é terminal: o dinheiro fica registrado, mas a reativação/estorno é manual

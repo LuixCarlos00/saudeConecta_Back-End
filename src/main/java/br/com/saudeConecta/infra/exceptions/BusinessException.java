@@ -25,6 +25,19 @@ public class BusinessException extends RuntimeException {
         this.errorCode = errorCode;
     }
 
+    /**
+     * Erro de negócio/integração com status próprio, preservando a causa para o log.
+     *
+     * @param message mensagem para o cliente
+     * @param status  status HTTP da resposta
+     * @param cause   exceção original
+     */
+    public BusinessException(String message, HttpStatus status, Throwable cause) {
+        super(message, cause);
+        this.status = status;
+        this.errorCode = "BUSINESS_ERROR";
+    }
+
     public BusinessException(String message, Throwable cause) {
         super(message, cause);
         this.status = HttpStatus.BAD_REQUEST;

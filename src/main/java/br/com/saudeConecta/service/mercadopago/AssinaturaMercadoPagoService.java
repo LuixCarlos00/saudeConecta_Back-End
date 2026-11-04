@@ -232,7 +232,7 @@ public class AssinaturaMercadoPagoService {
             assinaturaTenantRepository.save(assinatura);
         } catch (BusinessException e) {
             log.error("Não foi possível pausar o preapproval {}: {}",
-                    assinatura.getMpPreapprovalId(), e.getMessage());
+                    assinatura.getMpPreapprovalId(), e.getMessage(), e);
         }
     }
 
@@ -258,7 +258,7 @@ public class AssinaturaMercadoPagoService {
         } catch (BusinessException e) {
             log.error("Não foi possível reativar o preapproval {} da assinatura {} após o pagamento: {} — "
                     + "reativar manualmente no Mercado Pago", assinatura.getMpPreapprovalId(),
-                    assinatura.getId(), e.getMessage());
+                    assinatura.getId(), e.getMessage(), e);
         }
     }
 

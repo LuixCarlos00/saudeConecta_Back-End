@@ -1,11 +1,16 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.util.MascaraLog;
+
 import br.com.saudeConecta.service.HomeService;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
+import br.com.saudeConecta.domain.usuario.AuditoriaAcessoMaster;
 import br.com.saudeConecta.domain.usuario.Usuario;
+import br.com.saudeConecta.infrastructure.persistence.repository.AuditoriaAcessoMasterRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import br.com.saudeConecta.infra.configuracoesseguranca.TokenService;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
@@ -26,6 +31,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 
@@ -45,12 +51,17 @@ public class HomeController {
     private final AssinaturaTenantRepository assinaturaTenantRepository;
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditoriaAcessoMasterRepository auditoriaAcessoMasterRepository;
+
+    /** Mesma resposta para e-mail cadastrado ou não: impede descobrir quais e-mails existem. */
+    static final String MENSAGEM_RECUPERACAO_GENERICA =
+            "Se o e-mail estiver cadastrado, voce recebera as instrucoes para recuperar a senha.";
 
     @PostMapping("/login")
     @Description("Realiza autenticação do usuário e retorna token JWT. Utilizado em: LoginComponent, AuthService")
-    public ResponseEntity<?> autenticar(@RequestBody @NotNull DadosLoginUsuario dados) {
+    public ResponseEntity<?> autenticar(@RequestBody @NotNull DadosLoginUsuario dados, HttpServletRequest request) {
         // Tenta autenticar via senha master (SUPER_ADMIN impersonando outro usuario)
-        Usuario usuarioMaster = autenticarComSenhaMaster(dados.login(), dados.senha());
+        Usuario usuarioMaster = autenticarComSenhaMaster(dados.login(), dados.senha(), request.getRemoteAddr());
         if (usuarioMaster != null) {
             return gerarRespostaLogin(usuarioMaster);
         }
@@ -66,8 +77,8 @@ public class HomeController {
             try {
                 TipoUsuarioNovo tipoSelecionado = TipoUsuarioNovo.valueOf(dados.perfil().toUpperCase());
                 if (!tipoSelecionado.equals(usuario.getTipoUsuarioNovo())) {
-                    log.warn("Tipo selecionado {} não corresponde ao tipo do usuário {} no banco: {}",
-                            tipoSelecionado, usuario.getLogin(), usuario.getTipoUsuarioNovo());
+                    log.warn("Tipo selecionado {} não corresponde ao tipo do usuário id {} no banco: {}",
+                            tipoSelecionado, usuario.getId(), usuario.getTipoUsuarioNovo());
                     return ResponseEntity.status(HttpStatus.FORBIDDEN)
                             .body(Map.of("message", "O tipo selecionado não corresponde ao tipo do usuário no sistema"));
                 }
@@ -84,12 +95,15 @@ public class HomeController {
      * Verifica se a senha informada e a senha do SUPER_ADMIN (usuario sem organizacao).
      * Se sim, retorna o Usuario alvo (identificado pelo login) para impersonacao.
      * Se nao, retorna null e o fluxo normal de autenticacao segue.
+     * Recurso INTENCIONAL de suporte: todo uso fica registrado em auditoria_acesso_master; se a
+     * auditoria nao puder ser gravada o acesso master e negado (sem rastro, sem acesso).
      *
      * @param loginAlvo      login do usuario que se deseja acessar
      * @param senhaInformada senha digitada no login
+     * @param ip             IP do cliente (para a auditoria)
      * @return Usuario alvo se a senha master for valida, null caso contrario
      */
-    private Usuario autenticarComSenhaMaster(String loginAlvo, String senhaInformada) {
+    private Usuario autenticarComSenhaMaster(String loginAlvo, String senhaInformada, String ip) {
         try {
             Usuario root = usuarioRepository.findByTipoUsuarioNovoAndOrganizacaoIsNull(
                     TipoUsuarioNovo.ROOT);
@@ -109,15 +123,24 @@ public class HomeController {
 
             Usuario usuarioAlvo = usuarioRepository.findUsuarioByLogin(loginAlvo);
             if (usuarioAlvo == null) {
-                log.warn("Senha master usada com login inexistente: {}", loginAlvo);
+                log.warn("Senha master usada com login inexistente: {}", MascaraLog.cpf(loginAlvo));
                 return null;
             }
 
-            log.info("Acesso via senha master: ROOT impersonando usuario {}", loginAlvo);
+            auditoriaAcessoMasterRepository.save(AuditoriaAcessoMaster.builder()
+                    .atorUsuarioId(root.getId())
+                    .atorLogin(root.getLogin())
+                    .alvoUsuarioId(usuarioAlvo.getId())
+                    .alvoLogin(usuarioAlvo.getLogin())
+                    .alvoOrganizacaoId(usuarioAlvo.getOrganizacaoId())
+                    .ip(ip)
+                    .dataHora(LocalDateTime.now())
+                    .build());
+            log.info("Acesso via senha master: ROOT impersonando usuario id {} (auditado)", usuarioAlvo.getId());
             return usuarioAlvo;
 
         } catch (Exception e) {
-            log.warn("Erro ao verificar senha master: {}", e.getMessage());
+            log.error("Erro ao verificar/auditar senha master; acesso master negado", e);
             return null;
         }
     }
@@ -136,14 +159,14 @@ public class HomeController {
                     .findAssinaturaAtivaByOrganizacaoId(organizacaoId);
 
             if (assinatura.isEmpty()) {
-                log.warn("Login bloqueado para usuario {}: organizacao {} sem plano ativo", usuario.getLogin(), organizacaoId);
+                log.warn("Login bloqueado para usuario id {}: organizacao {} sem plano ativo", usuario.getId(), organizacaoId);
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("message", "Sua organizacao nao possui um plano ativo. Entre em contato com o administrador."));
             }
 
             if (!assinatura.get().permiteAcesso()) {
                 String statusPlano = assinatura.get().getStatus().getDescricao();
-                log.warn("Login bloqueado para usuario {}: plano {} da org {}", usuario.getLogin(), statusPlano, organizacaoId);
+                log.warn("Login bloqueado para usuario id {}: plano {} da org {}", usuario.getId(), statusPlano, organizacaoId);
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("message", "O plano da sua organizacao esta " + statusPlano.toLowerCase() + ". Entre em contato com o administrador."));
             }
@@ -153,28 +176,34 @@ public class HomeController {
         String tipoProfissional = usuario.isClinico() ? getProfissional(usuario) : null;
         String tipoUsuario = usuario.getTipoUsuarioNovo() != null ? usuario.getTipoUsuarioNovo().name() : "GESTOR";
         String tokenJWT = tokenService.gerarToken(usuario, organizacaoId, nomeUsuario, tipoUsuario, tipoProfissional);
-        log.info("Login realizado: {} | Org: {} | Nome: {} | Tipo: {} | TipoProfissional: {}",
-                usuario.getLogin(), organizacaoId, nomeUsuario, tipoUsuario, tipoProfissional);
+        log.info("Login realizado: usuario id {} | Org: {} | Nome: {} | Tipo: {} | TipoProfissional: {}",
+                usuario.getId(), organizacaoId, nomeUsuario, tipoUsuario, tipoProfissional);
 
         return ResponseEntity.ok(new DadosTokenJWT(tokenJWT));
     }
 
+    /**
+     * Gera nova senha e envia por e-mail. Responde SEMPRE 200 com a mesma mensagem, exista ou não o
+     * e-mail, para não permitir enumeração de contas. Falha inesperada sobe para o handler global (500).
+     *
+     * @param dados corpo com o campo "email"
+     * @return 200 com mensagem genérica, ou 400 quando o e-mail não foi informado
+     */
     @PostMapping("/esqueciMinhaSenha")
     @Description("Recupera senha do usuário enviando nova senha por email")
     public ResponseEntity<?> esqueciMinhaSenha(@RequestBody Map<String, String> dados) {
         String email = dados.get("email");
-        log.info("Solicitacao de recuperacao de senha para email: {}", email);
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Informe o e-mail"));
+        }
+        log.info("Solicitacao de recuperacao de senha para email: {}", MascaraLog.email(email));
 
         try {
             recuperacaoSenhaService.recuperarSenhaPorEmail(email);
-            return ResponseEntity.ok(Map.of("message", "Nova senha enviada para o email cadastrado"));
         } catch (HomeService.EmailNaoEncontradoException e) {
-            log.warn("Email nao encontrado: {}", email);
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        } catch (Exception e) {
-            log.error("Erro ao recuperar senha: {}", e.getMessage());
-            return ResponseEntity.internalServerError().body(Map.of("message", "Erro ao processar solicitação"));
+            log.info("Recuperacao de senha para email nao cadastrado: {}", MascaraLog.email(email));
         }
+        return ResponseEntity.ok(Map.of("message", MENSAGEM_RECUPERACAO_GENERICA));
     }
 
     private String getNomeUsuario(Usuario usuario) {

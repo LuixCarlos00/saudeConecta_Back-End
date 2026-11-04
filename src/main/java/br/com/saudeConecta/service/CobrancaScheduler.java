@@ -1,5 +1,6 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.config.FusoHorarioConfig;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService;
@@ -10,6 +11,7 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -46,12 +48,16 @@ public class CobrancaScheduler {
     private final AssinaturaMercadoPagoService assinaturaMercadoPagoService;
     private final ProcessadorReguaCobranca processador;
     private final MercadoPagoWebhookService webhookService;
+    /** Relógio em America/Sao_Paulo: as datas-limite da régua usam o "hoje" de Brasília. */
+    private final Clock clock;
 
     public CobrancaScheduler(
             AssinaturaTenantRepository assinaturaTenantRepository,
             AssinaturaMercadoPagoService assinaturaMercadoPagoService,
             ProcessadorReguaCobranca processador,
-            MercadoPagoWebhookService webhookService) {
+            MercadoPagoWebhookService webhookService,
+            Clock clock) {
+        this.clock = clock;
         this.assinaturaTenantRepository = assinaturaTenantRepository;
         this.assinaturaMercadoPagoService = assinaturaMercadoPagoService;
         this.processador = processador;
@@ -63,9 +69,9 @@ public class CobrancaScheduler {
      * para os trials que vencem em até 7 dias e ainda não têm link
      * (inclui os que ficaram para trás por falha em execuções anteriores).
      */
-    @Scheduled(cron = "0 0 8 * * *")
+    @Scheduled(cron = "0 0 8 * * *", zone = FusoHorarioConfig.FUSO)
     public void gerarLinksDeAtivacaoDeTrial() {
-        LocalDate dataAlvo = LocalDate.now().plusDays(DIAS_ANTECEDENCIA_LINK);
+        LocalDate dataAlvo = LocalDate.now(clock).plusDays(DIAS_ANTECEDENCIA_LINK);
         List<AssinaturaTenant> trials = assinaturaTenantRepository.findTrialsSemLinkVencendoAte(dataAlvo);
         if (trials.isEmpty()) {
             return;
@@ -82,20 +88,20 @@ public class CobrancaScheduler {
      * +15 dias → SUSPENSA (pausada no Mercado Pago), +30 dias suspensa → CANCELADA.
      * Antes de suspender ou cancelar, confere no MP se há fatura aprovada não registrada.
      */
-    @Scheduled(cron = "0 0 9 * * *")
+    @Scheduled(cron = "0 0 9 * * *", zone = FusoHorarioConfig.FUSO)
     public void aplicarReguaDeCarencia() {
-        LocalDate limiteInadimplencia = LocalDate.now().minusDays(DIAS_CARENCIA_INADIMPLENCIA);
+        LocalDate limiteInadimplencia = LocalDate.now(clock).minusDays(DIAS_CARENCIA_INADIMPLENCIA);
         List<AssinaturaTenant> vencidas = assinaturaTenantRepository.findVencidasNaoInadimplentes(limiteInadimplencia);
         int marcadas = processarCadaUm(vencidas, "marcar inadimplente",
                 assinatura -> processador.marcarInadimplente(assinatura.getId(), limiteInadimplencia));
 
-        LocalDate limiteSuspensao = LocalDate.now().minusDays(DIAS_CARENCIA_SUSPENSAO);
+        LocalDate limiteSuspensao = LocalDate.now(clock).minusDays(DIAS_CARENCIA_SUSPENSAO);
         List<AssinaturaTenant> inadimplentes = assinaturaTenantRepository.findInadimplentesParaSuspender(limiteSuspensao);
         int suspensas = processarCadaUm(inadimplentes, "suspender", assinatura ->
                 !pagamentoAprovadoRecuperado(assinatura, true)
                         && processador.suspender(assinatura.getId(), limiteSuspensao));
 
-        LocalDateTime limiteCancelamento = LocalDate.now().minusDays(DIAS_CARENCIA_CANCELAMENTO).atStartOfDay();
+        LocalDateTime limiteCancelamento = LocalDate.now(clock).minusDays(DIAS_CARENCIA_CANCELAMENTO).atStartOfDay();
         List<AssinaturaTenant> suspensasAntigas = assinaturaTenantRepository.findSuspensasParaCancelar(limiteCancelamento);
         int canceladas = processarCadaUm(suspensasAntigas, "cancelar", assinatura ->
                 !pagamentoAprovadoRecuperado(assinatura, false)
@@ -111,7 +117,7 @@ public class CobrancaScheduler {
      * Reconcilia o status local com o Mercado Pago a cada 4 horas.
      * Rede de segurança para notificações que nunca chegaram.
      */
-    @Scheduled(cron = "0 0 */4 * * *")
+    @Scheduled(cron = "0 0 */4 * * *", zone = FusoHorarioConfig.FUSO)
     public void reconciliarComMercadoPago() {
         List<AssinaturaTenant> assinaturas = assinaturaTenantRepository.findComPreapprovalParaReconciliar();
         if (assinaturas.isEmpty()) {
@@ -133,7 +139,7 @@ public class CobrancaScheduler {
      * falhou (ex.: GET da fatura com 5xx/timeout). Sem isso um pagamento aprovado cuja
      * notificação falhou nunca seria registrado. Backoff e expiração ficam no serviço.
      */
-    @Scheduled(cron = "0 */15 * * * *")
+    @Scheduled(cron = "0 */15 * * * *", zone = FusoHorarioConfig.FUSO)
     public void reprocessarWebhooksComErro() {
         int reprocessados = webhookService.reprocessarEventosComErro();
         if (reprocessados > 0) {
@@ -166,7 +172,7 @@ public class CobrancaScheduler {
         } catch (Exception e) {
             log.warn("[SCHEDULER] Não foi possível consultar as faturas da assinatura {} no MP: {} — {}",
                     assinatura.getId(), e.getMessage(),
-                    prosseguirSeMpFalhar ? "seguindo com a régua" : "adiado para o próximo ciclo");
+                    prosseguirSeMpFalhar ? "seguindo com a régua" : "adiado para o próximo ciclo", e);
             return !prosseguirSeMpFalhar;
         }
     }
@@ -177,7 +183,7 @@ public class CobrancaScheduler {
             webhookService.recuperarFaturasAprovadas(assinatura.getMpPreapprovalId());
         } catch (Exception e) {
             log.warn("[SCHEDULER] Reconciliação: falha ao consultar faturas da assinatura {} no MP: {}",
-                    assinatura.getId(), e.getMessage());
+                    assinatura.getId(), e.getMessage(), e);
         }
     }
 

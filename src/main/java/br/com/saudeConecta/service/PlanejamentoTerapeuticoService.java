@@ -9,7 +9,7 @@ import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.presentation.dto.prontuario.PlanejamentoTerapeuticoRequest;
-import br.com.saudeConecta.util.TokenLogUtil;
+import br.com.saudeConecta.util.MascaraLog;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -155,7 +155,7 @@ public class PlanejamentoTerapeuticoService {
             }
         }
 
-        log.info("Token de assinatura gerado={} para {} itens", TokenLogUtil.mascarar(token), planejamentos.size());
+        log.info("Token de assinatura gerado={} para {} itens", MascaraLog.token(token), planejamentos.size());
         return token;
     }
 
@@ -194,7 +194,7 @@ public class PlanejamentoTerapeuticoService {
      */
     @Transactional
     public void assinarPorToken(String token, String assinaturaBase64, String ipOrigem) {
-        log.info("Assinando planejamento — token={}, ip={}", TokenLogUtil.mascarar(token), ipOrigem);
+        log.info("Assinando planejamento — token={}, ip={}", MascaraLog.token(token), ipOrigem);
 
         int atualizados = planejamentoRepository.assinarPorToken(token, assinaturaBase64, ipOrigem, LocalDateTime.now());
         if (atualizados == 0) {

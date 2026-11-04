@@ -540,9 +540,12 @@ class ProfissionalServiceTest {
             doThrow(new RuntimeException("FK constraint"))
                     .when(profissionalRepository).delete(profissional);
 
+            // Fase 5.3: a causa original fica encadeada e a mensagem do banco não vaza para o cliente
             assertThatThrownBy(() -> profissionalService.deletarClinicoIdByOrg(PROF_ID))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("relacionamentos existentes");
+                    .hasMessageContaining("relacionamentos existentes")
+                    .hasMessageNotContaining("FK constraint")
+                    .hasCauseInstanceOf(RuntimeException.class);
         }
     }
 

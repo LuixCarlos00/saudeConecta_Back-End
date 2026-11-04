@@ -12,6 +12,7 @@ import java.time.Instant;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("MercadoPagoSignatureValidator - Testes unitários")
+@org.junit.jupiter.api.extension.ExtendWith(org.springframework.boot.test.system.OutputCaptureExtension.class)
 class MercadoPagoSignatureValidatorTest {
 
     private static final String SECRET = "segredo-de-teste";
@@ -98,5 +99,14 @@ class MercadoPagoSignatureValidatorTest {
         String header = assinar(DATA_ID, REQUEST_ID, ts);
 
         assertThat(validator.isValida(header, REQUEST_ID, null)).isFalse();
+    }
+
+    @Test
+    @DisplayName("5.4 - Header x-signature malformado não vai inteiro para o log")
+    void headerMalformadoNaoVaiParaOLog(org.springframework.boot.test.system.CapturedOutput output) {
+        String headerSemTs = "v1=hmac-secreto-que-nao-pode-vazar-0123456789abcdef";
+
+        assertThat(validator.isValida(headerSemTs, REQUEST_ID, DATA_ID)).isFalse();
+        assertThat(output.getAll()).contains("x-signature malformado").doesNotContain("hmac-secreto-que-nao-pode-vazar");
     }
 }

@@ -1,5 +1,6 @@
 package br.com.saudeConecta.email;
 
+import br.com.saudeConecta.util.MascaraLog;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -133,7 +134,7 @@ public class EmailNotificacaoService {
                                         String novaSenha, Long organizacaoId) {
         if (!emailHabilitado) {
             log.warn("Email desabilitado. Recuperação de senha não enviada. Login: {}, Email: {}",
-                    login, mascararEmail(email));
+                    login, MascaraLog.email(email));
             return;
         }
 
@@ -151,7 +152,7 @@ public class EmailNotificacaoService {
                         "recuperacao", organizacaoId, null);
 
             } catch (Exception e) {
-                log.error("Erro ao preparar email de recuperação para {}: {}", email, e.getMessage());
+                log.error("Erro ao preparar email de recuperação para {}: {}", MascaraLog.email(email), e.getMessage(), e);
             }
         }, emailTaskExecutor);
     }
@@ -178,7 +179,7 @@ public class EmailNotificacaoService {
                                                  int prazoDias, String previsaoAtendimento, int quantidadeAnexos,
                                                  Long organizacaoId) {
         if (!emailHabilitado) {
-            log.warn("Email desabilitado. Confirmacao de chamado nao enviada para: {}", email);
+            log.warn("Email desabilitado. Confirmacao de chamado nao enviada para: {}", MascaraLog.email(email));
             log.info("CHAMADO {} - Titulo: {}, Previsao: {}", protocolo, titulo, previsaoAtendimento);
             return;
         }
@@ -205,7 +206,7 @@ public class EmailNotificacaoService {
                         "chamado", organizacaoId, null);
 
             } catch (Exception e) {
-                log.error("Erro ao preparar email de chamado {} para {}: {}", protocolo, email, e.getMessage());
+                log.error("Erro ao preparar email de chamado {} para {}: {}", protocolo, MascaraLog.email(email), e.getMessage(), e);
             }
         }, emailTaskExecutor);
     }
@@ -227,7 +228,7 @@ public class EmailNotificacaoService {
                                                 String statusAnterior, String statusAtual, String observacao,
                                                 Long organizacaoId) {
         if (!emailHabilitado) {
-            log.warn("Email desabilitado. Atualizacao de status nao enviada para: {}", email);
+            log.warn("Email desabilitado. Atualizacao de status nao enviada para: {}", MascaraLog.email(email));
             log.info("CHAMADO {} - Status: {} -> {}", protocolo, statusAnterior, statusAtual);
             return;
         }
@@ -251,7 +252,7 @@ public class EmailNotificacaoService {
 
             } catch (Exception e) {
                 log.error("Erro ao preparar email de atualizacao do chamado {} para {}: {}",
-                        protocolo, email, e.getMessage());
+                        protocolo, MascaraLog.email(email), e.getMessage(), e);
             }
         }, emailTaskExecutor);
     }
@@ -274,7 +275,7 @@ public class EmailNotificacaoService {
                                               BigDecimal valorMensal, String initPoint, String payerEmail,
                                               LocalDate dataFimTrial, Long organizacaoId, Long adminOrgId) {
         if (!emailHabilitado) {
-            log.warn("Email desabilitado. Link de ativação não enviado para: {}", email);
+            log.warn("Email desabilitado. Link de ativação não enviado para: {}", MascaraLog.email(email));
             log.info("ATIVAÇÃO ASSINATURA - Plano: {}, Link: {}", plano, initPoint);
             return;
         }
@@ -297,7 +298,7 @@ public class EmailNotificacaoService {
                         "Administrador", organizacaoId, adminOrgId);
 
             } catch (Exception e) {
-                log.error("Erro ao preparar email de ativação de assinatura para {}: {}", email, e.getMessage());
+                log.error("Erro ao preparar email de ativação de assinatura para {}: {}", MascaraLog.email(email), e.getMessage(), e);
             }
         }, emailTaskExecutor);
     }
@@ -323,7 +324,7 @@ public class EmailNotificacaoService {
     @Async
     public void reenviarEmail(Long mensageriaId, String destinatario, String assunto, String corpoHtml) {
         if (!emailHabilitado) {
-            log.warn("Email desabilitado. Reenvio não realizado para: {}", destinatario);
+            log.warn("Email desabilitado. Reenvio não realizado para: {}", MascaraLog.email(destinatario));
             return;
         }
 
@@ -331,7 +332,7 @@ public class EmailNotificacaoService {
             try {
                 emailRetryService.executarReenvioComRetry(mensageriaId, destinatario, assunto, corpoHtml);
             } catch (Exception e) {
-                log.error("Erro ao reenviar email para {}: {}", destinatario, e.getMessage());
+                log.error("Erro ao reenviar email para {}: {}", MascaraLog.email(destinatario), e.getMessage(), e);
             }
         }, emailTaskExecutor);
     }
@@ -362,7 +363,7 @@ public class EmailNotificacaoService {
                                     Long organizacaoId, Long entidadeId) {
         if (!emailHabilitado) {
             log.warn("Email desabilitado. Credenciais de {} não enviadas. Login: {}, Email: {}",
-                    tipoUsuario, login, mascararEmail(email));
+                    tipoUsuario, login, MascaraLog.email(email));
             return;
         }
 
@@ -385,7 +386,7 @@ public class EmailNotificacaoService {
 
             } catch (Exception e) {
                 log.error("Erro ao preparar email de credenciais {} para {}: {}",
-                        tipoUsuario, email, e.getMessage());
+                        tipoUsuario, MascaraLog.email(email), e.getMessage(), e);
             }
         }, emailTaskExecutor);
     }
@@ -401,20 +402,5 @@ public class EmailNotificacaoService {
             case "Paciente" -> "paciente";
             default -> "generico";
         };
-    }
-
-    /**
-     * Mascara o e-mail para log (ex.: "fulano@clinica.com" vira "f***@clinica.com"),
-     * mantendo o domínio para facilitar diagnóstico sem expor o endereço completo.
-     */
-    private static String mascararEmail(String email) {
-        if (email == null || email.isBlank()) {
-            return "<vazio>";
-        }
-        int arroba = email.indexOf('@');
-        if (arroba <= 0) {
-            return "***";
-        }
-        return email.charAt(0) + "***" + email.substring(arroba);
     }
 }

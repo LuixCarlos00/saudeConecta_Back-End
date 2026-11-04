@@ -1,18 +1,14 @@
 package br.com.saudeConecta.presentation.controller;
 
-import br.com.saudeConecta.infra.exceptions.LimitePlanoException;
 import br.com.saudeConecta.service.UsuarioService;
-import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.presentation.dto.usuario.BloquearUsuarioRequest;
 import br.com.saudeConecta.presentation.dto.usuario.TodosUsuariosAgrupadosResponse;
 import br.com.saudeConecta.presentation.dto.usuario.UsuarioPerfilCompletoResponse;
-import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jdk.jfr.Description;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,17 +27,12 @@ public class UsuarioController {
     @Description("Bloqueia ou desbloqueia usuário por ID. Utilizado em: GerenciamentoUsuariosComponent")
     public ResponseEntity<Void> bloquearUsuariobyOrg(@RequestBody @Valid BloquearUsuarioRequest request) {
         log.debug("Alterando status do usuário ID: {}", request.codigoUsuario());
+        // LimitePlanoException (422) e erros inesperados (500) ficam com o GlobalExceptionHandler
         try {
             usuarioService.bloquearUsuariobyOrg( request );
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
-        } catch (LimitePlanoException e) {
-            // Reativação acima do limite do plano: deixa o handler global responder 422 com a mensagem
-            throw e;
-        } catch (Exception e) {
-            log.error("Erro ao alterar status do usuário ID: {}", request.codigoUsuario(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
@@ -49,7 +40,6 @@ public class UsuarioController {
 
 
     @GetMapping("/buscarTodosAgrupados")
-    @Transactional
     @Description("Lista todos os usuários agrupados por tipo (paciente, medico, secretaria, administrador). Utilizado em: TabelaTodosUsuariosComponent")
     public ResponseEntity<TodosUsuariosAgrupadosResponse> buscarTodosAgrupados() {
         Long organizacaoId = TenantContext.getCurrentTenant();
@@ -75,13 +65,8 @@ public class UsuarioController {
             usuarioService.trocarSenharUsuariobyOrg(id, novaSenha);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
+            // TenantAccessDeniedException (403) e erros inesperados (500) ficam com o GlobalExceptionHandler
             return ResponseEntity.notFound().build();
-        } catch (TenantAccessDeniedException e) {
-            // Sobe para o GlobalExceptionHandler responder 403; o catch genérico abaixo viraria 500.
-            throw e;
-        } catch (Exception e) {
-            log.error("Erro ao trocar senha do usuário ID: {}", id, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

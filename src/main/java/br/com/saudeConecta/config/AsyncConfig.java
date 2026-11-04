@@ -1,5 +1,6 @@
 package br.com.saudeConecta.config;
 
+import br.com.saudeConecta.infra.logging.MdcTaskDecorator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -33,6 +34,9 @@ public class AsyncConfig {
         // Política quando a fila está cheia e não há threads disponíveis
         executor.setRejectedExecutionHandler(new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy());
         
+        // Propaga requestId/tenantId/userId do MDC para a thread do e-mail
+        executor.setTaskDecorator(new MdcTaskDecorator());
+
         // Inicializa o executor
         executor.initialize();
         

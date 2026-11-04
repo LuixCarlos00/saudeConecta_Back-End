@@ -28,7 +28,7 @@ public class EmailUnicoService {
      * @return true se o email já existir, false caso contrário
      */
     public boolean emailJaExiste(String email) {
-        log.debug("Verificando existencia do email: {}", email);
+        log.debug("Verificando existencia do email: {}", MascaraLog.email(email));
         
         boolean existeEmAdmin = adminOrganizacaoRepository.findByEmail(email).isPresent();
         boolean existeEmProfissional = profissionalRepository.findByEmail(email).isPresent();
@@ -37,7 +37,7 @@ public class EmailUnicoService {
         boolean emailExiste = existeEmAdmin || existeEmProfissional || existeEmSecretaria;
         
         if (emailExiste) {
-            log.warn("Email {} já esta cadastrado no sistema", email);
+            log.warn("Email {} já esta cadastrado no sistema", MascaraLog.email(email));
         }
         
         return emailExiste;
@@ -51,26 +51,26 @@ public class EmailUnicoService {
      * @return true se o email já existir para outro usuário, false caso contrário
      */
     public boolean emailJaExisteParaOutroUsuario(String email, Long usuarioId) {
-        log.debug("Verificando existência do email: {} para outro usuário (ID: {})", email, usuarioId);
+        log.debug("Verificando existência do email: {} para outro usuário (ID: {})", MascaraLog.email(email), usuarioId);
         
         // Verificar em AdminOrganizacao
         Optional<AdminOrganizacao> adminOpt = adminOrganizacaoRepository.findByEmail(email);
         if (adminOpt.isPresent() && !pertenceAoUsuario(adminOpt.get().getUsuario(), usuarioId)) {
-            log.warn("Email {} já está cadastrado para outro administrador", email);
+            log.warn("Email {} já está cadastrado para outro administrador", MascaraLog.email(email));
             return true;
         }
         
         // Verificar em Profissional
         Optional<Profissional> profissionalOpt = profissionalRepository.findByEmail(email);
         if (profissionalOpt.isPresent() && !pertenceAoUsuario(profissionalOpt.get().getUsuario(), usuarioId)) {
-            log.warn("Email {} já está cadastrado para outro profissional", email);
+            log.warn("Email {} já está cadastrado para outro profissional", MascaraLog.email(email));
             return true;
         }
         
         // Verificar em Secretaria
         Optional<Secretaria> secretariaOpt = secretariaRepository.findByEmail(email);
         if (secretariaOpt.isPresent() && !pertenceAoUsuario(secretariaOpt.get().getUsuario(), usuarioId)) {
-            log.warn("Email {} já está cadastrado para outra secretária", email);
+            log.warn("Email {} já está cadastrado para outra secretária", MascaraLog.email(email));
             return true;
         }
         

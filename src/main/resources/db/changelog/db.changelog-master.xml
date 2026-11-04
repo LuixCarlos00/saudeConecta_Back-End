@@ -160,4 +160,7 @@
 
     <!-- Fase 2 (re-revisao): UNIQUE/indice da fatura MP em cobranca_tenant e marcador de pendencia manual em mp_webhook_evento -->
     <include file="db/changelog/08-2026/064-cobranca-indice-fatura-e-pendencias-manuais.xml"/>
+
+    <!-- Fase 5.4: trilha de auditoria persistente do acesso do ROOT via senha master -->
+    <include file="db/changelog/08-2026/065-auditoria-acesso-master.xml"/>
 </databaseChangeLog>

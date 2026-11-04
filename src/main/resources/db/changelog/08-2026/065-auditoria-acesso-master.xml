@@ -1,0 +1,49 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ================================================================ -->
+    <!-- FASE 5.4 - AUDITORIA DA SENHA MASTER DO ROOT                     -->
+    <!-- Tabela nova, so de insercao. Retrocompativel: a versao anterior   -->
+    <!-- da aplicacao nao conhece a tabela. Sem impacto em dados.          -->
+    <!-- ================================================================ -->
+    <changeSet id="065-001-auditoria-acesso-master" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="auditoria_acesso_master"/></not>
+        </preConditions>
+        <comment>Registro persistente de cada acesso do ROOT via senha master (quem, como quem, quando, IP)</comment>
+
+        <createTable tableName="auditoria_acesso_master">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="ator_usuario_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ator_login" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="alvo_usuario_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="alvo_login" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="alvo_organizacao_id" type="BIGINT"/>
+            <column name="ip" type="VARCHAR(45)"/>
+            <column name="data_hora" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="auditoria_acesso_master" indexName="idx_auditoria_master_data_hora">
+            <column name="data_hora"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="auditoria_acesso_master"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

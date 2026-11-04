@@ -23,6 +23,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
+import br.com.saudeConecta.config.FusoHorarioConfig;
+
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
@@ -51,7 +55,7 @@ class CobrancaSchedulerTest {
     @BeforeEach
     void setUp() {
         scheduler = new CobrancaScheduler(assinaturaTenantRepository, assinaturaMercadoPagoService, processador,
-                webhookService);
+                webhookService, Clock.system(FusoHorarioConfig.ZONA));
 
         Organizacao org = new Organizacao();
         org.setId(7L);
@@ -244,5 +248,34 @@ class CobrancaSchedulerTest {
                         .isEqualTo(Propagation.REQUIRES_NEW));
         assertThat(AssinaturaMercadoPagoService.class.getMethod("gerarLinkENotificar", Long.class)
                 .getAnnotation(Transactional.class).propagation()).isEqualTo(Propagation.REQUIRES_NEW);
+    }
+
+    @Test
+    @DisplayName("5.5 - Às 22h30 de Brasília (01h30 UTC do dia seguinte) o \"hoje\" da régua é o de Brasília")
+    void datasDaReguaUsamODiaDeBrasilia() {
+        Clock relogio = Clock.fixed(Instant.parse("2026-03-01T01:30:00Z"), FusoHorarioConfig.ZONA);
+        CobrancaScheduler comRelogio = new CobrancaScheduler(assinaturaTenantRepository, assinaturaMercadoPagoService,
+                processador, webhookService, relogio);
+
+        comRelogio.gerarLinksDeAtivacaoDeTrial();
+        comRelogio.aplicarReguaDeCarencia();
+
+        verify(assinaturaTenantRepository).findTrialsSemLinkVencendoAte(LocalDate.of(2026, 3, 7));
+        verify(assinaturaTenantRepository).findVencidasNaoInadimplentes(LocalDate.of(2026, 2, 23));
+        verify(assinaturaTenantRepository).findInadimplentesParaSuspender(LocalDate.of(2026, 2, 13));
+        verify(assinaturaTenantRepository).findSuspensasParaCancelar(LocalDate.of(2026, 1, 29).atStartOfDay());
+    }
+
+    @Test
+    @DisplayName("5.5 - Todos os @Scheduled rodam no fuso America/Sao_Paulo (não no UTC do container)")
+    void cronsNoFusoDeBrasilia() {
+        List<Method> agendados = Arrays.stream(CobrancaScheduler.class.getDeclaredMethods())
+                .filter(m -> m.isAnnotationPresent(org.springframework.scheduling.annotation.Scheduled.class))
+                .toList();
+
+        assertThat(agendados).isNotEmpty();
+        assertThat(agendados).allSatisfy(m -> assertThat(
+                m.getAnnotation(org.springframework.scheduling.annotation.Scheduled.class).zone())
+                .isEqualTo("America/Sao_Paulo"));
     }
 }

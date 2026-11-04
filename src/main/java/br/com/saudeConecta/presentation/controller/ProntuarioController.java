@@ -38,17 +38,11 @@ public class ProntuarioController {
         log.info("=== Requisição recebida: POST /prontuario/cadastrarProntuarioMedico ===");
         log.debug("Dados recebidos - Medico ID: {}, Consulta ID: {}", request.getCodigoMedico(), request.getConsulta());
         
-        try {
-            Prontuario prontuario = prontuarioService.cadastrarProntuarioMedico(request);
-            log.info("Prontuário cadastrado com sucesso - ID: {}", prontuario.getProntCodigoProntuario());
-            
-            // Converter para DTO de resposta para evitar LazyInitializationException
-            ProntuarioResponse response = ProntuarioResponse.fromEntity(prontuario);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (Exception e) {
-            log.error("Erro ao cadastrar prontuario: {}", e.getMessage(), e);
-            throw e;
-        }
+        Prontuario prontuario = prontuarioService.cadastrarProntuarioMedico(request);
+        log.info("Prontuário cadastrado com sucesso - ID: {}", prontuario.getProntCodigoProntuario());
+
+        // Converter para DTO de resposta para evitar LazyInitializationException
+        return ResponseEntity.status(HttpStatus.CREATED).body(ProntuarioResponse.fromEntity(prontuario));
     }
 
     /**
@@ -140,17 +134,11 @@ public class ProntuarioController {
                 prontuarioRequest.getCodigoMedico(), prontuarioRequest.getConsulta(), 
                 planejamentos != null ? planejamentos.size() : 0);
         
-        try {
-            Prontuario prontuario = prontuarioService.cadastrarProntuarioMedico(prontuarioRequest);
-            log.info("Prontuário cadastrado com sucesso - ID: {}", prontuario.getProntCodigoProntuario());
-            
-            // Converter para DTO de resposta para evitar LazyInitializationException
-            ProntuarioResponse response = ProntuarioResponse.fromEntity(prontuario);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (Exception e) {
-            log.error("Erro ao cadastrar prontuario com planejamentos: {}", e.getMessage(), e);
-            throw e;
-        }
+        Prontuario prontuario = prontuarioService.cadastrarProntuarioMedico(prontuarioRequest);
+        log.info("Prontuário cadastrado com sucesso - ID: {}", prontuario.getProntCodigoProntuario());
+
+        // Converter para DTO de resposta para evitar LazyInitializationException
+        return ResponseEntity.status(HttpStatus.CREATED).body(ProntuarioResponse.fromEntity(prontuario));
     }
 
     /**

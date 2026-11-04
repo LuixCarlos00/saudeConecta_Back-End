@@ -1,5 +1,7 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.util.MascaraLog;
+
 import br.com.saudeConecta.domain.mensageria.Mensageria;
 import br.com.saudeConecta.domain.mensageria.StatusMensagem;
 import br.com.saudeConecta.domain.mensageria.TipoMensagem;
@@ -180,7 +182,7 @@ public class MensageriaService {
         // Buscar email atualizado da entidade de domínio
         String emailAtualizado = obterEmailAtualizadoDoDominio(mensageria);
         
-        log.info("Reenviando mensagem ID: {} para email atualizado: {}", mensageriaId, emailAtualizado);
+        log.info("Reenviando mensagem ID: {} para email atualizado: {}", mensageriaId, MascaraLog.email(emailAtualizado));
 
         mensageria.setStatus(StatusMensagem.PENDENTE);
         mensageria.setErroDetalhe(null);

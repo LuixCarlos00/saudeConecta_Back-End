@@ -1,5 +1,6 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.util.MascaraLog;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.historicodadospessoais.EntidadeTipo;
@@ -322,9 +323,10 @@ public class AdminOrganizacaoService {
                     
         } catch (Exception e) {
             // 4. Caso haja relacionamento que impeça o delete, cancelar e avisar
-            String errorMessage = "Não foi possivel deletar o administrador devido a relacionamentos existentes: " + e.getMessage();
-            log.error(errorMessage);
-            throw new IllegalStateException(errorMessage);
+            // Mensagem do banco (tabela/constraint) fica só no log; a causa segue encadeada
+            String errorMessage = "Não foi possivel deletar o administrador devido a relacionamentos existentes";
+            log.warn(errorMessage, e);
+            throw new IllegalStateException(errorMessage, e);
         }
     }
 
@@ -499,7 +501,7 @@ public class AdminOrganizacaoService {
                 admin.getId()
         );
 
-        log.info("Admin Org criado com sucesso. ID: {}, Org: {}, Login: {}", admin.getId(), organizacao.getId(), login);
+        log.info("Admin Org criado com sucesso. ID: {}, Org: {}, Login: {}", admin.getId(), organizacao.getId(), MascaraLog.cpf(login));
         return admin;
     }
 

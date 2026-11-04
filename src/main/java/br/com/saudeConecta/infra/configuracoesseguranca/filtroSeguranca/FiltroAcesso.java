@@ -3,10 +3,14 @@ package br.com.saudeConecta.infra.configuracoesseguranca.filtroSeguranca;
 
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infra.configuracoesseguranca.TokenService;
+import br.com.saudeConecta.infra.exceptions.ErrorResponse;
+import br.com.saudeConecta.infra.logging.MdcChaves;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
 import br.com.saudeConecta.service.AcessoAssinaturaService;
-import br.com.saudeConecta.util.TokenLogUtil;
+import br.com.saudeConecta.util.MascaraLog;
 import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,6 +18,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,6 +31,11 @@ import java.util.List;
 @Component
 @Slf4j
 public class FiltroAcesso extends OncePerRequestFilter {
+
+    /** Serializa o ErrorResponse igual ao Jackson do Spring (datas ISO, sem nulos). */
+    private static final ObjectMapper JSON = new ObjectMapper()
+            .findAndRegisterModules()
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     /**
      * Rotas que a clínica com assinatura suspensa/cancelada ainda precisa para regularizar o
@@ -64,28 +74,36 @@ public class FiltroAcesso extends OncePerRequestFilter {
                 subject = tokenService.getSubject(tokenJwt);
                 usuario = (Usuario) usuarioRepository.findByLogin(subject);
             } catch (JWTVerificationException e) {
-                responderErro(response, HttpServletResponse.SC_UNAUTHORIZED, "error", "Token invalido ou expirado");
+                // Sem o token no log: só o tipo da falha (expirado, assinatura, formato) e a rota
+                log.warn("JWT rejeitado ({}) em {} {} de {}", e.getClass().getSimpleName(),
+                        request.getMethod(), request.getRequestURI(), request.getRemoteAddr());
+                responderErro(request, response, HttpServletResponse.SC_UNAUTHORIZED, "TOKEN_INVALIDO", "Token invalido ou expirado");
                 return;
             }
 
             if (usuario == null) {
                 log.warn("Token valido para usuario inexistente (login {}) em {} {}",
-                        TokenLogUtil.mascarar(subject), request.getMethod(), request.getRequestURI());
-                responderErro(response, HttpServletResponse.SC_UNAUTHORIZED, "error", "Usuario nao encontrado. Faca login novamente.");
+                        MascaraLog.token(subject), request.getMethod(), request.getRequestURI());
+                responderErro(request, response, HttpServletResponse.SC_UNAUTHORIZED, "USUARIO_NAO_ENCONTRADO", "Usuario nao encontrado. Faca login novamente.");
                 return;
             }
 
             if (!usuario.isEnabled()) {
                 log.warn("Token de usuario bloqueado (id {}) em {} {}",
                         usuario.getId(), request.getMethod(), request.getRequestURI());
-                responderErro(response, HttpServletResponse.SC_UNAUTHORIZED, "error", "Usuario bloqueado ou inativo");
+                responderErro(request, response, HttpServletResponse.SC_UNAUTHORIZED, "USUARIO_BLOQUEADO", "Usuario bloqueado ou inativo");
                 return;
+            }
+
+            MDC.put(MdcChaves.USER_ID, String.valueOf(usuario.getId()));
+            if (usuario.getOrganizacaoId() != null) {
+                MDC.put(MdcChaves.TENANT_ID, String.valueOf(usuario.getOrganizacaoId()));
             }
 
             if (assinaturaBloqueiaAcesso(usuario, request)) {
                 log.warn("Acesso negado ao usuario id {}: assinatura da organizacao {} sem acesso ({} {})",
                         usuario.getId(), usuario.getOrganizacaoId(), request.getMethod(), request.getRequestURI());
-                responderErro(response, HttpServletResponse.SC_FORBIDDEN, "message",
+                responderErro(request, response, HttpServletResponse.SC_FORBIDDEN, "PLANO_SEM_ACESSO",
                         "O plano da sua organizacao esta suspenso, cancelado ou inexistente. Regularize a assinatura para continuar.");
                 return;
             }
@@ -114,11 +132,16 @@ public class FiltroAcesso extends OncePerRequestFilter {
         return !acessoAssinaturaService.organizacaoPermiteAcesso(organizacaoId);
     }
 
-    private void responderErro(HttpServletResponse response, int status, String campo, String mensagem) throws IOException {
+    /**
+     * Responde no mesmo formato do GlobalExceptionHandler ({@link ErrorResponse}): o login lê
+     * {@code error} no 401 e o ErrorInterceptor do front lê {@code message} no 403 de plano.
+     */
+    private void responderErro(HttpServletRequest request, HttpServletResponse response, int status, String codigo,
+                               String mensagem) throws IOException {
         response.setStatus(status);
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
-        response.getWriter().write("{\"" + campo + "\": \"" + mensagem + "\"}");
+        response.getWriter().write(JSON.writeValueAsString(ErrorResponse.of(status, codigo, mensagem, request.getRequestURI())));
     }
 
 

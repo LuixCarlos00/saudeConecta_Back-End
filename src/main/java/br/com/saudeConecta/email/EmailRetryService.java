@@ -1,5 +1,7 @@
 package br.com.saudeConecta.email;
 
+import br.com.saudeConecta.util.MascaraLog;
+
 import br.com.saudeConecta.domain.mensageria.TipoMensagem;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -51,20 +53,20 @@ public class EmailRetryService {
                                     String corpoHtml, String tipoUsuario,
                                     Long organizacaoId, Long entidadeId, int tentativa) {
         try {
-            log.info("Tentativa {}/{} de envio para: {} [{}]", tentativa, MAX_TENTATIVAS, destinatario, tipoUsuario);
+            log.info("Tentativa {}/{} de envio para: {} [{}]", tentativa, MAX_TENTATIVAS, MascaraLog.email(destinatario), tipoUsuario);
             emailRemetenteService.enviarHtml(destinatario, assunto, corpoHtml);
 
-            log.info("Email enviado com sucesso na tentativa {} para: {}", tentativa, destinatario);
+            log.info("Email enviado com sucesso na tentativa {} para: {}", tentativa, MascaraLog.email(destinatario));
             TipoMensagem tipo = emailMensageriaService.resolverTipoMensagem(tipoUsuario);
             emailMensageriaService.registrarSucesso(
                     organizacaoId, entidadeId, destinatario, nome, assunto, corpoHtml, tipo, tentativa);
 
         } catch (Exception e) {
-            log.error("Erro na tentativa {}/{} para {} [{}]: {}",
-                    tentativa, MAX_TENTATIVAS, destinatario, tipoUsuario, e.getMessage());
+            log.warn("Erro na tentativa {}/{} para {} [{}]: {}",
+                    tentativa, MAX_TENTATIVAS, MascaraLog.email(destinatario), tipoUsuario, e.getMessage());
 
             if (tentativa >= MAX_TENTATIVAS) {
-                log.error("Falha definitiva após {} tentativas para: {}", MAX_TENTATIVAS, destinatario);
+                log.error("Falha definitiva após {} tentativas para: {}", MAX_TENTATIVAS, MascaraLog.email(destinatario), e);
                 TipoMensagem tipo = emailMensageriaService.resolverTipoMensagem(tipoUsuario);
                 emailMensageriaService.registrarFalha(
                         organizacaoId, entidadeId, destinatario, nome, assunto, corpoHtml,
@@ -74,7 +76,7 @@ public class EmailRetryService {
             }
 
             long delayMs = DELAY_INICIAL_MS * (long) Math.pow(2, tentativa - 1);
-            log.info("Próxima tentativa em {}ms para: {}", delayMs, destinatario);
+            log.info("Próxima tentativa em {}ms para: {}", delayMs, MascaraLog.email(destinatario));
 
             CompletableFuture.delayedExecutor(delayMs, TimeUnit.MILLISECONDS).execute(() ->
                     executarTentativa(destinatario, nome, assunto, corpoHtml, tipoUsuario,
@@ -107,18 +109,18 @@ public class EmailRetryService {
                                            String assunto, String corpoHtml, int tentativa) {
         try {
             log.info("Reenvio tentativa {}/{} para: {} [mensageriaId={}]",
-                    tentativa, MAX_TENTATIVAS, destinatario, mensageriaId);
+                    tentativa, MAX_TENTATIVAS, MascaraLog.email(destinatario), mensageriaId);
             emailRemetenteService.enviarHtml(destinatario, assunto, corpoHtml);
 
-            log.info("Reenvio com sucesso na tentativa {} para: {}", tentativa, destinatario);
+            log.info("Reenvio com sucesso na tentativa {} para: {}", tentativa, MascaraLog.email(destinatario));
             emailMensageriaService.atualizarSucesso(mensageriaId, tentativa);
 
         } catch (Exception e) {
-            log.error("Erro no reenvio tentativa {}/{} para {} [mensageriaId={}]: {}",
-                    tentativa, MAX_TENTATIVAS, destinatario, mensageriaId, e.getMessage());
+            log.warn("Erro no reenvio tentativa {}/{} para {} [mensageriaId={}]: {}",
+                    tentativa, MAX_TENTATIVAS, MascaraLog.email(destinatario), mensageriaId, e.getMessage());
 
             if (tentativa >= MAX_TENTATIVAS) {
-                log.error("Falha definitiva no reenvio após {} tentativas para: {}", MAX_TENTATIVAS, destinatario);
+                log.error("Falha definitiva no reenvio após {} tentativas para: {}", MAX_TENTATIVAS, MascaraLog.email(destinatario), e);
                 emailMensageriaService.atualizarFalha(mensageriaId,
                         "Falha no reenvio após " + MAX_TENTATIVAS + " tentativas: " + e.getMessage(),
                         tentativa);
@@ -126,7 +128,7 @@ public class EmailRetryService {
             }
 
             long delayMs = DELAY_INICIAL_MS * (long) Math.pow(2, tentativa - 1);
-            log.info("Próxima tentativa de reenvio em {}ms para: {}", delayMs, destinatario);
+            log.info("Próxima tentativa de reenvio em {}ms para: {}", delayMs, MascaraLog.email(destinatario));
 
             CompletableFuture.delayedExecutor(delayMs, TimeUnit.MILLISECONDS).execute(() ->
                     executarTentativaReenvio(mensageriaId, destinatario, assunto, corpoHtml, tentativa + 1));

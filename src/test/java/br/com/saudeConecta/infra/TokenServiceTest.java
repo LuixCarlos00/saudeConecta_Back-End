@@ -134,9 +134,9 @@ class TokenServiceTest {
         @Test
         @DisplayName("Deve lançar exceção com token inválido")
         void deveLancarExcecaoComTokenInvalido() {
+            // Fase 5.4: precisa ser JWTVerificationException para o FiltroAcesso responder 401 (antes virava 500)
             assertThatThrownBy(() -> tokenService.getSubject("token.invalido.aqui"))
-                    .isInstanceOf(RuntimeException.class)
-                    .hasMessageContaining("Token invalido");
+                    .isInstanceOf(com.auth0.jwt.exceptions.JWTVerificationException.class);
         }
 
         @Test
@@ -147,14 +147,14 @@ class TokenServiceTest {
             String tokenDeOutroService = outroService.gerarToken(usuario);
 
             assertThatThrownBy(() -> tokenService.getSubject(tokenDeOutroService))
-                    .isInstanceOf(RuntimeException.class);
+                    .isInstanceOf(com.auth0.jwt.exceptions.JWTVerificationException.class);
         }
 
         @Test
         @DisplayName("Deve lançar exceção com string vazia")
         void deveLancarExcecaoComTokenVazio() {
             assertThatThrownBy(() -> tokenService.getSubject(""))
-                    .isInstanceOf(RuntimeException.class);
+                    .isInstanceOf(com.auth0.jwt.exceptions.JWTVerificationException.class);
         }
     }
 

@@ -116,12 +116,10 @@ public class MensageriaController {
     @PostMapping("/{id}/reenviar")
     public ResponseEntity<?> reenviarMensagem(@PathVariable Long id) {
         log.info("Reenviando mensagem ID: {}", id);
+        // Regra de negócio (IllegalStateException) sobe para o handler global e vira 409
         try {
             mensageriaService.reenviarMensagem(id);
             return ResponseEntity.ok().build();
-        } catch (IllegalStateException e) {
-            log.warn("Erro ao reenviar mensagem: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
         } catch (IllegalArgumentException e) {
             log.warn("Mensagem não encontrada para reenvio: {}", e.getMessage());
             return ResponseEntity.notFound().build();

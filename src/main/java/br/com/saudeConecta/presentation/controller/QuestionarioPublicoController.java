@@ -6,7 +6,7 @@ import br.com.saudeConecta.presentation.dto.prontuario.AssinaturaPlanjamentoRequ
 import br.com.saudeConecta.presentation.dto.prontuario.QuestionarioSaudeRequest;
 import br.com.saudeConecta.service.PlanejamentoTerapeuticoService;
 import br.com.saudeConecta.service.TermoAutorizacaoService;
-import br.com.saudeConecta.util.TokenLogUtil;
+import br.com.saudeConecta.util.MascaraLog;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,7 +41,7 @@ public class QuestionarioPublicoController {
      */
     @GetMapping("/questionario/{token}")
     public ResponseEntity<Map<String, Object>> buscarQuestionario(@PathVariable String token) {
-        log.info("GET /publico/questionario/{}", TokenLogUtil.mascarar(token));
+        log.info("GET /publico/questionario/{}", MascaraLog.token(token));
 
         TermoAutorizacao termo = termoService.buscarPorToken(token);
 
@@ -67,7 +67,7 @@ public class QuestionarioPublicoController {
 
         String ipOrigem = obterIpOrigem(httpRequest);
         log.info("POST /publico/questionario/responder — token={}, ip={}",
-                TokenLogUtil.mascarar(request.getToken()), ipOrigem);
+                MascaraLog.token(request.getToken()), ipOrigem);
 
         termoService.responderQuestionario(request, ipOrigem);
 
@@ -87,7 +87,7 @@ public class QuestionarioPublicoController {
      */
     @GetMapping("/planejamento/{token}")
     public ResponseEntity<Map<String, Object>> buscarPlanejamento(@PathVariable String token) {
-        log.info("GET /publico/planejamento/{}", TokenLogUtil.mascarar(token));
+        log.info("GET /publico/planejamento/{}", MascaraLog.token(token));
 
         List<PlanejamentoTerapeutico> planejamentos = planejamentoService.buscarPorToken(token);
 
@@ -127,7 +127,7 @@ public class QuestionarioPublicoController {
 
         String ipOrigem = obterIpOrigem(httpRequest);
         log.info("POST /publico/planejamento/assinar — token={}, ip={}",
-                TokenLogUtil.mascarar(request.getToken()), ipOrigem);
+                MascaraLog.token(request.getToken()), ipOrigem);
 
         planejamentoService.assinarPorToken(request.getToken(), request.getAssinaturaBase64(), ipOrigem);
 

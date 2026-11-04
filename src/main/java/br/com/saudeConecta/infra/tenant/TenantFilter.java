@@ -1,12 +1,14 @@
 package br.com.saudeConecta.infra.tenant;
 
 import br.com.saudeConecta.infra.configuracoesseguranca.TokenService;
+import br.com.saudeConecta.infra.logging.MdcChaves;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -56,14 +58,16 @@ public class TenantFilter extends OncePerRequestFilter {
                     
                     if (organizacaoId != null) {
                         TenantContext.setCurrentTenant(organizacaoId);
+                        MDC.put(MdcChaves.TENANT_ID, String.valueOf(organizacaoId));
                         log.debug("Tenant definido: {} para usuário: {}", organizacaoId, userId);
                     }
                     
                     if (userId != null) {
                         TenantContext.setCurrentUser(userId);
+                        MDC.put(MdcChaves.USER_ID, String.valueOf(userId));
                     }
                 } catch (Exception e) {
-                    log.warn("Erro ao extrair tenant do token: {}", e.getMessage());
+                    log.warn("Erro ao extrair tenant do token", e);
                 }
             }
             
@@ -71,6 +75,8 @@ public class TenantFilter extends OncePerRequestFilter {
             
         } finally {
             TenantContext.clear();
+            MDC.remove(MdcChaves.TENANT_ID);
+            MDC.remove(MdcChaves.USER_ID);
         }
     }
     

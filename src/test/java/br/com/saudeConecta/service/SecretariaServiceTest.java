@@ -317,9 +317,12 @@ class SecretariaServiceTest {
             doThrow(new RuntimeException("FK constraint violation"))
                     .when(secretariaRepository).delete(secretaria);
 
+            // Fase 5.3: a causa original fica encadeada e a mensagem do banco não vaza para o cliente
             assertThatThrownBy(() -> secretariaService.deletarSecretariaIdByOrg(SEC_ID))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("relacionamentos existentes");
+                    .hasMessageContaining("relacionamentos existentes")
+                    .hasMessageNotContaining("FK constraint")
+                    .hasCauseInstanceOf(RuntimeException.class);
         }
     }
 }

@@ -20,6 +20,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,12 +37,16 @@ public class AssinaturaTenantService {
     private final OrganizacaoRepository organizacaoRepository;
     private final PlanoAssinaturaService planoAssinaturaService;
     private final AssinaturaMercadoPagoService assinaturaMercadoPagoService;
+    /** Relógio em America/Sao_Paulo: "hoje", vencimentos e o dia âncora seguem o dia de Brasília. */
+    private final Clock clock;
 
     public AssinaturaTenantService(
             AssinaturaTenantRepository assinaturaTenantRepository,
             OrganizacaoRepository organizacaoRepository,
             PlanoAssinaturaService planoAssinaturaService,
-            AssinaturaMercadoPagoService assinaturaMercadoPagoService) {
+            AssinaturaMercadoPagoService assinaturaMercadoPagoService,
+            Clock clock) {
+        this.clock = clock;
         this.assinaturaTenantRepository = assinaturaTenantRepository;
         this.organizacaoRepository = organizacaoRepository;
         this.planoAssinaturaService = planoAssinaturaService;
@@ -88,7 +93,7 @@ public class AssinaturaTenantService {
 
         PlanoAssinatura plano = planoAssinaturaService.buscarEntidadePorId(planoId);
 
-        LocalDate hoje = LocalDate.now();
+        LocalDate hoje = LocalDate.now(clock);
         AssinaturaTenant assinatura = AssinaturaTenant.builder()
                 .organizacao(organizacao)
                 .planoAssinatura(plano)
@@ -180,8 +185,8 @@ public class AssinaturaTenantService {
                         HttpStatus.NOT_FOUND));
 
         assinatura.setStatus(StatusAssinatura.ATIVA);
-        assinatura.setDataVencimento(LocalDate.now().plusMonths(1));
-        assinatura.setDataProximaCobranca(LocalDate.now().plusMonths(1));
+        assinatura.setDataVencimento(LocalDate.now(clock).plusMonths(1));
+        assinatura.setDataProximaCobranca(LocalDate.now(clock).plusMonths(1));
 
         AssinaturaTenant salva = assinaturaTenantRepository.save(assinatura);
         log.info("Assinatura da org {} ativada. Proximo vencimento: {}",
@@ -214,7 +219,7 @@ public class AssinaturaTenantService {
     public void suspender(Long assinaturaId) {
         AssinaturaTenant assinatura = buscarPorId(assinaturaId);
         assinatura.setStatus(StatusAssinatura.SUSPENSA);
-        assinatura.setDataSuspensao(LocalDateTime.now());
+        assinatura.setDataSuspensao(LocalDateTime.now(clock));
         assinaturaTenantRepository.save(assinatura);
         log.warn("Assinatura {} SUSPENSA (org: {})",
                 assinaturaId, assinatura.getOrganizacao().getId());
@@ -288,7 +293,9 @@ public class AssinaturaTenantService {
         AssinaturaTenant assinatura = buscarPorId(assinaturaId);
         assinatura.setStatus(StatusAssinatura.ATIVA);
         assinatura.setDataSuspensao(null);
-        assinatura.renovarCiclo(LocalDate.now());
+        // Âncora: data do processamento no fuso de Brasília. O DTO da fatura do MP não traz
+        // debit_date/date_created, então não há data "oficial" melhor para ancorar.
+        assinatura.renovarCiclo(LocalDate.now(clock));
         assinaturaTenantRepository.save(assinatura);
         log.info("Assinatura {} renovada. Proximo vencimento: {}",
                 assinaturaId, assinatura.getDataVencimento());
@@ -412,7 +419,7 @@ public class AssinaturaTenantService {
      * @return true quando a assinatura já tem cartão autorizado no MP (não precisa de link)
      */
     private boolean aplicarVencimentoAposCortesia(AssinaturaTenant assinatura) {
-        LocalDate prazoParaPagar = LocalDate.now().plusDays(DIAS_PARA_PAGAR_APOS_CORTESIA);
+        LocalDate prazoParaPagar = LocalDate.now(clock).plusDays(DIAS_PARA_PAGAR_APOS_CORTESIA);
 
         if (assinatura.temPreapproval() && MercadoPagoClient.STATUS_AUTHORIZED.equals(assinatura.getMpStatus())) {
             try {

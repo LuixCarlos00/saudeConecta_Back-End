@@ -418,16 +418,25 @@ public class ConsultaService {
      */
     private void validarSemConflitoDeHorario(Long orgId, Long profissionalId, LocalDateTime inicio,
                                              int duracaoMinutos, Long ignorarId) {
+        if (existeConflitoDeHorario(orgId, profissionalId, inicio, duracaoMinutos, ignorarId)) {
+            throw new IllegalStateException("Já existe consulta agendada para este horário");
+        }
+    }
+
+    /**
+     * Regra única de sobreposição (usada no cadastro, no reagendamento e na verificação de disponibilidade).
+     *
+     * @return true quando [inicio, inicio + duracao) sobrepõe outra consulta AGENDADA/CONFIRMADA do profissional
+     */
+    private boolean existeConflitoDeHorario(Long orgId, Long profissionalId, LocalDateTime inicio,
+                                            int duracaoMinutos, Long ignorarId) {
         LocalDateTime fim = inicio.plusMinutes(duracaoMinutos);
         // Janela de busca recua 1 dia para pegar consulta iniciada antes que atravesse o início novo.
-        boolean conflita = consultaRepository
+        return consultaRepository
             .findAtivasDoProfissionalNoPeriodo(orgId, profissionalId, inicio.minusDays(1), fim)
             .stream()
             .filter(c -> ignorarId == null || !ignorarId.equals(c.getId()))
             .anyMatch(c -> c.getDataHora().isBefore(fim) && c.getDataHoraFim().isAfter(inicio));
-        if (conflita) {
-            throw new IllegalStateException("Já existe consulta agendada para este horário");
-        }
     }
 
     /**
@@ -1303,22 +1312,23 @@ public class ConsultaService {
         Long orgId = tenantHelper.getCurrentTenantId();
         log.debug("Verificando disponibilidade - profissional: {}, data: {}, horario: {}, organizacao: {}", medicoId, data, horario, orgId);
 
+        LocalDateTime dataHora;
         try {
-            // Combina data e horario para criar LocalDateTime
-            String dataHoraStr = data + "T" + horario; // Usa T em vez de espaço para formato ISO
-            LocalDateTime dataHora = LocalDateTime.parse(dataHoraStr);
-            
-            // Verifica se existe consulta AGENDADA para este profissional nesta organização, data e horário
-            boolean existeConsultaAgendada = consultaRepository.existsByProfissional_IdAndOrganizacao_IdAndDataHoraAndStatus(
-                medicoId, orgId, dataHora, StatusConsulta.AGENDADA);
-            
-            log.debug("Resultado verificacao - existe consulta agendada: {}", existeConsultaAgendada);
-            return existeConsultaAgendada;
-            
-        } catch (Exception e) {
-            log.error("Erro ao verificar disponibilidade para profissional {} na data {} horário {}", medicoId, data, horario, e);
+            dataHora = LocalDateTime.parse(data + "T" + horario); // formato ISO
+        } catch (java.time.format.DateTimeParseException e) {
+            log.warn("Data/horario invalidos na verificacao de disponibilidade: data={} horario={}", data, horario);
             return false;
         }
+
+        // Mesma duração e mesma regra de sobreposição do cadastro: o front não pode ver "livre"
+        // um horário que o cadastro vai recusar por conflito.
+        int duracaoMinutos = profissionalRepository.buscarClinicoIdByOrg(medicoId, orgId)
+            .map(Profissional::getTempoConsultaMinutos)
+            .orElse(DURACAO_PADRAO_MINUTOS);
+        boolean ocupado = existeConflitoDeHorario(orgId, medicoId, dataHora, duracaoMinutos, null);
+
+        log.debug("Resultado verificacao - horario ocupado: {}", ocupado);
+        return ocupado;
     }
 
     // ==========================================

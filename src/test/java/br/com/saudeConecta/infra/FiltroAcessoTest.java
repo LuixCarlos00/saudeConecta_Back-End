@@ -94,6 +94,27 @@ class FiltroAcessoTest {
     }
 
     @Test
+    @DisplayName("5.4 - token adulterado (assinatura inválida, não expirado) responde 401, não 500")
+    void deveResponder401QuandoTokenAdulterado() throws Exception {
+        TokenService tokenReal = new TokenService();
+        org.springframework.test.util.ReflectionTestUtils.setField(tokenReal, "secret", "segredo-do-servidor");
+        TokenService tokenDeOutroServidor = new TokenService();
+        org.springframework.test.util.ReflectionTestUtils.setField(tokenDeOutroServidor, "secret", "segredo-forjado");
+        String tokenForjado = tokenDeOutroServidor.gerarToken(usuario(TipoUsuarioNovo.GESTOR, StatusUsuario.ATIVO, ORG_ID));
+        org.springframework.test.util.ReflectionTestUtils.setField(filtroAcesso, "tokenService", tokenReal);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/consultas");
+        request.addHeader("Authorization", "Bearer " + tokenForjado);
+
+        filtroAcesso.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        assertThat(response.getContentAsString())
+                .contains("\"error\"").contains("\"message\"").contains("Token invalido ou expirado");
+        assertThat(chain.getRequest()).isNull();
+        verifyNoInteractions(usuarioRepository);
+    }
+
+    @Test
     @DisplayName("Token expirado continua respondendo 401 no formato JSON")
     void deveResponder401QuandoTokenExpirado() throws Exception {
         when(tokenService.getSubject(TOKEN)).thenThrow(new TokenExpiredException("expirado", Instant.now()));

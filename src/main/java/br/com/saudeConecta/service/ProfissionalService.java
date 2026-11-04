@@ -381,9 +381,10 @@ return resultado ;
                     
         } catch (Exception e) {
             // 5. Caso haja relacionamento que impeça o delete, cancelar e avisar
-            String errorMessage = "nao foi possível deletar o profissional devido a relacionamentos existentes: " + e.getMessage();
-            log.error(errorMessage);
-            throw new IllegalStateException(errorMessage);
+            // Mensagem do banco (tabela/constraint) fica só no log; a causa segue encadeada
+            String errorMessage = "nao foi possível deletar o profissional devido a relacionamentos existentes";
+            log.warn(errorMessage, e);
+            throw new IllegalStateException(errorMessage, e);
         }
     }
 
