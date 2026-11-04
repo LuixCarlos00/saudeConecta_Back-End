@@ -136,6 +136,21 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
     List<Consulta> findByProfissional_IdAndOrganizacao_IdAndDataHora(
         Long profissionalId, Long organizacaoId, LocalDateTime dataHora);
 
+    /**
+     * Consultas que ocupam a agenda (AGENDADA ou CONFIRMADA) de um profissional com início em [de, ate).
+     * A sobreposição de intervalo é calculada em Java (soma de minutos em JPQL não é portável entre H2 e MySQL).
+     */
+    @Query("SELECT c FROM Consulta c " +
+           "WHERE c.organizacao.id = :orgId " +
+           "AND c.profissional.id = :profissionalId " +
+           "AND c.status IN ('AGENDADA', 'CONFIRMADA') " +
+           "AND c.dataHora >= :de AND c.dataHora < :ate " +
+           "ORDER BY c.dataHora")
+    List<Consulta> findAtivasDoProfissionalNoPeriodo(@Param("orgId") Long orgId,
+                                                      @Param("profissionalId") Long profissionalId,
+                                                      @Param("de") LocalDateTime de,
+                                                      @Param("ate") LocalDateTime ate);
+
 
     @Query("SELECT COUNT(c) FROM Consulta c WHERE c.organizacao.id = :orgId " +
            "AND DATE(c.dataHora) = CURRENT_DATE AND c.status = 'AGENDADA'")
@@ -633,11 +648,12 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
 
     /**
      * Soma o valor das consultas realizadas por organização em um período.
+     * Considera REALIZADA e PAGO: o fluxo normal é REALIZADA -> PAGO e o valor não pode sumir ao quitar.
      * @return [somaValor, quantidade]
      */
     @Query("SELECT COALESCE(SUM(c.valor), 0), COUNT(c) FROM Consulta c " +
            "WHERE c.organizacao.id = :orgId " +
-           "AND c.status = 'REALIZADA' " +
+           "AND c.status IN ('REALIZADA', 'PAGO') " +
            "AND c.valor IS NOT NULL " +
            "AND c.dataHora BETWEEN :inicio AND :fim")
     List<Object[]> somarValorConsultasRealizadasPorOrganizacao(
@@ -652,7 +668,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
     @Query("SELECT YEAR(c.dataHora), MONTH(c.dataHora), COALESCE(SUM(c.valor), 0), COUNT(c) " +
            "FROM Consulta c " +
            "WHERE c.organizacao.id = :orgId " +
-           "AND c.status = 'REALIZADA' " +
+           "AND c.status IN ('REALIZADA', 'PAGO') " +
            "AND c.valor IS NOT NULL " +
            "AND c.dataHora BETWEEN :inicio AND :fim " +
            "GROUP BY YEAR(c.dataHora), MONTH(c.dataHora) " +
@@ -669,7 +685,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
     @Query("SELECT YEAR(c.dataHora), WEEK(c.dataHora), COALESCE(SUM(c.valor), 0), COUNT(c) " +
            "FROM Consulta c " +
            "WHERE c.organizacao.id = :orgId " +
-           "AND c.status = 'REALIZADA' " +
+           "AND c.status IN ('REALIZADA', 'PAGO') " +
            "AND c.valor IS NOT NULL " +
            "AND c.dataHora BETWEEN :inicio AND :fim " +
            "GROUP BY YEAR(c.dataHora), WEEK(c.dataHora) " +

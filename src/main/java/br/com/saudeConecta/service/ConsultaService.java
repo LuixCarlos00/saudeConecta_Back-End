@@ -13,6 +13,7 @@ import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.infrastructure.persistence.specification.ConsultaSpecification;
 import br.com.saudeConecta.presentation.dto.consulta.AgendarConsultaRequest;
+import br.com.saudeConecta.presentation.dto.consulta.HorarioOcupadoResponse;
 import br.com.saudeConecta.presentation.dto.consulta.AtualizarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.CancelarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.EstatisticasDashboardAdminOrgResponse;
@@ -41,6 +42,9 @@ import java.text.ParseException;
 @RequiredArgsConstructor
 @Slf4j
 public class ConsultaService {
+
+    /** Duração assumida quando nem a consulta nem o profissional informam (mesmo default da entidade Consulta). */
+    private static final int DURACAO_PADRAO_MINUTOS = 30;
     
     private final ConsultaRepository consultaRepository;
     private final ConsultaHistoricoRepository historicoRepository;
@@ -248,16 +252,20 @@ public class ConsultaService {
         Organizacao organizacao = organizacaoRepository.findById(orgId)
             .orElseThrow(() -> new IllegalStateException("Organização não encontrada"));
 
+        // Lock pessimista no profissional: serializa agendamentos concorrentes dele até o fim da transação.
+        profissionalRepository.buscarParaAgendamentoComLock(request.profissionalId(), orgId);
+
         Profissional profissional = profissionalRepository.buscarClinicoIdByOrg(request.profissionalId(), orgId)
             .orElseThrow(() -> new IllegalArgumentException("Profissional não encontrado"));
 
         Paciente paciente = pacienteRepository.findById(request.pacienteId())
             .orElseThrow(() -> new IllegalArgumentException("Paciente não encontrado"));
 
-        if (consultaRepository.existsByProfissional_IdAndOrganizacao_IdAndDataHoraAndStatus(
-                request.profissionalId(), orgId, request.dataHora(), StatusConsulta.AGENDADA)) {
-            throw new IllegalStateException("Já existe consulta agendada para este horário");
-        }
+        int duracaoMinutos = request.duracaoMinutos() != null
+            ? request.duracaoMinutos()
+            : (profissional.getTempoConsultaMinutos() != null ? profissional.getTempoConsultaMinutos() : DURACAO_PADRAO_MINUTOS);
+
+        validarSemConflitoDeHorario(orgId, request.profissionalId(), request.dataHora(), duracaoMinutos, null);
         
         Especialidade especialidade = null;
         if (request.especialidadeId() != null) {
@@ -284,7 +292,7 @@ public class ConsultaService {
             .paciente(paciente)
             .especialidade(especialidade)
             .dataHora(request.dataHora())
-            .duracaoMinutos(request.duracaoMinutos() != null ? request.duracaoMinutos() : profissional.getTempoConsultaMinutos())
+            .duracaoMinutos(duracaoMinutos)
             .observacoes(request.observacoes())
             .formaPagamento(formaPagamento)
             .valor(request.valor())
@@ -315,8 +323,9 @@ public class ConsultaService {
         Consulta consulta = buscarPorId(id)
             .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada"));
 
-        if (!StatusConsulta.AGENDADA.equals(consulta.getStatus())) {
-            throw new IllegalStateException("Apenas consultas AGENDADAS podem ser concluídas");
+        if (!StatusConsulta.AGENDADA.equals(consulta.getStatus())
+                && !StatusConsulta.CONFIRMADA.equals(consulta.getStatus())) {
+            throw new IllegalStateException("Apenas consultas AGENDADAS ou CONFIRMADAS podem ser concluídas");
         }
 
         StatusConsulta statusAnterior = consulta.getStatus();
@@ -379,6 +388,46 @@ public class ConsultaService {
         Long orgId = tenantHelper.getCurrentTenantId();
         return consultaRepository.findByIdAndOrganizacao_IdWithRelations(salva.getId(), orgId)
             .orElse(salva);
+    }
+
+    /**
+     * Converte o texto do status para o enum; valor desconhecido vira IllegalArgumentException (400) com mensagem clara.
+     *
+     * @param texto status em texto (case-insensitive)
+     * @return status correspondente
+     */
+    private StatusConsulta parseStatus(String texto) {
+        try {
+            return StatusConsulta.valueOf(texto.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Status inválido: " + texto);
+        }
+    }
+
+    /**
+     * Garante que o intervalo [inicio, inicio + duracao) não sobrepõe outra consulta AGENDADA/CONFIRMADA
+     * do mesmo profissional (inicioExistente < fimNovo E fimExistente > inicioNovo). Consultas encostadas
+     * (fim == início) não conflitam. Deve rodar com o lock do profissional já adquirido.
+     *
+     * @param orgId          organização
+     * @param profissionalId profissional
+     * @param inicio         início da nova consulta
+     * @param duracaoMinutos duração da nova consulta em minutos
+     * @param ignorarId      consulta a ignorar (a própria, no reagendamento); null no cadastro
+     * @throws IllegalStateException se houver sobreposição
+     */
+    private void validarSemConflitoDeHorario(Long orgId, Long profissionalId, LocalDateTime inicio,
+                                             int duracaoMinutos, Long ignorarId) {
+        LocalDateTime fim = inicio.plusMinutes(duracaoMinutos);
+        // Janela de busca recua 1 dia para pegar consulta iniciada antes que atravesse o início novo.
+        boolean conflita = consultaRepository
+            .findAtivasDoProfissionalNoPeriodo(orgId, profissionalId, inicio.minusDays(1), fim)
+            .stream()
+            .filter(c -> ignorarId == null || !ignorarId.equals(c.getId()))
+            .anyMatch(c -> c.getDataHora().isBefore(fim) && c.getDataHoraFim().isAfter(inicio));
+        if (conflita) {
+            throw new IllegalStateException("Já existe consulta agendada para este horário");
+        }
     }
 
     /**
@@ -451,7 +500,16 @@ public class ConsultaService {
         Consulta consulta = buscarPorId(id)
             .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada"));
 
+        // PAGO e CANCELADA são estados finais: nenhuma edição é permitida (mesma regra de validarTransicaoStatus).
+        if (StatusConsulta.PAGO.equals(consulta.getStatus()) || StatusConsulta.CANCELADA.equals(consulta.getStatus())) {
+            throw new IllegalStateException(
+                "Consultas com status " + consulta.getStatus() + " não podem ser editadas");
+        }
+
         Long orgId = tenantHelper.getCurrentTenantId();
+
+        // Lock pessimista no profissional: serializa agendamentos/reagendamentos concorrentes dele.
+        profissionalRepository.buscarParaAgendamentoComLock(request.profissionalId(), orgId);
 
         Profissional profissional = profissionalRepository.buscarClinicoIdByOrg(request.profissionalId(), orgId)
             .orElseThrow(() -> new IllegalArgumentException("Profissional não encontrado"));
@@ -459,14 +517,21 @@ public class ConsultaService {
         Paciente paciente = pacienteRepository.findById(request.pacienteId())
             .orElseThrow(() -> new IllegalArgumentException("Paciente não encontrado"));
 
-        // Verificar se existe OUTRA consulta no mesmo horário (excluindo a consulta atual)
-        boolean horarioOcupado = consultaRepository.findByProfissional_IdAndOrganizacao_IdAndDataHora(
-            request.profissionalId(), orgId, request.dataHora()
-        ).stream()
-            .anyMatch(c -> !c.getId().equals(id) && c.getStatus() == StatusConsulta.AGENDADA);
-        
-        if (horarioOcupado) {
-            throw new IllegalStateException("Já existe consulta agendada para este horário");
+        // Status pedido passa pela mesma regra de transição do PATCH /status; igual ao atual é no-op.
+        StatusConsulta novoStatus = consulta.getStatus();
+        if (request.status() != null && !request.status().isBlank()) {
+            StatusConsulta solicitado = parseStatus(request.status());
+            if (solicitado != consulta.getStatus()) {
+                validarTransicaoStatus(consulta.getStatus(), solicitado);
+                novoStatus = solicitado;
+            }
+        }
+
+        if (StatusConsulta.AGENDADA.equals(novoStatus) || StatusConsulta.CONFIRMADA.equals(novoStatus)) {
+            int duracaoMinutos = request.duracaoMinutos() != null
+                ? request.duracaoMinutos()
+                : (consulta.getDuracaoMinutos() != null ? consulta.getDuracaoMinutos() : DURACAO_PADRAO_MINUTOS);
+            validarSemConflitoDeHorario(orgId, request.profissionalId(), request.dataHora(), duracaoMinutos, id);
         }
 
         StatusConsulta statusAnterior = consulta.getStatus();
@@ -495,9 +560,7 @@ public class ConsultaService {
         consulta.setObservacoes(request.observacoes());
         consulta.setValor(request.valor());
 
-        if (request.status() != null && !request.status().isBlank()) {
-            consulta.setStatus(StatusConsulta.valueOf(request.status().toUpperCase()));
-        }
+        consulta.setStatus(novoStatus);
 
         Consulta salva = consultaRepository.save(consulta);
 
@@ -1208,6 +1271,28 @@ public class ConsultaService {
         LocalDateTime dataConsulta = LocalDate.parse(data).atStartOfDay();
 
         return consultaRepository.findHorariosOcupados(orgId, profissionalId, dataConsulta);
+    }
+
+    /**
+     * Horários ocupados (AGENDADA/CONFIRMADA) de um profissional num dia, com início e duração.
+     *
+     * @param profissionalId ID do profissional
+     * @param data           data no formato yyyy-MM-dd
+     * @return lista ordenada por início
+     */
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public List<HorarioOcupadoResponse> buscarHorariosOcupadosDetalhado(Long profissionalId, String data) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        LocalDateTime inicioDoDia = LocalDate.parse(data).atStartOfDay();
+
+        return consultaRepository
+            .findAtivasDoProfissionalNoPeriodo(orgId, profissionalId, inicioDoDia, inicioDoDia.plusDays(1))
+            .stream()
+            .map(c -> new HorarioOcupadoResponse(
+                c.getDataHora().toLocalTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")),
+                c.getDuracaoMinutos() != null ? c.getDuracaoMinutos() : DURACAO_PADRAO_MINUTOS))
+            .toList();
     }
 
     @RequiresTenant

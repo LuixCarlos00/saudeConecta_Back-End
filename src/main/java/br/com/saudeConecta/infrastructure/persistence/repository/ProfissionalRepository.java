@@ -3,6 +3,8 @@ package br.com.saudeConecta.infrastructure.persistence.repository;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.profissional.StatusProfissional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -40,6 +42,14 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
            "LEFT JOIN FETCH p.endereco " +
            "WHERE p.id = :id AND p.organizacao.id = :organizacaoId")
     Optional<Profissional> buscarClinicoIdByOrg(@Param("id") Long id, @Param("organizacaoId") Long organizacaoId);
+
+    /**
+     * Trava a linha do profissional (SELECT ... FOR UPDATE) para serializar agendamentos concorrentes
+     * do mesmo profissional dentro da transação. Só vale dentro de @Transactional.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Profissional p WHERE p.id = :id AND p.organizacao.id = :organizacaoId")
+    Optional<Profissional> buscarParaAgendamentoComLock(@Param("id") Long id, @Param("organizacaoId") Long organizacaoId);
 
 
     @Query("SELECT DISTINCT p FROM Profissional p " +

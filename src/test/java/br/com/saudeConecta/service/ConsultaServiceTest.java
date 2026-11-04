@@ -157,8 +157,6 @@ class ConsultaServiceTest {
             when(organizacaoRepository.findById(ORG_ID)).thenReturn(Optional.of(organizacao));
             when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.of(profissional));
             when(pacienteRepository.findById(20L)).thenReturn(Optional.of(paciente));
-            when(consultaRepository.existsByProfissional_IdAndOrganizacao_IdAndDataHoraAndStatus(
-                    eq(5L), eq(ORG_ID), any(), eq(StatusConsulta.AGENDADA))).thenReturn(false);
             when(consultaRepository.save(any(Consulta.class))).thenReturn(consultaAgendada);
             when(historicoRepository.save(any(ConsultaHistorico.class))).thenReturn(null);
 
@@ -182,8 +180,6 @@ class ConsultaServiceTest {
             when(organizacaoRepository.findById(ORG_ID)).thenReturn(Optional.of(organizacao));
             when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.of(profissional));
             when(pacienteRepository.findById(20L)).thenReturn(Optional.of(paciente));
-            when(consultaRepository.existsByProfissional_IdAndOrganizacao_IdAndDataHoraAndStatus(
-                    any(), any(), any(), any())).thenReturn(false);
             when(consultaRepository.save(any(Consulta.class))).thenAnswer(inv -> {
                 Consulta c = inv.getArgument(0);
                 assertThat(c.getDuracaoMinutos()).isEqualTo(30);
@@ -230,19 +226,114 @@ class ConsultaServiceTest {
                     .hasMessageContaining("Paciente não encontrado");
         }
 
-        @Test
-        @DisplayName("Deve lançar exceção quando já existe consulta agendada no mesmo horário")
-        void deveLancarExcecaoQuandoHorarioOcupado() {
+        private void prepararCadastro() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(organizacaoRepository.findById(ORG_ID)).thenReturn(Optional.of(organizacao));
             when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.of(profissional));
             when(pacienteRepository.findById(20L)).thenReturn(Optional.of(paciente));
-            when(consultaRepository.existsByProfissional_IdAndOrganizacao_IdAndDataHoraAndStatus(
-                    eq(5L), eq(ORG_ID), any(), eq(StatusConsulta.AGENDADA))).thenReturn(true);
+        }
 
-            assertThatThrownBy(() -> consultaService.cadastrarConsultaByOrg(requestValido))
+        private Consulta existente(LocalDateTime inicio, Integer duracao, StatusConsulta status) {
+            return Consulta.builder().id(200L).organizacao(organizacao).profissional(profissional)
+                    .paciente(paciente).dataHora(inicio).duracaoMinutos(duracao).status(status).build();
+        }
+
+        private AgendarConsultaRequest requestEm(LocalDateTime inicio, Integer duracao) {
+            return new AgendarConsultaRequest(5L, 20L, null, inicio, duracao, null, null, null);
+        }
+
+        @Test
+        @DisplayName("Deve barrar consulta que sobrepõe parcialmente uma AGENDADA (09:00 60min x 09:30)")
+        void deveBarrarSobreposicaoComAgendada() {
+            LocalDateTime nove = LocalDateTime.now().plusDays(1).withHour(9).withMinute(0).withSecond(0).withNano(0);
+            prepararCadastro();
+            when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
+                    .thenReturn(List.of(existente(nove, 60, StatusConsulta.AGENDADA)));
+
+            assertThatThrownBy(() -> consultaService.cadastrarConsultaByOrg(requestEm(nove.plusMinutes(30), 30)))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("Já existe consulta agendada para este horário");
+            verify(consultaRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Deve barrar sobreposição com consulta CONFIRMADA (fluxo acelerado)")
+        void deveBarrarSobreposicaoComConfirmada() {
+            LocalDateTime nove = LocalDateTime.now().plusDays(1).withHour(9).withMinute(0).withSecond(0).withNano(0);
+            prepararCadastro();
+            when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
+                    .thenReturn(List.of(existente(nove, 60, StatusConsulta.CONFIRMADA)));
+
+            assertThatThrownBy(() -> consultaService.cadastrarConsultaByOrg(requestEm(nove, 30)))
+                    .isInstanceOf(IllegalStateException.class);
+            verify(consultaRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Deve barrar novo intervalo que engloba consulta existente")
+        void deveBarrarIntervaloQueEngloba() {
+            LocalDateTime nove = LocalDateTime.now().plusDays(1).withHour(9).withMinute(0).withSecond(0).withNano(0);
+            prepararCadastro();
+            when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
+                    .thenReturn(List.of(existente(nove.plusMinutes(15), 15, StatusConsulta.AGENDADA)));
+
+            assertThatThrownBy(() -> consultaService.cadastrarConsultaByOrg(requestEm(nove, 60)))
+                    .isInstanceOf(IllegalStateException.class);
+        }
+
+        @Test
+        @DisplayName("Deve usar 30 min quando a consulta existente não tem duração")
+        void deveUsarFallbackDeDuracaoDaExistente() {
+            LocalDateTime nove = LocalDateTime.now().plusDays(1).withHour(9).withMinute(0).withSecond(0).withNano(0);
+            prepararCadastro();
+            when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
+                    .thenReturn(List.of(existente(nove, null, StatusConsulta.AGENDADA)));
+
+            assertThatThrownBy(() -> consultaService.cadastrarConsultaByOrg(requestEm(nove.plusMinutes(29), 30)))
+                    .isInstanceOf(IllegalStateException.class);
+        }
+
+        @Test
+        @DisplayName("Deve permitir consulta encostada (09:00-10:00 e nova às 10:00)")
+        void devePermitirConsultaEncostada() {
+            LocalDateTime nove = LocalDateTime.now().plusDays(1).withHour(9).withMinute(0).withSecond(0).withNano(0);
+            prepararCadastro();
+            when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
+                    .thenReturn(List.of(existente(nove, 60, StatusConsulta.AGENDADA)));
+            when(consultaRepository.save(any())).thenReturn(consultaAgendada);
+
+            consultaService.cadastrarConsultaByOrg(requestEm(nove.plusMinutes(60), 30));
+
+            verify(consultaRepository).save(any(Consulta.class));
+        }
+
+        @Test
+        @DisplayName("Deve permitir consulta que termina exatamente quando a existente começa")
+        void devePermitirConsultaQueTerminaQuandoExistenteComeca() {
+            LocalDateTime nove = LocalDateTime.now().plusDays(1).withHour(9).withMinute(0).withSecond(0).withNano(0);
+            prepararCadastro();
+            when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
+                    .thenReturn(List.of(existente(nove, 60, StatusConsulta.AGENDADA)));
+            when(consultaRepository.save(any())).thenReturn(consultaAgendada);
+
+            consultaService.cadastrarConsultaByOrg(requestEm(nove.minusMinutes(30), 30));
+
+            verify(consultaRepository).save(any(Consulta.class));
+        }
+
+        @Test
+        @DisplayName("Deve travar o profissional (lock pessimista) antes de checar conflito e salvar")
+        void deveTravarProfissionalAntesDeSalvar() {
+            LocalDateTime nove = LocalDateTime.now().plusDays(1).withHour(9).withMinute(0).withSecond(0).withNano(0);
+            prepararCadastro();
+            when(consultaRepository.save(any())).thenReturn(consultaAgendada);
+
+            consultaService.cadastrarConsultaByOrg(requestEm(nove, 30));
+
+            org.mockito.InOrder ordem = inOrder(profissionalRepository, consultaRepository);
+            ordem.verify(profissionalRepository).buscarParaAgendamentoComLock(5L, ORG_ID);
+            ordem.verify(consultaRepository).findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any());
+            ordem.verify(consultaRepository).save(any(Consulta.class));
         }
 
         @Test
@@ -261,8 +352,6 @@ class ConsultaServiceTest {
             when(organizacaoRepository.findById(ORG_ID)).thenReturn(Optional.of(organizacao));
             when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.of(profissional));
             when(pacienteRepository.findById(20L)).thenReturn(Optional.of(paciente));
-            when(consultaRepository.existsByProfissional_IdAndOrganizacao_IdAndDataHoraAndStatus(
-                    any(), any(), any(), any())).thenReturn(false);
             when(especialidadeRepository.findById(3L)).thenReturn(Optional.of(especialidade));
             when(consultaRepository.save(any())).thenReturn(consultaAgendada);
             when(historicoRepository.save(any())).thenReturn(null);
@@ -298,6 +387,22 @@ class ConsultaServiceTest {
         }
 
         @Test
+        @DisplayName("Deve concluir consulta CONFIRMADA com sucesso")
+        void deveConcluirConsultaConfirmadaComSucesso() {
+            consultaAgendada.setStatus(StatusConsulta.CONFIRMADA);
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(consultaRepository.findByIdAndOrganizacao_Id(100L, ORG_ID))
+                    .thenReturn(Optional.of(consultaAgendada));
+            when(consultaRepository.save(any(Consulta.class))).thenReturn(consultaAgendada);
+            when(consultaRepository.findByIdAndOrganizacao_IdWithRelations(any(), any()))
+                    .thenReturn(Optional.of(consultaAgendada));
+
+            consultaService.concluirConsultabyOrg(100L);
+
+            assertThat(consultaAgendada.getStatus()).isEqualTo(StatusConsulta.REALIZADA);
+        }
+
+        @Test
         @DisplayName("Deve lançar exceção quando consulta não for AGENDADA")
         void deveLancarExcecaoQuandoConsultaNaoAgendada() {
             consultaAgendada.setStatus(StatusConsulta.REALIZADA);
@@ -308,7 +413,7 @@ class ConsultaServiceTest {
 
             assertThatThrownBy(() -> consultaService.concluirConsultabyOrg(100L))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Apenas consultas AGENDADAS podem ser concluídas");
+                    .hasMessageContaining("Apenas consultas AGENDADAS ou CONFIRMADAS podem ser concluídas");
         }
 
         @Test
@@ -714,8 +819,6 @@ class ConsultaServiceTest {
         @DisplayName("Deve retornar false quando horário está disponível")
         void deveRetornarFalseQuandoHorarioDisponivel() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.existsByProfissional_IdAndOrganizacao_IdAndDataHoraAndStatus(
-                    eq(5L), eq(ORG_ID), any(), eq(StatusConsulta.AGENDADA))).thenReturn(false);
 
             boolean resultado = consultaService.verificarDisponibilidade("2025-12-01", "10:00", 5L);
 
@@ -987,8 +1090,6 @@ class ConsultaServiceTest {
                     .thenReturn(Optional.of(consultaAgendada));
             when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.of(profissional));
             when(pacienteRepository.findById(20L)).thenReturn(Optional.of(paciente));
-            when(consultaRepository.findByProfissional_IdAndOrganizacao_IdAndDataHora(eq(5L), eq(ORG_ID), any()))
-                    .thenReturn(Collections.emptyList());
             when(consultaRepository.save(any(Consulta.class))).thenReturn(consultaAgendada);
             when(historicoRepository.save(any())).thenReturn(null);
 
@@ -1022,24 +1123,123 @@ class ConsultaServiceTest {
                     .hasMessageContaining("Profissional não encontrado");
         }
 
-        @Test
-        @DisplayName("Deve lançar exceção quando horário estiver ocupado por outra consulta")
-        void deveLancarExcecaoHorarioOcupadoPorOutraConsulta() {
-            Consulta outraConsulta = new Consulta();
-            outraConsulta.setId(999L);
-            outraConsulta.setStatus(StatusConsulta.AGENDADA);
-
+        private void prepararAtualizacao() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(consultaRepository.findByIdAndOrganizacao_Id(100L, ORG_ID))
                     .thenReturn(Optional.of(consultaAgendada));
             when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.of(profissional));
             when(pacienteRepository.findById(20L)).thenReturn(Optional.of(paciente));
-            when(consultaRepository.findByProfissional_IdAndOrganizacao_IdAndDataHora(eq(5L), eq(ORG_ID), any()))
+        }
+
+        @Test
+        @DisplayName("Deve lançar exceção quando reagendamento sobrepõe outra consulta")
+        void deveLancarExcecaoHorarioOcupadoPorOutraConsulta() {
+            LocalDateTime novo = requestAtualizar.dataHora();
+            Consulta outraConsulta = Consulta.builder().id(999L).organizacao(organizacao).profissional(profissional)
+                    .paciente(paciente).dataHora(novo.minusMinutes(20)).duracaoMinutos(60)
+                    .status(StatusConsulta.CONFIRMADA).build();
+            prepararAtualizacao();
+            when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
                     .thenReturn(List.of(outraConsulta));
 
             assertThatThrownBy(() -> consultaService.atualizarConsultaByOrg(100L, requestAtualizar))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("consulta agendada");
+            verify(consultaRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Deve permitir reagendar para o próprio horário (ignora a própria consulta)")
+        void devePermitirReagendarParaOProprioHorario() {
+            LocalDateTime novo = requestAtualizar.dataHora();
+            Consulta propria = Consulta.builder().id(100L).organizacao(organizacao).profissional(profissional)
+                    .paciente(paciente).dataHora(novo).duracaoMinutos(45).status(StatusConsulta.AGENDADA).build();
+            prepararAtualizacao();
+            when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
+                    .thenReturn(List.of(propria));
+            when(consultaRepository.save(any())).thenReturn(consultaAgendada);
+
+            consultaService.atualizarConsultaByOrg(100L, requestAtualizar);
+
+            verify(consultaRepository).save(consultaAgendada);
+        }
+
+        @Test
+        @DisplayName("Deve travar o profissional antes de checar conflito no reagendamento")
+        void deveTravarProfissionalNoReagendamento() {
+            prepararAtualizacao();
+            when(consultaRepository.save(any())).thenReturn(consultaAgendada);
+
+            consultaService.atualizarConsultaByOrg(100L, requestAtualizar);
+
+            org.mockito.InOrder ordem = inOrder(profissionalRepository, consultaRepository);
+            ordem.verify(profissionalRepository).buscarParaAgendamentoComLock(5L, ORG_ID);
+            ordem.verify(consultaRepository).findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any());
+        }
+
+        @Test
+        @DisplayName("Deve bloquear edição de consulta PAGO")
+        void deveBloquearEdicaoDeConsultaPaga() {
+            consultaAgendada.setStatus(StatusConsulta.PAGO);
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(consultaRepository.findByIdAndOrganizacao_Id(100L, ORG_ID)).thenReturn(Optional.of(consultaAgendada));
+
+            assertThatThrownBy(() -> consultaService.atualizarConsultaByOrg(100L, requestAtualizar))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("PAGO");
+            verify(consultaRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Deve bloquear edição de consulta CANCELADA")
+        void deveBloquearEdicaoDeConsultaCancelada() {
+            consultaAgendada.setStatus(StatusConsulta.CANCELADA);
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(consultaRepository.findByIdAndOrganizacao_Id(100L, ORG_ID)).thenReturn(Optional.of(consultaAgendada));
+
+            assertThatThrownBy(() -> consultaService.atualizarConsultaByOrg(100L, requestAtualizar))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("CANCELADA");
+            verify(consultaRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Deve rejeitar transição inválida de status na edição (AGENDADA -> REALIZADA)")
+        void deveRejeitarTransicaoInvalidaNaEdicao() {
+            AtualizarConsultaRequest req = new AtualizarConsultaRequest(
+                    5L, 20L, null, LocalDateTime.now().plusDays(2), null, null, null, null, "REALIZADA");
+            prepararAtualizacao();
+
+            assertThatThrownBy(() -> consultaService.atualizarConsultaByOrg(100L, req))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("AGENDADA só pode ir para");
+            assertThat(consultaAgendada.getStatus()).isEqualTo(StatusConsulta.AGENDADA);
+            verify(consultaRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Deve responder 400 (IllegalArgumentException) para status inexistente, não NPE/valueOf cru")
+        void deveRejeitarStatusInvalido() {
+            AtualizarConsultaRequest req = new AtualizarConsultaRequest(
+                    5L, 20L, null, LocalDateTime.now().plusDays(2), null, null, null, null, "BANANA");
+            prepararAtualizacao();
+
+            assertThatThrownBy(() -> consultaService.atualizarConsultaByOrg(100L, req))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Status inválido: BANANA");
+        }
+
+        @Test
+        @DisplayName("Deve aceitar status igual ao atual (edição sem mudar status)")
+        void deveAceitarStatusIgualAoAtual() {
+            AtualizarConsultaRequest req = new AtualizarConsultaRequest(
+                    5L, 20L, null, LocalDateTime.now().plusDays(2), null, null, null, null, "agendada");
+            prepararAtualizacao();
+            when(consultaRepository.save(any())).thenReturn(consultaAgendada);
+
+            consultaService.atualizarConsultaByOrg(100L, req);
+
+            assertThat(consultaAgendada.getStatus()).isEqualTo(StatusConsulta.AGENDADA);
         }
 
         @Test
@@ -1056,8 +1256,6 @@ class ConsultaServiceTest {
                     .thenReturn(Optional.of(consultaAgendada));
             when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.of(profissional));
             when(pacienteRepository.findById(20L)).thenReturn(Optional.of(paciente));
-            when(consultaRepository.findByProfissional_IdAndOrganizacao_IdAndDataHora(any(), any(), any()))
-                    .thenReturn(Collections.emptyList());
             when(consultaRepository.save(any())).thenReturn(consultaAgendada);
             when(historicoRepository.save(any())).thenReturn(null);
 
@@ -1928,6 +2126,32 @@ class ConsultaServiceTest {
             List<String> resultado = consultaService.buscarHorariosOcupados(5L, "2024-06-15");
 
             assertThat(resultado).isEmpty();
+        }
+    }
+
+    // ========== buscarHorariosOcupadosDetalhado ==========
+
+    @Nested
+    @DisplayName("buscarHorariosOcupadosDetalhado")
+    class BuscarHorariosOcupadosDetalhado {
+
+        @Test
+        @DisplayName("Deve devolver início (HH:mm:ss) e duração, com 30 min quando a duração for nula")
+        void deveDevolverInicioEDuracao() {
+            Consulta a = Consulta.builder().id(1L).dataHora(LocalDateTime.of(2030, 5, 10, 9, 0))
+                    .duracaoMinutos(60).status(StatusConsulta.AGENDADA).build();
+            Consulta b = Consulta.builder().id(2L).dataHora(LocalDateTime.of(2030, 5, 10, 10, 30))
+                    .duracaoMinutos(null).status(StatusConsulta.CONFIRMADA).build();
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(consultaRepository.findAtivasDoProfissionalNoPeriodo(
+                    ORG_ID, 5L, LocalDateTime.of(2030, 5, 10, 0, 0), LocalDateTime.of(2030, 5, 11, 0, 0)))
+                    .thenReturn(List.of(a, b));
+
+            List<br.com.saudeConecta.presentation.dto.consulta.HorarioOcupadoResponse> resultado =
+                    consultaService.buscarHorariosOcupadosDetalhado(5L, "2030-05-10");
+
+            assertThat(resultado).extracting("inicio", "duracaoMinutos")
+                    .containsExactly(tuple("09:00:00", 60), tuple("10:30:00", 30));
         }
     }
 }

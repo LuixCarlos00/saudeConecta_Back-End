@@ -204,6 +204,21 @@ public class ConsultaController {
     }
 
     /**
+     * Versão detalhada de /horarios-ocupados: devolve início e duração de cada consulta ocupando a agenda,
+     * para o front bloquear o intervalo inteiro (e não só o horário de início).
+     *
+     * @param medicoId ID do médico/profissional
+     * @param data     Data no formato yyyy-MM-dd
+     * @return Lista de {inicio (HH:mm:ss), duracaoMinutos}
+     */
+    @GetMapping("/horarios-ocupados-detalhado")
+    public ResponseEntity<List<HorarioOcupadoResponse>> buscarHorariosOcupadosDetalhado(
+            @RequestParam Long medicoId,
+            @RequestParam String data) {
+        return ResponseEntity.ok(consultaService.buscarHorariosOcupadosDetalhado(medicoId, data));
+    }
+
+    /**
      * Verifica a disponibilidade de um médico para uma consulta específica.
      * Valida os critérios antes de cadastrar uma nova consulta.
      *

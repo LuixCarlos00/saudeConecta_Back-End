@@ -156,6 +156,36 @@ class ConsultaControllerIntegrationTest {
         }
     }
 
+    // ========== GET /consultas/horarios-ocupados-detalhado ==========
+
+    @Nested
+    @DisplayName("GET /consultas/horarios-ocupados-detalhado")
+    class HorariosOcupadosDetalhado {
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("Deve retornar 200 com início e duração de cada horário ocupado")
+        void deveRetornarInicioEDuracao() throws Exception {
+            when(consultaService.buscarHorariosOcupadosDetalhado(5L, "2030-05-10"))
+                    .thenReturn(java.util.List.of(
+                            new br.com.saudeConecta.presentation.dto.consulta.HorarioOcupadoResponse("09:00:00", 60)));
+
+            mockMvc.perform(get("/consultas/horarios-ocupados-detalhado")
+                            .param("medicoId", "5").param("data", "2030-05-10"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].inicio").value("09:00:00"))
+                    .andExpect(jsonPath("$[0].duracaoMinutos").value(60));
+        }
+
+        @Test
+        @DisplayName("Deve retornar 403 sem autenticação")
+        void deveRetornar403SemAutenticacao() throws Exception {
+            mockMvc.perform(get("/consultas/horarios-ocupados-detalhado")
+                            .param("medicoId", "5").param("data", "2030-05-10"))
+                    .andExpect(status().isForbidden());
+        }
+    }
+
     // ========== GET /consultas/{id} ==========
 
     @Nested
