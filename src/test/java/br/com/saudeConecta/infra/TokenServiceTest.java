@@ -107,7 +107,7 @@ class TokenServiceTest {
             String token = tokenService.gerarToken(usuario, 1L, "Dr. Teste", "CLINICO", "MEDICO");
             Integer tipo = tokenService.getTipoUsuarioFromToken(token);
 
-            assertThat(tipo).isEqualTo(3);
+            assertThat(tipo).isEqualTo(TipoUsuarioNovo.CLINICO.getCodigo());
         }
 
         @Test

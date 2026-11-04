@@ -356,7 +356,7 @@ class UsuarioServiceTest {
 
             assertThatThrownBy(() -> usuarioService.bloquearUsuariobyOrg(request))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Super Admin");
+                    .hasMessageContaining("Root");
         }
 
         @Test

@@ -464,7 +464,7 @@ class AdminOrganizacaoServiceTest {
             when(passwordEncoder.encode(any())).thenReturn("encodedPass");
             when(usuarioRepository.save(any(Usuario.class))).thenReturn(usuario);
             when(adminOrganizacaoRepository.save(any(AdminOrganizacao.class))).thenReturn(adminOrganizacao);
-            doNothing().when(assinaturaTenantService).assinar(any(Long.class), any(Long.class));
+            when(assinaturaTenantService.assinar(any(Long.class), any(Long.class), anyBoolean())).thenReturn(null);
 
             AdminOrganizacao resultado = adminOrganizacaoService.cadastrarAdminOrgCompleto(request);
 
@@ -473,7 +473,7 @@ class AdminOrganizacaoServiceTest {
             verify(organizacaoRepository).save(any(Organizacao.class));
             verify(usuarioRepository).save(any(Usuario.class));
             verify(adminOrganizacaoRepository).save(any(AdminOrganizacao.class));
-            verify(assinaturaTenantService).assinar(eq(ORG_ID), eq(1L));
+            verify(assinaturaTenantService).assinar(eq(ORG_ID), eq(1L), eq(false));
             verify(configuracaoGraficoDashboardService).inicializarParaNovoUsuario(any());
             verify(emailNotificacaoService).enviarCredenciaisAdministrador(
                     eq("clinica@nova.com"), eq("Admin Completo"), eq("12345678000100"),
@@ -517,7 +517,7 @@ class AdminOrganizacaoServiceTest {
             when(passwordEncoder.encode(any())).thenReturn("encodedPass");
             when(usuarioRepository.save(any(Usuario.class))).thenReturn(usuario);
             when(adminOrganizacaoRepository.save(any(AdminOrganizacao.class))).thenReturn(adminOrganizacao);
-            doNothing().when(assinaturaTenantService).assinar(any(Long.class), any(Long.class));
+            when(assinaturaTenantService.assinar(any(Long.class), any(Long.class), anyBoolean())).thenReturn(null);
 
             AdminOrganizacao resultado = adminOrganizacaoService.cadastrarAdminOrgCompleto(requestFisica);
 
@@ -526,7 +526,7 @@ class AdminOrganizacaoServiceTest {
             verify(organizacaoRepository).save(any(Organizacao.class));
             verify(usuarioRepository).save(any(Usuario.class));
             verify(adminOrganizacaoRepository).save(any(AdminOrganizacao.class));
-            verify(assinaturaTenantService).assinar(eq(ORG_ID), eq(1L));
+            verify(assinaturaTenantService).assinar(eq(ORG_ID), eq(1L), eq(false));
             verify(configuracaoGraficoDashboardService).inicializarParaNovoUsuario(any());
             verify(emailNotificacaoService).enviarCredenciaisAdministrador(
                     eq("admin@fisica.com"), eq("Admin Física"), eq("98765432100"),

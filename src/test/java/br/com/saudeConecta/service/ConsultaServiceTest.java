@@ -47,6 +47,7 @@ class ConsultaServiceTest {
     @Mock private TermoAutorizacaoRepository termoAutorizacaoRepository;
     @Mock private ProntuarioRepository prontuarioRepository;
     @Mock private TenantHelper tenantHelper;
+    @Mock private br.com.saudeConecta.service.ConfiguracoesConsultaService configuracoesConsultaService;
 
     @InjectMocks
     private ConsultaService consultaService;
@@ -1480,20 +1481,20 @@ class ConsultaServiceTest {
         @DisplayName("Deve retornar consultas de hoje da organização")
         void deveRetornarConsultasHoje() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any()))
+            when(consultaRepository.findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any(), any()))
                     .thenReturn(List.of(consultaAgendada));
 
             List<Consulta> resultado = consultaService.buscarConsultasHoje(null);
 
             assertThat(resultado).hasSize(1);
-            verify(consultaRepository).findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any());
+            verify(consultaRepository).findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any(), any());
         }
 
         @Test
         @DisplayName("Deve retornar lista vazia quando não houver consultas hoje")
         void deveRetornarListaVaziaQuandoSemConsultasHoje() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any()))
+            when(consultaRepository.findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any(), any()))
                     .thenReturn(Collections.emptyList());
 
             List<Consulta> resultado = consultaService.buscarConsultasHoje(null);
@@ -1507,14 +1508,14 @@ class ConsultaServiceTest {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             LocalDate dataInformada = LocalDate.of(2024, 3, 10);
             when(consultaRepository.findByOrganizacaoIdAndPeriodo(
-                    eq(ORG_ID), eq(dataInformada.atStartOfDay()), eq(dataInformada.atTime(23, 59, 59))))
+                    eq(ORG_ID), any(), eq(dataInformada.atStartOfDay()), eq(dataInformada.atTime(23, 59, 59))))
                     .thenReturn(List.of(consultaAgendada));
 
             List<Consulta> resultado = consultaService.buscarConsultasHoje(dataInformada);
 
             assertThat(resultado).hasSize(1);
             verify(consultaRepository).findByOrganizacaoIdAndPeriodo(
-                    eq(ORG_ID), eq(dataInformada.atStartOfDay()), eq(dataInformada.atTime(23, 59, 59)));
+                    eq(ORG_ID), any(), eq(dataInformada.atStartOfDay()), eq(dataInformada.atTime(23, 59, 59)));
         }
     }
 
@@ -1528,20 +1529,20 @@ class ConsultaServiceTest {
         @DisplayName("Deve retornar consultas da semana atual")
         void deveRetornarConsultasDaSemana() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any()))
+            when(consultaRepository.findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any(), any()))
                     .thenReturn(List.of(consultaAgendada));
 
             List<Consulta> resultado = consultaService.buscarConsultasDaSemanaAtual(null);
 
             assertThat(resultado).hasSize(1);
-            verify(consultaRepository).findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any());
+            verify(consultaRepository).findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any(), any());
         }
 
         @Test
         @DisplayName("Deve retornar lista vazia quando não houver consultas na semana")
         void deveRetornarListaVaziaQuandoSemConsultasNaSemana() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any()))
+            when(consultaRepository.findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any(), any()))
                     .thenReturn(Collections.emptyList());
 
             List<Consulta> resultado = consultaService.buscarConsultasDaSemanaAtual(null);
@@ -1560,20 +1561,20 @@ class ConsultaServiceTest {
         @DisplayName("Deve retornar consultas do mês atual")
         void deveRetornarConsultasDoMes() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any()))
+            when(consultaRepository.findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any(), any()))
                     .thenReturn(List.of(consultaAgendada));
 
             List<Consulta> resultado = consultaService.buscarConsultasDoMesAtual(null);
 
             assertThat(resultado).hasSize(1);
-            verify(consultaRepository).findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any());
+            verify(consultaRepository).findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any(), any());
         }
 
         @Test
         @DisplayName("Deve retornar lista vazia quando não houver consultas no mês")
         void deveRetornarListaVaziaQuandoSemConsultasNoMes() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any()))
+            when(consultaRepository.findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any(), any()))
                     .thenReturn(Collections.emptyList());
 
             List<Consulta> resultado = consultaService.buscarConsultasDoMesAtual(null);

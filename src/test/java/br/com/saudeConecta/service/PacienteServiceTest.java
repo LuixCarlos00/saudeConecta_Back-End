@@ -47,6 +47,9 @@ class PacienteServiceTest {
     @Mock
     private HistoricoDadosPessoaisService historicoDadosPessoaisService;
 
+    @Mock
+    private br.com.saudeConecta.service.CacheEvictionService cacheEvictionService;
+
     @InjectMocks
     private PacienteService pacienteService;
 

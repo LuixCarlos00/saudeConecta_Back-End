@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -99,12 +100,14 @@ class ConsultaControllerIntegrationTest {
     class ListarConsultasHoje {
 
         @Test
-        @WithMockUser(roles = "PROFISSIONAL")
         @DisplayName("Deve retornar 200 com lista de consultas de hoje")
         void deveRetornar200ComListaDeConsultasHoje() throws Exception {
-            when(consultaService.buscarConsultasHoje(null)).thenReturn(java.util.Collections.emptyList());
+            // O controller usa @AuthenticationPrincipal Usuario; @WithMockUser não injeta o Usuario do domínio.
+            br.com.saudeConecta.domain.usuario.Usuario usuarioLogado = new br.com.saudeConecta.domain.usuario.Usuario();
+            usuarioLogado.setId(1L);
+            when(consultaService.buscarConsultasHoje(any(), any(br.com.saudeConecta.domain.usuario.Usuario.class))).thenReturn(java.util.Collections.emptyList());
 
-            mockMvc.perform(get("/consultas/hoje"))
+            mockMvc.perform(get("/consultas/hoje").with(user(usuarioLogado)))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON));
         }
