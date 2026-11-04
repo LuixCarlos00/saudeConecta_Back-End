@@ -154,4 +154,7 @@
 
     <!-- Lock otimista em assinatura_tenant e reprocessamento de webhooks MP com erro -->
     <include file="db/changelog/08-2026/062-cobranca-versao-e-reprocessamento-webhook.xml"/>
+
+    <!-- Fase 4: motivo do bloqueio, CPF unico por clinica e login unico (condicional a ausencia de duplicados) -->
+    <include file="db/changelog/08-2026/063-seguranca-unicidade-login-cpf-motivo-bloqueio.xml"/>
 </databaseChangeLog>

@@ -99,8 +99,10 @@ public class AdminOrganizacaoService {
 
         limitePlanoService.validarLimiteAdminOrg(organizacaoId);
 
-        if (usuarioRepository.existsByLogin(request.cpf())) {
-            log.warn("CPF já cadastrado como login: {}", request.cpf());
+        // O login gravado é o CPF limpo: checar o bruto (com máscara) deixava passar duplicado
+        String cpfLimpo = limparCpf(request.cpf());
+        if (usuarioRepository.existsByLogin(cpfLimpo)) {
+            log.warn("CPF já cadastrado como login na organizacao {}", organizacaoId);
             throw new IllegalStateException("CPF já cadastrado no sistema");
         }
 
@@ -114,7 +116,6 @@ public class AdminOrganizacaoService {
         Organizacao organizacao = organizacaoRepository.findById(organizacaoId)
             .orElseThrow(() -> new IllegalArgumentException("Organização não encontrada"));
 
-        String cpfLimpo = limparCpf(request.cpf());
         String senhaGerada = gerarSenhaAleatoria();
 
         Usuario usuario = Usuario.builder()
@@ -175,6 +176,9 @@ public class AdminOrganizacaoService {
         if (!admin.getOrganizacao().getId().equals(orgId)) {
             throw new IllegalArgumentException("Acesso negado: administrador não pertence à organização");
         }
+
+        emailUnicoService.validarEmailLivreParaAtualizacao(request.email(), admin.getEmail(),
+                admin.getUsuario() != null ? admin.getUsuario().getId() : null);
 
         // Snapshot para histórico
         AdminOrganizacao snapshot = SnapshotUtil.copiarSnapshot(admin);
@@ -249,6 +253,10 @@ public class AdminOrganizacaoService {
         AdminOrganizacao antes = adminOrganizacaoRepository.findByIdAndOrganizacao_Id(id, orgId)
             .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
 
+
+        // E-mail duplicado desvia o "esqueci minha senha" (que busca por e-mail) para a conta errada
+        emailUnicoService.validarEmailLivreParaAtualizacao(email, antes.getEmail(),
+                antes.getUsuario() != null ? antes.getUsuario().getId() : null);
 
         AdminOrganizacao snapshot = SnapshotUtil.copiarSnapshot(antes);
 

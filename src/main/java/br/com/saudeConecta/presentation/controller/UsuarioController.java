@@ -1,5 +1,6 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.infra.exceptions.LimitePlanoException;
 import br.com.saudeConecta.service.UsuarioService;
 import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.infra.tenant.TenantContext;
@@ -19,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/usuario")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 @Description(  "Endpoints para gerenciamento de usuários")
 public class UsuarioController {
 
@@ -36,6 +36,9 @@ public class UsuarioController {
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
+        } catch (LimitePlanoException e) {
+            // Reativação acima do limite do plano: deixa o handler global responder 422 com a mensagem
+            throw e;
         } catch (Exception e) {
             log.error("Erro ao alterar status do usuário ID: {}", request.codigoUsuario(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();

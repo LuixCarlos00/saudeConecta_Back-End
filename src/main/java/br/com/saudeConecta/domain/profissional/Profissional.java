@@ -18,7 +18,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "profissional")
+@Table(name = "profissional",
+       uniqueConstraints = @UniqueConstraint(name = "uk_profissional_org_cpf", columnNames = {"organizacao_id", "cpf"}))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -56,7 +57,8 @@ public class Profissional implements Serializable, TenantAware {
     @Column(name = "registro_conselho", nullable = false, length = 20)
     private String registroConselho;
     
-    @Column(unique = true, length = 14)
+    // Único por clínica (changeset 063): o mesmo profissional pode atender em mais de uma organização
+    @Column(length = 14)
     private String cpf;
     
     @Column(length = 20)

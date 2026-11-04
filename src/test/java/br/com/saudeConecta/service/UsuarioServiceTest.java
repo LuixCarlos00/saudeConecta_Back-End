@@ -6,7 +6,9 @@ import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.profissional.StatusProfissional;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.domain.secretaria.StatusSecretaria;
+import br.com.saudeConecta.domain.usuario.MotivoBloqueio;
 import br.com.saudeConecta.domain.usuario.StatusUsuario;
+import br.com.saudeConecta.infra.exceptions.LimitePlanoException;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
@@ -47,6 +49,7 @@ class UsuarioServiceTest {
     @Mock private PacienteRepository pacienteRepository;
     @Mock private SecretariaRepository secretariaRepository;
     @Mock private CacheEvictionService cacheEvictionService;
+    @Mock private LimitePlanoService limitePlanoService;
     @Spy private TenantHelper tenantHelper = new TenantHelper();
 
     @InjectMocks
@@ -345,6 +348,62 @@ class UsuarioServiceTest {
         }
 
         @Test
+        @DisplayName("4.4 - Reativar usuário valida o limite do plano; estourado, não reativa")
+        void reativarDeveValidarLimiteDoPlano() {
+            TenantContext.setCurrentTenant(ORG_ID);
+            usuario.setStatus(StatusUsuario.INATIVO);
+            usuario.setMotivoBloqueio(MotivoBloqueio.INDIVIDUAL);
+            BloquearUsuarioRequest request = new BloquearUsuarioRequest(PERFIL_ID, USUARIO_ID, 1);
+
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+            doThrow(new LimitePlanoException("PROFISSIONAL", 3, 3L))
+                    .when(limitePlanoService).validarLimiteProfissional(ORG_ID);
+
+            assertThatThrownBy(() -> usuarioService.bloquearUsuariobyOrg(request))
+                    .isInstanceOf(LimitePlanoException.class);
+
+            assertThat(usuario.getStatus()).isEqualTo(StatusUsuario.INATIVO);
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("4.4 - Reativação valida o limite do tipo certo (secretária e gestor)")
+        void reativarValidaLimiteConformeTipo() {
+            TenantContext.setCurrentTenant(ORG_ID);
+            usuario.setStatus(StatusUsuario.INATIVO);
+            usuario.setTipoUsuarioNovo(TipoUsuarioNovo.ASSISTENTE);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+
+            usuarioService.bloquearUsuariobyOrg(new BloquearUsuarioRequest(PERFIL_ID, USUARIO_ID, 1));
+
+            verify(limitePlanoService).validarLimiteSecretaria(ORG_ID);
+            assertThat(usuario.getStatus()).isEqualTo(StatusUsuario.ATIVO);
+            assertThat(usuario.getMotivoBloqueio()).isNull();
+        }
+
+        @Test
+        @DisplayName("Usuário já ativo recebendo status ATIVO não consome limite")
+        void ativoParaAtivoNaoValidaLimite() {
+            TenantContext.setCurrentTenant(ORG_ID);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+
+            usuarioService.bloquearUsuariobyOrg(new BloquearUsuarioRequest(PERFIL_ID, USUARIO_ID, 1));
+
+            verifyNoInteractions(limitePlanoService);
+        }
+
+        @Test
+        @DisplayName("4.4 - Bloqueio individual marca o motivo INDIVIDUAL")
+        void bloqueioIndividualMarcaMotivo() {
+            TenantContext.setCurrentTenant(ORG_ID);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+
+            usuarioService.bloquearUsuariobyOrg(new BloquearUsuarioRequest(PERFIL_ID, USUARIO_ID, 0));
+
+            assertThat(usuario.getMotivoBloqueio()).isEqualTo(MotivoBloqueio.INDIVIDUAL);
+        }
+
+        @Test
         @DisplayName("Deve lançar exceção ao tentar bloquear Super Admin")
         void deveLancarExcecaoAoBloquearSuperAdmin() {
             TenantContext.setCurrentTenant(ORG_ID);
@@ -437,6 +496,71 @@ class UsuarioServiceTest {
             assertThat(adminOrgUsuario.getStatus()).isEqualTo(StatusUsuario.INATIVO);
             assertThat(outroUsuario.getStatus()).isEqualTo(StatusUsuario.INATIVO);
             verify(usuarioRepository, atLeast(2)).save(any(Usuario.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("4.4 - cascata preserva bloqueios individuais")
+    class CascataPreservaBloqueioIndividual {
+
+        private Usuario adminOrgUsuario;
+
+        @BeforeEach
+        void comoSuperAdmin() {
+            TenantContext.clear();
+            SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                    "root", "n/a", List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))));
+            adminOrgUsuario = Usuario.builder().login("gestor").tipoUsuarioNovo(TipoUsuarioNovo.GESTOR)
+                    .status(StatusUsuario.ATIVO).organizacao(organizacao).build();
+            adminOrgUsuario.setId(USUARIO_ID);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(adminOrgUsuario));
+            when(adminOrganizacaoRepository.findById(PERFIL_ID)).thenReturn(Optional.empty());
+        }
+
+        @AfterEach
+        void limpar() {
+            SecurityContextHolder.clearContext();
+            TenantContext.clear();
+        }
+
+        private Usuario usuarioDaOrg(long id, StatusUsuario status, MotivoBloqueio motivo) {
+            Usuario u = Usuario.builder().login("u" + id).tipoUsuarioNovo(TipoUsuarioNovo.CLINICO)
+                    .status(status).motivoBloqueio(motivo).organizacao(organizacao).build();
+            u.setId(id);
+            return u;
+        }
+
+        @Test
+        @DisplayName("Bloqueio em cascata marca CASCATA só em quem estava ativo")
+        void bloqueioCascataNaoSobrescreveIndividual() {
+            Usuario ativo = usuarioDaOrg(50L, StatusUsuario.ATIVO, null);
+            Usuario jaBloqueado = usuarioDaOrg(51L, StatusUsuario.INATIVO, MotivoBloqueio.INDIVIDUAL);
+            when(usuarioRepository.findByOrganizacao_Id(ORG_ID)).thenReturn(List.of(ativo, jaBloqueado));
+
+            usuarioService.bloquearUsuariobyOrg(new BloquearUsuarioRequest(PERFIL_ID, USUARIO_ID, 0));
+
+            assertThat(ativo.getStatus()).isEqualTo(StatusUsuario.INATIVO);
+            assertThat(ativo.getMotivoBloqueio()).isEqualTo(MotivoBloqueio.CASCATA);
+            assertThat(jaBloqueado.getMotivoBloqueio()).isEqualTo(MotivoBloqueio.INDIVIDUAL);
+        }
+
+        @Test
+        @DisplayName("Desbloqueio em cascata reativa só quem foi bloqueado pela cascata")
+        void desbloqueioCascataSoReativaCascata() {
+            adminOrgUsuario.setStatus(StatusUsuario.INATIVO);
+            adminOrgUsuario.setMotivoBloqueio(MotivoBloqueio.CASCATA);
+            Usuario daCascata = usuarioDaOrg(50L, StatusUsuario.INATIVO, MotivoBloqueio.CASCATA);
+            Usuario individual = usuarioDaOrg(51L, StatusUsuario.INATIVO, MotivoBloqueio.INDIVIDUAL);
+            Usuario legado = usuarioDaOrg(52L, StatusUsuario.INATIVO, null);
+            when(usuarioRepository.findByOrganizacao_Id(ORG_ID)).thenReturn(List.of(daCascata, individual, legado));
+
+            usuarioService.bloquearUsuariobyOrg(new BloquearUsuarioRequest(PERFIL_ID, USUARIO_ID, 1));
+
+            assertThat(adminOrgUsuario.getStatus()).isEqualTo(StatusUsuario.ATIVO);
+            assertThat(daCascata.getStatus()).isEqualTo(StatusUsuario.ATIVO);
+            assertThat(daCascata.getMotivoBloqueio()).isNull();
+            assertThat(individual.getStatus()).isEqualTo(StatusUsuario.INATIVO);
+            assertThat(legado.getStatus()).isEqualTo(StatusUsuario.INATIVO);
         }
     }
 

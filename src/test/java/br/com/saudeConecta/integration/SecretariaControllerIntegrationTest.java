@@ -167,4 +167,25 @@ class SecretariaControllerIntegrationTest {
                     .andExpect(status().isConflict());
         }
     }
+
+    // ========== 4.5d - e-mail duplicado na atualização ==========
+
+    @Nested
+    @DisplayName("PUT /secretaria/atualizarSecretariaIdByOrg/{id} - e-mail duplicado")
+    class AtualizarSecretariaEmailDuplicado {
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("4.5d - e-mail de outro usuário responde 409 com a mensagem")
+        void emailDuplicadoResponde409() throws Exception {
+            when(secretariaService.atualizarSecretariaIdByOrg(eq(5L), any()))
+                    .thenThrow(new IllegalStateException("Email ja cadastrado no sistema para outro usuario"));
+
+            mockMvc.perform(put("/secretaria/atualizarSecretariaIdByOrg/5")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"email\":\"outro@email.com\"}"))
+                    .andExpect(status().isConflict());
+        }
+    }
 }

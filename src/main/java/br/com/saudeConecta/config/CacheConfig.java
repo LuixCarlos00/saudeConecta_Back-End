@@ -54,7 +54,10 @@ public class CacheConfig {
             buildCache("especialidades",         30, 200),
             buildCache("disponibilidade-consulta",  2, 2000),
             buildCache("questionario-saude",     60, 500),
-            buildCache("prontuario-recente",     30, 500)
+            buildCache("prontuario-recente",     30, 500),
+            // Consultado pelo FiltroAcesso em toda requisição autenticada: TTL curto limita a janela
+            // em que uma clínica suspensa ainda navega caso alguma invalidação se perca.
+            buildCache("acesso-assinatura",       1, 2000)
         ));
         return manager;
     }

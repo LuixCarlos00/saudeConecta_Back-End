@@ -1,6 +1,7 @@
 package br.com.saudeConecta.domain.planos;
 
 import br.com.saudeConecta.domain.organizacao.Organizacao;
+import br.com.saudeConecta.service.AssinaturaTenantCacheListener;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "assinatura_tenant")
+@EntityListeners(AssinaturaTenantCacheListener.class)
 @Getter
 @Setter
 @NoArgsConstructor

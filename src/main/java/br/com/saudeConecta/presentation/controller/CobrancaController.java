@@ -15,7 +15,6 @@ import java.util.List;
 @RequestMapping("/cobrancas")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class CobrancaController {
 
     private final CobrancaService cobrancaService;

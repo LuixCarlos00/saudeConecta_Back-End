@@ -4,6 +4,7 @@ import br.com.saudeConecta.domain.common.Sexo;
 import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.historicodadospessoais.EntidadeTipo;
 import br.com.saudeConecta.domain.mensageria.Mensageria;
+import br.com.saudeConecta.domain.mensageria.TipoMensagem;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.profissional.Especialidade;
 import br.com.saudeConecta.domain.profissional.Profissional;
@@ -108,7 +109,8 @@ public class ProfissionalService {
 
         String cpfLimpo = limparCpf(request.cpf());
 
-        if (usuarioRepository.existsByLogin(request.cpf())) {
+        // O login gravado é o CPF limpo: checar o bruto (com máscara) deixava passar duplicado
+        if (usuarioRepository.existsByLogin(cpfLimpo)) {
             throw new IllegalStateException("CPF ja cadastrado no sistema");
         }
 
@@ -239,11 +241,15 @@ public class ProfissionalService {
         Profissional antes = profissionalRepository.buscarClinicoIdByOrg(id, orgId)
                 .orElseThrow(() -> new IllegalArgumentException("Profissional nao encontrado"));
 
+        // E-mail duplicado desvia o "esqueci minha senha" (que busca por e-mail) para a conta errada
+        emailUnicoService.validarEmailLivreParaAtualizacao(dadosAtualizados.email(), antes.getEmail(),
+                antes.getUsuario() != null ? antes.getUsuario().getId() : null);
+
         Profissional snapshot = SnapshotUtil.copiarSnapshot(antes);
 
         // Atualiza campos básicos
         antes.setNome(dadosAtualizados.nome());
-        antes.setCpf(dadosAtualizados.cpf());
+        antes.setCpf(limparCpf(dadosAtualizados.cpf()));
         antes.setRg(dadosAtualizados.rg());
         antes.setRegistroConselho(dadosAtualizados.registroConselho());
         antes.setTelefone(dadosAtualizados.telefone());
@@ -353,8 +359,10 @@ return resultado ;
         try {
             Long usuarioId = usuario.getId();
 
-            // 2. Deletar registros relacionados na tabela mensageria primeiro
-            List<Mensageria> mensagens = mensageriaRepository.findByDestinatarioEntidadeId(profissional.getId());
+            // 2. Deletar a mensageria deste profissional primeiro. O ID sozinho colide com
+            //    secretária/admin/paciente e com outras clínicas: filtra tipo e organização.
+            List<Mensageria> mensagens = mensageriaRepository.findByDestinatarioEntidadeIdAndTipoMensagemAndOrganizacao_Id(
+                    profissional.getId(), TipoMensagem.EMAIL_CREDENCIAIS_CLINICO, orgId);
             if (!mensagens.isEmpty()) {
                 log.info("Deletando {} registros de mensageria do profissional ID: {}", mensagens.size(), idProfissional);
                 mensageriaRepository.deleteAll(mensagens);

@@ -5,11 +5,16 @@ import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infra.configuracoesseguranca.TokenService;
+import com.auth0.jwt.JWT;
 import com.auth0.jwt.exceptions.TokenExpiredException;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.TimeZone;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -189,6 +194,31 @@ class TokenServiceTest {
             String resultado = tokenService.getNomeFromToken("token.invalido");
 
             assertThat(resultado).isNull();
+        }
+    }
+
+    // ========== expiração ==========
+
+    @Nested
+    @DisplayName("4.3 - expiração do token independe do fuso do servidor")
+    class Expiracao {
+
+        @Test
+        @DisplayName("Em servidor UTC o token expira em 24h (antes: 27h por causa do offset fixo -03:00)")
+        void deveExpirarEm24HorasEmServidorUtc() {
+            TimeZone original = TimeZone.getDefault();
+            try {
+                TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+                Instant antes = Instant.now();
+
+                String token = tokenService.gerarToken(usuario, 1L, "Nome", "CLINICO", null);
+
+                Instant expiracao = JWT.decode(token).getExpiresAtAsInstant();
+                assertThat(Duration.between(antes, expiracao))
+                        .isBetween(Duration.ofHours(24).minusMinutes(1), Duration.ofHours(24).plusMinutes(1));
+            } finally {
+                TimeZone.setDefault(original);
+            }
         }
     }
 }

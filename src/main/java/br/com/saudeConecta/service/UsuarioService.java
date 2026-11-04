@@ -5,6 +5,7 @@ import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.profissional.StatusProfissional;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.domain.secretaria.StatusSecretaria;
+import br.com.saudeConecta.domain.usuario.MotivoBloqueio;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.domain.usuario.StatusUsuario;
@@ -34,6 +35,7 @@ public class UsuarioService   {
     private final SecretariaRepository secretariaRepository;
     private final CacheEvictionService cacheEvictionService;
     private final TenantHelper tenantHelper;
+    private final LimitePlanoService limitePlanoService;
 
     public UsuarioService(
              PasswordEncoder passwordEncoder,
@@ -43,7 +45,8 @@ public class UsuarioService   {
             SecretariaRepository secretariaRepository,
             UsuarioRepository usuarioRepository,
             CacheEvictionService cacheEvictionService,
-            TenantHelper tenantHelper) {
+            TenantHelper tenantHelper,
+            LimitePlanoService limitePlanoService) {
          this.passwordEncoder = passwordEncoder;
          this.profissionalRepository = profissionalRepository;
         this.adminOrganizacaoRepository = adminOrganizacaoRepository;
@@ -52,6 +55,7 @@ public class UsuarioService   {
         this.usuarioRepository = usuarioRepository;
         this.cacheEvictionService = cacheEvictionService;
         this.tenantHelper = tenantHelper;
+        this.limitePlanoService = limitePlanoService;
     }
 
 
@@ -102,10 +106,17 @@ public class UsuarioService   {
             bloquearTenantEmCascata(usuario, request.codigo(), novoStatus);
         } else {
             // Bloqueio individual
+            Long orgIdPerfil = isSuperAdmin ? usuario.getOrganizacaoId() : organizacaoId;
+
+            // Reativar ocupa uma vaga do plano, igual a um cadastro novo
+            if (novoStatus == StatusUsuario.ATIVO && !usuario.isEnabled()) {
+                validarLimiteParaReativar(usuario.getTipoUsuarioNovo(), orgIdPerfil);
+            }
+
             usuario.setStatus(novoStatus);
+            usuario.setMotivoBloqueio(novoStatus == StatusUsuario.INATIVO ? MotivoBloqueio.INDIVIDUAL : null);
             usuarioRepository.save(usuario);
 
-            Long orgIdPerfil = isSuperAdmin ? usuario.getOrganizacaoId() : organizacaoId;
             atualizarStatusPerfil(request.codigo(), orgIdPerfil, usuario.getTipoUsuarioNovo(), novoStatus);
         }
 
@@ -124,8 +135,11 @@ public class UsuarioService   {
         Long orgId = adminUsuario.getOrganizacaoId();
         log.info("Bloqueio em cascata da organizacao ID: {} para status: {}", orgId, novoStatus);
 
+        boolean bloqueando = novoStatus == StatusUsuario.INATIVO;
+
         // 1. Bloqueia o AdminOrg principal
         adminUsuario.setStatus(novoStatus);
+        adminUsuario.setMotivoBloqueio(bloqueando ? MotivoBloqueio.CASCATA : null);
         usuarioRepository.save(adminUsuario);
 
         // Atualiza perfil do AdminOrg
@@ -139,13 +153,23 @@ public class UsuarioService   {
 
         cacheEvictionService.evictPerfilUsuario(adminUsuario.getId());
 
-        // 2. Bloqueia/desbloqueia TODOS os outros usuarios da organizacao
+        // 2. Bloqueia/desbloqueia os outros usuarios da organizacao. Quem ja estava bloqueado
+        //    individualmente fica de fora nos dois sentidos: o bloqueio nao sobrescreve o motivo
+        //    e o desbloqueio so reativa quem a propria cascata bloqueou. Bloqueios anteriores a
+        //    coluna motivo_bloqueio (null) nao sao reativados: o gestor reativa um a um.
         if (orgId != null) {
             List<Usuario> usuariosOrg = usuarioRepository.findByOrganizacao_Id(orgId);
             int count = 0;
             for (Usuario u : usuariosOrg) {
-                if (!u.getId().equals(adminUsuario.getId()) && !u.isRoot()) {
+                if (u.getId().equals(adminUsuario.getId()) || u.isRoot()) {
+                    continue;
+                }
+                boolean afetado = bloqueando
+                        ? u.isEnabled()
+                        : !u.isEnabled() && u.getMotivoBloqueio() == MotivoBloqueio.CASCATA;
+                if (afetado) {
                     u.setStatus(novoStatus);
+                    u.setMotivoBloqueio(bloqueando ? MotivoBloqueio.CASCATA : null);
                     usuarioRepository.save(u);
                     cacheEvictionService.evictPerfilUsuario(u.getId());
                     count++;
@@ -153,6 +177,26 @@ public class UsuarioService   {
             }
             log.info("Bloqueio em cascata: {} usuarios adicionais da organizacao {} atualizados para {}",
                     count, orgId, novoStatus);
+        }
+    }
+
+    /**
+     * Reativar um usuário consome uma vaga do plano; sem esta checagem o gestor contornava o
+     * limite bloqueando e desbloqueando usuários.
+     *
+     * @param tipoUsuario   tipo do usuário reativado
+     * @param organizacaoId organização dona da vaga
+     * @throws br.com.saudeConecta.infra.exceptions.LimitePlanoException se o limite estiver cheio
+     */
+    private void validarLimiteParaReativar(TipoUsuarioNovo tipoUsuario, Long organizacaoId) {
+        if (tipoUsuario == null || organizacaoId == null) {
+            return;
+        }
+        switch (tipoUsuario) {
+            case GESTOR -> limitePlanoService.validarLimiteAdminOrg(organizacaoId);
+            case CLINICO -> limitePlanoService.validarLimiteProfissional(organizacaoId);
+            case ASSISTENTE -> limitePlanoService.validarLimiteSecretaria(organizacaoId);
+            default -> { }
         }
     }
 

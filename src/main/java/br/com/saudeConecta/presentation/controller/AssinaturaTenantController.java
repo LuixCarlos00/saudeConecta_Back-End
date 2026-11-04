@@ -21,7 +21,6 @@ import java.util.List;
 @RequestMapping("/assinaturas")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class AssinaturaTenantController {
 
     private final AssinaturaTenantService assinaturaTenantService;

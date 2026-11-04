@@ -33,7 +33,6 @@ import java.util.Optional;
 @RequestMapping("/Home")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 @Description("Endpoints para autenticação principal do sistema")
 public class HomeController {
 

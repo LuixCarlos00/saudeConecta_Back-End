@@ -83,6 +83,10 @@ public class SecretariaService {
         Secretaria antes = secretariaRepository.findByIdAndOrganizacao_Id(id, orgId)
             .orElseThrow(() -> new IllegalArgumentException("Secretaria nao encontrada"));
 
+        // E-mail duplicado desvia o "esqueci minha senha" (que busca por e-mail) para a conta errada
+        emailUnicoService.validarEmailLivreParaAtualizacao(dadosAtualizados.getEmail(), antes.getEmail(),
+                antes.getUsuario() != null ? antes.getUsuario().getId() : null);
+
         Secretaria snapshot = SnapshotUtil.copiarSnapshot(antes);
 
 

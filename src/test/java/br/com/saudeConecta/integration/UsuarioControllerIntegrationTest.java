@@ -126,6 +126,22 @@ class UsuarioControllerIntegrationTest {
 
         @Test
         @WithMockUser
+        @DisplayName("4.4 - Reativar acima do limite do plano responde 422 com a mensagem (antes: 500 sem corpo)")
+        void deveRetornar422QuandoLimiteDoPlanoAtingido() throws Exception {
+            doThrow(new br.com.saudeConecta.infra.exceptions.LimitePlanoException("PROFISSIONAL", 3, 3L))
+                    .when(usuarioService).bloquearUsuariobyOrg(any());
+
+            BloquearUsuarioRequest request = new BloquearUsuarioRequest(20L, 10L, 1);
+
+            mockMvc.perform(put("/usuario/bloquearUsuariobyOrg")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isUnprocessableEntity());
+        }
+
+        @Test
+        @WithMockUser
         @DisplayName("Deve retornar 404 quando usuário não encontrado")
         void deveRetornar404QuandoNaoEncontrado() throws Exception {
             doThrow(new IllegalArgumentException("não encontrado"))

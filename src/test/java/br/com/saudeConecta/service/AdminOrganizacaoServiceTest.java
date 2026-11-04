@@ -159,7 +159,7 @@ class AdminOrganizacaoServiceTest {
         @DisplayName("Deve cadastrar admin com sucesso")
         void deveCadastrarAdminComSucesso() {
             doNothing().when(limitePlanoService).validarLimiteAdminOrg(ORG_ID);
-            when(usuarioRepository.existsByLogin("123.456.789-00")).thenReturn(false);
+            when(usuarioRepository.existsByLogin("12345678900")).thenReturn(false);
             when(emailUnicoService.emailJaExiste("novo@teste.com")).thenReturn(false);
             when(organizacaoRepository.findById(ORG_ID)).thenReturn(Optional.of(organizacao));
             when(passwordEncoder.encode(any())).thenReturn("encodedPass");
@@ -181,7 +181,7 @@ class AdminOrganizacaoServiceTest {
         @DisplayName("Deve lançar exceção quando CPF já cadastrado como login")
         void deveLancarExcecaoQuandoCpfJaCadastrado() {
             doNothing().when(limitePlanoService).validarLimiteAdminOrg(ORG_ID);
-            when(usuarioRepository.existsByLogin("123.456.789-00")).thenReturn(true);
+            when(usuarioRepository.existsByLogin("12345678900")).thenReturn(true);
 
             assertThatThrownBy(() -> adminOrganizacaoService.cadastrarAdminByOrg(request, ORG_ID))
                     .isInstanceOf(IllegalStateException.class)
@@ -192,7 +192,7 @@ class AdminOrganizacaoServiceTest {
         @DisplayName("Deve lançar exceção quando email já existe")
         void deveLancarExcecaoQuandoEmailJaExiste() {
             doNothing().when(limitePlanoService).validarLimiteAdminOrg(ORG_ID);
-            when(usuarioRepository.existsByLogin("123.456.789-00")).thenReturn(false);
+            when(usuarioRepository.existsByLogin("12345678900")).thenReturn(false);
             when(emailUnicoService.emailJaExiste("novo@teste.com")).thenReturn(true);
             when(emailUnicoService.ondeEmailFoiEncontrado("novo@teste.com")).thenReturn("GESTOR");
 
@@ -220,6 +220,22 @@ class AdminOrganizacaoServiceTest {
     @Nested
     @DisplayName("atualizarAdmByOrg")
     class AtualizarAdmByOrg {
+
+        @Test
+        @DisplayName("4.5d - Trocar para e-mail de outro usuário é rejeitado")
+        void deveRejeitarEmailDeOutroUsuario() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(adminOrganizacaoRepository.findByIdAndOrganizacao_Id(ADMIN_ID, ORG_ID))
+                    .thenReturn(Optional.of(adminOrganizacao));
+            doThrow(new IllegalStateException("Email ja cadastrado no sistema para outro usuario"))
+                    .when(emailUnicoService)
+                    .validarEmailLivreParaAtualizacao("prof@outra.com", "admin@teste.com", USUARIO_ID);
+
+            assertThatThrownBy(() -> adminOrganizacaoService.atualizarAdmByOrg(ADMIN_ID, "Nome", "prof@outra.com"))
+                    .isInstanceOf(IllegalStateException.class);
+            assertThat(adminOrganizacao.getEmail()).isEqualTo("admin@teste.com");
+            verify(adminOrganizacaoRepository, never()).save(any());
+        }
 
         @Test
         @DisplayName("Deve atualizar nome e email do admin com sucesso")
@@ -646,6 +662,22 @@ class AdminOrganizacaoServiceTest {
             assertThatThrownBy(() -> adminOrganizacaoService.atualizarMeusDadosAdminOrg(ADMIN_ID, request))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Administrador não encontrado");
+        }
+
+        @Test
+        @DisplayName("4.5d - Meus Dados: trocar para e-mail de outro usuário é rejeitado")
+        void deveRejeitarEmailDeOutroUsuarioEmMeusDados() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentUserId()).thenReturn(USUARIO_ID);
+            when(adminOrganizacaoRepository.findByIdWithOrgAndEndereco(ADMIN_ID))
+                    .thenReturn(Optional.of(adminOrganizacao));
+            doThrow(new IllegalStateException("Email ja cadastrado no sistema para outro usuario"))
+                    .when(emailUnicoService)
+                    .validarEmailLivreParaAtualizacao("atualizado@email.com", "admin@teste.com", USUARIO_ID);
+
+            assertThatThrownBy(() -> adminOrganizacaoService.atualizarMeusDadosAdminOrg(ADMIN_ID, request))
+                    .isInstanceOf(IllegalStateException.class);
+            verify(adminOrganizacaoRepository, never()).save(any());
         }
 
         @Test

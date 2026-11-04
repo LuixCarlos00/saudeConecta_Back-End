@@ -23,23 +23,13 @@ public class TenantFilter extends OncePerRequestFilter {
     
     private final TokenService tokenService;
     
+    // Espelha as rotas permitAll de SecurityConfigurations; só entram paths com handler real
     private static final List<String> PUBLIC_PATHS = Arrays.asList(
         "/Home/login",
-        "/Home/cadastralogin",
         "/Home/esqueciMinhaSenha",
-        "/Home/trocaDeSenha",
-        "/Home/buscarUsuarioExistente",
-        "/Home/recuperaLogin",
         "/cep",
-        "/paciente/buscarPorEmail",
-        "/paciente/InserirCodigo",
-        "/medico/buscarPorEmail",
-        "/public",
         "/publico",
-        "/planos",
-        "/swagger-ui",
-        "/v3/api-docs",
-        "/actuator"
+        "/planos"
     );
     
     @Override

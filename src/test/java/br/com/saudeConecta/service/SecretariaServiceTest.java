@@ -136,6 +136,24 @@ class SecretariaServiceTest {
         }
 
         @Test
+        @DisplayName("4.5d - Trocar para e-mail de outro usuário é rejeitado")
+        void deveRejeitarEmailDeOutroUsuario() {
+            Secretaria dadosAtualizados = Secretaria.builder().email("gestor@outra.com").build();
+
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(secretariaRepository.findByIdAndOrganizacao_Id(SEC_ID, ORG_ID))
+                    .thenReturn(Optional.of(secretaria));
+            doThrow(new IllegalStateException("Email ja cadastrado no sistema para outro usuario"))
+                    .when(emailUnicoService)
+                    .validarEmailLivreParaAtualizacao("gestor@outra.com", "sec@teste.com", USUARIO_ID);
+
+            assertThatThrownBy(() -> secretariaService.atualizarSecretariaIdByOrg(SEC_ID, dadosAtualizados))
+                    .isInstanceOf(IllegalStateException.class);
+            assertThat(secretaria.getEmail()).isEqualTo("sec@teste.com");
+            verify(secretariaRepository, never()).save(any());
+        }
+
+        @Test
         @DisplayName("Não deve alterar campos quando forem nulos")
         void naoDeveAlterarCamposNulos() {
             Secretaria dadosVazios = Secretaria.builder().build();

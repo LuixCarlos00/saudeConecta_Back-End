@@ -12,8 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 
 @Service
 @Slf4j
@@ -70,9 +69,8 @@ public class TokenService {
     }
 
     private Instant calcularDataExpiracao() {
-        return LocalDateTime.now()
-                .plusHours(TOKEN_EXPIRATION_HOURS)
-                .toInstant(ZoneOffset.of("-03:00"));
+        // Instant é absoluto: não depende do fuso do servidor (antes, em UTC, o token valia 27h)
+        return Instant.now().plus(TOKEN_EXPIRATION_HOURS, ChronoUnit.HOURS);
     }
 
     public String getSubject(String tokenJwt) {

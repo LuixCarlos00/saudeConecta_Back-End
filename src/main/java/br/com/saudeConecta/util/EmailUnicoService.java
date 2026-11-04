@@ -3,6 +3,7 @@ package br.com.saudeConecta.util;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
+import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.SecretariaRepository;
@@ -54,26 +55,50 @@ public class EmailUnicoService {
         
         // Verificar em AdminOrganizacao
         Optional<AdminOrganizacao> adminOpt = adminOrganizacaoRepository.findByEmail(email);
-        if (adminOpt.isPresent() && !adminOpt.get().getUsuario().getId().equals(usuarioId)) {
+        if (adminOpt.isPresent() && !pertenceAoUsuario(adminOpt.get().getUsuario(), usuarioId)) {
             log.warn("Email {} já está cadastrado para outro administrador", email);
             return true;
         }
         
         // Verificar em Profissional
         Optional<Profissional> profissionalOpt = profissionalRepository.findByEmail(email);
-        if (profissionalOpt.isPresent() && !profissionalOpt.get().getUsuario().getId().equals(usuarioId)) {
+        if (profissionalOpt.isPresent() && !pertenceAoUsuario(profissionalOpt.get().getUsuario(), usuarioId)) {
             log.warn("Email {} já está cadastrado para outro profissional", email);
             return true;
         }
         
         // Verificar em Secretaria
         Optional<Secretaria> secretariaOpt = secretariaRepository.findByEmail(email);
-        if (secretariaOpt.isPresent() && !secretariaOpt.get().getUsuario().getId().equals(usuarioId)) {
+        if (secretariaOpt.isPresent() && !pertenceAoUsuario(secretariaOpt.get().getUsuario(), usuarioId)) {
             log.warn("Email {} já está cadastrado para outra secretária", email);
             return true;
         }
         
         return false;
+    }
+
+    /**
+     * Valida a troca de e-mail numa atualização de cadastro (admin, profissional ou secretária).
+     * O "esqueci minha senha" procura o e-mail em Profissional, Secretaria e Admin, nessa ordem:
+     * e-mail repetido desvia o reset para a conta errada e pode estourar o findByEmail (500).
+     * Só consulta quando o e-mail muda, para não travar edições de registros legados.
+     *
+     * @param novoEmail  e-mail recebido na atualização (nulo/vazio = sem troca)
+     * @param emailAtual e-mail gravado hoje no registro
+     * @param usuarioId  ID do usuário dono do registro (ignorado na busca)
+     * @throws IllegalStateException se o e-mail já pertencer a outro usuário
+     */
+    public void validarEmailLivreParaAtualizacao(String novoEmail, String emailAtual, Long usuarioId) {
+        if (novoEmail == null || novoEmail.isBlank() || novoEmail.equalsIgnoreCase(emailAtual)) {
+            return;
+        }
+        if (emailJaExisteParaOutroUsuario(novoEmail, usuarioId)) {
+            throw new IllegalStateException("Email ja cadastrado no sistema para outro usuario");
+        }
+    }
+
+    private static boolean pertenceAoUsuario(Usuario usuario, Long usuarioId) {
+        return usuario != null && usuario.getId() != null && usuario.getId().equals(usuarioId);
     }
 
     /**

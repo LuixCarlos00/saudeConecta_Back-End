@@ -18,7 +18,6 @@ import java.util.List;
 @RequestMapping("/planos")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class PlanoAssinaturaController {
 
     private final PlanoAssinaturaService planoAssinaturaService;

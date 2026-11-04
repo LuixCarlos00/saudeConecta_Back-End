@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/ia")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(originPatterns = "*", allowCredentials = "true")
 public class IAController {
 
     private final IALocalService iaLocalService;

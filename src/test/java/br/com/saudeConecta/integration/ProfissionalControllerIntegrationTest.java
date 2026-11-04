@@ -229,4 +229,25 @@ class ProfissionalControllerIntegrationTest {
                     .andExpect(status().isOk());
         }
     }
+
+    // ========== 4.5d - e-mail duplicado na atualização ==========
+
+    @Nested
+    @DisplayName("PUT /profissionais/atualizarClinicoIdByOrg/{id} - e-mail duplicado")
+    class AtualizarClinicoEmailDuplicado {
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("4.5d - e-mail de outro usuário responde 409 com a mensagem")
+        void emailDuplicadoResponde409() throws Exception {
+            when(profissionalService.atualizarClinicoIdByOrg(eq(10L), any()))
+                    .thenThrow(new IllegalStateException("Email ja cadastrado no sistema para outro usuario"));
+
+            mockMvc.perform(put("/profissionais/atualizarClinicoIdByOrg/10")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"nome\":\"Dr X\",\"cpf\":\"12345678900\",\"registroConselho\":\"CRM-1\",\"email\":\"outro@email.com\",\"sexo\":\"MASCULINO\",\"dataNascimento\":\"1985-03-15\"}"))
+                    .andExpect(status().isConflict());
+        }
+    }
 }

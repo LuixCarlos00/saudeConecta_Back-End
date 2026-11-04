@@ -11,7 +11,8 @@ import lombok.*;
 import java.io.Serializable;
 
 @Entity
-@Table(name = "secretaria")
+@Table(name = "secretaria",
+       uniqueConstraints = @UniqueConstraint(name = "uk_secretaria_org_cpf", columnNames = {"organizacao_id", "cpf"}))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -40,7 +41,8 @@ public class Secretaria implements Serializable, TenantAware {
     @Column(nullable = false, length = 150)
     private String nome;
 
-    @Column(nullable = false, unique = true, length = 14)
+    // Único por clínica (changeset 063)
+    @Column(nullable = false, length = 14)
     private String cpf;
 
     @Column(nullable = false, length = 150)

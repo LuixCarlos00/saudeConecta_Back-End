@@ -16,7 +16,6 @@ import java.util.List;
 @RequestMapping("/historico-dados-pessoais")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 @Description("Endpoints para consulta de histórico de alterações de dados pessoais. Exclusivo para SUPER_ADMIN.")
 public class HistoricoDadosPessoaisController {
 

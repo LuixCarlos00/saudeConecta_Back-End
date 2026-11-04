@@ -156,7 +156,7 @@ public class PacienteService  {
                 .paciSexo(dados.sexo() != null ? dados.sexo() : antes .getPaciSexo())
                 .paciDataNacimento(dados.dataNascimento () != null ?
                         Date.valueOf(dados.dataNascimento ()) : antes .getPaciDataNacimento())
-                .paciCpf(dados.cpf() != null ? dados.cpf() : antes .getPaciCpf())
+                .paciCpf(dados.cpf() != null ? limparCpf(dados.cpf()) : antes .getPaciCpf())
                 .paciRg(dados.rg() != null ? dados.rg() : antes .getPaciRg())
                 .paciEmail(dados.email() != null ? dados.email() : antes .getPaciEmail())
                 .paciTelefone(dados.telefone() != null ? dados.telefone() : antes .getPaciTelefone())

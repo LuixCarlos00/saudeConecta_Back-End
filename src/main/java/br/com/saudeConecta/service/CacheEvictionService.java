@@ -27,6 +27,7 @@ public class CacheEvictionService {
     private static final String CHAVE_SUPER_ADMIN = "super-admin";
     private static final String CACHE_PRONTUARIO_RECENTE = "prontuario-recente";
     private static final String CACHE_QUESTIONARIO_SAUDE = "questionario-saude";
+    private static final String CACHE_ACESSO_ASSINATURA = AcessoAssinaturaService.CACHE_ACESSO_ASSINATURA;
 
     private final CacheManager cacheManager;
 
@@ -117,6 +118,19 @@ public class CacheEvictionService {
      */
     public void evictQuestionarioSaude(Long organizacaoId, Long consultaId) {
         evictAposCommit(CACHE_QUESTIONARIO_SAUDE, chaveConsultaPorTenant(organizacaoId, consultaId));
+    }
+
+    /**
+     * Invalida o acesso em cache da assinatura de uma organização (consultado pelo FiltroAcesso).
+     * Chamado quando a assinatura muda, para a suspensão/reativação valer na próxima requisição.
+     *
+     * @param organizacaoId ID da organização (null é ignorado)
+     */
+    public void evictAcessoAssinatura(Long organizacaoId) {
+        if (organizacaoId == null) {
+            return;
+        }
+        evictAposCommit(CACHE_ACESSO_ASSINATURA, organizacaoId);
     }
 
     /**

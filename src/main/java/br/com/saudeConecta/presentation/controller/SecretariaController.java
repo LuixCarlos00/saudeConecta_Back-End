@@ -47,13 +47,16 @@ public class SecretariaController {
 
     @PutMapping("/atualizarSecretariaIdByOrg/{id}")
     @Description("Atualiza secretária por ID")
-    public ResponseEntity<SecretariaResponse> atualizarSecretariaIdByOrg(@PathVariable Long id, @RequestBody Secretaria secretaria) {
+    public ResponseEntity<?> atualizarSecretariaIdByOrg(@PathVariable Long id, @RequestBody Secretaria secretaria) {
         try {
             Secretaria atualizada = secretariaService.atualizarSecretariaIdByOrg(id, secretaria);
             return ResponseEntity.ok(SecretariaResponse.fromEntity(atualizada));
         } catch (IllegalArgumentException e) {
             log.warn("Erro ao atualizar secretaria: {}", e.getMessage());
             return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            log.warn("Conflito ao atualizar secretaria: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         }
     }
 

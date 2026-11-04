@@ -2,6 +2,7 @@ package br.com.saudeConecta.service;
 
 import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.mensageria.Mensageria;
+import br.com.saudeConecta.domain.mensageria.TipoMensagem;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.profissional.Especialidade;
 import br.com.saudeConecta.domain.profissional.Profissional;
@@ -129,7 +130,7 @@ class ProfissionalServiceTest {
 
             doNothing().when(limitePlanoService).validarLimiteProfissional(ORG_ID);
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(usuarioRepository.existsByLogin("123.456.789-00")).thenReturn(false);
+            when(usuarioRepository.existsByLogin("12345678900")).thenReturn(false);
             when(emailUnicoService.emailJaExiste("novo@clinica.com")).thenReturn(false);
             when(organizacaoRepository.findById(ORG_ID)).thenReturn(Optional.of(organizacao));
             when(tipoProfissionalRepository.findByCodigo("MEDICO")).thenReturn(Optional.of(tipoProfissional));
@@ -156,7 +157,7 @@ class ProfissionalServiceTest {
 
             doNothing().when(limitePlanoService).validarLimiteProfissional(ORG_ID);
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(usuarioRepository.existsByLogin(request.cpf())).thenReturn(false);
+            when(usuarioRepository.existsByLogin("12345678900")).thenReturn(false);
             when(emailUnicoService.emailJaExiste(request.email())).thenReturn(false);
             when(organizacaoRepository.findById(ORG_ID)).thenReturn(Optional.of(organizacao));
             when(tipoProfissionalRepository.findByCodigo("MEDICO")).thenReturn(Optional.of(tipoProfissional));
@@ -178,7 +179,7 @@ class ProfissionalServiceTest {
         void deveCriarNovaEspecialidadeQuandoNaoExistir() {
             doNothing().when(limitePlanoService).validarLimiteProfissional(ORG_ID);
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(usuarioRepository.existsByLogin(request.cpf())).thenReturn(false);
+            when(usuarioRepository.existsByLogin("12345678900")).thenReturn(false);
             when(emailUnicoService.emailJaExiste(request.email())).thenReturn(false);
             when(organizacaoRepository.findById(ORG_ID)).thenReturn(Optional.of(organizacao));
             when(tipoProfissionalRepository.findByCodigo("MEDICO")).thenReturn(Optional.of(tipoProfissional));
@@ -201,7 +202,7 @@ class ProfissionalServiceTest {
         void deveLancarExcecaoQuandoCpfJaCadastrado() {
             doNothing().when(limitePlanoService).validarLimiteProfissional(ORG_ID);
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(usuarioRepository.existsByLogin(request.cpf())).thenReturn(true);
+            when(usuarioRepository.existsByLogin("12345678900")).thenReturn(true);
 
             assertThatThrownBy(() -> profissionalService.cadastraClinicoByOrg(request))
                     .isInstanceOf(IllegalStateException.class)
@@ -213,7 +214,7 @@ class ProfissionalServiceTest {
         void deveLancarExcecaoQuandoEmailJaExiste() {
             doNothing().when(limitePlanoService).validarLimiteProfissional(ORG_ID);
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(usuarioRepository.existsByLogin(request.cpf())).thenReturn(false);
+            when(usuarioRepository.existsByLogin("12345678900")).thenReturn(false);
             when(emailUnicoService.emailJaExiste(request.email())).thenReturn(true);
             when(emailUnicoService.ondeEmailFoiEncontrado(request.email())).thenReturn("PROFISSIONAL");
 
@@ -317,6 +318,42 @@ class ProfissionalServiceTest {
             assertThat(profissional.getNome()).isEqualTo("Dr. Atualizado");
             assertThat(profissional.getEmail()).isEqualTo("dr.atualizado@teste.com");
             verify(profissionalRepository).save(profissional);
+        }
+
+        @Test
+        @DisplayName("4.5c - Atualização grava o CPF só com dígitos")
+        void atualizacaoNormalizaCpf() {
+            AtualizarClinicoRequest comMascara = new AtualizarClinicoRequest(
+                    "Dr. Atualizado", "123.456.789-00", "MG-111", "CRM-11111",
+                    "11888888888", "dr.atualizado@teste.com", "MASCULINO",
+                    LocalDate.of(1985, 3, 15), "Medicina", "USP",
+                    45, BigDecimal.valueOf(250), null, null, null
+            );
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentUserId()).thenReturn(USUARIO_ID);
+            when(profissionalRepository.buscarClinicoIdByOrg(PROF_ID, ORG_ID))
+                    .thenReturn(Optional.of(profissional));
+            when(profissionalRepository.save(any())).thenReturn(profissional);
+
+            profissionalService.atualizarClinicoIdByOrg(PROF_ID, comMascara);
+
+            assertThat(profissional.getCpf()).isEqualTo("12345678900");
+        }
+
+        @Test
+        @DisplayName("4.5d - Trocar para e-mail de outro usuário é rejeitado (protege o esqueci-senha)")
+        void atualizacaoRejeitaEmailDeOutroUsuario() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(profissionalRepository.buscarClinicoIdByOrg(PROF_ID, ORG_ID))
+                    .thenReturn(Optional.of(profissional));
+            doThrow(new IllegalStateException("Email ja cadastrado no sistema para outro usuario"))
+                    .when(emailUnicoService)
+                    .validarEmailLivreParaAtualizacao("dr.atualizado@teste.com", "dr@teste.com", USUARIO_ID);
+
+            assertThatThrownBy(() -> profissionalService.atualizarClinicoIdByOrg(PROF_ID, request))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("Email");
+            verify(profissionalRepository, never()).save(any());
         }
 
         @Test
@@ -438,7 +475,7 @@ class ProfissionalServiceTest {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(profissionalRepository.buscarClinicoIdByOrg(PROF_ID, ORG_ID))
                     .thenReturn(Optional.of(profissional));
-            when(mensageriaRepository.findByDestinatarioEntidadeId(PROF_ID))
+            when(mensageriaRepository.findByDestinatarioEntidadeIdAndTipoMensagemAndOrganizacao_Id(PROF_ID, TipoMensagem.EMAIL_CREDENCIAIS_CLINICO, ORG_ID))
                     .thenReturn(Collections.emptyList());
 
             profissionalService.deletarClinicoIdByOrg(PROF_ID);
@@ -455,7 +492,7 @@ class ProfissionalServiceTest {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(profissionalRepository.buscarClinicoIdByOrg(PROF_ID, ORG_ID))
                     .thenReturn(Optional.of(profissional));
-            when(mensageriaRepository.findByDestinatarioEntidadeId(PROF_ID)).thenReturn(mensagens);
+            when(mensageriaRepository.findByDestinatarioEntidadeIdAndTipoMensagemAndOrganizacao_Id(PROF_ID, TipoMensagem.EMAIL_CREDENCIAIS_CLINICO, ORG_ID)).thenReturn(mensagens);
 
             profissionalService.deletarClinicoIdByOrg(PROF_ID);
 
@@ -498,7 +535,7 @@ class ProfissionalServiceTest {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(profissionalRepository.buscarClinicoIdByOrg(PROF_ID, ORG_ID))
                     .thenReturn(Optional.of(profissional));
-            when(mensageriaRepository.findByDestinatarioEntidadeId(PROF_ID))
+            when(mensageriaRepository.findByDestinatarioEntidadeIdAndTipoMensagemAndOrganizacao_Id(PROF_ID, TipoMensagem.EMAIL_CREDENCIAIS_CLINICO, ORG_ID))
                     .thenReturn(Collections.emptyList());
             doThrow(new RuntimeException("FK constraint"))
                     .when(profissionalRepository).delete(profissional);

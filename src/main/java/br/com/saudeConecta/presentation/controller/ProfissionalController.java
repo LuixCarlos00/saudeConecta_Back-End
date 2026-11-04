@@ -30,8 +30,8 @@ public class ProfissionalController {
 
     @PutMapping("/atualizarClinicoIdByOrg/{id}")
     @Description("Atualiza médico/clínico por ID dentro da organização")
-    public ResponseEntity<ProfissionalResponse> atualizarClinicoIdByOrg(@PathVariable Long id,
-                                                                     @Valid @RequestBody AtualizarClinicoRequest request) {
+    public ResponseEntity<?> atualizarClinicoIdByOrg(@PathVariable Long id,
+                                                     @Valid @RequestBody AtualizarClinicoRequest request) {
         try {
             log.info("Atualizando clinico: {}", request.nome());
             Profissional atualizado = profissionalService.atualizarClinicoIdByOrg(id, request);
@@ -39,6 +39,9 @@ public class ProfissionalController {
         } catch (IllegalArgumentException e) {
             log.warn("Erro ao atualizar profissional: {}", e.getMessage());
             return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            log.warn("Conflito ao atualizar profissional: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         }
     }
 

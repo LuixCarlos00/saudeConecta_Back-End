@@ -21,7 +21,6 @@ import java.util.List;
 @RequestMapping("/prontuario")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(originPatterns = "*", allowCredentials = "true")
 public class ProntuarioController {
 
     private final ProntuarioService prontuarioService;

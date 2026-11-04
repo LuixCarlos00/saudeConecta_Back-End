@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/administrador")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 @Description("Endpoints para gerenciamento de administradores de organização")
 public class AdminOrganizacaoController {
 
@@ -75,6 +74,9 @@ public class AdminOrganizacaoController {
         } catch (IllegalArgumentException e) {
             log.warn("Erro ao atualizar administrador: {}", e.getMessage());
             return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            log.warn("Conflito ao atualizar administrador: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         }
     }
 
@@ -138,6 +140,9 @@ public class AdminOrganizacaoController {
         } catch (IllegalArgumentException e) {
             log.warn("Erro ao atualizar dados pessoais do admin: {}", e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (IllegalStateException e) {
+            log.warn("Conflito ao atualizar dados pessoais do admin: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         }
     }
 

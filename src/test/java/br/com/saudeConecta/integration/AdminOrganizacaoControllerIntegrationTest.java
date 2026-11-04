@@ -316,4 +316,40 @@ class AdminOrganizacaoControllerIntegrationTest {
             verifyNoInteractions(adminOrganizacaoService);
         }
     }
+
+    // ========== 4.5d - e-mail duplicado na atualização ==========
+
+    @Nested
+    @DisplayName("4.5d - atualização com e-mail de outro usuário responde 409")
+    class AtualizacaoEmailDuplicado {
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("PUT atualizarAdmByOrg: 409 com a mensagem (antes gravava o e-mail duplicado)")
+        void atualizarAdmByOrgResponde409() throws Exception {
+            when(adminOrganizacaoService.atualizarAdmByOrg(eq(1L), any(), any()))
+                    .thenThrow(new IllegalStateException("Email ja cadastrado no sistema para outro usuario"));
+
+            mockMvc.perform(put("/administrador/atualizarAdmByOrg/1")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"nome\":\"X\",\"email\":\"outro@email.com\"}"))
+                    .andExpect(status().isConflict())
+                    .andExpect(content().string(org.hamcrest.Matchers.containsString("Email ja cadastrado")));
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("PUT atualizarMeusDados: 409 com a mensagem")
+        void atualizarMeusDadosResponde409() throws Exception {
+            doThrow(new IllegalStateException("Email ja cadastrado no sistema para outro usuario"))
+                    .when(adminOrganizacaoService).atualizarMeusDadosAdminOrg(eq(1L), any());
+
+            mockMvc.perform(put("/administrador/atualizarMeusDados/1")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"nome\":\"X\",\"email\":\"outro@email.com\"}"))
+                    .andExpect(status().isConflict());
+        }
+    }
 }
