@@ -21,11 +21,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -41,12 +43,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * Ponta a ponta da cobrança SaaS com banco real (H2) e transações reais.
  * Só o transporte HTTP do Mercado Pago (MercadoPagoClient) e o e-mail são simulados.
  */
 @SpringBootTest(properties = "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect")
+@AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DisplayName("E2E - Cobrança Mercado Pago: webhooks, reconciliação e régua")
 class CobrancaMercadoPagoFluxoE2ETest {
@@ -66,6 +73,7 @@ class CobrancaMercadoPagoFluxoE2ETest {
     @Autowired private PlanoAssinaturaRepository planoAssinaturaRepository;
     @Autowired private AssinaturaTenantService assinaturaTenantService;
     @Autowired private PlatformTransactionManager transactionManager;
+    @Autowired private MockMvc mockMvc;
 
     private Organizacao organizacao;
     private PlanoAssinatura plano;
@@ -299,6 +307,9 @@ class CobrancaMercadoPagoFluxoE2ETest {
 
         assertThat(eventoDaFatura().getExpiradoEm()).isNotNull();
         assertThat(eventoDaFatura().getProcessado()).isFalse();
+        // N7 - expirado fica marcado para tratamento manual
+        assertThat(eventoDaFatura().getRequerAtencao()).isTrue();
+        assertThat(eventoDaFatura().getMotivoAtencao()).startsWith(MpWebhookEvento.MOTIVO_EVENTO_EXPIRADO);
         verify(mercadoPagoClient, never()).buscarAuthorizedPayment(anyString());
     }
 
@@ -480,5 +491,88 @@ class CobrancaMercadoPagoFluxoE2ETest {
         AssinaturaTenant suspensa = recarregar(vencidoHa16Dias);
         assertThat(suspensa.getStatus()).isEqualTo(StatusAssinatura.SUSPENSA);
         assertThat(suspensa.getDataSuspensao()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("N7 - Pagamento em CANCELADA aparece em GET /assinaturas/pendencias-manuais (só SUPER_ADMIN)")
+    void pagamentoEmCanceladaApareceNasPendenciasManuais() throws Exception {
+        salvarAssinatura(StatusAssinatura.CANCELADA, PREAPPROVAL_ID, "cancelled", LocalDate.now().minusDays(60));
+        when(mercadoPagoClient.buscarAuthorizedPayment(FATURA_ID)).thenReturn(fatura("approved"));
+
+        webhookService.processar(MercadoPagoWebhookService.TOPICO_AUTHORIZED_PAYMENT, FATURA_ID, "{}");
+
+        MpWebhookEvento evento = eventoDaFatura();
+        assertThat(evento.getProcessado()).isTrue();
+        assertThat(evento.getRequerAtencao()).isTrue();
+        assertThat(evento.getMotivoAtencao()).startsWith(MpWebhookEvento.MOTIVO_PAGAMENTO_EM_CANCELADA);
+
+        mockMvc.perform(get("/assinaturas/pendencias-manuais").with(user("root").roles("SUPER_ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].dataId").value(FATURA_ID))
+                .andExpect(jsonPath("$[0].motivo").value(org.hamcrest.Matchers.startsWith(
+                        MpWebhookEvento.MOTIVO_PAGAMENTO_EM_CANCELADA)))
+                .andExpect(jsonPath("$[0].payload").doesNotExist());
+        mockMvc.perform(get("/assinaturas/pendencias-manuais").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("N4 - Reconciliação reativa no MP o preapproval pausado de assinatura ATIVA em dia")
+    void reconciliacaoReativaPausadoDeAtivaEmDia() {
+        AssinaturaTenant assinatura = salvarAssinatura(StatusAssinatura.ATIVA, PREAPPROVAL_ID, "paused",
+                LocalDate.now().plusDays(25));
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(new PreapprovalResponse(
+                PREAPPROVAL_ID, "paused", null, null, null, null, null));
+        when(mercadoPagoClient.reativarPreapproval(PREAPPROVAL_ID)).thenReturn(new PreapprovalResponse(
+                PREAPPROVAL_ID, "authorized", null, null, null, null, null));
+
+        cobrancaScheduler.reconciliarComMercadoPago();
+
+        verify(mercadoPagoClient).reativarPreapproval(PREAPPROVAL_ID);
+        AssinaturaTenant depois = recarregar(assinatura);
+        assertThat(depois.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
+        assertThat(depois.getMpStatus()).isEqualTo("authorized");
+    }
+
+    @Test
+    @DisplayName("N8 - Remover cortesia com preapproval pausado: cancela o antigo, e se o MP falhar a rotina diária tenta de novo sem duplicar")
+    void removerCortesiaComPreapprovalPausadoNaoDeixaOrfaoETemRetry() {
+        AssinaturaTenant cortesia = salvarAssinatura(StatusAssinatura.ATIVA, "pa-e2e-antigo", "paused",
+                LocalDate.now().minusDays(100));
+        cortesia.setCortesia(true);
+        cortesia.setMpPayerEmail("pagador@clinica-e2e.com");
+        cortesia = assinaturaTenantRepository.save(cortesia);
+        Long id = cortesia.getId();
+        // 1ª consulta: ainda pausado (será cancelado); depois disso o MP já o devolve cancelado
+        when(mercadoPagoClient.buscarPreapproval("pa-e2e-antigo"))
+                .thenReturn(new PreapprovalResponse("pa-e2e-antigo", "paused", null, null, null, null, null))
+                .thenReturn(new PreapprovalResponse("pa-e2e-antigo", "cancelled", null, null, null, null, null));
+        when(mercadoPagoClient.cancelarPreapproval("pa-e2e-antigo"))
+                .thenReturn(new PreapprovalResponse("pa-e2e-antigo", "cancelled", null, null, null, null, null));
+        when(mercadoPagoClient.criarPreapprovalPendente(anyString(), anyString(), anyString(), any()))
+                .thenThrow(new BusinessException("MP fora do ar", HttpStatus.BAD_GATEWAY))
+                .thenReturn(new PreapprovalResponse("pa-e2e-novo", "pending", "https://mp/checkout/novo",
+                        "pagador@clinica-e2e.com", "ASSINATURA-" + id, null, null));
+
+        assinaturaTenantService.definirCortesia(id, false);
+
+        AssinaturaTenant aposFalha = recarregar(cortesia);
+        assertThat(aposFalha.getStatus()).isEqualTo(StatusAssinatura.TRIAL);
+        assertThat(aposFalha.getMpPreapprovalId()).isEqualTo("pa-e2e-antigo");
+        verify(mercadoPagoClient, times(1)).cancelarPreapproval("pa-e2e-antigo");
+
+        // Rotina diária pega o TRIAL com preapproval não autorizado e gera o link
+        cobrancaScheduler.gerarLinksDeAtivacaoDeTrial();
+
+        AssinaturaTenant comLink = recarregar(cortesia);
+        assertThat(comLink.getMpPreapprovalId()).isEqualTo("pa-e2e-novo");
+        assertThat(comLink.getMpStatus()).isEqualTo("pending");
+        assertThat(comLink.getMpInitPoint()).isEqualTo("https://mp/checkout/novo");
+
+        // Com link pendente válido, nova execução não gera outro preapproval
+        cobrancaScheduler.gerarLinksDeAtivacaoDeTrial();
+
+        verify(mercadoPagoClient, times(1)).cancelarPreapproval("pa-e2e-antigo");
+        verify(mercadoPagoClient, times(2)).criarPreapprovalPendente(anyString(), anyString(), anyString(), any());
     }
 }

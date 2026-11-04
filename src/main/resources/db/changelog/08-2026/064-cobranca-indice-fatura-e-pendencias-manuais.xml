@@ -1,0 +1,120 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ================================================================ -->
+    <!-- COBRANCA (FASE 2 - RE-REVISAO DO 7c92b6c: N2 e N7)               -->
+    <!-- Retrocompativel com a versao anterior da aplicacao:              -->
+    <!--  - o UNIQUE em mp_authorized_payment_id so e criado se nao       -->
+    <!--    houver duplicado; a versao anterior ja buscava a cobranca     -->
+    <!--    pela fatura antes de inserir, entao nao gera duplicados;      -->
+    <!--  - requer_atencao tem DEFAULT 0 e motivo_atencao e nullable: a   -->
+    <!--    versao anterior nao le nem escreve estas colunas.             -->
+    <!-- ================================================================ -->
+
+    <!-- N2 - Uma fatura do MP gera no maximo uma cobranca local, e a reconciliacao deixa de fazer -->
+    <!-- full scan por fatura. Com duplicados, o changeset e marcado como rodado sem efeito e o    -->
+    <!-- 064-002 cria um indice nao unico no lugar: conferir os duplicados e criar o UNIQUE depois. -->
+    <changeSet id="064-001-cobranca-tenant-uk-mp-authorized-payment" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN"
+                       onFailMessage="UNIQUE uk_cobranca_mp_authorized_payment nao criado: ja existe ou ha mp_authorized_payment_id duplicado em cobranca_tenant (o 064-002 cria indice nao unico)">
+            <not><indexExists tableName="cobranca_tenant" indexName="uk_cobranca_mp_authorized_payment"/></not>
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM (
+                    SELECT mp_authorized_payment_id FROM cobranca_tenant
+                    WHERE mp_authorized_payment_id IS NOT NULL
+                    GROUP BY mp_authorized_payment_id HAVING COUNT(*) &gt; 1
+                ) duplicados
+            </sqlCheck>
+        </preConditions>
+        <comment>UNIQUE em cobranca_tenant.mp_authorized_payment_id (NULLs repetidos continuam permitidos)</comment>
+
+        <addUniqueConstraint tableName="cobranca_tenant" columnNames="mp_authorized_payment_id"
+                             constraintName="uk_cobranca_mp_authorized_payment"/>
+
+        <rollback>
+            <dropUniqueConstraint tableName="cobranca_tenant" constraintName="uk_cobranca_mp_authorized_payment"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Fallback do 064-001: so roda se nao existir nenhum indice com a coluna (o UNIQUE conta) -->
+    <changeSet id="064-002-cobranca-tenant-idx-mp-authorized-payment" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN"
+                       onFailMessage="cobranca_tenant.mp_authorized_payment_id ja esta indexada; indice nao unico desnecessario">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM information_schema.statistics
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'cobranca_tenant'
+                  AND column_name = 'mp_authorized_payment_id'
+            </sqlCheck>
+        </preConditions>
+        <comment>Indice nao unico em cobranca_tenant.mp_authorized_payment_id (quando o UNIQUE nao pode ser aplicado)</comment>
+
+        <createIndex tableName="cobranca_tenant" indexName="idx_cobranca_mp_authorized_payment">
+            <column name="mp_authorized_payment_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="cobranca_tenant" indexName="idx_cobranca_mp_authorized_payment"/>
+        </rollback>
+    </changeSet>
+
+    <!-- N7 - Marcador consultavel de tratamento manual (GET /assinaturas/pendencias-manuais) -->
+    <changeSet id="064-003-mp-webhook-evento-requer-atencao" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="mp_webhook_evento" columnName="requer_atencao"/></not>
+        </preConditions>
+        <comment>Marca eventos do Mercado Pago que precisam de tratamento manual (pagamento em CANCELADA, evento expirado)</comment>
+
+        <addColumn tableName="mp_webhook_evento">
+            <column name="requer_atencao" type="TINYINT(1)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="motivo_atencao" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="mp_webhook_evento" columnName="motivo_atencao"/>
+            <dropColumn tableName="mp_webhook_evento" columnName="requer_atencao"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="064-004-mp-webhook-evento-idx-atencao" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="mp_webhook_evento" indexName="idx_mp_webhook_atencao"/></not>
+        </preConditions>
+        <comment>Indice da listagem de pendencias manuais</comment>
+
+        <createIndex tableName="mp_webhook_evento" indexName="idx_mp_webhook_atencao">
+            <column name="requer_atencao"/>
+            <column name="recebido_em"/>
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="mp_webhook_evento" indexName="idx_mp_webhook_atencao"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Eventos ja expirados antes desta versao (062) tambem entram na lista de pendencias.   -->
+    <!-- Pagamentos em CANCELADA anteriores so ficaram no log: nao ha como reconstrui-los aqui. -->
+    <changeSet id="064-005-mp-webhook-evento-backfill-expirados" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="mp_webhook_evento" columnName="requer_atencao"/>
+        </preConditions>
+        <comment>Marca para tratamento manual os eventos que ja estavam expirados</comment>
+
+        <update tableName="mp_webhook_evento">
+            <column name="requer_atencao" valueNumeric="1"/>
+            <column name="motivo_atencao" value="EVENTO_EXPIRADO: reprocessamento automatico esgotado, conferir o recurso no Mercado Pago"/>
+            <where>expirado_em IS NOT NULL AND requer_atencao = 0</where>
+        </update>
+
+        <!-- O rollback do 064-003 remove as colunas; nada a desfazer aqui -->
+        <rollback/>
+    </changeSet>
+
+</databaseChangeLog>

@@ -370,9 +370,15 @@ public class AssinaturaTenantService {
      *       cobrança agendada no MP (next_payment_date) e o status é mantido — o próprio MP
      *       cobra nessa data; se o MP não responder, usa hoje + 7 e mantém o status;</li>
      *   <li>sem cartão autorizado, a assinatura volta para TRIAL com vencimento hoje + 7.
-     *       O link de pagamento é gerado logo após o commit e, se o MP falhar, a rotina
-     *       diária de links de trial ({@code findTrialsSemLinkVencendoAte}) gera depois.</li>
+     *       O link de pagamento é gerado logo após o commit (fora desta transação) e, se o
+     *       MP falhar, a rotina diária de links de trial ({@code findTrialsSemLinkVencendoAte},
+     *       que também pega TRIAL com preapproval não autorizado) gera depois. Um preapproval
+     *       antigo não pendente é cancelado no MP antes de o novo ser criado.</li>
      * </ul>
+     *
+     * A única chamada ao MP dentro desta transação é o GET do next_payment_date (cartão
+     * autorizado): é leitura, não trava a linha (o UPDATE só sai no commit, protegido por
+     * {@code @Version}) e é limitada pelo read timeout do RestTemplate.
      *
      * @param assinaturaId ID da assinatura
      * @param cortesia     true para isentar de cobrança

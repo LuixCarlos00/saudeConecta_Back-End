@@ -7,6 +7,7 @@ import br.com.saudeConecta.service.AssinaturaTenantService;
 import br.com.saudeConecta.service.CobrancaService;
 import br.com.saudeConecta.service.LimitePlanoService;
 import br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService;
+import br.com.saudeConecta.service.mercadopago.MercadoPagoWebhookService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,7 @@ public class AssinaturaTenantController {
     private final AssinaturaMercadoPagoService assinaturaMercadoPagoService;
     private final LimitePlanoService limitePlanoService;
     private final CobrancaService cobrancaService;
+    private final MercadoPagoWebhookService mercadoPagoWebhookService;
 
     /**
      * Cria nova assinatura (TRIAL) para a organização (SUPER_ADMIN).
@@ -113,6 +115,16 @@ public class AssinaturaTenantController {
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<List<AssinaturaTenantResponse>> listarTodas() {
         return ResponseEntity.ok(assinaturaTenantService.listarTodas());
+    }
+
+    /**
+     * Lista os eventos do Mercado Pago que precisam de tratamento manual (SUPER_ADMIN):
+     * pagamento aprovado em assinatura cancelada e eventos com erro que expiraram.
+     */
+    @GetMapping("/pendencias-manuais")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<List<PendenciaManualResponse>> listarPendenciasManuais() {
+        return ResponseEntity.ok(mercadoPagoWebhookService.listarPendenciasManuais());
     }
 
     /**

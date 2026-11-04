@@ -12,6 +12,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -27,6 +28,10 @@ public class MercadoPagoClient {
     private static final String PATH_PREAPPROVAL = "/preapproval";
     private static final String PATH_AUTHORIZED_PAYMENT = "/authorized_payments/";
     private static final String PATH_AUTHORIZED_PAYMENT_SEARCH = "/authorized_payments/search?preapproval_id=";
+    /** Tamanho de página pedido na busca de faturas. */
+    static final int TAMANHO_PAGINA_FATURAS = 50;
+    /** Teto de páginas na busca de faturas (50 x 20 = 1000 faturas, ~83 anos de mensalidades). */
+    static final int MAXIMO_PAGINAS_FATURAS = 20;
     private static final String CURRENCY_BRL = "BRL";
     private static final String FREQUENCY_TYPE_MONTHS = "months";
 
@@ -145,14 +150,55 @@ public class MercadoPagoClient {
      * Lista as faturas (authorized payments) geradas por uma assinatura.
      * Usado pela reconciliação para achar pagamentos aprovados cujo webhook se perdeu.
      *
+     * Paginação defensiva: pede páginas de {@link #TAMANHO_PAGINA_FATURAS} via
+     * {@code limit/offset} e segue até cobrir {@code paging.total}. Se o MP não devolver
+     * {@code paging}, considera uma página só (com WARN); o teto de
+     * {@link #MAXIMO_PAGINAS_FATURAS} páginas impede loop se o total vier inconsistente.
+     * Não pede ordenação: o parâmetro de ordenação deste endpoint não é documentado e um
+     * parâmetro recusado derrubaria a recuperação; percorrer todas as páginas já cobre
+     * a fatura mais recente.
+     *
+     * ❓ Contrato a validar no sandbox do Mercado Pago (aceite de limit/offset e formato de paging).
+     *
      * @param preapprovalId identificador do preapproval
      * @return faturas da assinatura (lista vazia quando não há nenhuma)
      */
     public List<AuthorizedPaymentResponse> buscarAuthorizedPaymentsDoPreapproval(String preapprovalId) {
-        AuthorizedPaymentSearchResponse resposta = executar(HttpMethod.GET,
-                PATH_AUTHORIZED_PAYMENT_SEARCH + preapprovalId, null,
-                AuthorizedPaymentSearchResponse.class, "buscar faturas do preapproval " + preapprovalId);
-        return resposta != null ? resposta.faturas() : List.of();
+        return buscarAuthorizedPaymentsDoPreapproval(preapprovalId, TAMANHO_PAGINA_FATURAS);
+    }
+
+    /** Variante com tamanho de página configurável (testes). */
+    List<AuthorizedPaymentResponse> buscarAuthorizedPaymentsDoPreapproval(String preapprovalId, int tamanhoPagina) {
+        List<AuthorizedPaymentResponse> faturas = new ArrayList<>();
+        int offset = 0;
+        for (int pagina = 1; pagina <= MAXIMO_PAGINAS_FATURAS; pagina++) {
+            AuthorizedPaymentSearchResponse resposta = executar(HttpMethod.GET,
+                    PATH_AUTHORIZED_PAYMENT_SEARCH + preapprovalId + "&limit=" + tamanhoPagina + "&offset=" + offset,
+                    null, AuthorizedPaymentSearchResponse.class,
+                    "buscar faturas do preapproval " + preapprovalId + " (offset " + offset + ")");
+            if (resposta == null) {
+                break;
+            }
+            List<AuthorizedPaymentResponse> paginaAtual = resposta.faturas();
+            faturas.addAll(paginaAtual);
+
+            AuthorizedPaymentSearchResponse.Paging paging = resposta.paging();
+            if (paging == null || paging.total() == null) {
+                log.warn("Busca de faturas do preapproval {} sem paging: considerando só a 1ª página ({} fatura(s))",
+                        preapprovalId, paginaAtual.size());
+                break;
+            }
+            // Avança pelo que veio (o MP pode aplicar um limit menor que o pedido)
+            offset += paginaAtual.size();
+            if (paginaAtual.isEmpty() || offset >= paging.total()) {
+                break;
+            }
+            if (pagina == MAXIMO_PAGINAS_FATURAS) {
+                log.warn("Busca de faturas do preapproval {} parou no teto de {} páginas ({} de {} faturas lidas)",
+                        preapprovalId, MAXIMO_PAGINAS_FATURAS, offset, paging.total());
+            }
+        }
+        return faturas;
     }
 
     private PreapprovalResponse alterarStatus(String preapprovalId, String status) {

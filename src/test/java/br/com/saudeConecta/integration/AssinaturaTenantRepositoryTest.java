@@ -112,6 +112,8 @@ class AssinaturaTenantRepositoryTest {
         AssinaturaTenant venceDepois = assinatura(StatusAssinatura.TRIAL, alvo.plusDays(1));
         AssinaturaTenant comLink = assinatura(StatusAssinatura.TRIAL, alvo.minusDays(1));
         comLink.setMpPreapprovalId("pa-ja-gerado");
+        comLink.setMpStatus("pending");
+        comLink.setMpInitPoint("https://mp/checkout/ja-gerado");
         em.flush();
         em.clear();
 
@@ -119,5 +121,60 @@ class AssinaturaTenantRepositoryTest {
                 .extracting(AssinaturaTenant::getId)
                 .containsExactlyInAnyOrder(venceNoAlvo.getId(), venceAntes.getId(), jaVencido.getId())
                 .doesNotContain(venceDepois.getId(), comLink.getId());
+    }
+
+    @Test
+    @DisplayName("N8 - Links de trial: pega TRIAL com preapproval não autorizado (sem link pendente válido) para nova tentativa")
+    void linksDeTrialComPreapprovalNaoAutorizado() {
+        LocalDate alvo = LocalDate.now().plusDays(7);
+        AssinaturaTenant pausado = assinatura(StatusAssinatura.TRIAL, alvo.minusDays(1));
+        pausado.setMpPreapprovalId("pa-pausado");
+        pausado.setMpStatus("paused");
+        AssinaturaTenant cancelado = assinatura(StatusAssinatura.TRIAL, alvo.minusDays(1));
+        cancelado.setMpPreapprovalId("pa-cancelado");
+        cancelado.setMpStatus("cancelled");
+        AssinaturaTenant pendenteSemLink = assinatura(StatusAssinatura.TRIAL, alvo.minusDays(1));
+        pendenteSemLink.setMpPreapprovalId("pa-pendente-sem-link");
+        pendenteSemLink.setMpStatus("pending");
+        AssinaturaTenant pendenteComLink = assinatura(StatusAssinatura.TRIAL, alvo.minusDays(1));
+        pendenteComLink.setMpPreapprovalId("pa-pendente");
+        pendenteComLink.setMpStatus("pending");
+        pendenteComLink.setMpInitPoint("https://mp/checkout/pendente");
+        AssinaturaTenant autorizado = assinatura(StatusAssinatura.TRIAL, alvo.minusDays(1));
+        autorizado.setMpPreapprovalId("pa-autorizado");
+        autorizado.setMpStatus("authorized");
+        em.flush();
+        em.clear();
+
+        assertThat(repository.findTrialsSemLinkVencendoAte(alvo))
+                .extracting(AssinaturaTenant::getId)
+                .containsExactlyInAnyOrder(pausado.getId(), cancelado.getId(), pendenteSemLink.getId())
+                .doesNotContain(pendenteComLink.getId(), autorizado.getId());
+    }
+
+    @Test
+    @DisplayName("N2 - Duas cobranças com o mesmo mp_authorized_payment_id são barradas pelo banco (UNIQUE)")
+    void cobrancaUnicaPorFatura() {
+        AssinaturaTenant a = assinatura(StatusAssinatura.ATIVA, LocalDate.now());
+        em.persist(cobranca(a, "fatura-1"));
+        em.flush();
+
+        // IDENTITY: o INSERT sai já no persist
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> {
+                    em.persist(cobranca(a, "fatura-1"));
+                    em.flush();
+                })
+                .isInstanceOf(jakarta.persistence.PersistenceException.class)
+                .hasRootCauseInstanceOf(java.sql.SQLIntegrityConstraintViolationException.class);
+    }
+
+    private br.com.saudeConecta.domain.planos.CobrancaTenant cobranca(AssinaturaTenant a, String faturaId) {
+        return br.com.saudeConecta.domain.planos.CobrancaTenant.builder()
+                .assinaturaTenant(a)
+                .organizacao(organizacao)
+                .valorTotal(BigDecimal.valueOf(279))
+                .status(br.com.saudeConecta.domain.planos.StatusCobranca.PENDENTE)
+                .mpAuthorizedPaymentId(faturaId)
+                .build();
     }
 }

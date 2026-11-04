@@ -4,6 +4,7 @@ import br.com.saudeConecta.domain.planos.*;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.CobrancaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.MpWebhookEventoRepository;
+import br.com.saudeConecta.presentation.dto.planos.PendenciaManualResponse;
 import br.com.saudeConecta.service.AssinaturaTenantService;
 import br.com.saudeConecta.service.mercadopago.dto.AuthorizedPaymentResponse;
 import br.com.saudeConecta.service.mercadopago.dto.PreapprovalResponse;
@@ -157,7 +158,7 @@ public class MercadoPagoWebhookService {
      * de cada um. Antes, marca como expirados os que passaram do prazo sem sucesso
      * (param de ser tentados e ficam para tratamento manual).
      *
-     * @return quantos eventos foram reprocessados nesta execução
+     * @return quantos eventos foram reprocessados nesta execução (sem contar os que falharam)
      */
     public int reprocessarEventosComErro() {
         LocalDateTime agora = LocalDateTime.now();
@@ -170,12 +171,32 @@ public class MercadoPagoWebhookService {
         }
 
         List<MpWebhookEvento> elegiveis = eventoRepository.findComErroParaReprocessar(limite, agora);
+        int reprocessados = 0;
         for (MpWebhookEvento evento : elegiveis) {
             log.info("Reprocessando webhook {} data.id={} (tentativas anteriores: {}, último erro: {})",
                     evento.getTipo(), evento.getDataId(), evento.getTentativas(), evento.getErro());
-            processar(evento.getTipo(), evento.getDataId(), evento.getPayload());
+            // Falha fora do tratamento do processar (ex.: banco ao registrar o evento) não derruba o lote
+            try {
+                processar(evento.getTipo(), evento.getDataId(), evento.getPayload());
+                reprocessados++;
+            } catch (Exception e) {
+                log.error("Falha ao reprocessar webhook {} data.id={} — segue para o próximo",
+                        evento.getTipo(), evento.getDataId(), e);
+            }
         }
-        return elegiveis.size();
+        return reprocessados;
+    }
+
+    /**
+     * Eventos marcados para tratamento manual (pagamento em CANCELADA, evento expirado),
+     * do mais recente para o mais antigo.
+     *
+     * @return eventos que requerem atenção
+     */
+    public List<PendenciaManualResponse> listarPendenciasManuais() {
+        return eventoRepository.findByRequerAtencaoTrueOrderByRecebidoEmDesc().stream()
+                .map(PendenciaManualResponse::fromEntity)
+                .toList();
     }
 
     /**
@@ -192,7 +213,7 @@ public class MercadoPagoWebhookService {
                     if (Boolean.TRUE.equals(atual.getProcessado())) {
                         return;
                     }
-                    atual.registrarProcessamento(despachar(tipo, dataId));
+                    atual.registrarProcessamento(despachar(tipo, dataId, atual));
                     eventoRepository.save(atual);
                 });
                 return;
@@ -241,10 +262,10 @@ public class MercadoPagoWebhookService {
     /**
      * @return true quando o recurso atingiu estado final e o evento pode ser encerrado
      */
-    private boolean despachar(String tipo, String dataId) {
+    private boolean despachar(String tipo, String dataId, MpWebhookEvento evento) {
         return switch (tipo) {
             case TOPICO_PREAPPROVAL -> processarPreapproval(dataId);
-            case TOPICO_AUTHORIZED_PAYMENT -> processarPagamentoAutorizado(dataId);
+            case TOPICO_AUTHORIZED_PAYMENT -> processarPagamentoAutorizado(dataId, evento);
             default -> {
                 log.info("Tópico não tratado pelo Saúde Conecta: {}", tipo);
                 yield true;
@@ -322,7 +343,7 @@ public class MercadoPagoWebhookService {
      * @return true quando a fatura está paga (estado final); recusada ou sem pagamento
      *         continuam abertas porque o Mercado Pago tenta cobrar de novo
      */
-    private boolean processarPagamentoAutorizado(String authorizedPaymentId) {
+    private boolean processarPagamentoAutorizado(String authorizedPaymentId, MpWebhookEvento evento) {
         AuthorizedPaymentResponse fatura = mercadoPagoClient.buscarAuthorizedPayment(authorizedPaymentId);
         if (fatura == null) {
             log.warn("Authorized payment {} não encontrado no Mercado Pago", authorizedPaymentId);
@@ -360,10 +381,12 @@ public class MercadoPagoWebhookService {
 
             // CANCELADA é terminal: o dinheiro fica registrado, mas a reativação/estorno é manual
             if (StatusAssinatura.CANCELADA.equals(assinatura.getStatus())) {
+                Long organizacaoId = assinatura.getOrganizacao() != null ? assinatura.getOrganizacao().getId() : null;
                 log.warn("Pagamento recebido em assinatura cancelada — tratar manualmente (estorno ou reativação). "
-                        + "Assinatura {} (org {}), fatura {}", assinatura.getId(),
-                        assinatura.getOrganizacao() != null ? assinatura.getOrganizacao().getId() : null,
-                        authorizedPaymentId);
+                        + "Assinatura {} (org {}), fatura {}", assinatura.getId(), organizacaoId, authorizedPaymentId);
+                evento.marcarParaAtencao(MpWebhookEvento.MOTIVO_PAGAMENTO_EM_CANCELADA,
+                        "assinatura " + assinatura.getId() + " (org " + organizacaoId + "), fatura "
+                                + authorizedPaymentId + " — estornar ou reativar manualmente");
                 return true;
             }
 

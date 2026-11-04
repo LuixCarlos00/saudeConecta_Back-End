@@ -25,6 +25,12 @@ public class MpWebhookEvento implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    /** Prefixo do motivo: pagamento aprovado chegou para assinatura CANCELADA (estorno ou reativação manual). */
+    public static final String MOTIVO_PAGAMENTO_EM_CANCELADA = "PAGAMENTO_EM_CANCELADA";
+    /** Prefixo do motivo: evento com erro passou do prazo de reprocessamento automático. */
+    public static final String MOTIVO_EVENTO_EXPIRADO = "EVENTO_EXPIRADO";
+    private static final int TAMANHO_MAXIMO_MOTIVO = 255;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -61,6 +67,15 @@ public class MpWebhookEvento implements Serializable {
     @Column(name = "expirado_em")
     private LocalDateTime expiradoEm;
 
+    /** Evento que precisa de tratamento manual (consultado em GET /assinaturas/pendencias-manuais). */
+    @Builder.Default
+    @Column(name = "requer_atencao", nullable = false)
+    private Boolean requerAtencao = false;
+
+    /** Por que o evento precisa de atenção: prefixo MOTIVO_* seguido do contexto. */
+    @Column(name = "motivo_atencao", length = 255)
+    private String motivoAtencao;
+
     @PrePersist
     protected void onCreate() {
         if (recebidoEm == null) {
@@ -78,5 +93,17 @@ public class MpWebhookEvento implements Serializable {
         this.processado = estadoFinal;
         this.erro = null;
         this.proximaTentativaEm = null;
+    }
+
+    /**
+     * Marca o evento para tratamento manual. Não altera {@code processado}.
+     *
+     * @param motivo  um dos prefixos MOTIVO_*
+     * @param detalhe contexto para quem for tratar (assinatura, organização, fatura)
+     */
+    public void marcarParaAtencao(String motivo, String detalhe) {
+        String texto = detalhe != null ? motivo + ": " + detalhe : motivo;
+        this.requerAtencao = true;
+        this.motivoAtencao = texto.substring(0, Math.min(texto.length(), TAMANHO_MAXIMO_MOTIVO));
     }
 }

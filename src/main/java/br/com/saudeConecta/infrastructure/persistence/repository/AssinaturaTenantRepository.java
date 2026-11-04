@@ -63,15 +63,22 @@ public interface AssinaturaTenantRepository extends JpaRepository<AssinaturaTena
 
     /**
      * Busca trials que vencem até a data informada (inclusive os já vencidos) e ainda
-     * não possuem link de pagamento gerado (ignora cortesias). Usar "até" em vez de
+     * não possuem link de pagamento válido (ignora cortesias). Usar "até" em vez de
      * "exatamente em" garante nova tentativa quando a geração falha em um dia.
+     *
+     * Link válido = preapproval {@code pending} com init_point (o checkout ainda serve) ou
+     * {@code authorized} (cartão já cadastrado). Um preapproval pausado/cancelado (ex.: o que
+     * sobrou ao remover a cortesia) entra para nova tentativa; o
+     * {@code AssinaturaMercadoPagoService#gerarLinkPagamento} abandona o antigo no MP antes de
+     * criar o novo, então a nova tentativa não deixa preapproval duplicado ativo.
      */
     @Query("SELECT a FROM AssinaturaTenant a " +
            "JOIN FETCH a.planoAssinatura " +
            "JOIN FETCH a.organizacao " +
            "WHERE a.status = 'TRIAL' " +
            "AND a.cortesia = false " +
-           "AND a.mpPreapprovalId IS NULL " +
+           "AND (a.mpPreapprovalId IS NULL OR a.mpStatus IS NULL " +
+           "     OR (a.mpStatus <> 'authorized' AND (a.mpStatus <> 'pending' OR a.mpInitPoint IS NULL))) " +
            "AND a.dataVencimento <= :dataAlvo")
     List<AssinaturaTenant> findTrialsSemLinkVencendoAte(@Param("dataAlvo") LocalDate dataAlvo);
 

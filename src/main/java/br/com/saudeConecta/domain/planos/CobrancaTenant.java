@@ -10,7 +10,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "cobranca_tenant")
+// Uma fatura do Mercado Pago gera no máximo uma cobrança local (changeset 064)
+@Table(name = "cobranca_tenant", uniqueConstraints = @UniqueConstraint(
+        name = "uk_cobranca_mp_authorized_payment", columnNames = "mp_authorized_payment_id"))
 @Getter
 @Setter
 @NoArgsConstructor

@@ -60,16 +60,24 @@ public interface MpWebhookEventoRepository extends JpaRepository<MpWebhookEvento
                                                      @Param("agora") LocalDateTime agora);
 
     /**
-     * Marca como expirados os eventos com erro mais antigos que o prazo de reprocessamento.
+     * Marca como expirados (e para tratamento manual) os eventos com erro mais antigos que o
+     * prazo de reprocessamento.
      *
      * @param recebidoAntesDe limite de idade
      * @param agora           data gravada como expiração
      * @return quantidade de eventos expirados agora
      */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("UPDATE MpWebhookEvento e SET e.expiradoEm = :agora " +
+    @Query("UPDATE MpWebhookEvento e SET e.expiradoEm = :agora, e.requerAtencao = true, " +
+           "e.motivoAtencao = '" + MpWebhookEvento.MOTIVO_EVENTO_EXPIRADO
+           + ": reprocessamento automatico esgotado, conferir o recurso no Mercado Pago' " +
            "WHERE e.processado = false AND e.erro IS NOT NULL AND e.expiradoEm IS NULL " +
            "AND e.recebidoEm < :recebidoAntesDe")
     int expirarComErroAntesDe(@Param("recebidoAntesDe") LocalDateTime recebidoAntesDe,
                               @Param("agora") LocalDateTime agora);
+
+    /**
+     * Eventos que precisam de tratamento manual, do mais recente para o mais antigo.
+     */
+    List<MpWebhookEvento> findByRequerAtencaoTrueOrderByRecebidoEmDesc();
 }

@@ -69,8 +69,11 @@ public class AssinaturaMercadoPagoService {
 
     /**
      * Gera (ou reaproveita) o link do checkout hospedado para uma assinatura.
-     * Reutiliza o preapproval existente enquanto ele ainda estiver pendente,
-     * evitando criar assinaturas duplicadas no Mercado Pago.
+     * Reutiliza o preapproval existente enquanto ele ainda estiver pendente (o init_point
+     * continua servindo), evitando criar assinaturas duplicadas no Mercado Pago.
+     * Qualquer outro preapproval anterior (pausado, autorizado com cartão recusado etc.)
+     * é cancelado no MP antes de criar o novo: sem isso ele fica órfão e pode voltar a
+     * cobrar em paralelo ao novo.
      *
      * @param assinatura assinatura do tenant
      * @return dados do checkout, incluindo o init_point
@@ -91,6 +94,10 @@ public class AssinaturaMercadoPagoService {
             log.info("Reaproveitando preapproval pendente {} da assinatura {}",
                     assinatura.getMpPreapprovalId(), assinatura.getId());
             return montarResposta(assinatura);
+        }
+
+        if (assinatura.temPreapproval()) {
+            abandonarPreapprovalAnterior(assinatura);
         }
 
         String payerEmail = resolverPayerEmail(assinatura);
@@ -120,6 +127,27 @@ public class AssinaturaMercadoPagoService {
                 preapproval.id(), assinatura.getId(), assinatura.getOrganizacao().getId());
 
         return montarResposta(assinatura);
+    }
+
+    /**
+     * Cancela no MP o preapproval que será substituído. Consulta o status remoto antes
+     * para que a nova tentativa (rotina diária de links) não tente cancelar de novo um
+     * preapproval que a tentativa anterior já cancelou antes de falhar ao criar o novo.
+     * Falha no cancelamento propaga: melhor não gerar o link agora do que deixar dois
+     * preapprovals vivos.
+     */
+    private void abandonarPreapprovalAnterior(AssinaturaTenant assinatura) {
+        String anterior = assinatura.getMpPreapprovalId();
+        PreapprovalResponse remoto = mercadoPagoClient.buscarPreapproval(anterior);
+        if (remoto == null || MercadoPagoClient.STATUS_CANCELLED.equals(remoto.status())) {
+            assinatura.setMpStatus(MercadoPagoClient.STATUS_CANCELLED);
+            return;
+        }
+        PreapprovalResponse cancelado = mercadoPagoClient.cancelarPreapproval(anterior);
+        assinatura.setMpStatus(cancelado != null && cancelado.status() != null
+                ? cancelado.status() : MercadoPagoClient.STATUS_CANCELLED);
+        log.warn("Preapproval {} (status {}) da assinatura {} cancelado no MP para ser substituído por um novo link",
+                anterior, remoto.status(), assinatura.getId());
     }
 
     /**
@@ -285,6 +313,15 @@ public class AssinaturaMercadoPagoService {
         }
 
         assinaturaTenantRepository.save(assinatura);
+
+        // Retry da reativação: se ela falhou após o pagamento, a assinatura está em dia mas o
+        // MP segue pausado e não cobraria o próximo mês
+        if (MercadoPagoClient.STATUS_PAUSED.equals(remoto.status()) && ativaEmDia(assinatura)) {
+            log.warn("Reconciliação: assinatura {} ATIVA em dia com preapproval pausado no MP — reativando",
+                    assinatura.getId());
+            reativarSePausado(assinatura);
+            mudou = mudou || !MercadoPagoClient.STATUS_PAUSED.equals(assinatura.getMpStatus());
+        }
         return mudou;
     }
 

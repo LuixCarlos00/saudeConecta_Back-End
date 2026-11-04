@@ -483,6 +483,48 @@ class MercadoPagoWebhookServiceTest {
         assertThat(comErro.getErro()).isNull();
     }
 
+    @Test
+    @DisplayName("N5 - Falha inesperada em um evento do lote não impede o reprocessamento dos demais")
+    void falhaEmUmEventoNaoDerrubaOLote() {
+        MpWebhookEvento quebrado = MpWebhookEvento.builder().id(8L)
+                .tipo(MercadoPagoWebhookService.TOPICO_AUTHORIZED_PAYMENT).dataId("fatura-quebrada")
+                .payload("{}").processado(false).erro("timeout").tentativas(1)
+                .recebidoEm(LocalDateTime.now().minusHours(1)).build();
+        MpWebhookEvento bom = MpWebhookEvento.builder().id(9L)
+                .tipo(MercadoPagoWebhookService.TOPICO_AUTHORIZED_PAYMENT).dataId(AUTHORIZED_PAYMENT_ID)
+                .payload("{}").processado(false).erro("timeout").tentativas(1)
+                .recebidoEm(LocalDateTime.now().minusHours(1)).build();
+        when(eventoRepository.findComErroParaReprocessar(any(), any())).thenReturn(java.util.List.of(quebrado, bom));
+        when(eventoRepository.findByTipoAndDataId(MercadoPagoWebhookService.TOPICO_AUTHORIZED_PAYMENT, "fatura-quebrada"))
+                .thenThrow(new org.springframework.dao.DataAccessResourceFailureException("conexão perdida"));
+        when(eventoRepository.findByTipoAndDataId(MercadoPagoWebhookService.TOPICO_AUTHORIZED_PAYMENT,
+                AUTHORIZED_PAYMENT_ID)).thenReturn(Optional.of(bom));
+        when(cobrancaTenantRepository.findByMpAuthorizedPaymentId(AUTHORIZED_PAYMENT_ID)).thenReturn(Optional.empty());
+        when(mercadoPagoClient.buscarAuthorizedPayment(AUTHORIZED_PAYMENT_ID)).thenReturn(faturaAprovada(AUTHORIZED_PAYMENT_ID));
+
+        int reprocessados = service.reprocessarEventosComErro();
+
+        assertThat(reprocessados).isEqualTo(1);
+        verify(assinaturaTenantService).renovarAposPagamento(ASSINATURA_ID);
+        assertThat(bom.getProcessado()).isTrue();
+    }
+
+    @Test
+    @DisplayName("N7 - Pagamento aprovado em assinatura CANCELADA marca o evento para tratamento manual")
+    void pagamentoEmCanceladaMarcaEventoParaAtencao() {
+        assinatura.setStatus(StatusAssinatura.CANCELADA);
+        when(cobrancaTenantRepository.findByMpAuthorizedPaymentId(AUTHORIZED_PAYMENT_ID)).thenReturn(Optional.empty());
+        when(mercadoPagoClient.buscarAuthorizedPayment(AUTHORIZED_PAYMENT_ID)).thenReturn(faturaAprovada(AUTHORIZED_PAYMENT_ID));
+
+        service.processar(MercadoPagoWebhookService.TOPICO_AUTHORIZED_PAYMENT, AUTHORIZED_PAYMENT_ID, "{}");
+
+        MpWebhookEvento salvo = ultimoEventoSalvo();
+        assertThat(salvo.getProcessado()).isTrue();
+        assertThat(salvo.getRequerAtencao()).isTrue();
+        assertThat(salvo.getMotivoAtencao()).startsWith(MpWebhookEvento.MOTIVO_PAGAMENTO_EM_CANCELADA);
+        verify(assinaturaTenantService, never()).renovarAposPagamento(any());
+    }
+
     private MpWebhookEvento ultimoEventoSalvo() {
         ArgumentCaptor<MpWebhookEvento> captor = ArgumentCaptor.forClass(MpWebhookEvento.class);
         verify(eventoRepository, atLeastOnce()).save(captor.capture());
