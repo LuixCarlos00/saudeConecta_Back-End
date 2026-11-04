@@ -187,7 +187,11 @@ class IsolamentoTenantRepositoryTest {
         assertThat(planejamentoRepository.assinarPorToken("tok-legado", "sig", "1.1.1.1", agora)).isEqualTo(1);
         em.clear();
         assertThat(planejamentoRepository.findByTokenAssinatura("tok-legado"))
-                .as("token limpo após assinar")
-                .isEmpty();
+                .as("token mantido após assinar, para o link reaberto mostrar 'já assinado'")
+                .hasSize(1)
+                .allMatch(PlanejamentoTerapeutico::isAssinado);
+        assertThat(planejamentoRepository.assinarPorToken("tok-legado", "sig2", "2.2.2.2", agora.plusMinutes(1)))
+                .as("reenvio não reassina")
+                .isZero();
     }
 }

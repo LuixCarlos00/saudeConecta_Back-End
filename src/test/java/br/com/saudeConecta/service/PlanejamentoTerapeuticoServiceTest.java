@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import jakarta.persistence.EntityNotFoundException;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
@@ -159,7 +160,21 @@ class PlanejamentoTerapeuticoServiceTest {
         when(planejamentoRepository.findByTokenAssinatura("tok")).thenReturn(List.of(p));
 
         assertThatThrownBy(() -> service.buscarPorToken("tok"))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining("expirado");
+    }
+
+    @Test
+    @DisplayName("buscarPorToken de planejamento já ASSINADO responde os dados mesmo após a expiração")
+    void buscarPorTokenAssinadoExpirado() {
+        TenantContext.clear();
+        PlanejamentoTerapeutico p = PlanejamentoTerapeutico.builder()
+                .statusAssinatura("ASSINADO")
+                .tokenExpiracao(LocalDateTime.now().minusDays(30))
+                .build();
+        when(planejamentoRepository.findByTokenAssinatura("tok")).thenReturn(List.of(p));
+
+        assertThat(service.buscarPorToken("tok")).hasSize(1);
     }
 
     @Test

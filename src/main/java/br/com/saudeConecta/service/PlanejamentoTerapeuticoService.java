@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -173,10 +174,12 @@ public class PlanejamentoTerapeuticoService {
 
         // Expiração nula = link legado gerado antes da coluna existir (sem expiração).
         LocalDateTime agora = LocalDateTime.now();
+        // A expiração só vale para itens ainda PENDENTES: um planejamento já assinado continua consultável.
         boolean expirado = lista.stream()
-                .anyMatch(p -> p.getTokenExpiracao() != null && !p.getTokenExpiracao().isAfter(agora));
+                .anyMatch(p -> !p.isAssinado() && p.getTokenExpiracao() != null && !p.getTokenExpiracao().isAfter(agora));
         if (expirado) {
-            throw new IllegalArgumentException("Link invalido ou expirado.");
+            // 404 (EntityNotFoundException): o front mostra "Planejamento não encontrado ou link expirado."
+            throw new EntityNotFoundException("Link expirado. Solicite um novo link à clínica.");
         }
 
         return lista;

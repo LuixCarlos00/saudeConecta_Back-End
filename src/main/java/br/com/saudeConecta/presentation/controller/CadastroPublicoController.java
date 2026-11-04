@@ -62,13 +62,11 @@ public class CadastroPublicoController {
     }
 
     /**
-     * Resolve o IP de origem considerando proxies reversos (Railway, Vercel).
+     * Resolve o IP de origem. Com server.forward-headers-strategy=native o Tomcat já substitui o
+     * remoteAddr pelo IP do cliente informado pelo proxy confiável; ler X-Forwarded-For na mão
+     * permitiria forjar o cabeçalho para burlar o rate limit.
      */
     private String resolverIp(HttpServletRequest servlet) {
-        String forwarded = servlet.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
         return servlet.getRemoteAddr();
     }
 }

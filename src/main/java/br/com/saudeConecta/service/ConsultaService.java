@@ -581,9 +581,10 @@ public class ConsultaService {
      * @return DTO com consultasHoje, consultasAguardando, consultasAtendidas,
      *         consultasSemana, canceladosSemana e confirmadosSemana
      */
-    @Cacheable(value = "dashboard-admin-org", key = "#organizacaoId")
+    @Cacheable(value = "dashboard-admin-org", key = "@tenantHelper.getCurrentTenantIdOrNull()")
     @Transactional(readOnly = true)
     public EstatisticasDashboardAdminOrgResponse getEstatisticasDashboardAdminOrg(Long organizacaoId) {
+        tenantHelper.validateTenant(organizacaoId);
         LocalDate hoje = LocalDate.now();
         LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
         LocalDate fimSemana = inicioSemana.plusDays(6);
@@ -816,9 +817,10 @@ public class ConsultaService {
         );
     }
 
-    @Cacheable(value = "consultas-intervalo-org", key = "#organizacaoId + '-' + #dataInicio + '-' + #dataFim")
+    @Cacheable(value = "consultas-intervalo-org", key = "@tenantHelper.getCurrentTenantIdOrNull() + '-' + #dataInicio + '-' + #dataFim")
     @Transactional(readOnly = true)
     public List<Consulta> buscarConsultasPorOrganizacaoEIntervalo(Long organizacaoId, LocalDate dataInicio, LocalDate dataFim) {
+        tenantHelper.validateTenant(organizacaoId);
         return consultaRepository.findByOrganizacaoIdAndDataHoraBetweenWithRelations(
             organizacaoId,
             dataInicio.atStartOfDay(),

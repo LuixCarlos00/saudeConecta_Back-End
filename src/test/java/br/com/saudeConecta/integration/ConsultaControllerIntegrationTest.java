@@ -278,4 +278,40 @@ class ConsultaControllerIntegrationTest {
                     .andExpect(status().isOk());
         }
     }
+
+    // ========== Estatísticas globais (somente SUPER_ADMIN) ==========
+
+    @Nested
+    @DisplayName("Estatísticas globais exigem SUPER_ADMIN")
+    class EstatisticasGlobais {
+
+        private static final String[] ROTAS = {
+                "/consultas/estatisticas/consultas-hoje",
+                "/consultas/estatisticas/consultas-realizadas-hoje",
+                "/consultas/estatisticas/consultas-agendadas-hoje",
+                "/consultas/estatisticas/consultas-semana-global"
+        };
+
+        @Test
+        @WithMockUser(roles = "GESTOR")
+        @DisplayName("GESTOR recebe 403 nas contagens globais")
+        void gestorRecebe403() throws Exception {
+            for (String rota : ROTAS) {
+                mockMvc.perform(get(rota)).andExpect(status().isForbidden());
+            }
+        }
+
+        @Test
+        @WithMockUser(roles = "SUPER_ADMIN")
+        @DisplayName("SUPER_ADMIN recebe 200 nas contagens globais")
+        void superAdminRecebe200() throws Exception {
+            when(consultaService.contarTodasConsultasHoje()).thenReturn(1L);
+            when(consultaService.contarTodasConsultasRealizadasHoje()).thenReturn(1L);
+            when(consultaService.contarTodasConsultasAgendadasHoje()).thenReturn(1L);
+            when(consultaService.contarConsultasSemanaGlobal()).thenReturn(1L);
+            for (String rota : ROTAS) {
+                mockMvc.perform(get(rota)).andExpect(status().isOk());
+            }
+        }
+    }
 }

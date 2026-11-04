@@ -685,16 +685,19 @@ public class ConsultaController {
     // ==========================================
 
     @GetMapping("/estatisticas/consultas-hoje")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Long> contarTodasConsultasHoje() {
         return ResponseEntity.ok(consultaService.contarTodasConsultasHoje());
     }
 
     @GetMapping("/estatisticas/consultas-realizadas-hoje")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Long> contarTodasRealizadasHoje() {
         return ResponseEntity.ok(consultaService.contarTodasConsultasRealizadasHoje());
     }
 
     @GetMapping("/estatisticas/consultas-agendadas-hoje")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Long> contarTodasAgendadasHoje() {
         return ResponseEntity.ok(consultaService.contarTodasConsultasAgendadasHoje());
     }
@@ -786,6 +789,7 @@ public class ConsultaController {
      * @return Quantidade total de consultas da semana
      */
     @GetMapping("/estatisticas/consultas-semana-global")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Long> contarConsultasSemanaGlobal() {
 
         log.debug("Contando consultas da semana globalmente");

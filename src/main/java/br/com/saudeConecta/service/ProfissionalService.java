@@ -407,9 +407,10 @@ return resultado ;
 
 
 
-    @Cacheable(value = "profissionais-org", key = "'count-org-' + #organizacaoId")
+    @Cacheable(value = "profissionais-org", key = "'count-org-' + @tenantHelper.getCurrentTenantIdOrNull()")
     @Transactional(readOnly = true)
     public Long contarAtivosPorOrganizacao(Long organizacaoId) {
+        tenantHelper.validateTenant(organizacaoId);
         return profissionalRepository.countAtivosByOrganizacaoId(organizacaoId);
     }
 
@@ -425,9 +426,10 @@ return resultado ;
     }
 
 
-    @Cacheable(value = "profissionais-org", key = "'org-' + #organizacaoId")
+    @Cacheable(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull()")
     @Transactional(readOnly = true)
     public List<Profissional> buscarPorOrganizacao(Long organizacaoId) {
+        tenantHelper.validateTenant(organizacaoId);
         return profissionalRepository.findByOrganizacaoIdAndStatusWithRelations(organizacaoId, StatusProfissional.ATIVO);
     }
 

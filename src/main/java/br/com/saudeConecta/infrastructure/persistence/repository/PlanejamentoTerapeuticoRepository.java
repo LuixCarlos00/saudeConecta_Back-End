@@ -90,7 +90,8 @@ public interface PlanejamentoTerapeuticoRepository extends JpaRepository<Planeja
 
     /**
      * Assina os itens do link apenas se ainda estiverem PENDENTES e o link não tiver expirado.
-     * O token é limpo na mesma instrução, tornando o link de uso único (reenvio afeta 0 linhas).
+     * O token é mantido: o link é de assinatura única (reenvio afeta 0 linhas pois o status deixa de ser PENDENTE),
+     * mas reabrir o link continua mostrando o planejamento como já assinado.
      * Expiração nula = link legado gerado antes da coluna existir, tratado como sem expiração.
      *
      * @param token      token público de assinatura
@@ -104,9 +105,7 @@ public interface PlanejamentoTerapeuticoRepository extends JpaRepository<Planeja
            "SET p.statusAssinatura = 'ASSINADO', " +
            "    p.assinaturaBase64 = :assinatura, " +
            "    p.dataAssinatura = :agora, " +
-           "    p.ipOrigem = :ipOrigem, " +
-           "    p.tokenAssinatura = NULL, " +
-           "    p.tokenExpiracao = NULL " +
+           "    p.ipOrigem = :ipOrigem " +
            "WHERE p.tokenAssinatura = :token " +
            "AND p.statusAssinatura = 'PENDENTE' " +
            "AND (p.tokenExpiracao IS NULL OR p.tokenExpiracao > :agora)")

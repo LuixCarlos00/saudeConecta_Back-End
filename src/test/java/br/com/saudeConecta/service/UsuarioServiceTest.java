@@ -11,6 +11,11 @@ import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.infra.tenant.TenantHelper;
+import br.com.saudeConecta.infra.tenant.TenantNotDefinedException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.presentation.dto.usuario.BloquearUsuarioRequest;
 import br.com.saudeConecta.presentation.dto.usuario.TodosUsuariosAgrupadosResponse;
@@ -19,6 +24,7 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -41,6 +47,7 @@ class UsuarioServiceTest {
     @Mock private PacienteRepository pacienteRepository;
     @Mock private SecretariaRepository secretariaRepository;
     @Mock private CacheEvictionService cacheEvictionService;
+    @Spy private TenantHelper tenantHelper = new TenantHelper();
 
     @InjectMocks
     private UsuarioService usuarioService;
@@ -382,13 +389,28 @@ class UsuarioServiceTest {
         @AfterEach
         void limparTenantContext() {
             TenantContext.clear();
+            SecurityContextHolder.clearContext();
+        }
+
+        @Test
+        @DisplayName("Sem tenant e sem ROLE_SUPER_ADMIN deve negar (403) em vez de agir como super admin")
+        void deveNegarSemTenantESemPapelSuperAdmin() {
+            TenantContext.clear();
+            SecurityContextHolder.clearContext();
+            BloquearUsuarioRequest request = new BloquearUsuarioRequest(PERFIL_ID, USUARIO_ID, 0);
+
+            assertThatThrownBy(() -> usuarioService.bloquearUsuariobyOrg(request))
+                    .isInstanceOf(TenantNotDefinedException.class);
+            verifyNoInteractions(usuarioRepository);
         }
 
         @Test
         @DisplayName("Deve bloquear todos os usuários da organização em cascata")
         void deveBloquearTodosUsuariosEmCascata() {
-            // SUPER_ADMIN: TenantContext sem tenant definido (null)
+            // SUPER_ADMIN: sem tenant no contexto, mas com o papel explícito
             TenantContext.clear();
+            SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                    "root", "n/a", List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))));
 
             Usuario adminOrgUsuario = Usuario.builder()
                     .login("cnpj")

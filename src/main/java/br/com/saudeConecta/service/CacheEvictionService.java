@@ -4,6 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Centraliza a invalidação seletiva (por chave) dos caches relacionados a
@@ -104,7 +106,7 @@ public class CacheEvictionService {
      * @param consultaId    ID da consulta
      */
     public void evictProntuarioRecente(Long organizacaoId, Long consultaId) {
-        evict(CACHE_PRONTUARIO_RECENTE, chaveConsultaPorTenant(organizacaoId, consultaId));
+        evictAposCommit(CACHE_PRONTUARIO_RECENTE, chaveConsultaPorTenant(organizacaoId, consultaId));
     }
 
     /**
@@ -114,7 +116,25 @@ public class CacheEvictionService {
      * @param consultaId    ID da consulta
      */
     public void evictQuestionarioSaude(Long organizacaoId, Long consultaId) {
-        evict(CACHE_QUESTIONARIO_SAUDE, chaveConsultaPorTenant(organizacaoId, consultaId));
+        evictAposCommit(CACHE_QUESTIONARIO_SAUDE, chaveConsultaPorTenant(organizacaoId, consultaId));
+    }
+
+    /**
+     * Evicta somente depois do commit: dentro da transação, uma leitura concorrente poderia
+     * repopular o cache com o dado antigo antes de o commit ficar visível. Sem transação ativa
+     * (ex.: testes unitários) o evict é imediato.
+     */
+    private void evictAposCommit(String cacheName, Object key) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    evict(cacheName, key);
+                }
+            });
+        } else {
+            evict(cacheName, key);
+        }
     }
 
     private void evict(String cacheName, Object key) {

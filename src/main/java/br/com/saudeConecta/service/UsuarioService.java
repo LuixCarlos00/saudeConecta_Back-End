@@ -10,6 +10,7 @@ import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.presentation.dto.usuario.*;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,7 @@ public class UsuarioService   {
     private final PacienteRepository pacienteRepository;
     private final SecretariaRepository secretariaRepository;
     private final CacheEvictionService cacheEvictionService;
+    private final TenantHelper tenantHelper;
 
     public UsuarioService(
              PasswordEncoder passwordEncoder,
@@ -40,7 +42,8 @@ public class UsuarioService   {
             PacienteRepository pacienteRepository,
             SecretariaRepository secretariaRepository,
             UsuarioRepository usuarioRepository,
-            CacheEvictionService cacheEvictionService) {
+            CacheEvictionService cacheEvictionService,
+            TenantHelper tenantHelper) {
          this.passwordEncoder = passwordEncoder;
          this.profissionalRepository = profissionalRepository;
         this.adminOrganizacaoRepository = adminOrganizacaoRepository;
@@ -48,6 +51,7 @@ public class UsuarioService   {
         this.secretariaRepository = secretariaRepository;
         this.usuarioRepository = usuarioRepository;
         this.cacheEvictionService = cacheEvictionService;
+        this.tenantHelper = tenantHelper;
     }
 
 
@@ -55,7 +59,8 @@ public class UsuarioService   {
 
     @Transactional
     public void bloquearUsuariobyOrg(BloquearUsuarioRequest request) {
-        Long organizacaoId = TenantContext.getCurrentTenant();
+        // Falha fechada: sem tenant só passa quem tem ROLE_SUPER_ADMIN; os demais recebem 403.
+        Long organizacaoId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
         boolean isSuperAdmin = (organizacaoId == null);
 
         log.info("Bloqueando usuario ID: {} (registro ID: {}) para {} | orgId: {} | SUPER_ADMIN: {}",
