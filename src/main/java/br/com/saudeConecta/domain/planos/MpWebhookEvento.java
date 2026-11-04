@@ -7,9 +7,11 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * Registro bruto de uma notificação recebida do Mercado Pago.
- * A constraint UNIQUE (tipo, dataId) é o mecanismo de idempotência:
- * o Mercado Pago reenvia a mesma notificação até receber uma resposta 2xx.
+ * Registro bruto de uma notificação recebida do Mercado Pago, um por (tipo, dataId).
+ *
+ * O mesmo recurso é notificado várias vezes conforme muda de estado (fatura sem
+ * pagamento → recusada → aprovada), então {@code processado} só fica true quando o
+ * recurso atingiu um estado final; até lá cada nova notificação é reprocessada.
  */
 @Entity
 @Table(name = "mp_webhook_evento")
@@ -54,10 +56,13 @@ public class MpWebhookEvento implements Serializable {
     }
 
     /**
-     * Marca o evento como processado com sucesso, limpando qualquer erro anterior.
+     * Registra um processamento sem erro, limpando falhas anteriores.
+     *
+     * @param estadoFinal true quando o recurso no Mercado Pago não muda mais de estado;
+     *                    false mantém o evento aberto para as próximas notificações
      */
-    public void marcarProcessado() {
-        this.processado = true;
+    public void registrarProcessamento(boolean estadoFinal) {
+        this.processado = estadoFinal;
         this.erro = null;
     }
 

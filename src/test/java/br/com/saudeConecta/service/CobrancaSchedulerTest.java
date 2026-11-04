@@ -1,15 +1,11 @@
 package br.com.saudeConecta.service;
 
-import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
-import br.com.saudeConecta.domain.planos.OrigemCancelamento;
 import br.com.saudeConecta.domain.planos.PlanoAssinatura;
 import br.com.saudeConecta.domain.planos.StatusAssinatura;
-import br.com.saudeConecta.email.EmailNotificacaoService;
-import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
+import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
-import br.com.saudeConecta.presentation.dto.planos.LinkPagamentoResponse;
 import br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -19,12 +15,17 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -34,127 +35,135 @@ import static org.mockito.Mockito.*;
 class CobrancaSchedulerTest {
 
     private static final Long ASSINATURA_ID = 42L;
-    private static final String INIT_POINT = "https://mp/checkout";
+    private static final Long OUTRA_ID = 43L;
 
     @Mock private AssinaturaTenantRepository assinaturaTenantRepository;
-    @Mock private AdminOrganizacaoRepository adminOrganizacaoRepository;
-    @Mock private AssinaturaTenantService assinaturaTenantService;
     @Mock private AssinaturaMercadoPagoService assinaturaMercadoPagoService;
-    @Mock private EmailNotificacaoService emailNotificacaoService;
+    @Mock private ProcessadorReguaCobranca processador;
 
     private CobrancaScheduler scheduler;
     private AssinaturaTenant assinatura;
+    private AssinaturaTenant outra;
 
     @BeforeEach
     void setUp() {
-        scheduler = new CobrancaScheduler(assinaturaTenantRepository, adminOrganizacaoRepository,
-                assinaturaTenantService, assinaturaMercadoPagoService, emailNotificacaoService);
+        scheduler = new CobrancaScheduler(assinaturaTenantRepository, assinaturaMercadoPagoService, processador);
 
         Organizacao org = new Organizacao();
         org.setId(7L);
-        org.setNome("Clínica Teste");
-
         PlanoAssinatura plano = new PlanoAssinatura();
         plano.setId(2L);
-        plano.setNome("Profissional");
 
-        assinatura = AssinaturaTenant.builder()
-                .id(ASSINATURA_ID)
-                .organizacao(org)
-                .planoAssinatura(plano)
-                .status(StatusAssinatura.TRIAL)
-                .valorMensal(BigDecimal.valueOf(279))
-                .dataVencimento(LocalDate.now().plusDays(7))
-                .build();
+        assinatura = criar(ASSINATURA_ID, org, plano);
+        outra = criar(OUTRA_ID, org, plano);
 
-        AdminOrganizacao admin = new AdminOrganizacao();
-        admin.setId(3L);
-        admin.setNome("Fulano");
-        admin.setEmail("admin@clinica.com.br");
-        when(adminOrganizacaoRepository.findOwnerByOrganizacaoId(7L)).thenReturn(Optional.of(admin));
-
-        when(assinaturaTenantRepository.findTrialsSemLinkVencendoEm(any())).thenReturn(List.of());
+        when(assinaturaTenantRepository.findTrialsSemLinkVencendoAte(any())).thenReturn(List.of());
         when(assinaturaTenantRepository.findVencidasNaoInadimplentes(any())).thenReturn(List.of());
         when(assinaturaTenantRepository.findInadimplentesParaSuspender(any())).thenReturn(List.of());
         when(assinaturaTenantRepository.findSuspensasParaCancelar(any())).thenReturn(List.of());
         when(assinaturaTenantRepository.findComPreapprovalParaReconciliar()).thenReturn(List.of());
     }
 
-    @Test
-    @DisplayName("Deve gerar o link de ativação 7 dias antes do fim do trial e notificar por e-mail")
-    void deveGerarLinkSeteDiasAntesDoFimDoTrial() {
-        LocalDate alvo = LocalDate.now().plusDays(7);
-        when(assinaturaTenantRepository.findTrialsSemLinkVencendoEm(alvo)).thenReturn(List.of(assinatura));
-        when(assinaturaMercadoPagoService.gerarLinkPagamento(assinatura)).thenReturn(
-                new LinkPagamentoResponse("pa-1", INIT_POINT, "admin@clinica.com.br", BigDecimal.valueOf(279)));
-
-        scheduler.gerarLinksDeAtivacaoDeTrial();
-
-        verify(assinaturaMercadoPagoService).gerarLinkPagamento(assinatura);
-        verify(emailNotificacaoService).enviarLinkAtivacaoAssinatura(
-                eq("admin@clinica.com.br"), eq("Fulano"), eq("Profissional"),
-                any(), eq(INIT_POINT), eq("admin@clinica.com.br"), any(), eq(7L), eq(3L));
-    }
-
-    @Test
-    @DisplayName("Não deve gerar cobrança para assinaturas em TRIAL fora da janela de ativação")
-    void naoDeveCobrarTrialForaDaJanela() {
-        scheduler.gerarLinksDeAtivacaoDeTrial();
-
-        verify(assinaturaMercadoPagoService, never()).gerarLinkPagamento(any(AssinaturaTenant.class));
-        verifyNoInteractions(emailNotificacaoService);
-    }
-
-    @Test
-    @DisplayName("Falha ao gerar link de uma assinatura não deve interromper as demais")
-    void falhaEmUmaAssinaturaNaoInterrompeAsDemais() {
-        AssinaturaTenant outra = AssinaturaTenant.builder()
-                .id(43L)
-                .organizacao(assinatura.getOrganizacao())
-                .planoAssinatura(assinatura.getPlanoAssinatura())
+    private AssinaturaTenant criar(Long id, Organizacao org, PlanoAssinatura plano) {
+        return AssinaturaTenant.builder()
+                .id(id)
+                .organizacao(org)
+                .planoAssinatura(plano)
                 .status(StatusAssinatura.TRIAL)
                 .valorMensal(BigDecimal.valueOf(279))
                 .dataVencimento(LocalDate.now().plusDays(7))
                 .build();
+    }
 
-        when(assinaturaTenantRepository.findTrialsSemLinkVencendoEm(any()))
-                .thenReturn(List.of(assinatura, outra));
-        when(assinaturaMercadoPagoService.gerarLinkPagamento(assinatura))
-                .thenThrow(new RuntimeException("Mercado Pago fora do ar"));
-        when(assinaturaMercadoPagoService.gerarLinkPagamento(outra)).thenReturn(
-                new LinkPagamentoResponse("pa-2", INIT_POINT, "admin@clinica.com.br", BigDecimal.valueOf(279)));
+    @Test
+    @DisplayName("2.7 - Deve gerar o link para trials que vencem até hoje+7 (inclui quem ficou para trás)")
+    void deveGerarLinkAteSeteDiasAntesDoFimDoTrial() {
+        when(assinaturaTenantRepository.findTrialsSemLinkVencendoAte(LocalDate.now().plusDays(7)))
+                .thenReturn(List.of(assinatura));
 
         scheduler.gerarLinksDeAtivacaoDeTrial();
 
-        verify(assinaturaMercadoPagoService).gerarLinkPagamento(outra);
-        verify(emailNotificacaoService, times(1)).enviarLinkAtivacaoAssinatura(
-                any(), any(), any(), any(), any(), any(), any(), any(), any());
+        verify(assinaturaMercadoPagoService).gerarLinkENotificar(ASSINATURA_ID);
     }
 
     @Test
-    @DisplayName("Régua de carência deve marcar inadimplente, suspender (pausando no MP) e cancelar")
-    void reguaDeCarenciaDeveAplicarTodasAsTransicoes() {
-        AssinaturaTenant vencida = assinatura;
-        when(assinaturaTenantRepository.findVencidasNaoInadimplentes(any())).thenReturn(List.of(vencida));
-        when(assinaturaTenantRepository.findInadimplentesParaSuspender(any())).thenReturn(List.of(vencida));
-        when(assinaturaTenantRepository.findSuspensasParaCancelar(any())).thenReturn(List.of(vencida));
+    @DisplayName("Sem trials na janela, nenhum link é gerado")
+    void semTrialsNaJanela() {
+        scheduler.gerarLinksDeAtivacaoDeTrial();
+
+        verifyNoInteractions(assinaturaMercadoPagoService);
+    }
+
+    @Test
+    @DisplayName("2.5 - Falha ao gerar link de uma assinatura não interrompe as demais")
+    void falhaEmUmLinkNaoInterrompeAsDemais() {
+        when(assinaturaTenantRepository.findTrialsSemLinkVencendoAte(any())).thenReturn(List.of(assinatura, outra));
+        when(assinaturaMercadoPagoService.gerarLinkENotificar(ASSINATURA_ID))
+                .thenThrow(new BusinessException("Mercado Pago fora do ar", HttpStatus.BAD_GATEWAY));
+
+        scheduler.gerarLinksDeAtivacaoDeTrial();
+
+        verify(assinaturaMercadoPagoService).gerarLinkENotificar(OUTRA_ID);
+    }
+
+    @Test
+    @DisplayName("Régua de carência delega cada transição ao processador, item a item")
+    void reguaDeCarenciaDelegaAoProcessador() {
+        when(assinaturaTenantRepository.findVencidasNaoInadimplentes(any())).thenReturn(List.of(assinatura));
+        when(assinaturaTenantRepository.findInadimplentesParaSuspender(any())).thenReturn(List.of(assinatura));
+        when(assinaturaTenantRepository.findSuspensasParaCancelar(any())).thenReturn(List.of(assinatura));
 
         scheduler.aplicarReguaDeCarencia();
 
-        verify(assinaturaTenantService).marcarInadimplente(ASSINATURA_ID);
-        verify(assinaturaTenantService).suspender(ASSINATURA_ID);
-        verify(assinaturaMercadoPagoService).pausar(vencida);
-        verify(assinaturaMercadoPagoService).cancelar(vencida, OrigemCancelamento.SISTEMA);
+        verify(processador).marcarInadimplente(ASSINATURA_ID);
+        verify(processador).suspender(ASSINATURA_ID);
+        verify(processador).cancelar(ASSINATURA_ID);
     }
 
     @Test
-    @DisplayName("Reconciliação deve sincronizar todas as assinaturas com preapproval")
-    void reconciliacaoDeveSincronizarAssinaturas() {
-        assinatura.setMpPreapprovalId("pa-1");
-        when(assinaturaTenantRepository.findComPreapprovalParaReconciliar()).thenReturn(List.of(assinatura));
+    @DisplayName("2.5 - BusinessException em um item não desfaz nem interrompe os demais itens da régua")
+    void erroEmUmItemDaReguaNaoInterrompeOsDemais() {
+        when(assinaturaTenantRepository.findVencidasNaoInadimplentes(any())).thenReturn(List.of(assinatura, outra));
+        when(assinaturaTenantRepository.findInadimplentesParaSuspender(any())).thenReturn(List.of(assinatura, outra));
+        when(assinaturaTenantRepository.findSuspensasParaCancelar(any())).thenReturn(List.of(assinatura, outra));
+        doThrow(new BusinessException("falha", HttpStatus.CONFLICT)).when(processador).marcarInadimplente(ASSINATURA_ID);
+        doThrow(new BusinessException("falha", HttpStatus.CONFLICT)).when(processador).suspender(ASSINATURA_ID);
+        doThrow(new BusinessException("falha", HttpStatus.BAD_GATEWAY)).when(processador).cancelar(ASSINATURA_ID);
+
+        scheduler.aplicarReguaDeCarencia();
+
+        verify(processador).marcarInadimplente(OUTRA_ID);
+        verify(processador).suspender(OUTRA_ID);
+        verify(processador).cancelar(OUTRA_ID);
+    }
+
+    @Test
+    @DisplayName("Reconciliação sincroniza item a item e segue após falha")
+    void reconciliacaoSincronizaItemAItem() {
+        when(assinaturaTenantRepository.findComPreapprovalParaReconciliar()).thenReturn(List.of(assinatura, outra));
+        when(processador.sincronizar(ASSINATURA_ID)).thenThrow(new RuntimeException("timeout"));
 
         scheduler.reconciliarComMercadoPago();
 
-        verify(assinaturaMercadoPagoService).sincronizar(assinatura);
+        verify(processador).sincronizar(OUTRA_ID);
+    }
+
+    @Test
+    @DisplayName("2.5 - O scheduler não abre transação de lote; o processador abre uma transação nova por item")
+    void transacaoPorItem() throws NoSuchMethodException {
+        for (Method metodo : CobrancaScheduler.class.getDeclaredMethods()) {
+            assertThat(metodo.isAnnotationPresent(Transactional.class))
+                    .as("CobrancaScheduler.%s não pode ter @Transactional de lote", metodo.getName())
+                    .isFalse();
+        }
+
+        List<String> porItem = List.of("marcarInadimplente", "suspender", "cancelar", "sincronizar");
+        Arrays.stream(ProcessadorReguaCobranca.class.getDeclaredMethods())
+                .filter(m -> porItem.contains(m.getName()))
+                .forEach(m -> assertThat(m.getAnnotation(Transactional.class).propagation())
+                        .as("ProcessadorReguaCobranca.%s", m.getName())
+                        .isEqualTo(Propagation.REQUIRES_NEW));
+        assertThat(AssinaturaMercadoPagoService.class.getMethod("gerarLinkENotificar", Long.class)
+                .getAnnotation(Transactional.class).propagation()).isEqualTo(Propagation.REQUIRES_NEW);
     }
 }

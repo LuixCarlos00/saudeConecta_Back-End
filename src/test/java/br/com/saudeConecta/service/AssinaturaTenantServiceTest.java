@@ -10,6 +10,8 @@ import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenan
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
 import br.com.saudeConecta.presentation.dto.planos.AssinaturaTenantResponse;
 import br.com.saudeConecta.presentation.dto.planos.CustomizarPlanoTenantRequest;
+import br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService;
+import org.springframework.http.HttpStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -20,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,6 +37,7 @@ class AssinaturaTenantServiceTest {
     @Mock private AssinaturaTenantRepository assinaturaTenantRepository;
     @Mock private OrganizacaoRepository organizacaoRepository;
     @Mock private PlanoAssinaturaService planoAssinaturaService;
+    @Mock private AssinaturaMercadoPagoService assinaturaMercadoPagoService;
 
     @InjectMocks
     private AssinaturaTenantService service;
@@ -188,6 +192,7 @@ class AssinaturaTenantServiceTest {
             service.suspender(1L);
 
             assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.SUSPENSA);
+            assertThat(assinatura.getDataSuspensao()).isNotNull();
         }
 
         @Test
@@ -288,6 +293,21 @@ class AssinaturaTenantServiceTest {
             assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
             verify(assinaturaTenantRepository).save(assinatura);
         }
+
+        @Test
+        @DisplayName("2.8 - Renovação parte do vencimento atual e fixa o dia âncora; limpa a data da suspensão")
+        void deveRenovarAPartirDoCicloELimparSuspensao() {
+            AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.SUSPENSA);
+            assinatura.setDataVencimento(LocalDate.now().minusDays(20));
+            assinatura.setDataSuspensao(LocalDateTime.now().minusDays(3));
+            when(assinaturaTenantRepository.findById(1L)).thenReturn(Optional.of(assinatura));
+
+            service.renovarAposPagamento(1L);
+
+            assertThat(assinatura.getDiaCobranca()).isEqualTo(LocalDate.now().getDayOfMonth());
+            assertThat(assinatura.getDataVencimento()).isAfter(LocalDate.now());
+            assertThat(assinatura.getDataSuspensao()).isNull();
+        }
     }
 
     // ========== trocarPlano ==========
@@ -369,6 +389,74 @@ class AssinaturaTenantServiceTest {
             service.customizarPlano(1L, request);
 
             assertThat(assinatura.getQtdAdminExtra()).isEqualTo(0);
+        }
+    }
+
+    // ========== definirCortesia ==========
+
+    @Nested
+    @DisplayName("definirCortesia")
+    class DefinirCortesia {
+
+        @Test
+        @DisplayName("2.6 - Remover cortesia define novo vencimento (hoje+7) e gera/envia o link de pagamento")
+        void removerCortesiaDefineVencimentoEGeraLink() {
+            AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.ATIVA);
+            assinatura.setCortesia(true);
+            assinatura.setDataVencimento(LocalDate.now().minusDays(200));
+            when(assinaturaTenantRepository.findById(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
+
+            service.definirCortesia(1L, false);
+
+            assertThat(assinatura.isCortesia()).isFalse();
+            assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
+            assertThat(assinatura.getDataVencimento()).isEqualTo(LocalDate.now().plusDays(7));
+            assertThat(assinatura.getDataProximaCobranca()).isEqualTo(LocalDate.now().plusDays(7));
+            verify(assinaturaMercadoPagoService).gerarLinkENotificar(1L);
+        }
+
+        @Test
+        @DisplayName("2.6 - Falha ao gerar o link não desfaz a remoção da cortesia")
+        void falhaNoLinkNaoDesfazRemocao() {
+            AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.ATIVA);
+            assinatura.setCortesia(true);
+            when(assinaturaTenantRepository.findById(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
+            when(assinaturaMercadoPagoService.gerarLinkENotificar(1L))
+                    .thenThrow(new BusinessException("MP fora", HttpStatus.BAD_GATEWAY));
+
+            assertThatCode(() -> service.definirCortesia(1L, false)).doesNotThrowAnyException();
+            assertThat(assinatura.isCortesia()).isFalse();
+        }
+
+        @Test
+        @DisplayName("Remover cortesia de quem já tem preapproval não gera link novo")
+        void removerCortesiaComPreapprovalNaoGeraLink() {
+            AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.ATIVA);
+            assinatura.setCortesia(true);
+            assinatura.setMpPreapprovalId("pa-1");
+            when(assinaturaTenantRepository.findById(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
+
+            service.definirCortesia(1L, false);
+
+            verifyNoInteractions(assinaturaMercadoPagoService);
+        }
+
+        @Test
+        @DisplayName("Conceder cortesia não gera link nem mexe no vencimento")
+        void concederCortesiaNaoGeraLink() {
+            AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.TRIAL);
+            LocalDate vencimento = assinatura.getDataVencimento();
+            when(assinaturaTenantRepository.findById(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
+
+            service.definirCortesia(1L, true);
+
+            assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
+            assertThat(assinatura.getDataVencimento()).isEqualTo(vencimento);
+            verifyNoInteractions(assinaturaMercadoPagoService);
         }
     }
 }

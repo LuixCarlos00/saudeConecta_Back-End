@@ -9,14 +9,18 @@ import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenan
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
 import br.com.saudeConecta.presentation.dto.planos.AssinaturaTenantResponse;
 import br.com.saudeConecta.presentation.dto.planos.CustomizarPlanoTenantRequest;
+import br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -24,18 +28,23 @@ public class AssinaturaTenantService {
 
     private static final Logger log = LoggerFactory.getLogger(AssinaturaTenantService.class);
     private static final int DIAS_TRIAL = 30;
+    /** Prazo até o novo vencimento ao remover a cortesia: o mesmo aviso que o trial recebe. */
+    private static final int DIAS_PARA_PAGAR_APOS_CORTESIA = 7;
 
     private final AssinaturaTenantRepository assinaturaTenantRepository;
     private final OrganizacaoRepository organizacaoRepository;
     private final PlanoAssinaturaService planoAssinaturaService;
+    private final AssinaturaMercadoPagoService assinaturaMercadoPagoService;
 
     public AssinaturaTenantService(
             AssinaturaTenantRepository assinaturaTenantRepository,
             OrganizacaoRepository organizacaoRepository,
-            PlanoAssinaturaService planoAssinaturaService) {
+            PlanoAssinaturaService planoAssinaturaService,
+            AssinaturaMercadoPagoService assinaturaMercadoPagoService) {
         this.assinaturaTenantRepository = assinaturaTenantRepository;
         this.organizacaoRepository = organizacaoRepository;
         this.planoAssinaturaService = planoAssinaturaService;
+        this.assinaturaMercadoPagoService = assinaturaMercadoPagoService;
     }
 
     /**
@@ -195,7 +204,8 @@ public class AssinaturaTenantService {
     }
 
     /**
-     * Suspende a assinatura (bloqueia login).
+     * Suspende a assinatura (bloqueia login) e registra a data da suspensão,
+     * que conta o prazo até o cancelamento automático.
      *
      * @param assinaturaId ID da assinatura
      */
@@ -203,6 +213,7 @@ public class AssinaturaTenantService {
     public void suspender(Long assinaturaId) {
         AssinaturaTenant assinatura = buscarPorId(assinaturaId);
         assinatura.setStatus(StatusAssinatura.SUSPENSA);
+        assinatura.setDataSuspensao(LocalDateTime.now());
         assinaturaTenantRepository.save(assinatura);
         log.warn("Assinatura {} SUSPENSA (org: {})",
                 assinaturaId, assinatura.getOrganizacao().getId());
@@ -266,7 +277,8 @@ public class AssinaturaTenantService {
     }
 
     /**
-     * Renova o vencimento da assinatura após pagamento confirmado.
+     * Renova o vencimento da assinatura após pagamento confirmado,
+     * mantendo o dia âncora do ciclo de cobrança.
      *
      * @param assinaturaId ID da assinatura
      */
@@ -274,8 +286,8 @@ public class AssinaturaTenantService {
     public void renovarAposPagamento(Long assinaturaId) {
         AssinaturaTenant assinatura = buscarPorId(assinaturaId);
         assinatura.setStatus(StatusAssinatura.ATIVA);
-        assinatura.setDataVencimento(LocalDate.now().plusMonths(1));
-        assinatura.setDataProximaCobranca(LocalDate.now().plusMonths(1));
+        assinatura.setDataSuspensao(null);
+        assinatura.renovarCiclo(LocalDate.now());
         assinaturaTenantRepository.save(assinatura);
         log.info("Assinatura {} renovada. Proximo vencimento: {}",
                 assinaturaId, assinatura.getDataVencimento());
@@ -351,6 +363,10 @@ public class AssinaturaTenantService {
      * Marca ou remove a condição de cortesia da assinatura (SUPER_ADMIN).
      * Assinaturas de cortesia ficam fora de toda a rotina de cobrança.
      *
+     * Ao remover a cortesia, a assinatura ganha um novo vencimento (hoje + 7 dias,
+     * o mesmo aviso do trial) e o link de pagamento é gerado e enviado ao administrador;
+     * sem isso o vencimento antigo a tornaria inadimplente sem nunca ter recebido o link.
+     *
      * @param assinaturaId ID da assinatura
      * @param cortesia     true para isentar de cobrança
      * @return AssinaturaTenantResponse atualizada
@@ -358,16 +374,53 @@ public class AssinaturaTenantService {
     @Transactional
     public AssinaturaTenantResponse definirCortesia(Long assinaturaId, boolean cortesia) {
         AssinaturaTenant assinatura = buscarPorId(assinaturaId);
+        boolean removendoCortesia = !cortesia && assinatura.isCortesia();
         assinatura.setCortesia(cortesia);
         if (cortesia && StatusAssinatura.TRIAL.equals(assinatura.getStatus())) {
             assinatura.setStatus(StatusAssinatura.ATIVA);
+        }
+        if (removendoCortesia) {
+            LocalDate novoVencimento = LocalDate.now().plusDays(DIAS_PARA_PAGAR_APOS_CORTESIA);
+            assinatura.setDataVencimento(novoVencimento);
+            assinatura.setDataProximaCobranca(novoVencimento);
         }
 
         AssinaturaTenant salva = assinaturaTenantRepository.save(assinatura);
         log.warn("Assinatura {} definida como cortesia={} (org {})",
                 assinaturaId, cortesia, salva.getOrganizacao().getId());
 
+        if (removendoCortesia && !salva.temPreapproval()) {
+            enviarLinkDePagamentoAposCommit(assinaturaId);
+        }
+
         return AssinaturaTenantResponse.fromEntity(salva);
+    }
+
+    /**
+     * O link é gerado depois do commit: a chamada HTTP ao Mercado Pago fica fora da
+     * transação, a nova transação já enxerga cortesia=false e uma falha no MP não
+     * desfaz a remoção da cortesia (o cliente ainda pode gerar o link pela tela).
+     */
+    private void enviarLinkDePagamentoAposCommit(Long assinaturaId) {
+        Runnable envio = () -> {
+            try {
+                assinaturaMercadoPagoService.gerarLinkENotificar(assinaturaId);
+            } catch (Exception e) {
+                log.error("Falha ao gerar o link de pagamento após remover a cortesia da assinatura {}",
+                        assinaturaId, e);
+            }
+        };
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    envio.run();
+                }
+            });
+        } else {
+            envio.run();
+        }
     }
 
     /**

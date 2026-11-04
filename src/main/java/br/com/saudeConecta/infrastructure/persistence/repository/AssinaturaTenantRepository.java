@@ -60,8 +60,9 @@ public interface AssinaturaTenantRepository extends JpaRepository<AssinaturaTena
     Optional<AssinaturaTenant> findByMpPreapprovalId(@Param("preapprovalId") String preapprovalId);
 
     /**
-     * Busca trials que vencem exatamente na data informada e ainda não possuem
-     * link de pagamento gerado (ignora cortesias).
+     * Busca trials que vencem até a data informada (inclusive os já vencidos) e ainda
+     * não possuem link de pagamento gerado (ignora cortesias). Usar "até" em vez de
+     * "exatamente em" garante nova tentativa quando a geração falha em um dia.
      */
     @Query("SELECT a FROM AssinaturaTenant a " +
            "JOIN FETCH a.planoAssinatura " +
@@ -69,8 +70,8 @@ public interface AssinaturaTenantRepository extends JpaRepository<AssinaturaTena
            "WHERE a.status = 'TRIAL' " +
            "AND a.cortesia = false " +
            "AND a.mpPreapprovalId IS NULL " +
-           "AND a.dataVencimento = :dataAlvo")
-    List<AssinaturaTenant> findTrialsSemLinkVencendoEm(@Param("dataAlvo") LocalDate dataAlvo);
+           "AND a.dataVencimento <= :dataAlvo")
+    List<AssinaturaTenant> findTrialsSemLinkVencendoAte(@Param("dataAlvo") LocalDate dataAlvo);
 
     /**
      * Busca assinaturas já vinculadas ao Mercado Pago para reconciliação de status.
@@ -84,11 +85,11 @@ public interface AssinaturaTenantRepository extends JpaRepository<AssinaturaTena
 
     /**
      * Busca assinaturas vencidas que ainda não foram marcadas como inadimplentes.
-     * Cortesias são ignoradas.
+     * TRIAL vencido segue a mesma régua da ATIVA vencida. Cortesias são ignoradas.
      */
     @Query("SELECT a FROM AssinaturaTenant a " +
            "JOIN FETCH a.organizacao " +
-           "WHERE a.status = 'ATIVA' " +
+           "WHERE a.status IN ('ATIVA', 'TRIAL') " +
            "AND a.cortesia = false " +
            "AND a.dataVencimento < :hoje")
     List<AssinaturaTenant> findVencidasNaoInadimplentes(@Param("hoje") LocalDate hoje);
@@ -105,13 +106,14 @@ public interface AssinaturaTenantRepository extends JpaRepository<AssinaturaTena
     List<AssinaturaTenant> findInadimplentesParaSuspender(@Param("dataLimite") LocalDate dataLimite);
 
     /**
-     * Busca assinaturas suspensas há mais de N dias (para cancelar).
-     * Cortesias são ignoradas.
+     * Busca assinaturas suspensas há mais de N dias (para cancelar), contados a partir
+     * da data da suspensão. atualizadoEm só é usado para linhas suspensas por versões
+     * anteriores da aplicação, que não gravavam data_suspensao. Cortesias são ignoradas.
      */
     @Query("SELECT a FROM AssinaturaTenant a " +
            "WHERE a.status = 'SUSPENSA' " +
            "AND a.cortesia = false " +
-           "AND a.atualizadoEm < :dataLimite")
+           "AND COALESCE(a.dataSuspensao, a.atualizadoEm) < :dataLimite")
     List<AssinaturaTenant> findSuspensasParaCancelar(@Param("dataLimite") LocalDateTime dataLimite);
 
     /**

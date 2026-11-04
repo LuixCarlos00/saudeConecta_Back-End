@@ -1,8 +1,10 @@
 package br.com.saudeConecta.service.mercadopago;
 
+import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
 import br.com.saudeConecta.domain.planos.OrigemCancelamento;
 import br.com.saudeConecta.domain.planos.StatusAssinatura;
+import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
@@ -12,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -31,16 +34,19 @@ public class AssinaturaMercadoPagoService {
     private final AdminOrganizacaoRepository adminOrganizacaoRepository;
     private final MercadoPagoClient mercadoPagoClient;
     private final MercadoPagoProperties properties;
+    private final EmailNotificacaoService emailNotificacaoService;
 
     public AssinaturaMercadoPagoService(
             AssinaturaTenantRepository assinaturaTenantRepository,
             AdminOrganizacaoRepository adminOrganizacaoRepository,
             MercadoPagoClient mercadoPagoClient,
-            MercadoPagoProperties properties) {
+            MercadoPagoProperties properties,
+            EmailNotificacaoService emailNotificacaoService) {
         this.assinaturaTenantRepository = assinaturaTenantRepository;
         this.adminOrganizacaoRepository = adminOrganizacaoRepository;
         this.mercadoPagoClient = mercadoPagoClient;
         this.properties = properties;
+        this.emailNotificacaoService = emailNotificacaoService;
     }
 
     /**
@@ -116,6 +122,25 @@ public class AssinaturaMercadoPagoService {
     }
 
     /**
+     * Gera o link de pagamento de uma assinatura e o envia por e-mail ao administrador
+     * owner da organização. Roda em transação própria para ser chamado item a item
+     * pelo scheduler e após o commit da remoção de cortesia.
+     *
+     * @param assinaturaId ID da assinatura
+     * @return dados do checkout, incluindo o init_point
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public LinkPagamentoResponse gerarLinkENotificar(Long assinaturaId) {
+        AssinaturaTenant assinatura = assinaturaTenantRepository.findById(assinaturaId)
+                .orElseThrow(() -> new BusinessException(
+                        "Assinatura não encontrada: " + assinaturaId, HttpStatus.NOT_FOUND));
+
+        LinkPagamentoResponse link = gerarLinkPagamento(assinatura);
+        notificarLinkDePagamento(assinatura, link);
+        return link;
+    }
+
+    /**
      * Cancela a assinatura a pedido do próprio cliente.
      * O cancelamento é propagado ao Mercado Pago antes de ser refletido localmente.
      *
@@ -187,7 +212,7 @@ public class AssinaturaMercadoPagoService {
      * Rede de segurança para webhooks perdidos.
      *
      * @param assinatura assinatura com preapproval vinculado
-     * @return true se houve alteração de status
+     * @return true se houve alteração no espelho do MP ou no status local
      */
     @Transactional
     public boolean sincronizar(AssinaturaTenant assinatura) {
@@ -204,11 +229,10 @@ public class AssinaturaMercadoPagoService {
         assinatura.setMpStatus(remoto.status());
         assinatura.setMpUltimaSincronizacao(LocalDateTime.now());
 
-        StatusAssinatura statusLocal = mapearStatus(remoto.status());
-        if (statusLocal != null && statusLocal != assinatura.getStatus()) {
+        StatusAssinatura statusAnterior = assinatura.getStatus();
+        if (aplicarStatusRemoto(assinatura, remoto.status())) {
             log.warn("Reconciliação: assinatura {} passou de {} para {} (MP: {})",
-                    assinatura.getId(), assinatura.getStatus(), statusLocal, remoto.status());
-            assinatura.setStatus(statusLocal);
+                    assinatura.getId(), statusAnterior, assinatura.getStatus(), remoto.status());
             mudou = true;
         }
 
@@ -217,21 +241,40 @@ public class AssinaturaMercadoPagoService {
     }
 
     /**
-     * Traduz o status do Mercado Pago para o status interno da assinatura.
+     * Reflete no status local apenas as mudanças remotas que a régua não decide sozinha:
+     * pausa (SUSPENSA) e cancelamento (CANCELADA).
      *
-     * @param mpStatus status retornado pelo Mercado Pago
-     * @return status interno correspondente ou null quando não há equivalência
+     * {@code authorized} no Mercado Pago significa "cartão autorizado", não "fatura paga":
+     * não promove TRIAL, INADIMPLENTE nem SUSPENSA e não mexe no vencimento. Só a fatura
+     * (authorized_payment) aprovada reativa e renova a assinatura. CANCELADA é terminal.
+     *
+     * @param assinatura assinatura local (não é salva aqui)
+     * @param mpStatus   status atual do preapproval no Mercado Pago
+     * @return true se o status local mudou
      */
-    public StatusAssinatura mapearStatus(String mpStatus) {
-        if (mpStatus == null) {
-            return null;
+    public boolean aplicarStatusRemoto(AssinaturaTenant assinatura, String mpStatus) {
+        if (mpStatus == null || StatusAssinatura.CANCELADA.equals(assinatura.getStatus())) {
+            return false;
         }
-        return switch (mpStatus) {
-            case MercadoPagoClient.STATUS_AUTHORIZED -> StatusAssinatura.ATIVA;
-            case MercadoPagoClient.STATUS_PAUSED -> StatusAssinatura.SUSPENSA;
-            case MercadoPagoClient.STATUS_CANCELLED -> StatusAssinatura.CANCELADA;
-            default -> null;
-        };
+        switch (mpStatus) {
+            case MercadoPagoClient.STATUS_PAUSED -> {
+                if (StatusAssinatura.SUSPENSA.equals(assinatura.getStatus())) {
+                    return false;
+                }
+                assinatura.setStatus(StatusAssinatura.SUSPENSA);
+                assinatura.setDataSuspensao(LocalDateTime.now());
+                return true;
+            }
+            case MercadoPagoClient.STATUS_CANCELLED -> {
+                assinatura.setStatus(StatusAssinatura.CANCELADA);
+                assinatura.setDataCancelamento(LocalDateTime.now());
+                assinatura.setCanceladoPor(OrigemCancelamento.MERCADO_PAGO);
+                return true;
+            }
+            default -> {
+                return false;
+            }
+        }
     }
 
     /**
@@ -259,5 +302,27 @@ public class AssinaturaMercadoPagoService {
                 assinatura.getMpInitPoint(),
                 assinatura.getMpPayerEmail(),
                 assinatura.getValorMensal());
+    }
+
+    private void notificarLinkDePagamento(AssinaturaTenant assinatura, LinkPagamentoResponse link) {
+        AdminOrganizacao owner = adminOrganizacaoRepository
+                .findOwnerByOrganizacaoId(assinatura.getOrganizacao().getId())
+                .orElse(null);
+
+        if (owner == null || owner.getEmail() == null || owner.getEmail().isBlank()) {
+            log.warn("Assinatura {} sem administrador com e-mail — link não enviado", assinatura.getId());
+            return;
+        }
+
+        emailNotificacaoService.enviarLinkAtivacaoAssinatura(
+                owner.getEmail(),
+                owner.getNome(),
+                assinatura.getPlanoAssinatura().getNome(),
+                assinatura.getValorMensal(),
+                link.initPoint(),
+                link.payerEmail(),
+                assinatura.getDataVencimento(),
+                assinatura.getOrganizacao().getId(),
+                owner.getId());
     }
 }

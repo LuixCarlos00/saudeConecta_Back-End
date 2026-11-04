@@ -42,6 +42,8 @@ public class MercadoPagoWebhookController {
             @RequestParam(value = "data.id", required = false) String idQuery,
             @RequestBody(required = false) JsonNode corpo) {
 
+        // O HMAC cobre só o data.id: o tipo não é confiável aqui e é validado pelo
+        // MercadoPagoWebhookService contra o recurso consultado no Mercado Pago.
         String tipo = primeiroNaoVazio(tipoQuery, texto(corpo, "type"), texto(corpo, "topic"));
         String dataId = primeiroNaoVazio(idQuery, dataId(corpo), texto(corpo, "id"));
 

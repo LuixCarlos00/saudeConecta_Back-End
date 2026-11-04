@@ -148,4 +148,7 @@
 
     <!-- Validade do link publico de assinatura do planejamento terapeutico (coluna nullable) -->
     <include file="db/changelog/08-2026/060-adicionar-token-expiracao-planejamento-terapeutico.xml"/>
+
+    <!-- Regua de cobranca: data da suspensao, dia ancora do ciclo e reabertura de eventos MP nao finais -->
+    <include file="db/changelog/08-2026/061-regua-cobranca-suspensao-e-dia-cobranca.xml"/>
 </databaseChangeLog>

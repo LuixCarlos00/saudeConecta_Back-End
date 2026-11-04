@@ -98,6 +98,14 @@ public class AssinaturaTenant implements Serializable {
     @Column(name = "cancelado_por", length = 20)
     private OrigemCancelamento canceladoPor;
 
+    /** Momento em que a assinatura entrou em SUSPENSA; base do prazo para cancelamento. */
+    @Column(name = "data_suspensao")
+    private LocalDateTime dataSuspensao;
+
+    /** Dia do mês do ciclo de cobrança, fixado no primeiro pagamento (1 a 31). */
+    @Column(name = "dia_cobranca")
+    private Integer diaCobranca;
+
     @Column(name = "criado_em", updatable = false)
     private LocalDateTime criadoEm;
 
@@ -152,5 +160,35 @@ public class AssinaturaTenant implements Serializable {
      */
     public boolean temPreapproval() {
         return mpPreapprovalId != null && !mpPreapprovalId.isBlank();
+    }
+
+    /**
+     * Avança o vencimento para o próximo ciclo mensal após uma fatura paga.
+     *
+     * O dia âncora é fixado no primeiro pagamento e preservado nos meses curtos
+     * (31/jan → 28/fev → 31/mar). O próximo vencimento é calculado a partir do
+     * maior valor entre o vencimento atual e a data do pagamento: assim um pagamento
+     * antecipado não gera vencimento no dia seguinte e um atrasado não acumula ciclos.
+     *
+     * @param dataPagamento data em que a fatura foi paga
+     */
+    public void renovarCiclo(LocalDate dataPagamento) {
+        if (diaCobranca == null) {
+            diaCobranca = dataPagamento.getDayOfMonth();
+        }
+        LocalDate base = dataVencimento != null && dataVencimento.isAfter(dataPagamento)
+                ? dataVencimento
+                : dataPagamento;
+
+        LocalDate proximo = noDiaDeCobranca(base);
+        if (!proximo.isAfter(base)) {
+            proximo = noDiaDeCobranca(base.plusMonths(1));
+        }
+        dataVencimento = proximo;
+        dataProximaCobranca = proximo;
+    }
+
+    private LocalDate noDiaDeCobranca(LocalDate mes) {
+        return mes.withDayOfMonth(Math.min(diaCobranca, mes.lengthOfMonth()));
     }
 }

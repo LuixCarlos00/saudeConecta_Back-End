@@ -6,6 +6,7 @@ import br.com.saudeConecta.domain.planos.AssinaturaTenant;
 import br.com.saudeConecta.domain.planos.OrigemCancelamento;
 import br.com.saudeConecta.domain.planos.PlanoAssinatura;
 import br.com.saudeConecta.domain.planos.StatusAssinatura;
+import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
@@ -21,6 +22,8 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,6 +46,7 @@ class AssinaturaMercadoPagoServiceTest {
     @Mock private AssinaturaTenantRepository assinaturaTenantRepository;
     @Mock private AdminOrganizacaoRepository adminOrganizacaoRepository;
     @Mock private MercadoPagoClient mercadoPagoClient;
+    @Mock private EmailNotificacaoService emailNotificacaoService;
 
     private MercadoPagoProperties properties;
     private AssinaturaMercadoPagoService service;
@@ -55,7 +59,7 @@ class AssinaturaMercadoPagoServiceTest {
         properties.setBackUrl("https://app.saudeconecta.com.br/assinatura/sucesso");
 
         service = new AssinaturaMercadoPagoService(assinaturaTenantRepository,
-                adminOrganizacaoRepository, mercadoPagoClient, properties);
+                adminOrganizacaoRepository, mercadoPagoClient, properties, emailNotificacaoService);
 
         Organizacao org = new Organizacao();
         org.setId(ORG_ID);
@@ -75,6 +79,7 @@ class AssinaturaMercadoPagoServiceTest {
         AdminOrganizacao admin = new AdminOrganizacao();
         admin.setId(3L);
         admin.setEmail(EMAIL_ADMIN);
+        admin.setNome("Fulano");
 
         when(adminOrganizacaoRepository.findOwnerByOrganizacaoId(ORG_ID)).thenReturn(Optional.of(admin));
         when(assinaturaTenantRepository.findAssinaturaAtivaByOrganizacaoId(ORG_ID)).thenReturn(Optional.of(assinatura));
@@ -168,26 +173,87 @@ class AssinaturaMercadoPagoServiceTest {
     }
 
     @Test
-    @DisplayName("Sincronizar deve corrigir divergência de status vinda do Mercado Pago")
-    void sincronizarDeveCorrigirDivergencia() {
+    @DisplayName("2.3 - Sincronizar com authorized atualiza o espelho do MP mas não mexe no status local nem no vencimento")
+    void sincronizarAuthorizedNaoPromoveStatus() {
+        LocalDate vencimento = LocalDate.now().plusDays(3);
         assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
         assinatura.setMpStatus("pending");
+        assinatura.setDataVencimento(vencimento);
         when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(
                 new PreapprovalResponse(PREAPPROVAL_ID, "authorized", INIT_POINT, EMAIL_ADMIN, null, null));
 
         boolean mudou = service.sincronizar(assinatura);
 
         assertThat(mudou).isTrue();
-        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
+        assertThat(assinatura.getMpStatus()).isEqualTo("authorized");
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.TRIAL);
+        assertThat(assinatura.getDataVencimento()).isEqualTo(vencimento);
     }
 
     @Test
-    @DisplayName("Mapeamento de status do Mercado Pago para status interno")
-    void deveMapearStatus() {
-        assertThat(service.mapearStatus("authorized")).isEqualTo(StatusAssinatura.ATIVA);
-        assertThat(service.mapearStatus("paused")).isEqualTo(StatusAssinatura.SUSPENSA);
-        assertThat(service.mapearStatus("cancelled")).isEqualTo(StatusAssinatura.CANCELADA);
-        assertThat(service.mapearStatus("pending")).isNull();
-        assertThat(service.mapearStatus(null)).isNull();
+    @DisplayName("2.3 - Reconciliação não desfaz INADIMPLENTE nem SUSPENSA quando o MP diz authorized")
+    void sincronizarNaoDesfazInadimplenciaNemSuspensao() {
+        assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
+        assinatura.setMpStatus("authorized");
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(
+                new PreapprovalResponse(PREAPPROVAL_ID, "authorized", INIT_POINT, EMAIL_ADMIN, null, null));
+
+        assinatura.setStatus(StatusAssinatura.INADIMPLENTE);
+        assertThat(service.sincronizar(assinatura)).isFalse();
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.INADIMPLENTE);
+
+        LocalDateTime suspensaEm = LocalDateTime.now().minusDays(10);
+        assinatura.setStatus(StatusAssinatura.SUSPENSA);
+        assinatura.setDataSuspensao(suspensaEm);
+        assertThat(service.sincronizar(assinatura)).isFalse();
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.SUSPENSA);
+        assertThat(assinatura.getDataSuspensao()).isEqualTo(suspensaEm);
+    }
+
+    @Test
+    @DisplayName("Sincronizar com paused suspende e registra a data da suspensão")
+    void sincronizarPausedSuspende() {
+        assinatura.setStatus(StatusAssinatura.INADIMPLENTE);
+        assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
+        assinatura.setMpStatus("authorized");
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(
+                new PreapprovalResponse(PREAPPROVAL_ID, "paused", null, EMAIL_ADMIN, null, null));
+
+        assertThat(service.sincronizar(assinatura)).isTrue();
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.SUSPENSA);
+        assertThat(assinatura.getDataSuspensao()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("Status remoto: só pausa e cancelamento refletem localmente; cancelada é terminal")
+    void aplicarStatusRemoto() {
+        assinatura.setStatus(StatusAssinatura.ATIVA);
+        assertThat(service.aplicarStatusRemoto(assinatura, "authorized")).isFalse();
+        assertThat(service.aplicarStatusRemoto(assinatura, "pending")).isFalse();
+        assertThat(service.aplicarStatusRemoto(assinatura, null)).isFalse();
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
+
+        assertThat(service.aplicarStatusRemoto(assinatura, "cancelled")).isTrue();
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.CANCELADA);
+        assertThat(assinatura.getCanceladoPor()).isEqualTo(OrigemCancelamento.MERCADO_PAGO);
+
+        assertThat(service.aplicarStatusRemoto(assinatura, "paused")).isFalse();
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.CANCELADA);
+    }
+
+    @Test
+    @DisplayName("Gerar link e notificar: cria o preapproval e envia o e-mail ao administrador")
+    void gerarLinkENotificar() {
+        when(assinaturaTenantRepository.findById(ASSINATURA_ID)).thenReturn(Optional.of(assinatura));
+        when(mercadoPagoClient.criarPreapprovalPendente(any(), eq("ASSINATURA-42"), eq(EMAIL_ADMIN), any()))
+                .thenReturn(new PreapprovalResponse(PREAPPROVAL_ID, "pending", INIT_POINT,
+                        EMAIL_ADMIN, "ASSINATURA-42", null));
+
+        LinkPagamentoResponse link = service.gerarLinkENotificar(ASSINATURA_ID);
+
+        assertThat(link.initPoint()).isEqualTo(INIT_POINT);
+        verify(emailNotificacaoService).enviarLinkAtivacaoAssinatura(
+                eq(EMAIL_ADMIN), eq("Fulano"), eq("Profissional"), any(), eq(INIT_POINT),
+                eq(EMAIL_ADMIN), any(), eq(ORG_ID), eq(3L));
     }
 }
