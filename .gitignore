@@ -79,3 +79,11 @@ Thumbs.db
 
 # Credenciais locais do MCP (nao versionar)
 .env-mcp
+
+# IDE e ferramentas locais de dev (nao versionar)
+.idea/
+*.iml
+README-MCP.md
+mysql-mcp-server.py
+requirements-mcp.txt
+.omc/
