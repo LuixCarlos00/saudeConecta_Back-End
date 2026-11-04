@@ -1,5 +1,9 @@
 package br.com.saudeConecta.email;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -7,8 +11,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.List;
 import java.util.concurrent.Executor;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -241,6 +247,59 @@ class EmailNotificacaoServiceTest {
             emailNotificacaoService.reenviarEmail(99L, "dest@email.com", "Assunto", "<html>corpo</html>");
 
             verifyNoInteractions(emailRetryService);
+        }
+    }
+
+    // ========== logs com e-mail desabilitado ==========
+
+    @Nested
+    @DisplayName("Logs com e-mail desabilitado")
+    class LogsComEmailDesabilitado {
+
+        private static final String SENHA = "S3nh@Secreta!";
+        private static final String EMAIL = "fulano.silva@clinica.com";
+
+        private Logger logger;
+        private ListAppender<ILoggingEvent> appender;
+
+        @BeforeEach
+        void capturarLogs() {
+            ReflectionTestUtils.setField(emailNotificacaoService, "emailHabilitado", false);
+            logger = (Logger) LoggerFactory.getLogger(EmailNotificacaoService.class);
+            appender = new ListAppender<>();
+            appender.start();
+            logger.addAppender(appender);
+        }
+
+        @AfterEach
+        void soltarLogs() {
+            logger.detachAppender(appender);
+        }
+
+        private List<String> mensagens() {
+            return appender.list.stream().map(ILoggingEvent::getFormattedMessage).toList();
+        }
+
+        @Test
+        @DisplayName("Credenciais: não deve logar a senha nem o e-mail em claro, mas mantém o login")
+        void credenciaisNaoDevemLogarSenha() {
+            emailNotificacaoService.enviarCredenciaisAdministrador(EMAIL, "Fulano", "12345678900", SENHA, 1L, 2L);
+
+            assertThat(mensagens()).isNotEmpty();
+            assertThat(mensagens()).noneMatch(m -> m.contains(SENHA));
+            assertThat(mensagens()).noneMatch(m -> m.contains(EMAIL));
+            assertThat(mensagens()).anyMatch(m -> m.contains("12345678900"));
+        }
+
+        @Test
+        @DisplayName("Recuperação de senha: não deve logar a senha nem o e-mail em claro, mas mantém o login")
+        void recuperacaoNaoDeveLogarSenha() {
+            emailNotificacaoService.enviarRecuperacaoSenha(EMAIL, "Fulano", "12345678900", SENHA, 1L);
+
+            assertThat(mensagens()).isNotEmpty();
+            assertThat(mensagens()).noneMatch(m -> m.contains(SENHA));
+            assertThat(mensagens()).noneMatch(m -> m.contains(EMAIL));
+            assertThat(mensagens()).anyMatch(m -> m.contains("12345678900"));
         }
     }
 }

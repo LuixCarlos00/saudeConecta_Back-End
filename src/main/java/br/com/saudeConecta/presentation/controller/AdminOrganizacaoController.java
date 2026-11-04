@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -63,6 +64,7 @@ public class AdminOrganizacaoController {
 
 
     @PutMapping("/atualizarAdmByOrg/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     @Description("Atualiza nome e email do administrador. Utilizado em: VisualizarEditarUsuarioComponent")
     public ResponseEntity<?> atualizarAdmByOrg(@PathVariable Long id, @RequestBody AtualizarAdminRequest request) {
@@ -78,6 +80,7 @@ public class AdminOrganizacaoController {
 
 
     @PostMapping("/cadastrarAdminOrgCompleto")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Transactional
     @Description("Cadastra Admin de Organização completo (com organização e endereço). Exclusivo para SUPER_ADMIN.")
     public ResponseEntity<?> cadastrarAdminOrgCompleto(@RequestBody @Valid CadastrarAdminOrgCompletoRequest request) {
@@ -95,6 +98,7 @@ public class AdminOrganizacaoController {
     }
 
     @GetMapping("/buscarAdminOrgCompleto/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Transactional
     @Description("Busca dados completos do AdminOrg (admin + organização + endereço). Exclusivo para SUPER_ADMIN.")
     public ResponseEntity<AdminOrgCompletoResponse> buscarAdminOrgCompleto(@PathVariable Long id) {
@@ -109,6 +113,7 @@ public class AdminOrganizacaoController {
     }
 
     @PutMapping("/atualizarAdminOrgCompleto/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Transactional
     @Description("Atualiza dados completos do AdminOrg (admin + organização + endereço). Exclusivo para SUPER_ADMIN.")
     public ResponseEntity<?> atualizarAdminOrgCompleto(@PathVariable Long id, @RequestBody AtualizarAdminOrgCompletoRequest request) {

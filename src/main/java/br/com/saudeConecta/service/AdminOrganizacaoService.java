@@ -229,13 +229,24 @@ public class AdminOrganizacaoService {
         log.info("Dados pessoais do Admin Org atualizados com sucesso. AdminID: {}", adminId);
     }
 
+    /**
+     * Atualiza nome e e-mail de um administrador da organização do usuário logado.
+     *
+     * @param id    ID do AdminOrganizacao
+     * @param nome  novo nome (ignorado se nulo ou em branco)
+     * @param email novo e-mail (ignorado se nulo ou em branco)
+     * @return administrador atualizado
+     * @throws IllegalArgumentException se o administrador não existir na organização do token
+     */
     @Transactional
     public AdminOrganizacao atualizarAdmByOrg(Long id, String nome, String email) {
         log.info("Atualizando administrador ID: {}", id);
         Long orgId = tenantHelper.getCurrentTenantId();
 
-
-        AdminOrganizacao antes = adminOrganizacaoRepository.findById(id )
+        // Busca restrita ao tenant do token: trocar o e-mail de um gestor de outra clínica
+        // permitiria tomar a conta via "esqueci minha senha". Admin de outra org responde
+        // igual a inexistente para não revelar quais IDs existem.
+        AdminOrganizacao antes = adminOrganizacaoRepository.findByIdAndOrganizacao_Id(id, orgId)
             .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
 
 

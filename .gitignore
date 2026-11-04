@@ -76,3 +76,6 @@ spring-boot-*.log
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Credenciais locais do MCP (nao versionar)
+.env-mcp

@@ -83,7 +83,7 @@ class AdminOrganizacaoControllerIntegrationTest {
     class BuscarAdminOrgCompleto {
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = "SUPER_ADMIN")
         @DisplayName("Deve retornar 200 com dados completos")
         void deveRetornar200ComDadosCompletos() throws Exception {
             AdminOrgCompletoResponse response = new AdminOrgCompletoResponse(
@@ -98,7 +98,7 @@ class AdminOrganizacaoControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = "SUPER_ADMIN")
         @DisplayName("Deve retornar 404 quando admin completo não existe")
         void deveRetornar404QuandoNaoExiste() throws Exception {
             when(adminOrganizacaoService.buscarAdminOrgCompleto(99L))
@@ -106,6 +106,15 @@ class AdminOrganizacaoControllerIntegrationTest {
 
             mockMvc.perform(get("/administrador/buscarAdminOrgCompleto/99"))
                     .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("Deve retornar 403 para GESTOR (não é SUPER_ADMIN)")
+        void deveRetornar403ParaGestor() throws Exception {
+            mockMvc.perform(get("/administrador/buscarAdminOrgCompleto/1"))
+                    .andExpect(status().isForbidden());
+            verifyNoInteractions(adminOrganizacaoService);
         }
     }
 
@@ -155,7 +164,7 @@ class AdminOrganizacaoControllerIntegrationTest {
     class AtualizarAdminByOrg {
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
         @DisplayName("Deve retornar 200 ao atualizar com sucesso")
         void deveRetornar200AoAtualizar() throws Exception {
             AdminOrganizacao admin = new AdminOrganizacao();
@@ -176,7 +185,7 @@ class AdminOrganizacaoControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
         @DisplayName("Deve retornar 404 quando admin não encontrado ao atualizar")
         void deveRetornar404QuandoNaoEncontrado() throws Exception {
             when(adminOrganizacaoService.atualizarAdmByOrg(eq(99L), any(), any()))
@@ -194,6 +203,99 @@ class AdminOrganizacaoControllerIntegrationTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @WithMockUser(roles = "RECEPCIONISTA")
+        @DisplayName("Deve retornar 403 para ASSISTENTE (sem ROLE_ADMIN)")
+        void deveRetornar403ParaAssistente() throws Exception {
+            mockMvc.perform(put("/administrador/atualizarAdmByOrg/1")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"nome\":\"X\",\"email\":\"invasor@email.com\"}"))
+                    .andExpect(status().isForbidden());
+            verifyNoInteractions(adminOrganizacaoService);
+        }
+
+        @Test
+        @WithMockUser(roles = "PROFISSIONAL")
+        @DisplayName("Deve retornar 403 para CLINICO (sem ROLE_ADMIN)")
+        void deveRetornar403ParaClinico() throws Exception {
+            mockMvc.perform(put("/administrador/atualizarAdmByOrg/1")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"nome\":\"X\",\"email\":\"invasor@email.com\"}"))
+                    .andExpect(status().isForbidden());
+            verifyNoInteractions(adminOrganizacaoService);
+        }
+    }
+
+    // ========== PUT /administrador/atualizarAdminOrgCompleto/{id} ==========
+
+    @Nested
+    @DisplayName("PUT /administrador/atualizarAdminOrgCompleto/{id}")
+    class AtualizarAdminOrgCompleto {
+
+        @Test
+        @WithMockUser(roles = {"SUPER_ADMIN", "ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("Deve retornar 200 para SUPER_ADMIN")
+        void deveRetornar200ParaSuperAdmin() throws Exception {
+            mockMvc.perform(put("/administrador/atualizarAdminOrgCompleto/1")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"nome\":\"Novo\"}"))
+                    .andExpect(status().isOk());
+            verify(adminOrganizacaoService).atualizarAdminOrgCompleto(eq(1L), any());
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("Deve retornar 403 para GESTOR")
+        void deveRetornar403ParaGestor() throws Exception {
+            mockMvc.perform(put("/administrador/atualizarAdminOrgCompleto/1")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"nome\":\"Novo\"}"))
+                    .andExpect(status().isForbidden());
+            verifyNoInteractions(adminOrganizacaoService);
+        }
+    }
+
+    // ========== POST /administrador/cadastrarAdminOrgCompleto ==========
+
+    @Nested
+    @DisplayName("POST /administrador/cadastrarAdminOrgCompleto")
+    class CadastrarAdminOrgCompleto {
+
+        private static final String BODY_VALIDO = """
+                {"tipoPessoa":"FISICA","nome":"Gestor Novo","cpf":"12345678900","cargo":"Gestor",
+                 "email":"gestor@novo.com","cep":"01310-100","uf":"SP","municipio":"São Paulo",
+                 "rua":"Rua A","numero":100,"planoId":1,"cortesia":true}
+                """;
+
+        @Test
+        @WithMockUser(roles = {"SUPER_ADMIN", "ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("Deve retornar 201 para SUPER_ADMIN")
+        void deveRetornar201ParaSuperAdmin() throws Exception {
+            when(adminOrganizacaoService.cadastrarAdminOrgCompleto(any())).thenReturn(new AdminOrganizacao());
+
+            mockMvc.perform(post("/administrador/cadastrarAdminOrgCompleto")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(BODY_VALIDO))
+                    .andExpect(status().isCreated());
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("Deve retornar 403 para GESTOR (impede criar tenant com cortesia)")
+        void deveRetornar403ParaGestor() throws Exception {
+            mockMvc.perform(post("/administrador/cadastrarAdminOrgCompleto")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(BODY_VALIDO))
+                    .andExpect(status().isForbidden());
+            verifyNoInteractions(adminOrganizacaoService);
         }
     }
 }

@@ -93,7 +93,7 @@ class OrganizacaoControllerIntegrationTest {
     class ListarTodas {
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = "SUPER_ADMIN")
         @DisplayName("Deve retornar 200 com lista de organizações")
         void deveRetornar200ComLista() throws Exception {
             when(organizacaoService.listarTodas())
@@ -104,7 +104,7 @@ class OrganizacaoControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = "SUPER_ADMIN")
         @DisplayName("Deve retornar lista vazia quando não há organizações")
         void deveRetornarListaVazia() throws Exception {
             when(organizacaoService.listarTodas()).thenReturn(Collections.emptyList());
@@ -121,7 +121,7 @@ class OrganizacaoControllerIntegrationTest {
     class ListarAtivas {
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = "SUPER_ADMIN")
         @DisplayName("Deve retornar 200 com organizações ativas")
         void deveRetornar200ComAtivas() throws Exception {
             when(organizacaoService.listarAtivas())
@@ -139,7 +139,7 @@ class OrganizacaoControllerIntegrationTest {
     class BuscarPorId {
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = "SUPER_ADMIN")
         @DisplayName("Deve retornar 200 quando encontrada")
         void deveRetornar200QuandoEncontrada() throws Exception {
             when(organizacaoService.buscarPorId(1L))
@@ -150,7 +150,7 @@ class OrganizacaoControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = "SUPER_ADMIN")
         @DisplayName("Deve retornar 404 quando não encontrada")
         void deveRetornar404QuandoNaoEncontrada() throws Exception {
             when(organizacaoService.buscarPorId(99L)).thenReturn(Optional.empty());
@@ -167,7 +167,7 @@ class OrganizacaoControllerIntegrationTest {
     class AtivarInativar {
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = "SUPER_ADMIN")
         @DisplayName("Deve retornar 200 ao ativar organização")
         void deveRetornar200AoAtivar() throws Exception {
             doNothing().when(organizacaoService).ativar(1L);
@@ -177,7 +177,7 @@ class OrganizacaoControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = "SUPER_ADMIN")
         @DisplayName("Deve retornar 200 ao inativar organização")
         void deveRetornar200AoInativar() throws Exception {
             doNothing().when(organizacaoService).inativar(1L);
@@ -194,13 +194,83 @@ class OrganizacaoControllerIntegrationTest {
     class ContarAtivas {
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = "SUPER_ADMIN")
         @DisplayName("Deve retornar 200 com contagem de organizações ativas")
         void deveRetornar200ComContagem() throws Exception {
             when(organizacaoService.contarAtivas()).thenReturn(5L);
 
             mockMvc.perform(get("/api/v2/organizacoes/estatisticas/total"))
                     .andExpect(status().isOk());
+        }
+    }
+
+    // ========== Autorização: operações de plataforma exigem SUPER_ADMIN ==========
+
+    @Nested
+    @DisplayName("Operações de plataforma com perfil GESTOR")
+    class OperacoesPlataformaComGestor {
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("GET /api/v2/organizacoes deve retornar 403")
+        void listarTodasDeveRetornar403() throws Exception {
+            mockMvc.perform(get("/api/v2/organizacoes")).andExpect(status().isForbidden());
+            verifyNoInteractions(organizacaoService);
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("GET /api/v2/organizacoes/ativas deve retornar 403")
+        void listarAtivasDeveRetornar403() throws Exception {
+            mockMvc.perform(get("/api/v2/organizacoes/ativas")).andExpect(status().isForbidden());
+            verifyNoInteractions(organizacaoService);
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("GET /api/v2/organizacoes/{id} deve retornar 403")
+        void buscarPorIdDeveRetornar403() throws Exception {
+            mockMvc.perform(get("/api/v2/organizacoes/2")).andExpect(status().isForbidden());
+            verifyNoInteractions(organizacaoService);
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("POST /api/v2/organizacoes deve retornar 403")
+        void criarDeveRetornar403() throws Exception {
+            mockMvc.perform(post("/api/v2/organizacoes").with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"nome\":\"Nova\",\"tipo\":\"CLINICA\"}"))
+                    .andExpect(status().isForbidden());
+            verifyNoInteractions(organizacaoService);
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("PUT /api/v2/organizacoes/{id} deve retornar 403")
+        void atualizarDeveRetornar403() throws Exception {
+            mockMvc.perform(put("/api/v2/organizacoes/2").with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"nome\":\"Outra\"}"))
+                    .andExpect(status().isForbidden());
+            verifyNoInteractions(organizacaoService);
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("PUT /api/v2/organizacoes/{id}/ativar e /inativar devem retornar 403")
+        void ativarInativarDevemRetornar403() throws Exception {
+            mockMvc.perform(put("/api/v2/organizacoes/2/ativar").with(csrf())).andExpect(status().isForbidden());
+            mockMvc.perform(put("/api/v2/organizacoes/2/inativar").with(csrf())).andExpect(status().isForbidden());
+            verifyNoInteractions(organizacaoService);
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("GET /api/v2/organizacoes/estatisticas/total deve retornar 403")
+        void contarAtivasDeveRetornar403() throws Exception {
+            mockMvc.perform(get("/api/v2/organizacoes/estatisticas/total")).andExpect(status().isForbidden());
+            verifyNoInteractions(organizacaoService);
         }
     }
 }

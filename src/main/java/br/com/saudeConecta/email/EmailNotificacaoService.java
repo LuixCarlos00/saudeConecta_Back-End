@@ -132,8 +132,8 @@ public class EmailNotificacaoService {
     public void enviarRecuperacaoSenha(String email, String nome, String login,
                                         String novaSenha, Long organizacaoId) {
         if (!emailHabilitado) {
-            log.warn("Email desabilitado. Recuperação não enviada para: {}", email);
-            log.info("RECUPERAÇÃO SENHA - Login: {}, Senha: {}", login, novaSenha);
+            log.warn("Email desabilitado. Recuperação de senha não enviada. Login: {}, Email: {}",
+                    login, mascararEmail(email));
             return;
         }
 
@@ -361,8 +361,8 @@ public class EmailNotificacaoService {
                                     String tipoUsuario, String corTema, String nomeOrganizacao,
                                     Long organizacaoId, Long entidadeId) {
         if (!emailHabilitado) {
-            log.warn("Email desabilitado. Credenciais não enviadas para {}: {}", tipoUsuario, email);
-            log.info("CREDENCIAIS {} - Login: {}, Senha: {}", tipoUsuario.toUpperCase(), login, senha);
+            log.warn("Email desabilitado. Credenciais de {} não enviadas. Login: {}, Email: {}",
+                    tipoUsuario, login, mascararEmail(email));
             return;
         }
 
@@ -401,5 +401,20 @@ public class EmailNotificacaoService {
             case "Paciente" -> "paciente";
             default -> "generico";
         };
+    }
+
+    /**
+     * Mascara o e-mail para log (ex.: "fulano@clinica.com" vira "f***@clinica.com"),
+     * mantendo o domínio para facilitar diagnóstico sem expor o endereço completo.
+     */
+    private static String mascararEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return "<vazio>";
+        }
+        int arroba = email.indexOf('@');
+        if (arroba <= 0) {
+            return "***";
+        }
+        return email.charAt(0) + "***" + email.substring(arroba);
     }
 }

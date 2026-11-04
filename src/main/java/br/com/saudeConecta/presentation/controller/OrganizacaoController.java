@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +19,8 @@ import java.util.List;
 @RequestMapping("/api/v2/organizacoes")
 @RequiredArgsConstructor
 @Slf4j
+// Somente GET /minha é do tenant do usuário; as demais rotas são operações de plataforma
+// (listar/criar/alterar/ativar/inativar qualquer clínica) e ficam restritas ao SUPER_ADMIN.
 public class OrganizacaoController {
 
     private final OrganizacaoService organizacaoService;
@@ -32,6 +35,7 @@ public class OrganizacaoController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<List<OrganizacaoResponse>> listarTodas() {
         log.debug("Listando todas as organizacoes");
         List<OrganizacaoResponse> response = organizacaoService.listarTodas()
@@ -42,6 +46,7 @@ public class OrganizacaoController {
     }
 
     @GetMapping("/ativas")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<List<OrganizacaoResponse>> listarAtivas() {
         log.debug("Listando organizacoes ativas");
         List<OrganizacaoResponse> response = organizacaoService.listarAtivas()
@@ -52,6 +57,7 @@ public class OrganizacaoController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<OrganizacaoResponse> buscarPorId(@PathVariable Long id) {
         log.debug("Buscando organizacao por ID: {}", id);
         return organizacaoService.buscarPorId(id)
@@ -61,6 +67,7 @@ public class OrganizacaoController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<OrganizacaoResponse> criar(@Valid @RequestBody CriarOrganizacaoRequest request) {
         log.info("Criando nova organizacao: {}", request.nome());
         Organizacao org = organizacaoService.criar(request);
@@ -69,6 +76,7 @@ public class OrganizacaoController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<OrganizacaoResponse> atualizar(
             @PathVariable Long id,
             @Valid @RequestBody AtualizarOrganizacaoRequest request) {
@@ -78,6 +86,7 @@ public class OrganizacaoController {
     }
 
     @PutMapping("/{id}/ativar")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Void> ativar(@PathVariable Long id) {
         log.info("Ativando organizacao ID: {}", id);
         organizacaoService.ativar(id);
@@ -85,6 +94,7 @@ public class OrganizacaoController {
     }
 
     @PutMapping("/{id}/inativar")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Void> inativar(@PathVariable Long id) {
         log.info("Inativando organizacao ID: {}", id);
         organizacaoService.inativar(id);
@@ -92,6 +102,7 @@ public class OrganizacaoController {
     }
 
     @GetMapping("/estatisticas/total")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Long> contarAtivas() {
         return ResponseEntity.ok(organizacaoService.contarAtivas());
     }

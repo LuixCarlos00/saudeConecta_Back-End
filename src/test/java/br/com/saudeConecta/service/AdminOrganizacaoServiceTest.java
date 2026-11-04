@@ -225,7 +225,7 @@ class AdminOrganizacaoServiceTest {
         void deveAtualizarAdminComSucesso() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(tenantHelper.getCurrentUserId()).thenReturn(USUARIO_ID);
-            when(adminOrganizacaoRepository.findById(ADMIN_ID))
+            when(adminOrganizacaoRepository.findByIdAndOrganizacao_Id(ADMIN_ID, ORG_ID))
                     .thenReturn(Optional.of(adminOrganizacao));
             when(adminOrganizacaoRepository.save(any())).thenReturn(adminOrganizacao);
 
@@ -241,7 +241,7 @@ class AdminOrganizacaoServiceTest {
         @DisplayName("Deve lançar exceção quando admin não encontrado")
         void deveLancarExcecaoQuandoAdminNaoEncontrado() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(adminOrganizacaoRepository.findById(ADMIN_ID)).thenReturn(Optional.empty());
+            when(adminOrganizacaoRepository.findByIdAndOrganizacao_Id(ADMIN_ID, ORG_ID)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> adminOrganizacaoService.atualizarAdmByOrg(ADMIN_ID, "Nome", "email@teste.com"))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -253,7 +253,7 @@ class AdminOrganizacaoServiceTest {
         void naoDeveAlterarNomeQuandoNulo() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(tenantHelper.getCurrentUserId()).thenReturn(USUARIO_ID);
-            when(adminOrganizacaoRepository.findById(ADMIN_ID))
+            when(adminOrganizacaoRepository.findByIdAndOrganizacao_Id(ADMIN_ID, ORG_ID))
                     .thenReturn(Optional.of(adminOrganizacao));
             when(adminOrganizacaoRepository.save(any())).thenReturn(adminOrganizacao);
 
@@ -261,6 +261,23 @@ class AdminOrganizacaoServiceTest {
 
             assertThat(adminOrganizacao.getNome()).isEqualTo("Admin Teste");
             assertThat(adminOrganizacao.getEmail()).isEqualTo("admin@teste.com");
+        }
+
+        @Test
+        @DisplayName("Não deve alterar admin de outra organização (tomada de conta entre tenants)")
+        void naoDeveAlterarAdminDeOutraOrganizacao() {
+            Long outraOrgId = 2L;
+            when(tenantHelper.getCurrentTenantId()).thenReturn(outraOrgId);
+            when(adminOrganizacaoRepository.findByIdAndOrganizacao_Id(ADMIN_ID, outraOrgId))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> adminOrganizacaoService.atualizarAdmByOrg(ADMIN_ID, "Invasor", "invasor@email.com"))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Administrador não encontrado");
+
+            assertThat(adminOrganizacao.getEmail()).isEqualTo("admin@teste.com");
+            verify(adminOrganizacaoRepository, never()).findById(any());
+            verify(adminOrganizacaoRepository, never()).save(any());
         }
     }
 
