@@ -8,6 +8,7 @@ import br.com.saudeConecta.domain.secretaria.StatusSecretaria;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.domain.usuario.StatusUsuario;
+import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.presentation.dto.usuario.*;
@@ -248,6 +249,17 @@ public class UsuarioService   {
 
 
 
+    /**
+     * Troca a senha de um usuário, aplicando a regra de autorização do produto:
+     * qualquer usuário troca a própria senha; o gestor (admin da organização)
+     * troca a senha dos usuários da mesma organização, exceto a do ROOT.
+     *
+     * @param id        ID do usuário que terá a senha alterada
+     * @param novaSenha nova senha em texto puro (é criptografada antes de salvar)
+     * @throws IllegalArgumentException    se o usuário alvo não existir
+     * @throws TenantAccessDeniedException se o usuário logado não puder trocar a senha do alvo
+     */
+    @Transactional
     public void trocarSenharUsuariobyOrg(Long id, String novaSenha) {
 
         var usuarioOpt = buscarPorId(id);
@@ -257,11 +269,53 @@ public class UsuarioService   {
         }
 
         var usuario = usuarioOpt.get();
+        validarPermissaoTrocaSenha(usuario);
         String senhaCriptografada = passwordEncoder.encode(novaSenha);
         usuario.setSenha(senhaCriptografada);
         usuarioRepository.save(usuario);
         cacheEvictionService.evictPerfilUsuario(id);
         log.info("Senha do usuario ID: {} alterada com sucesso", id);
+    }
+
+    /**
+     * Garante que o usuário logado (vindo do JWT, via TenantContext) pode trocar a senha do alvo.
+     * A organização do logado vem do token, não do banco, pelo mesmo motivo do resto do sistema:
+     * o token é a fonte do tenant da requisição. O ROOT só troca a própria senha por aqui;
+     * para agir em nome de uma clínica ele usa a senha master (login como o usuário escolhido).
+     *
+     * @param alvo usuário que terá a senha alterada
+     * @throws TenantAccessDeniedException quando a troca não é permitida
+     */
+    private void validarPermissaoTrocaSenha(Usuario alvo) {
+        Long usuarioLogadoId = TenantContext.getCurrentUser();
+        if (usuarioLogadoId == null) {
+            throw negarTrocaSenha(alvo.getId(), "sem usuario logado");
+        }
+
+        if (usuarioLogadoId.equals(alvo.getId())) {
+            return;
+        }
+
+        if (alvo.getTipoUsuarioNovo() != null && alvo.getTipoUsuarioNovo().isRoot()) {
+            throw negarTrocaSenha(alvo.getId(), "alvo e ROOT");
+        }
+
+        var usuarioLogado = usuarioRepository.findById(usuarioLogadoId)
+                .orElseThrow(() -> negarTrocaSenha(alvo.getId(), "usuario logado inexistente"));
+
+        boolean isGestor = usuarioLogado.getTipoUsuarioNovo() != null
+                && usuarioLogado.getTipoUsuarioNovo().isGestor();
+        Long organizacaoLogado = TenantContext.getCurrentTenant();
+        Long organizacaoAlvo = alvo.getOrganizacao() != null ? alvo.getOrganizacao().getId() : null;
+
+        if (!isGestor || organizacaoLogado == null || !organizacaoLogado.equals(organizacaoAlvo)) {
+            throw negarTrocaSenha(alvo.getId(), "logado " + usuarioLogadoId + " sem permissao");
+        }
+    }
+
+    private TenantAccessDeniedException negarTrocaSenha(Long alvoId, String motivo) {
+        log.warn("Troca de senha negada para usuario ID: {} ({})", alvoId, motivo);
+        return new TenantAccessDeniedException("Acesso negado: sem permissao para trocar a senha deste usuario");
     }
 
 

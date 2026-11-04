@@ -9,6 +9,7 @@ import br.com.saudeConecta.domain.secretaria.StatusSecretaria;
 import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
+import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.presentation.dto.usuario.BloquearUsuarioRequest;
@@ -98,10 +99,51 @@ class UsuarioServiceTest {
     @DisplayName("trocarSenharUsuariobyOrg")
     class TrocarSenha {
 
+        private static final Long GESTOR_ID = 30L;
+        private static final Long OUTRA_ORG_ID = 2L;
+
+        private Usuario criarUsuario(Long id, TipoUsuarioNovo tipo, Organizacao org) {
+            Usuario u = Usuario.builder()
+                    .login("login" + id).senha("encodedPass")
+                    .tipoUsuarioNovo(tipo)
+                    .status(StatusUsuario.ATIVO).organizacao(org)
+                    .build();
+            u.setId(id);
+            return u;
+        }
+
+        /** Simula o que o TenantFilter faz a partir do JWT do usuário logado. */
+        private void logarComo(Long usuarioId, Long organizacaoId) {
+            TenantContext.setCurrentUser(usuarioId);
+            TenantContext.setCurrentTenant(organizacaoId);
+        }
+
+        @AfterEach
+        void limparTenantContext() {
+            TenantContext.clear();
+        }
+
         @Test
-        @DisplayName("Deve trocar senha com sucesso")
-        void deveTrocarSenhaComSucesso() {
+        @DisplayName("Usuário comum troca a própria senha")
+        void deveTrocarPropriaSenha() {
+            logarComo(USUARIO_ID, ORG_ID);
             when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+            when(passwordEncoder.encode("novaSenha123")).thenReturn("encodedNovaSenha");
+
+            usuarioService.trocarSenharUsuariobyOrg(USUARIO_ID, "novaSenha123");
+
+            assertThat(usuario.getSenha()).isEqualTo("encodedNovaSenha");
+            verify(usuarioRepository).save(usuario);
+            verify(cacheEvictionService).evictPerfilUsuario(USUARIO_ID);
+        }
+
+        @Test
+        @DisplayName("Gestor troca a senha de um usuário da própria organização")
+        void gestorDeveTrocarSenhaDeUsuarioDaMesmaOrganizacao() {
+            Usuario gestor = criarUsuario(GESTOR_ID, TipoUsuarioNovo.GESTOR, organizacao);
+            logarComo(GESTOR_ID, ORG_ID);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+            when(usuarioRepository.findById(GESTOR_ID)).thenReturn(Optional.of(gestor));
             when(passwordEncoder.encode("novaSenha123")).thenReturn("encodedNovaSenha");
 
             usuarioService.trocarSenharUsuariobyOrg(USUARIO_ID, "novaSenha123");
@@ -111,8 +153,139 @@ class UsuarioServiceTest {
         }
 
         @Test
+        @DisplayName("Gestor NÃO troca a senha de usuário de outra organização")
+        void gestorNaoDeveTrocarSenhaDeOutraOrganizacao() {
+            Organizacao outraOrg = Organizacao.builder().nome("Outra Clínica").build();
+            outraOrg.setId(OUTRA_ORG_ID);
+            Usuario gestorOutraOrg = criarUsuario(GESTOR_ID, TipoUsuarioNovo.GESTOR, outraOrg);
+            logarComo(GESTOR_ID, OUTRA_ORG_ID);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+            when(usuarioRepository.findById(GESTOR_ID)).thenReturn(Optional.of(gestorOutraOrg));
+
+            assertThatThrownBy(() -> usuarioService.trocarSenharUsuariobyOrg(USUARIO_ID, "novaSenha123"))
+                    .isInstanceOf(TenantAccessDeniedException.class);
+            verify(usuarioRepository, never()).save(any());
+            assertThat(usuario.getSenha()).isEqualTo("encodedPass");
+        }
+
+        @Test
+        @DisplayName("Clínico NÃO troca a senha de outro usuário, mesmo da mesma organização")
+        void clinicoNaoDeveTrocarSenhaDeOutroUsuario() {
+            Usuario outroClinico = criarUsuario(40L, TipoUsuarioNovo.CLINICO, organizacao);
+            logarComo(40L, ORG_ID);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+            when(usuarioRepository.findById(40L)).thenReturn(Optional.of(outroClinico));
+
+            assertThatThrownBy(() -> usuarioService.trocarSenharUsuariobyOrg(USUARIO_ID, "novaSenha123"))
+                    .isInstanceOf(TenantAccessDeniedException.class);
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Assistente NÃO troca a senha de outro usuário, mesmo da mesma organização")
+        void assistenteNaoDeveTrocarSenhaDeOutroUsuario() {
+            Usuario assistente = criarUsuario(50L, TipoUsuarioNovo.ASSISTENTE, organizacao);
+            logarComo(50L, ORG_ID);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+            when(usuarioRepository.findById(50L)).thenReturn(Optional.of(assistente));
+
+            assertThatThrownBy(() -> usuarioService.trocarSenharUsuariobyOrg(USUARIO_ID, "novaSenha123"))
+                    .isInstanceOf(TenantAccessDeniedException.class);
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Gestor NÃO troca a senha do ROOT, mesmo que esteja na mesma organização")
+        void gestorNaoDeveTrocarSenhaDoRoot() {
+            Usuario root = criarUsuario(1L, TipoUsuarioNovo.ROOT, organizacao);
+            logarComo(GESTOR_ID, ORG_ID);
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.of(root));
+
+            assertThatThrownBy(() -> usuarioService.trocarSenharUsuariobyOrg(1L, "novaSenha123"))
+                    .isInstanceOf(TenantAccessDeniedException.class);
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("ROOT troca a própria senha")
+        void rootDeveTrocarPropriaSenha() {
+            Usuario root = criarUsuario(1L, TipoUsuarioNovo.ROOT, null);
+            TenantContext.setCurrentUser(1L);
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.of(root));
+            when(passwordEncoder.encode("novaSenha123")).thenReturn("encodedNovaSenha");
+
+            usuarioService.trocarSenharUsuariobyOrg(1L, "novaSenha123");
+
+            assertThat(root.getSenha()).isEqualTo("encodedNovaSenha");
+            verify(usuarioRepository).save(root);
+        }
+
+        @Test
+        @DisplayName("ROOT logado direto NÃO troca a senha de outro usuário (usa a senha master como o admin)")
+        void rootNaoDeveTrocarSenhaDeOutroUsuarioDiretamente() {
+            Usuario root = criarUsuario(1L, TipoUsuarioNovo.ROOT, null);
+            TenantContext.setCurrentUser(1L);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.of(root));
+
+            assertThatThrownBy(() -> usuarioService.trocarSenharUsuariobyOrg(USUARIO_ID, "novaSenha123"))
+                    .isInstanceOf(TenantAccessDeniedException.class);
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Gestor com token sem organização NÃO troca a senha de outro usuário")
+        void gestorSemOrganizacaoNoTokenNaoDeveTrocarSenha() {
+            Usuario gestor = criarUsuario(GESTOR_ID, TipoUsuarioNovo.GESTOR, organizacao);
+            TenantContext.setCurrentUser(GESTOR_ID);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+            when(usuarioRepository.findById(GESTOR_ID)).thenReturn(Optional.of(gestor));
+
+            assertThatThrownBy(() -> usuarioService.trocarSenharUsuariobyOrg(USUARIO_ID, "novaSenha123"))
+                    .isInstanceOf(TenantAccessDeniedException.class);
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Gestor NÃO troca a senha de usuário sem organização")
+        void gestorNaoDeveTrocarSenhaDeUsuarioSemOrganizacao() {
+            Usuario semOrg = criarUsuario(60L, TipoUsuarioNovo.CLINICO, null);
+            Usuario gestor = criarUsuario(GESTOR_ID, TipoUsuarioNovo.GESTOR, organizacao);
+            logarComo(GESTOR_ID, ORG_ID);
+            when(usuarioRepository.findById(60L)).thenReturn(Optional.of(semOrg));
+            when(usuarioRepository.findById(GESTOR_ID)).thenReturn(Optional.of(gestor));
+
+            assertThatThrownBy(() -> usuarioService.trocarSenharUsuariobyOrg(60L, "novaSenha123"))
+                    .isInstanceOf(TenantAccessDeniedException.class);
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Nega a troca quando não há usuário logado no contexto")
+        void deveNegarSemUsuarioLogado() {
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+
+            assertThatThrownBy(() -> usuarioService.trocarSenharUsuariobyOrg(USUARIO_ID, "novaSenha123"))
+                    .isInstanceOf(TenantAccessDeniedException.class);
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Nega a troca quando o usuário logado não existe mais no banco")
+        void deveNegarQuandoUsuarioLogadoNaoExiste() {
+            logarComo(GESTOR_ID, ORG_ID);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+            when(usuarioRepository.findById(GESTOR_ID)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> usuarioService.trocarSenharUsuariobyOrg(USUARIO_ID, "novaSenha123"))
+                    .isInstanceOf(TenantAccessDeniedException.class);
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
         @DisplayName("Deve lançar exceção quando usuário não for encontrado")
         void deveLancarExcecaoQuandoUsuarioNaoEncontrado() {
+            logarComo(GESTOR_ID, ORG_ID);
             when(usuarioRepository.findById(999L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> usuarioService.trocarSenharUsuariobyOrg(999L, "novaSenha"))

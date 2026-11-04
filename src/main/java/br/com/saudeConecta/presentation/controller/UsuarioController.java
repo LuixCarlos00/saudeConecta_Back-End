@@ -1,6 +1,7 @@
 package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.service.UsuarioService;
+import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.presentation.dto.usuario.BloquearUsuarioRequest;
 import br.com.saudeConecta.presentation.dto.usuario.TodosUsuariosAgrupadosResponse;
@@ -72,6 +73,9 @@ public class UsuarioController {
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
+        } catch (TenantAccessDeniedException e) {
+            // Sobe para o GlobalExceptionHandler responder 403; o catch genérico abaixo viraria 500.
+            throw e;
         } catch (Exception e) {
             log.error("Erro ao trocar senha do usuário ID: {}", id, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();

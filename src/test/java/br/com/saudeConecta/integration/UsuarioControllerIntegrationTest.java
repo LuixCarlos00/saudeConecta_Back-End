@@ -1,5 +1,6 @@
 package br.com.saudeConecta.integration;
 
+import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.presentation.dto.usuario.BloquearUsuarioRequest;
 import br.com.saudeConecta.presentation.dto.usuario.TodosUsuariosAgrupadosResponse;
 import br.com.saudeConecta.presentation.dto.usuario.UsuarioPerfilCompletoResponse;
@@ -182,6 +183,20 @@ class UsuarioControllerIntegrationTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(Map.of("senhaNova", "senha123"))))
                     .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @WithMockUser
+        @DisplayName("Deve retornar 403 quando o usuário logado não pode trocar a senha do alvo")
+        void deveRetornar403QuandoSemPermissao() throws Exception {
+            doThrow(new TenantAccessDeniedException("sem permissão"))
+                    .when(usuarioService).trocarSenharUsuariobyOrg(eq(5L), any());
+
+            mockMvc.perform(put("/usuario/trocarSenharUsuariobyOrg/5")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(Map.of("senhaNova", "senha123"))))
+                    .andExpect(status().isForbidden());
         }
     }
 }
