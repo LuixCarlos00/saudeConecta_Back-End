@@ -10,6 +10,7 @@ import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
+import br.com.saudeConecta.infra.tenant.TenantNotDefinedException;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
@@ -102,7 +103,7 @@ class AdminOrganizacaoServiceTest {
         @Test
         @DisplayName("Deve buscar admin pelo ID sem filtro de org quando ROOT (orgId null)")
         void deveBuscarSemFiltroOrgQuandoSuperAdmin() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(null);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(null);
             when(adminOrganizacaoRepository.findById(ADMIN_ID))
                     .thenReturn(Optional.of(adminOrganizacao));
 
@@ -117,7 +118,7 @@ class AdminOrganizacaoServiceTest {
         @Test
         @DisplayName("Deve buscar admin com filtro de org quando orgId presente")
         void deveBuscarComFiltroOrgQuandoTenantPresente() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
             when(adminOrganizacaoRepository.findByIdAndOrganizacao_Id(ADMIN_ID, ORG_ID))
                     .thenReturn(Optional.of(adminOrganizacao));
 
@@ -131,7 +132,7 @@ class AdminOrganizacaoServiceTest {
         @Test
         @DisplayName("Deve retornar vazio quando admin não pertence à organização")
         void deveRetornarVazioQuandoAdminNaoPertenceOrg() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
             when(adminOrganizacaoRepository.findByIdAndOrganizacao_Id(ADMIN_ID, ORG_ID))
                     .thenReturn(Optional.empty());
 
@@ -290,7 +291,7 @@ class AdminOrganizacaoServiceTest {
         @Test
         @DisplayName("Deve deletar admin com sucesso quando ROOT (orgId null)")
         void deveDeletarAdminSuperAdmin() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(null);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(null);
             when(adminOrganizacaoRepository.findById(ADMIN_ID))
                     .thenReturn(Optional.of(adminOrganizacao));
 
@@ -303,7 +304,7 @@ class AdminOrganizacaoServiceTest {
         @Test
         @DisplayName("Deve deletar admin com filtro de org quando orgId presente")
         void deveDeletarAdminComFiltroOrg() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
             when(adminOrganizacaoRepository.findByIdAndOrganizacao_Id(ADMIN_ID, ORG_ID))
                     .thenReturn(Optional.of(adminOrganizacao));
 
@@ -316,7 +317,7 @@ class AdminOrganizacaoServiceTest {
         @Test
         @DisplayName("Deve lançar exceção quando admin não encontrado")
         void deveLancarExcecaoQuandoAdminNaoEncontrado() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(null);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(null);
             when(adminOrganizacaoRepository.findById(ADMIN_ID)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> adminOrganizacaoService.deletarAdmByOrg(ADMIN_ID))
@@ -331,7 +332,7 @@ class AdminOrganizacaoServiceTest {
                     .nome("Sem Usuário").usuario(null).status(AdminOrganizacao.StatusAdmin.ATIVO).build();
             adminSemUsuario.setId(ADMIN_ID);
 
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(null);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(null);
             when(adminOrganizacaoRepository.findById(ADMIN_ID)).thenReturn(Optional.of(adminSemUsuario));
 
             assertThatThrownBy(() -> adminOrganizacaoService.deletarAdmByOrg(ADMIN_ID))
@@ -342,7 +343,7 @@ class AdminOrganizacaoServiceTest {
         @Test
         @DisplayName("Deve propagar exceção de relacionamento ao deletar")
         void devePropararExcecaoDeRelacionamento() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(null);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(null);
             when(adminOrganizacaoRepository.findById(ADMIN_ID)).thenReturn(Optional.of(adminOrganizacao));
             doThrow(new RuntimeException("FK constraint violation"))
                     .when(adminOrganizacaoRepository).delete(adminOrganizacao);
@@ -350,6 +351,36 @@ class AdminOrganizacaoServiceTest {
             assertThatThrownBy(() -> adminOrganizacaoService.deletarAdmByOrg(ADMIN_ID))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("relacionamentos existentes");
+        }
+    }
+
+    // ========== Falha fechada sem tenant ==========
+
+    @Nested
+    @DisplayName("Sem tenant e sem papel SUPER_ADMIN")
+    class SemTenantNaoSuperAdmin {
+
+        @Test
+        @DisplayName("buscarrAdminByOrg nega em vez de buscar sem filtro de organização")
+        void buscarNega() {
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin())
+                    .thenThrow(new TenantNotDefinedException("Tenant não definido"));
+
+            assertThatThrownBy(() -> adminOrganizacaoService.buscarrAdminByOrg(ADMIN_ID))
+                    .isInstanceOf(TenantNotDefinedException.class);
+            verify(adminOrganizacaoRepository, never()).findById(any());
+        }
+
+        @Test
+        @DisplayName("deletarAdmByOrg nega em vez de deletar sem filtro de organização")
+        void deletarNega() {
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin())
+                    .thenThrow(new TenantNotDefinedException("Tenant não definido"));
+
+            assertThatThrownBy(() -> adminOrganizacaoService.deletarAdmByOrg(ADMIN_ID))
+                    .isInstanceOf(TenantNotDefinedException.class);
+            verify(adminOrganizacaoRepository, never()).delete(any());
+            verify(usuarioRepository, never()).delete(any());
         }
     }
 

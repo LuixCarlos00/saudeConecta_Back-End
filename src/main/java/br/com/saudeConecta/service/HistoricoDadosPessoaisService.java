@@ -4,6 +4,7 @@ package br.com.saudeConecta.service;
  import br.com.saudeConecta.domain.historicodadospessoais.HistoricoDadosPessoais;
  import br.com.saudeConecta.domain.organizacao.Organizacao;
  import br.com.saudeConecta.domain.usuario.Usuario;
+ import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
  import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.HistoricoDadosPessoaisRepository;
  import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
@@ -65,15 +66,12 @@ public class HistoricoDadosPessoaisService {
      */
     @Transactional(readOnly = true)
     public List<HistoricoDadosPessoais> buscarHistoricoByEntidade(String entidade, Long idEntidade) {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
-
-        // SUPER_ADMIN não tem organização (orgId == null)
-        if (orgId == null) {
-            log.info("SUPER_ADMIN: buscando histórico global por entidade: {}, ID: {}", entidade, idEntidade);
-            return historicoRepository.findByEntidadeAndIdEntidadeOrderByCriadoEmDesc(entidade, idEntidade);
+        // Checagem explícita do papel: ausência de organização no token não basta.
+        if (!tenantHelper.isSuperAdmin()) {
+            throw new TenantAccessDeniedException("Acesso negado: apenas SUPER_ADMIN pode acessar histórico por entidade");
         }
-
-        throw new IllegalStateException("Acesso negado: apenas SUPER_ADMIN pode acessar histórico por entidade");
+        log.info("SUPER_ADMIN: buscando histórico global por entidade: {}, ID: {}", entidade, idEntidade);
+        return historicoRepository.findByEntidadeAndIdEntidadeOrderByCriadoEmDesc(entidade, idEntidade);
     }
 
     /**
@@ -85,15 +83,12 @@ public class HistoricoDadosPessoaisService {
      */
     @Transactional(readOnly = true)
     public List<HistoricoDadosPessoais> buscarHistoricoByUsuario(Long idUsuario) {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
-
-        // SUPER_ADMIN não tem organização (orgId == null)
-        if (orgId == null) {
-            log.info("SUPER_ADMIN: buscando histórico global por usuário ID: {}", idUsuario);
-            return historicoRepository.findByUsuario_IdOrderByCriadoEmDesc(idUsuario);
+        // Checagem explícita do papel: ausência de organização no token não basta.
+        if (!tenantHelper.isSuperAdmin()) {
+            throw new TenantAccessDeniedException("Acesso negado: apenas SUPER_ADMIN pode acessar histórico por usuário");
         }
-
-        throw new IllegalStateException("Acesso negado: apenas SUPER_ADMIN pode acessar histórico por usuário");
+        log.info("SUPER_ADMIN: buscando histórico global por usuário ID: {}", idUsuario);
+        return historicoRepository.findByUsuario_IdOrderByCriadoEmDesc(idUsuario);
     }
 
     /**
@@ -104,15 +99,12 @@ public class HistoricoDadosPessoaisService {
      */
     @Transactional(readOnly = true)
     public List<HistoricoDadosPessoais> buscarHistoricoRecentes() {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
-
-        // SUPER_ADMIN não tem organização (orgId == null)
-        if (orgId == null) {
-            log.info("SUPER_ADMIN: buscando 10 registros mais recentes de histórico");
-            return historicoRepository.findTop10ByOrderByCriadoEmDesc();
+        // Checagem explícita do papel: ausência de organização no token não basta.
+        if (!tenantHelper.isSuperAdmin()) {
+            throw new TenantAccessDeniedException("Acesso negado: apenas SUPER_ADMIN pode acessar histórico");
         }
-
-        throw new IllegalStateException("Acesso negado: apenas SUPER_ADMIN pode acessar histórico");
+        log.info("SUPER_ADMIN: buscando 10 registros mais recentes de histórico");
+        return historicoRepository.findTop10ByOrderByCriadoEmDesc();
     }
 
 

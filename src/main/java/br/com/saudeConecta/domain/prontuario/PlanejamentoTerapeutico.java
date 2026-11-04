@@ -69,6 +69,10 @@ public class PlanejamentoTerapeutico {
     @Column(name = "token_assinatura")
     private String tokenAssinatura;
 
+    /** Validade do link público de assinatura. Nulo = link legado, sem expiração. */
+    @Column(name = "token_expiracao")
+    private LocalDateTime tokenExpiracao;
+
     @Column(name = "assinatura_base64", columnDefinition = "TEXT")
     private String assinaturaBase64;
 

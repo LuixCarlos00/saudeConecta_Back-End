@@ -8,6 +8,7 @@ import br.com.saudeConecta.domain.suporte.StatusChamado;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.email.EmailNotificacaoService;
+import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ChamadoSuporteRepository;
@@ -113,7 +114,7 @@ public class ChamadoSuporteService {
     @Transactional(readOnly = true)
     public Page<ChamadoSuporteResponse> listarPorTenant(StatusChamado status, PrioridadeChamado prioridade,
                                                         Pageable pageable) {
-        Long organizacaoId = tenantHelper.getCurrentTenantIdOrNull();
+        Long organizacaoId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
 
         if (organizacaoId == null) {
             log.info("ROOT: listando chamados de suporte globais");
@@ -147,8 +148,8 @@ public class ChamadoSuporteService {
      */
     @Transactional
     public ChamadoSuporteResponse atualizarStatus(String chamadoId, AtualizarStatusChamadoRequest request) {
-        if (tenantHelper.getCurrentTenantIdOrNull() != null) {
-            throw new IllegalStateException("Apenas o suporte pode atualizar o status de um chamado");
+        if (!tenantHelper.isSuperAdmin()) {
+            throw new TenantAccessDeniedException("Apenas o suporte pode atualizar o status de um chamado");
         }
 
         ChamadoSuporte chamado = chamadoSuporteRepository.findByIdWithAnexos(chamadoId)
@@ -183,7 +184,7 @@ public class ChamadoSuporteService {
 
     /**
      * Recupera o chamado garantindo que pertence ao tenant atual.
-     * O ROOT (sem organizacao no contexto) tem acesso a qualquer chamado.
+     * Somente o SUPER_ADMIN (ROOT, sem organizacao no contexto) tem acesso a qualquer chamado.
      *
      * @param chamadoId ID do chamado
      * @return entidade do chamado
@@ -192,7 +193,7 @@ public class ChamadoSuporteService {
         ChamadoSuporte chamado = chamadoSuporteRepository.findByIdWithAnexos(chamadoId)
                 .orElseThrow(() -> new IllegalArgumentException("Chamado nao encontrado: " + chamadoId));
 
-        Long organizacaoId = tenantHelper.getCurrentTenantIdOrNull();
+        Long organizacaoId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
         if (organizacaoId != null && !organizacaoId.equals(chamado.getOrganizacaoId())) {
             throw new IllegalArgumentException("Acesso negado ao chamado: " + chamadoId);
         }

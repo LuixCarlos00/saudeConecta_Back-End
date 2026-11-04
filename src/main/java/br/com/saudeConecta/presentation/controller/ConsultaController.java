@@ -4,7 +4,9 @@ import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.usuario.Usuario;
+import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.presentation.dto.consulta.*;
 import br.com.saudeConecta.presentation.dto.dashboard.SaldoFinanceiroResponse;
@@ -21,6 +23,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,6 +44,7 @@ public class ConsultaController {
     private final BuscarHistoricoCompletoPacienteMedicoUseCase buscarHistoricoCompletoPacienteMedicoUseCase;
     private final BuscarHistoricoCompletoPacienteAdminUseCase buscarHistoricoCompletoPacienteAdminUseCase;
     private final ProfissionalRepository profissionalRepository;
+    private final TenantHelper tenantHelper;
 
 //=================Tela de /gerenciamento =================
     @GetMapping("/hoje")
@@ -378,6 +382,7 @@ public class ConsultaController {
             @PathVariable Long organizacaoId,
             @PathVariable String especialidade,
             @RequestParam(required = false) String status) {
+        tenantHelper.validateTenant(organizacaoId);
         log.debug("- Iniciando pesquisa de especialidade e organizacao - pesquisarPorEspecialidadeEOrganizacao" );
         List<ConsultaResponse> response = consultaService.pesquisarPorEspecialidadeEOrganizacao(
                         organizacaoId, especialidade, status).stream()
@@ -518,6 +523,8 @@ public class ConsultaController {
     @GetMapping("/estatisticas/organizacao/{organizacaoId}/dashboard")
     public ResponseEntity<EstatisticasDashboardAdminOrgResponse> getEstatisticasDashboardAdminOrg(
             @PathVariable Long organizacaoId) {
+        // Validado antes do service: o @Cacheable usa o orgId como chave e responderia do cache sem checar.
+        tenantHelper.validateTenant(organizacaoId);
 
         log.debug("Buscando estatisticas de dashboard para organizacao {}", organizacaoId);
 
@@ -542,6 +549,11 @@ public class ConsultaController {
     @GetMapping("/estatisticas/dashboard/profissional")
     public ResponseEntity<EstatisticasDashboardAdminOrgResponse> getEstatisticasDashboardProfissional(
             @RequestParam Long usuarioId) {
+        // A query do dashboard filtra só por usuário (sem organização): restringe ao próprio usuário do token,
+        // o que também torna a chave de cache (#usuarioId) a do usuário validado.
+        if (!usuarioId.equals(tenantHelper.getCurrentUserId())) {
+            throw new TenantAccessDeniedException("Acesso negado: dashboard de outro usuário");
+        }
         log.debug("Buscando estatisticas de dashboard para profissional usuarioId={}", usuarioId);
         return ResponseEntity.ok(consultaService.getEstatisticasDashboardProfissional(usuarioId));
     }
@@ -558,6 +570,7 @@ public class ConsultaController {
      *         consultasSemana, canceladosSemana e confirmadosSemana
      */
     @GetMapping("/estatisticas/dashboard/super-admin")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<EstatisticasDashboardAdminOrgResponse> getEstatisticasDashboardSuperAdmin() {
         log.debug("Buscando estatisticas de dashboard global para SuperAdmin");
         return ResponseEntity.ok(consultaService.getEstatisticasDashboardSuperAdmin());
@@ -565,17 +578,20 @@ public class ConsultaController {
 
     @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-hoje")
     public ResponseEntity<Long> getEstatisticaConsultasHojeByAdmiOrg(@PathVariable Long organizacaoId) {
+        tenantHelper.validateTenant(organizacaoId);
         return ResponseEntity.ok(consultaService.getEstatisticaConsultasHojeByAdmiOrg(organizacaoId));
     }
 
 
     @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-atendidas-hoje")
     public ResponseEntity<Long> getEstatisticaConsultasAtendidasByAdmiOrg(@PathVariable Long organizacaoId) {
+        tenantHelper.validateTenant(organizacaoId);
         return ResponseEntity.ok(consultaService.getEstatisticaConsultasAtendidasByAdmiOrg(organizacaoId));
     }
 
     @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-agendadas-hoje")
     public ResponseEntity<Long> getEstatisticasConsultaAgendadasHojeByOrd(@PathVariable Long organizacaoId) {
+        tenantHelper.validateTenant(organizacaoId);
         return ResponseEntity.ok(consultaService.getEstatisticasConsultaAgendadasHojeByOrd(organizacaoId));
     }
 
@@ -583,6 +599,7 @@ public class ConsultaController {
     @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-semana")
     public ResponseEntity<Long> getEstatisticasSemanaPorOrganizacao(
             @PathVariable Long organizacaoId) {
+        tenantHelper.validateTenant(organizacaoId);
 
         log.debug("Contando consultas da semana para organizacao {}", organizacaoId);
 
@@ -600,6 +617,7 @@ public class ConsultaController {
             @PathVariable Long organizacaoId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal) {
+        tenantHelper.validateTenant(organizacaoId);
         List<ConsultaResponse> response = consultaService.buscarConsultasPorOrganizacaoEIntervalo(
                 organizacaoId, dataInicial, dataFinal).stream()
             .map(ConsultaResponse::fromEntity)

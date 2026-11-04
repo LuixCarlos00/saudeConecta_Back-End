@@ -7,7 +7,7 @@ import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
 import br.com.saudeConecta.domain.prontuario.Prontuario;
-import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
@@ -17,7 +17,6 @@ import br.com.saudeConecta.presentation.dto.prontuario.PlanejamentoTerapeuticoRe
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,24 +38,32 @@ public class ProntuarioService {
     private final ConsultaRepository consultaRepository;
     private final PacienteRepository pacienteRepository;
     private final PlanejamentoTerapeuticoService planejamentoService;
+    private final TenantHelper tenantHelper;
+    private final CacheEvictionService cacheEvictionService;
+
+    // Chave de cache sempre prefixada pela organização do token (mesmo formato usado na evicção).
+    private static final String CHAVE_CACHE_CONSULTA_TENANT =
+            "T(br.com.saudeConecta.service.CacheEvictionService).chaveConsultaPorTenant("
+                    + "@tenantHelper.getCurrentTenantIdOrNull(), #consultaId)";
 
     /**
      * Cadastra um novo prontuario Medico com planejamentos terapêuticos
      * @param request Dados do prontuario a ser cadastrado
      * @return prontuario cadastrado
      */
-    @CacheEvict(value = "prontuario-recente", key = "#request.getConsulta()")
     @Transactional
     public Prontuario cadastrarProntuarioMedico(CadastrarProntuarioRequest request) {
         log.info("Cadastrando prontuario médico — consulta={}", request.getConsulta());
+        Long orgId = tenantHelper.getCurrentTenantId();
 
+        // Profissional e consulta precisam ser da clínica do token; de outra clínica = "não encontrado".
         Profissional profissional = profissionalRepository
-                .findById(request.getCodigoMedico())
+                .findByIdAndOrganizacao_Id(request.getCodigoMedico(), orgId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Profissional nao encontrado: " + request.getCodigoMedico()));
 
         Consulta consulta = consultaRepository
-                .findById(request.getConsulta())
+                .findByIdAndOrganizacao_Id(request.getConsulta(), orgId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Consulta nao encontrada: " + request.getConsulta()));
 
@@ -104,7 +111,6 @@ public class ProntuarioService {
         // ── Adiciona planejamentos terapêuticos ─────────────────────────────────
         if (!CollectionUtils.isEmpty(request.getPlanejamentos())) {
             log.info("Processando {} planejamentos", request.getPlanejamentos().size());
-            Long orgId = TenantContext.getCurrentTenant();
             Organizacao organizacao = new Organizacao();
             organizacao.setId(orgId);
 
@@ -114,7 +120,9 @@ public class ProntuarioService {
                 
                 Paciente paciente = null;
                 if (item.getPacienteId() != null) {
-                    paciente = pacienteRepository.findById(item.getPacienteId()).orElse(null);
+                    paciente = pacienteRepository
+                            .findByPaciCodigoAndOrganizacao_IdWithEndereco(item.getPacienteId(), orgId)
+                            .orElse(null);
                 }
 
                 PlanejamentoTerapeutico planejamento = PlanejamentoTerapeutico.builder()
@@ -146,6 +154,7 @@ public class ProntuarioService {
         consulta.setStatus(StatusConsulta.REALIZADA);
         consultaRepository.save(consulta);
         log.info("Status da consulta ID: {} atualizado para REALIZADA", consulta.getId());
+        cacheEvictionService.evictProntuarioRecente(orgId, consulta.getId());
 
         return salvo;
     }
@@ -153,11 +162,12 @@ public class ProntuarioService {
     @Transactional
     public void atualizarProntuarioMedico(Long id, CadastrarProntuarioRequest request) {
         log.info("Atualizando prontuário médico — id={}", id);
+        Long orgId = tenantHelper.getCurrentTenantId();
 
-        Prontuario prontuario = prontuarioRepository.findById(id)
+        Prontuario prontuario = prontuarioRepository.findByProntCodigoProntuarioAndConsulta_Organizacao_Id(id, orgId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Prontuário não encontrado: " + id));
-        evictProntuarioRecenteCache(prontuario.getConsulta().getId());
+        cacheEvictionService.evictProntuarioRecente(orgId, prontuario.getConsulta().getId());
 
         prontuario.setProntPeso(request.getPeso());
         prontuario.setProntAltura(request.getAltura());
@@ -187,7 +197,6 @@ public class ProntuarioService {
         prontuarioRepository.saveAndFlush(prontuario);
 
         if (!CollectionUtils.isEmpty(request.getPlanejamentos())) {
-            Long orgId = TenantContext.getCurrentTenant();
             Organizacao organizacao = new Organizacao();
             organizacao.setId(orgId);
 
@@ -197,7 +206,9 @@ public class ProntuarioService {
             for (CadastrarProntuarioRequest.PlanejamentoItem item : request.getPlanejamentos()) {
                 Paciente paciente = null;
                 if (item.getPacienteId() != null) {
-                    paciente = pacienteRepository.findById(item.getPacienteId()).orElse(null);
+                    paciente = pacienteRepository
+                            .findByPaciCodigoAndOrganizacao_IdWithEndereco(item.getPacienteId(), orgId)
+                            .orElse(null);
                 }
                 PlanejamentoTerapeutico p = PlanejamentoTerapeutico.builder()
                         .prontuario(prontuario)
@@ -224,7 +235,8 @@ public class ProntuarioService {
 
     @Transactional(readOnly = true)
     public Prontuario buscarPorId(Long id) {
-        return prontuarioRepository.findById(id)
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return prontuarioRepository.findByProntCodigoProntuarioAndConsulta_Organizacao_Id(id, orgId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Prontuario médico nao encontrado: " + id));
     }
@@ -237,7 +249,8 @@ public class ProntuarioService {
     @Transactional(readOnly = true)
     public Prontuario buscarProntuarioById(Long consultaId) {
         log.debug("Buscando prontuario por consulta ID: {}", consultaId);
-        Prontuario prontuario = prontuarioRepository.findByConsulta_IdWithFetch(consultaId);
+        Long orgId = tenantHelper.getCurrentTenantId();
+        Prontuario prontuario = prontuarioRepository.findByConsultaIdAndOrganizacaoIdWithFetch(consultaId, orgId);
         
         if (prontuario == null) {
             log.warn("prontuario nao encontrado para consulta ID: {}", consultaId);
@@ -254,13 +267,14 @@ public class ProntuarioService {
      * @param consultaId ID da consulta
      * @return prontuário mais recente encontrado
      */
-    @Cacheable(value = "prontuario-recente", key = "#consultaId")
+    @Cacheable(value = "prontuario-recente", key = CHAVE_CACHE_CONSULTA_TENANT)
     @Transactional(readOnly = true)
     public Prontuario buscarMaisRecentePorConsulta(Long consultaId) {
         log.debug("Buscando prontuário médico mais recente para consulta ID: {}", consultaId);
+        Long orgId = tenantHelper.getCurrentTenantId();
 
         Long id = prontuarioRepository
-                .findIdMaisRecentePorConsulta(consultaId)
+                .findIdMaisRecentePorConsulta(consultaId, orgId)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Nenhum prontuário médico encontrado para consulta: " + consultaId));
 
@@ -278,7 +292,8 @@ public class ProntuarioService {
     @Transactional(readOnly = true)
     public List<Prontuario> buscarPorPaciente(Long pacienteId) {
         log.debug("Buscando prontuarios do paciente ID: {}", pacienteId);
-        return prontuarioRepository.findByConsulta_Paciente_PaciCodigo(pacienteId);
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return prontuarioRepository.findByConsulta_Paciente_PaciCodigoAndConsulta_Organizacao_Id(pacienteId, orgId);
     }
 
     /**
@@ -289,17 +304,8 @@ public class ProntuarioService {
     @Transactional(readOnly = true)
     public List<Prontuario> buscarPorProfissional(Long profissionalId) {
         log.debug("Buscando prontuarios do profissional ID: {}", profissionalId);
-        return prontuarioRepository.findByProfissional_Id(profissionalId);
-    }
-
-    /**
-     * Invalida o cache do prontuário mais recente para a consulta informada.
-     *
-     * @param consultaId ID da consulta cujo cache deve ser invalidado
-     */
-    @CacheEvict(value = "prontuario-recente", key = "#consultaId")
-    public void evictProntuarioRecenteCache(Long consultaId) {
-        log.debug("Cache prontuario-recente invalidado para consulta={}", consultaId);
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return prontuarioRepository.findByProfissional_IdAndConsulta_Organizacao_Id(profissionalId, orgId);
     }
 
     private Date parseData(Date data) {

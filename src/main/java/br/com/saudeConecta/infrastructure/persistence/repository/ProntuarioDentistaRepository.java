@@ -25,8 +25,31 @@ public interface ProntuarioDentistaRepository extends JpaRepository<ProntuarioDe
     """)
     List<ProntuarioDentista> findByConsultaId(@Param("consultaId") Long consultaId);
 
+    /**
+     * Lista prontuários de uma consulta da organização informada, com os dentes do odontograma.
+     *
+     * @param consultaId ID da consulta
+     * @param orgId      ID da organização do token
+     * @return prontuários da consulta, ou vazio se a consulta for de outra clínica
+     */
+    @Query("""
+        SELECT DISTINCT pd FROM ProntuarioDentista pd
+        LEFT JOIN FETCH pd.dentes
+        JOIN FETCH pd.profissional
+        WHERE pd.consulta.id = :consultaId AND pd.consulta.organizacao.id = :orgId
+        ORDER BY pd.dataFinalizado DESC
+    """)
+    List<ProntuarioDentista> findByConsultaIdAndOrganizacaoId(@Param("consultaId") Long consultaId,
+                                                              @Param("orgId") Long orgId);
 
-
+    /**
+     * Busca um prontuário odontológico somente se a consulta pertencer à organização informada.
+     *
+     * @param codigo ID do prontuário
+     * @param orgId  ID da organização do token
+     * @return prontuário, ou vazio se não existir ou for de outra clínica
+     */
+    Optional<ProntuarioDentista> findByCodigoAndConsulta_Organizacao_Id(Long codigo, Long orgId);
 
     /**
      * PASSO 1 — busca apenas o ID do prontuário mais recente (sem fetch de coleção).
@@ -34,11 +57,11 @@ public interface ProntuarioDentistaRepository extends JpaRepository<ProntuarioDe
      */
     @Query("""
         SELECT pd.id FROM ProntuarioDentista pd
-        WHERE pd.consulta.id = :consultaId
+        WHERE pd.consulta.id = :consultaId AND pd.consulta.organizacao.id = :orgId
         ORDER BY pd.dataFinalizado DESC
         LIMIT 1
     """)
-    Optional<Long> findIdMaisRecentePorConsulta(@Param("consultaId") Long consultaId);
+    Optional<Long> findIdMaisRecentePorConsulta(@Param("consultaId") Long consultaId, @Param("orgId") Long orgId);
 
 
     @Query("""
@@ -64,17 +87,19 @@ public interface ProntuarioDentistaRepository extends JpaRepository<ProntuarioDe
     @Query("""
         SELECT DISTINCT pd FROM ProntuarioDentista pd
         LEFT JOIN FETCH pd.dentes
-        JOIN FETCH pd.consulta
-        WHERE pd.profissional.id = :profissionalId
+        JOIN FETCH pd.consulta c
+        WHERE pd.profissional.id = :profissionalId AND c.organizacao.id = :orgId
         ORDER BY pd.dataFinalizado DESC
     """)
-    List<ProntuarioDentista> findByProfissionalId(@Param("profissionalId") Long profissionalId);
+    List<ProntuarioDentista> findByProfissionalId(@Param("profissionalId") Long profissionalId,
+                                                  @Param("orgId") Long orgId);
 
 
     /**
-     * Lista prontuários de um paciente (via consulta → paciente).
+     * Lista prontuários de um paciente (via consulta → paciente) na organização informada.
      *
      * @param pacienteId ID do paciente
+     * @param orgId      ID da organização do token
      * @return lista de prontuários do paciente ordenados por data
      */
     @Query("""
@@ -87,10 +112,10 @@ public interface ProntuarioDentistaRepository extends JpaRepository<ProntuarioDe
         JOIN FETCH pd.profissional prof
         LEFT JOIN FETCH prof.tipoProfissional
         LEFT JOIN FETCH prof.especialidades
-        WHERE c.paciente.id = :pacienteId
+        WHERE c.paciente.id = :pacienteId AND c.organizacao.id = :orgId
         ORDER BY pd.dataFinalizado DESC
     """)
-    List<ProntuarioDentista> findByPacienteId(@Param("pacienteId") Long pacienteId);
+    List<ProntuarioDentista> findByPacienteId(@Param("pacienteId") Long pacienteId, @Param("orgId") Long orgId);
 
     /**
      * Exclui todos os dentes (odontograma) dos prontuários vinculados a uma consulta.

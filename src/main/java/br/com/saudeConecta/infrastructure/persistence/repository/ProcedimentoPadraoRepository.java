@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ProcedimentoPadraoRepository extends JpaRepository<ProcedimentoPadrao, Long> {
@@ -28,4 +29,6 @@ public interface ProcedimentoPadraoRepository extends JpaRepository<Procedimento
             @Param("profissionalId") Long profissionalId,
             @Param("orgId") Long orgId);
 
+
+    Optional<ProcedimentoPadrao> findByIdAndOrganizacao_Id(Long id, Long organizacaoId);
 }

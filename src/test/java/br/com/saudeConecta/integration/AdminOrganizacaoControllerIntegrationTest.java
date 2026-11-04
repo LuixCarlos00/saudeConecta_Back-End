@@ -125,7 +125,25 @@ class AdminOrganizacaoControllerIntegrationTest {
     class DeletarAdminByOrg {
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = "RECEPCIONISTA")
+        @DisplayName("Deve retornar 403 para ASSISTENTE (sem ROLE_ADMIN)")
+        void deveRetornar403ParaAssistente() throws Exception {
+            mockMvc.perform(delete("/administrador/deletarAdmByOrg/1").with(csrf()))
+                    .andExpect(status().isForbidden());
+            verify(adminOrganizacaoService, never()).deletarAdmByOrg(anyLong());
+        }
+
+        @Test
+        @WithMockUser(roles = "PROFISSIONAL")
+        @DisplayName("Deve retornar 403 para CLINICO (sem ROLE_ADMIN)")
+        void deveRetornar403ParaClinico() throws Exception {
+            mockMvc.perform(delete("/administrador/deletarAdmByOrg/1").with(csrf()))
+                    .andExpect(status().isForbidden());
+            verify(adminOrganizacaoService, never()).deletarAdmByOrg(anyLong());
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
         @DisplayName("Deve retornar 200 ao deletar com sucesso")
         void deveRetornar200AoDeletar() throws Exception {
             doNothing().when(adminOrganizacaoService).deletarAdmByOrg(1L);
@@ -135,7 +153,7 @@ class AdminOrganizacaoControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
         @DisplayName("Deve retornar 404 quando admin não encontrado ao deletar")
         void deveRetornar404QuandoNaoEncontrado() throws Exception {
             doThrow(new IllegalArgumentException("não encontrado"))
@@ -146,7 +164,7 @@ class AdminOrganizacaoControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
         @DisplayName("Deve retornar 409 em conflito ao deletar")
         void deveRetornar409EmConflito() throws Exception {
             doThrow(new IllegalStateException("conflito"))

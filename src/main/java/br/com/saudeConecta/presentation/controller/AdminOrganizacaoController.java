@@ -142,6 +142,7 @@ public class AdminOrganizacaoController {
     }
 
     @DeleteMapping("/deletarAdmByOrg/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     @Description("Deleta administrador por ID")
     public ResponseEntity<?> deletarAdmByOrg(@PathVariable Long id) {

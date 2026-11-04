@@ -145,4 +145,7 @@
 
     <!-- Desativação do Pix estático (preserva txid para histórico) -->
     <include file="db/changelog/08-2026/059-remover-pix-assinaturas.xml"/>
+
+    <!-- Validade do link publico de assinatura do planejamento terapeutico (coluna nullable) -->
+    <include file="db/changelog/08-2026/060-adicionar-token-expiracao-planejamento-terapeutico.xml"/>
 </databaseChangeLog>

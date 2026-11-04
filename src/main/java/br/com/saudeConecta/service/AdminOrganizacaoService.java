@@ -85,7 +85,7 @@ public class AdminOrganizacaoService {
     @Transactional(readOnly = true)
     public Optional<AdminOrganizacao> buscarrAdminByOrg(Long id) {
         log.debug("Buscando administrador por ID: {}", id);
-        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
+        Long orgId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
         if (orgId == null) {
             log.debug("SUPER_ADMIN: buscando administrador por ID sem filtro de organização");
             return adminOrganizacaoRepository.findById(id);
@@ -278,7 +278,7 @@ public class AdminOrganizacaoService {
  
     @Transactional
     public void deletarAdmByOrg(Long idAdmin) {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
+        Long orgId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
         log.info("Deletando administrador ID: {} da organização: {}", idAdmin, orgId);
 
         // 1. Buscar o administrador na tabela admin_organizacao

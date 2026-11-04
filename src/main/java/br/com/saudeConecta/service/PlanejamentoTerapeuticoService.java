@@ -7,8 +7,9 @@ import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
 import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
-import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.presentation.dto.prontuario.PlanejamentoTerapeuticoRequest;
+import br.com.saudeConecta.util.TokenLogUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,10 @@ public class PlanejamentoTerapeuticoService {
     private final ConsultaRepository consultaRepository;
     private final ProfissionalRepository profissionalRepository;
     private final PacienteRepository pacienteRepository;
+    private final TenantHelper tenantHelper;
+
+    /** Validade do link público de assinatura do planejamento. */
+    private static final int DIAS_EXPIRACAO_LINK = 7;
 
     /**
      * Lista planejamentos de um prontuário (dentista ou médico).
@@ -39,9 +44,10 @@ public class PlanejamentoTerapeuticoService {
      */
     @Transactional(readOnly = true)
     public List<PlanejamentoTerapeutico> listarPorProntuario(Long prontuarioId) {
-        List<PlanejamentoTerapeutico> lista = planejamentoRepository.findByProntuarioId(prontuarioId);
+        Long orgId = tenantHelper.getCurrentTenantId();
+        List<PlanejamentoTerapeutico> lista = planejamentoRepository.findByProntuarioId(prontuarioId, orgId);
         if (lista.isEmpty()) {
-            lista = planejamentoRepository.findByProntuarioMedicoId(prontuarioId);
+            lista = planejamentoRepository.findByProntuarioMedicoId(prontuarioId, orgId);
         }
         return lista;
     }
@@ -55,18 +61,21 @@ public class PlanejamentoTerapeuticoService {
      */
     @Transactional
     public PlanejamentoTerapeutico adicionar(Long profissionalId, PlanejamentoTerapeuticoRequest request) {
-        Long orgId = TenantContext.getCurrentTenant();
+        Long orgId = tenantHelper.getCurrentTenantId();
         log.info("Adicionando planejamento — prontuario={}, procedimento={}",
                 request.getProntuarioDentistaId(), request.getProcedimentoRealizado());
 
-        ProntuarioDentista prontuario = prontuarioRepository.findById(request.getProntuarioDentistaId())
+        // Prontuário, profissional e paciente precisam ser da clínica do token; de outra = "não encontrado".
+        ProntuarioDentista prontuario = prontuarioRepository
+                .findByCodigoAndConsulta_Organizacao_Id(request.getProntuarioDentistaId(), orgId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "prontuario nao encontrado: " + request.getProntuarioDentistaId()));
 
-        Profissional profissional = profissionalRepository.findById(profissionalId)
+        Profissional profissional = profissionalRepository.findByIdAndOrganizacao_Id(profissionalId, orgId)
                 .orElseThrow(() -> new IllegalArgumentException("Profissional nao encontrado: " + profissionalId));
 
-        Paciente paciente = pacienteRepository.findById(request.getPacienteId())
+        Paciente paciente = pacienteRepository
+                .findByPaciCodigoAndOrganizacao_IdWithEndereco(request.getPacienteId(), orgId)
                 .orElseThrow(() -> new IllegalArgumentException("Paciente nao encontrado: " + request.getPacienteId()));
 
         Organizacao organizacao = new Organizacao();
@@ -74,7 +83,7 @@ public class PlanejamentoTerapeuticoService {
 
         Consulta consulta = null;
         if (request.getConsultaId() != null) {
-            consulta = consultaRepository.findById(request.getConsultaId()).orElse(null);
+            consulta = consultaRepository.findByIdAndOrganizacao_Id(request.getConsultaId(), orgId).orElse(null);
         }
 
         PlanejamentoTerapeutico planejamento = PlanejamentoTerapeutico.builder()
@@ -101,10 +110,10 @@ public class PlanejamentoTerapeuticoService {
      */
     @Transactional
     public void remover(Long id) {
-        if (!planejamentoRepository.existsById(id)) {
-            throw new IllegalArgumentException("Planejamento nao encontrado: " + id);
-        }
-        planejamentoRepository.deleteById(id);
+        PlanejamentoTerapeutico planejamento = planejamentoRepository
+                .findByIdAndOrganizacao_Id(id, tenantHelper.getCurrentTenantId())
+                .orElseThrow(() -> new IllegalArgumentException("Planejamento nao encontrado: " + id));
+        planejamentoRepository.delete(planejamento);
         log.info("Planejamento removido — id={}", id);
     }
 
@@ -119,13 +128,14 @@ public class PlanejamentoTerapeuticoService {
     @Transactional
     public String gerarLinkAssinatura(Long prontuarioId, String tipo) {
         log.info("Gerando link de assinatura para prontuario={}, tipo={}", prontuarioId, tipo);
+        Long orgId = tenantHelper.getCurrentTenantId();
 
         List<PlanejamentoTerapeutico> planejamentos;
 
         if ("MEDICO".equalsIgnoreCase(tipo)) {
-            planejamentos = planejamentoRepository.findByProntuarioMedicoId(prontuarioId);
+            planejamentos = planejamentoRepository.findByProntuarioMedicoId(prontuarioId, orgId);
         } else {
-            planejamentos = planejamentoRepository.findByProntuarioId(prontuarioId);
+            planejamentos = planejamentoRepository.findByProntuarioId(prontuarioId, orgId);
         }
 
         if (planejamentos.isEmpty()) {
@@ -134,15 +144,17 @@ public class PlanejamentoTerapeuticoService {
 
         // Gera um único token para todos os itens pendentes
         String token = UUID.randomUUID().toString();
+        LocalDateTime expiracao = LocalDateTime.now().plusDays(DIAS_EXPIRACAO_LINK);
 
         for (PlanejamentoTerapeutico p : planejamentos) {
             if (p.isPendente()) {
                 p.setTokenAssinatura(token);
+                p.setTokenExpiracao(expiracao);
                 planejamentoRepository.save(p);
             }
         }
 
-        log.info("Token de assinatura gerado={} para {} itens", token, planejamentos.size());
+        log.info("Token de assinatura gerado={} para {} itens", TokenLogUtil.mascarar(token), planejamentos.size());
         return token;
     }
 
@@ -159,6 +171,14 @@ public class PlanejamentoTerapeuticoService {
             throw new IllegalArgumentException("Link invalido ou nao encontrado.");
         }
 
+        // Expiração nula = link legado gerado antes da coluna existir (sem expiração).
+        LocalDateTime agora = LocalDateTime.now();
+        boolean expirado = lista.stream()
+                .anyMatch(p -> p.getTokenExpiracao() != null && !p.getTokenExpiracao().isAfter(agora));
+        if (expirado) {
+            throw new IllegalArgumentException("Link invalido ou expirado.");
+        }
+
         return lista;
     }
 
@@ -171,9 +191,9 @@ public class PlanejamentoTerapeuticoService {
      */
     @Transactional
     public void assinarPorToken(String token, String assinaturaBase64, String ipOrigem) {
-        log.info("Assinando planejamento — token={}, ip={}", token, ipOrigem);
+        log.info("Assinando planejamento — token={}, ip={}", TokenLogUtil.mascarar(token), ipOrigem);
 
-        int atualizados = planejamentoRepository.assinarPorToken(token, assinaturaBase64, ipOrigem);
+        int atualizados = planejamentoRepository.assinarPorToken(token, assinaturaBase64, ipOrigem, LocalDateTime.now());
         if (atualizados == 0) {
             throw new IllegalArgumentException("Nenhum planejamento encontrado para o token informado.");
         }

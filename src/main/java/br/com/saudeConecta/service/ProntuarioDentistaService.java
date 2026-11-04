@@ -8,7 +8,7 @@ import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
 import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
 import br.com.saudeConecta.domain.prontuario.ProntuarioDentistaDente;
-import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
@@ -35,6 +35,7 @@ public class ProntuarioDentistaService {
     private final ConsultaRepository consultaRepository;
     private final PacienteRepository pacienteRepository;
     private final EntityManager entityManager;
+    private final TenantHelper tenantHelper;
 
     // =========================================================================
     // CADASTRO
@@ -43,14 +44,16 @@ public class ProntuarioDentistaService {
     @Transactional
     public ProntuarioDentista cadastrarProntuarioByOrg(CadastrarProntuarioDentistaRequest request) {
         log.info("Cadastrando prontuario odontologico — consulta={}", request.getConsulta());
+        Long orgId = tenantHelper.getCurrentTenantId();
 
+        // Profissional e consulta precisam ser da clínica do token; de outra clínica = "não encontrado".
         Profissional profissional = profissionalRepository
-                .findById(request.getCodigoMedico())
+                .findByIdAndOrganizacao_Id(request.getCodigoMedico(), orgId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Profissional nao encontrado: " + request.getCodigoMedico()));
 
         Consulta consulta = consultaRepository
-                .findById(request.getConsulta())
+                .findByIdAndOrganizacao_Id(request.getConsulta(), orgId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Consulta nao encontrada: " + request.getConsulta()));
 
@@ -134,14 +137,15 @@ public class ProntuarioDentistaService {
 
         // ── Adiciona planejamentos terapêuticos ─────────────────────────────────
         if (!CollectionUtils.isEmpty(request.getPlanejamentos())) {
-            Long orgId = TenantContext.getCurrentTenant();
             Organizacao organizacao = new Organizacao();
             organizacao.setId(orgId);
 
             for (CadastrarProntuarioDentistaRequest.PlanejamentoItem item : request.getPlanejamentos()) {
                 Paciente paciente = null;
                 if (item.getPacienteId() != null) {
-                    paciente = pacienteRepository.findById(item.getPacienteId()).orElse(null);
+                    paciente = pacienteRepository
+                            .findByPaciCodigoAndOrganizacao_IdWithEndereco(item.getPacienteId(), orgId)
+                            .orElse(null);
                 }
 
                 PlanejamentoTerapeutico planejamento = PlanejamentoTerapeutico.builder()
@@ -181,8 +185,9 @@ public class ProntuarioDentistaService {
     @Transactional
     public void atualizarProntuario(Long id, CadastrarProntuarioDentistaRequest request) {
         log.info("Atualizando prontuario odontologico — id={}", id);
+        Long orgId = tenantHelper.getCurrentTenantId();
 
-        ProntuarioDentista prontuario = prontuarioDentistaRepository.findById(id)
+        ProntuarioDentista prontuario = prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(id, orgId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Prontuario odontologico nao encontrado: " + id));
 
@@ -266,7 +271,6 @@ public class ProntuarioDentistaService {
         prontuarioDentistaRepository.saveAndFlush(prontuario);
 
         if (!CollectionUtils.isEmpty(request.getPlanejamentos())) {
-            Long orgId = TenantContext.getCurrentTenant();
             Organizacao organizacao = new Organizacao();
             organizacao.setId(orgId);
 
@@ -277,7 +281,9 @@ public class ProntuarioDentistaService {
             for (CadastrarProntuarioDentistaRequest.PlanejamentoItem item : request.getPlanejamentos()) {
                 Paciente paciente = null;
                 if (item.getPacienteId() != null) {
-                    paciente = pacienteRepository.findById(item.getPacienteId()).orElse(null);
+                    paciente = pacienteRepository
+                            .findByPaciCodigoAndOrganizacao_IdWithEndereco(item.getPacienteId(), orgId)
+                            .orElse(null);
                 }
 
                 PlanejamentoTerapeutico planejamento = PlanejamentoTerapeutico.builder()
@@ -306,20 +312,21 @@ public class ProntuarioDentistaService {
 
     @Transactional(readOnly = true)
     public ProntuarioDentista buscarPorId(Long id) {
-        return prontuarioDentistaRepository.findById(id)
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(id, orgId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Prontuario odontologico nao encontrado: " + id));
     }
 
     @Transactional(readOnly = true)
     public List<ProntuarioDentista> listarPorConsulta(Long consultaId) {
-        return prontuarioDentistaRepository.findByConsultaId(consultaId);
+        return prontuarioDentistaRepository.findByConsultaIdAndOrganizacaoId(consultaId, tenantHelper.getCurrentTenantId());
     }
 
     @Transactional(readOnly = true)
     public ProntuarioDentista buscarMaisRecentePorConsulta(Long consultaId) {
         Long id = prontuarioDentistaRepository
-                .findIdMaisRecentePorConsulta(consultaId)
+                .findIdMaisRecentePorConsulta(consultaId, tenantHelper.getCurrentTenantId())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Nenhum Prontuario odontologico encontrado para consulta: " + consultaId));
 
@@ -339,7 +346,7 @@ public class ProntuarioDentistaService {
 
     @Transactional(readOnly = true)
     public List<ProntuarioDentista> listarPorProfissional(Long profissionalId) {
-        return prontuarioDentistaRepository.findByProfissionalId(profissionalId);
+        return prontuarioDentistaRepository.findByProfissionalId(profissionalId, tenantHelper.getCurrentTenantId());
     }
 
     /**
@@ -350,7 +357,8 @@ public class ProntuarioDentistaService {
      */
     @Transactional(readOnly = true)
     public List<ProntuarioDentista> listarPorPaciente(Long pacienteId) {
-        List<ProntuarioDentista> lista = prontuarioDentistaRepository.findByPacienteId(pacienteId);
+        List<ProntuarioDentista> lista = prontuarioDentistaRepository
+                .findByPacienteId(pacienteId, tenantHelper.getCurrentTenantId());
         // Inicializa planejamentos em query separada para evitar cartesian product com dentes
         lista.forEach(pd -> Hibernate.initialize(pd.getPlanejamentos()));
         return lista;

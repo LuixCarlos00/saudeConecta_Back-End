@@ -4,12 +4,13 @@ import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.domain.prontuario.TermoAutorizacao;
+import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.TermoAutorizacaoRepository;
 import br.com.saudeConecta.presentation.dto.prontuario.QuestionarioSaudeRequest;
+import br.com.saudeConecta.util.TokenLogUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,8 +25,15 @@ public class TermoAutorizacaoService {
 
     private final TermoAutorizacaoRepository termoRepository;
     private final ConsultaRepository consultaRepository;
+    private final TenantHelper tenantHelper;
+    private final CacheEvictionService cacheEvictionService;
 
     private static final int HORAS_EXPIRACAO = 24;
+
+    // Chave de cache sempre prefixada pela organização do token (mesmo formato usado na evicção).
+    private static final String CHAVE_CACHE_CONSULTA_TENANT =
+            "T(br.com.saudeConecta.service.CacheEvictionService).chaveConsultaPorTenant("
+                    + "@tenantHelper.getCurrentTenantIdOrNull(), #consultaId)";
 
     /**
      * Gera um link único para o questionário de saúde vinculado a uma consulta.
@@ -33,12 +41,13 @@ public class TermoAutorizacaoService {
      * @param consultaId ID da consulta
      * @return token gerado
      */
-    @CacheEvict(value = "questionario-saude", key = "#consultaId")
     @Transactional
     public String gerarLinkQuestionario(Long consultaId) {
         log.info("Gerando link do questionário para consulta={}", consultaId);
+        Long orgId = tenantHelper.getCurrentTenantId();
 
-        Consulta consulta = consultaRepository.findById(consultaId)
+        // Consulta de outra clínica responde igual a inexistente.
+        Consulta consulta = consultaRepository.findByIdAndOrganizacao_Id(consultaId, orgId)
                 .orElseThrow(() -> new IllegalArgumentException("Consulta nao encontrada: " + consultaId));
 
         // Usa lock pessimista para evitar race condition em requests simultâneos
@@ -71,7 +80,9 @@ public class TermoAutorizacaoService {
                 .build();
 
         termoRepository.save(termo);
-        log.info("Token gerado={} para consulta={}, expira em {}h", token, consultaId, HORAS_EXPIRACAO);
+        cacheEvictionService.evictQuestionarioSaude(orgId, consultaId);
+        log.info("Token gerado={} para consulta={}, expira em {}h",
+                TokenLogUtil.mascarar(token), consultaId, HORAS_EXPIRACAO);
 
         return token;
     }
@@ -106,8 +117,7 @@ public class TermoAutorizacaoService {
      */
     @Transactional
     public void responderQuestionario(QuestionarioSaudeRequest request, String ipOrigem) {
-        // @CacheEvict aplicado no final do método para garantir que o termo já foi salvo
-        log.info("Recebendo respostas do questionário — token={}", request.getToken());
+        log.info("Recebendo respostas do questionário — token={}", TokenLogUtil.mascarar(request.getToken()));
 
         TermoAutorizacao termo = termoRepository.findByToken(request.getToken())
                 .orElseThrow(() -> new IllegalArgumentException("Token invalido."));
@@ -120,26 +130,23 @@ public class TermoAutorizacaoService {
             throw new IllegalStateException("Este questionario já foi respondido.");
         }
 
-        termo.setRespostasQuestionario(request.getRespostasQuestionario());
-        termo.setAssinaturaBase64(request.getAssinaturaBase64());
-        termo.setIpOrigem(ipOrigem);
-        termo.setDataAssinatura(LocalDateTime.now());
-        termo.setStatus("ASSINADO");
+        // As checagens acima só dão a mensagem certa; quem garante o uso único é o UPDATE
+        // condicional (status PENDENTE e não expirado), atômico mesmo com envios simultâneos.
+        int atualizados = termoRepository.responderSePendente(
+                request.getToken(),
+                request.getRespostasQuestionario(),
+                request.getAssinaturaBase64(),
+                ipOrigem,
+                LocalDateTime.now());
+        if (atualizados == 0) {
+            throw new IllegalStateException("Este questionario já foi respondido.");
+        }
 
-        termoRepository.save(termo);
-        log.info("Questionário respondido e assinado — consulta={}", termo.getConsulta().getId());
-        evictQuestionarioCache(termo.getConsulta().getId());
-    }
-
-    /**
-     * Invalida o cache do questionário de saúde para a consulta informada.
-     * Separado para garantir execução após o flush da transação.
-     *
-     * @param consultaId ID da consulta cujo cache deve ser invalidado
-     */
-    @CacheEvict(value = "questionario-saude", key = "#consultaId")
-    public void evictQuestionarioCache(Long consultaId) {
-        log.debug("Cache questionario-saude invalidado para consulta={}", consultaId);
+        Long consultaId = termo.getConsulta().getId();
+        log.info("Questionário respondido e assinado — consulta={}", consultaId);
+        // Rota pública não tem tenant no contexto: a chave usa a organização dona do termo.
+        // Evicção via bean porque @CacheEvict em método da própria classe não passa pelo proxy.
+        cacheEvictionService.evictQuestionarioSaude(termo.getOrganizacao().getId(), consultaId);
     }
 
     /**
@@ -148,9 +155,10 @@ public class TermoAutorizacaoService {
      * @param consultaId ID da consulta
      * @return termo com respostas ou null se nao existir
      */
-    @Cacheable(value = "questionario-saude", key = "#consultaId", unless = "#result == null")
+    @Cacheable(value = "questionario-saude", key = CHAVE_CACHE_CONSULTA_TENANT, unless = "#result == null")
     @Transactional(readOnly = true)
     public TermoAutorizacao buscarPorConsultaId(Long consultaId) {
-        return termoRepository.findByConsultaId(consultaId).orElse(null);
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return termoRepository.findByConsultaIdAndOrganizacaoId(consultaId, orgId).orElse(null);
     }
 }

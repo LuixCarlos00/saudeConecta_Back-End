@@ -1,5 +1,6 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.service.ProfissionalService;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.presentation.dto.profissional.AtualizarClinicoRequest;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,6 +25,7 @@ import java.util.Map;
 public class ProfissionalController {
     
     private final ProfissionalService profissionalService;
+    private final TenantHelper tenantHelper;
 
 
     @PutMapping("/atualizarClinicoIdByOrg/{id}")
@@ -87,11 +90,14 @@ public class ProfissionalController {
 
     @GetMapping("/estatisticas/organizacao/{organizacaoId}/medicos-ativos")
     public ResponseEntity<Long> contarAtivosPorOrganizacao(@PathVariable Long organizacaoId) {
+        // Validado antes do service: o @Cacheable usa o orgId como chave e responderia do cache sem checar.
+        tenantHelper.validateTenant(organizacaoId);
         return ResponseEntity.ok(profissionalService.contarAtivosPorOrganizacao(organizacaoId));
     }
 
 
     @GetMapping("/estatisticas/medicos-ativos")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Long> getEstatisticasMedicosAtivosByOrg() {
         return ResponseEntity.ok(profissionalService.getEstatisticasMedicosAtivosByOrg());
     }
@@ -104,6 +110,8 @@ public class ProfissionalController {
 
     @GetMapping("/organizacao/{organizacaoId}")
     public ResponseEntity<List<ProfissionalResponse>> listarPorOrganizacao(@PathVariable Long organizacaoId) {
+        // A resposta traz CPF/RG/e-mail: só a própria clínica pode listar (validado antes do cache do service).
+        tenantHelper.validateTenant(organizacaoId);
         List<Profissional> profissionais = profissionalService.buscarPorOrganizacao(organizacaoId);
         List<ProfissionalResponse> response = profissionais.stream()
                 .map(ProfissionalResponse::fromEntity)

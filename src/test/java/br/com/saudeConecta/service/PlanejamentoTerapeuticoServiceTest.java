@@ -1,0 +1,187 @@
+package br.com.saudeConecta.service;
+
+import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
+import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
+import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.domain.paciente.Paciente;
+import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.infra.tenant.TenantHelper;
+import br.com.saudeConecta.infrastructure.persistence.repository.*;
+import br.com.saudeConecta.presentation.dto.prontuario.PlanejamentoTerapeuticoRequest;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Spy;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith({MockitoExtension.class, OutputCaptureExtension.class})
+@DisplayName("PlanejamentoTerapeuticoService - isolamento por tenant e link público")
+class PlanejamentoTerapeuticoServiceTest {
+
+    private static final Long ORG = 1L;
+
+    @Mock private PlanejamentoTerapeuticoRepository planejamentoRepository;
+    @Mock private ProntuarioDentistaRepository prontuarioRepository;
+    @Mock private ConsultaRepository consultaRepository;
+    @Mock private ProfissionalRepository profissionalRepository;
+    @Mock private PacienteRepository pacienteRepository;
+    @Spy private TenantHelper tenantHelper = new TenantHelper();
+
+    @InjectMocks
+    private PlanejamentoTerapeuticoService service;
+
+    @BeforeEach
+    void definirTenant() {
+        TenantContext.setCurrentTenant(ORG);
+    }
+
+    @AfterEach
+    void limpar() {
+        TenantContext.clear();
+    }
+
+    private PlanejamentoTerapeuticoRequest request() {
+        PlanejamentoTerapeuticoRequest r = new PlanejamentoTerapeuticoRequest();
+        r.setProntuarioDentistaId(5L);
+        r.setPacienteId(7L);
+        r.setProcedimentoRealizado("Restauração");
+        return r;
+    }
+
+    @Test
+    @DisplayName("listarPorProntuario consulta somente a organização do token")
+    void listarFiltrado() {
+        service.listarPorProntuario(5L);
+
+        verify(planejamentoRepository).findByProntuarioId(5L, ORG);
+        verify(planejamentoRepository).findByProntuarioMedicoId(5L, ORG);
+    }
+
+    @Test
+    @DisplayName("adicionar recusa prontuário de outra clínica e não grava")
+    void adicionarProntuarioOutraClinica() {
+        lenient().when(prontuarioRepository.findById(5L)).thenReturn(Optional.of(new ProntuarioDentista()));
+
+        assertThatThrownBy(() -> service.adicionar(3L, request()))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(prontuarioRepository).findByCodigoAndConsulta_Organizacao_Id(5L, ORG);
+        verify(planejamentoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("adicionar recusa profissional de outra clínica e não grava")
+    void adicionarProfissionalOutraClinica() {
+        when(prontuarioRepository.findByCodigoAndConsulta_Organizacao_Id(5L, ORG))
+                .thenReturn(Optional.of(new ProntuarioDentista()));
+        lenient().when(profissionalRepository.findById(3L)).thenReturn(Optional.of(new Profissional()));
+
+        assertThatThrownBy(() -> service.adicionar(3L, request()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Profissional nao encontrado");
+        verify(planejamentoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("adicionar recusa paciente de outra clínica e não grava")
+    void adicionarPacienteOutraClinica() {
+        when(prontuarioRepository.findByCodigoAndConsulta_Organizacao_Id(5L, ORG))
+                .thenReturn(Optional.of(new ProntuarioDentista()));
+        when(profissionalRepository.findByIdAndOrganizacao_Id(3L, ORG)).thenReturn(Optional.of(new Profissional()));
+        lenient().when(pacienteRepository.findById(7L)).thenReturn(Optional.of(new Paciente()));
+
+        assertThatThrownBy(() -> service.adicionar(3L, request()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Paciente nao encontrado");
+        verify(planejamentoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("remover recusa planejamento de outra clínica e não apaga")
+    void removerOutraClinica() {
+        lenient().when(planejamentoRepository.existsById(9L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.remover(9L))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(planejamentoRepository, never()).deleteById(any());
+        verify(planejamentoRepository, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("gerarLinkAssinatura recusa prontuário de outra clínica")
+    void gerarLinkOutraClinica() {
+        lenient().when(planejamentoRepository.findByProntuarioId(eq(5L), any()))
+                .thenAnswer(inv -> ORG.equals(inv.getArgument(1)) ? List.of() : List.of(new PlanejamentoTerapeutico()));
+
+        assertThatThrownBy(() -> service.gerarLinkAssinatura(5L, "DENTISTA"))
+                .isInstanceOf(IllegalStateException.class);
+        verify(planejamentoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("gerarLinkAssinatura define expiração de 7 dias e não loga o token inteiro")
+    void gerarLinkDefineExpiracao(CapturedOutput output) {
+        PlanejamentoTerapeutico p = PlanejamentoTerapeutico.builder().statusAssinatura("PENDENTE").build();
+        when(planejamentoRepository.findByProntuarioId(5L, ORG)).thenReturn(List.of(p));
+
+        String token = service.gerarLinkAssinatura(5L, "DENTISTA");
+
+        assertThat(p.getTokenAssinatura()).isEqualTo(token);
+        assertThat(p.getTokenExpiracao())
+                .isAfter(LocalDateTime.now().plusDays(6))
+                .isBefore(LocalDateTime.now().plusDays(7).plusMinutes(1));
+        assertThat(output.getAll()).contains("Token de assinatura gerado=" + token.substring(0, 6))
+                .doesNotContain(token);
+    }
+
+    @Test
+    @DisplayName("buscarPorToken recusa link expirado")
+    void buscarPorTokenExpirado() {
+        TenantContext.clear();
+        PlanejamentoTerapeutico p = PlanejamentoTerapeutico.builder()
+                .statusAssinatura("PENDENTE")
+                .tokenExpiracao(LocalDateTime.now().minusMinutes(1))
+                .build();
+        when(planejamentoRepository.findByTokenAssinatura("tok")).thenReturn(List.of(p));
+
+        assertThatThrownBy(() -> service.buscarPorToken("tok"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("buscarPorToken aceita token legado sem expiração (coluna nula)")
+    void buscarPorTokenLegado() {
+        TenantContext.clear();
+        PlanejamentoTerapeutico p = PlanejamentoTerapeutico.builder().statusAssinatura("PENDENTE").build();
+        when(planejamentoRepository.findByTokenAssinatura("tok")).thenReturn(List.of(p));
+
+        assertThat(service.buscarPorToken("tok")).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("assinarPorToken repassa o instante atual para a query condicional e não loga o token")
+    void assinarPorTokenCondicional(CapturedOutput output) {
+        TenantContext.clear();
+        when(planejamentoRepository.assinarPorToken(eq("abcdef-1234-5678"), any(), any(), any())).thenReturn(0);
+
+        assertThatThrownBy(() -> service.assinarPorToken("abcdef-1234-5678", "base64", "10.0.0.1"))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(planejamentoRepository).assinarPorToken(eq("abcdef-1234-5678"), eq("base64"), eq("10.0.0.1"),
+                any(LocalDateTime.class));
+        assertThat(output.getAll()).contains("token=abcdef***").doesNotContain("abcdef-1234-5678");
+    }
+}

@@ -12,4 +12,6 @@ public interface ConfiguracoesConsultaRepository extends JpaRepository<Configura
     Optional<ConfiguracoesConsulta> findByOrganizacaoId(Long organizacaoId);
 
     boolean existsByOrganizacaoId(Long organizacaoId);
+
+    Optional<ConfiguracoesConsulta> findByIdAndOrganizacaoId(Long id, Long organizacaoId);
 }

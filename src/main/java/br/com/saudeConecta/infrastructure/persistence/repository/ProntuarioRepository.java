@@ -15,30 +15,40 @@ public interface ProntuarioRepository extends JpaRepository<Prontuario, Long> {
 
     Prontuario findByConsulta_Id(Long consultaId);
     
-    List<Prontuario> findByConsulta_Paciente_PaciCodigo(Long paciCodigo);
-    
-    List<Prontuario> findByProfissional_Id(Long profissionalId);
-    
+    /**
+     * Busca um prontuário médico somente se a consulta pertencer à organização informada.
+     *
+     * @param id    ID do prontuário
+     * @param orgId ID da organização do token
+     * @return prontuário, ou vazio se não existir ou for de outra clínica
+     */
+    Optional<Prontuario> findByProntCodigoProntuarioAndConsulta_Organizacao_Id(Long id, Long orgId);
+
+    List<Prontuario> findByConsulta_Paciente_PaciCodigoAndConsulta_Organizacao_Id(Long paciCodigo, Long orgId);
+
+    List<Prontuario> findByProfissional_IdAndConsulta_Organizacao_Id(Long profissionalId, Long orgId);
+
     @Query("SELECT p FROM Prontuario p " +
            "LEFT JOIN FETCH p.profissional " +
            "LEFT JOIN FETCH p.consulta c " +
            "LEFT JOIN FETCH c.paciente " +
            "LEFT JOIN FETCH c.formaPagamento " +
            "LEFT JOIN FETCH p.planejamentos " +
-           "WHERE p.consulta.id = :consultaId")
-    Prontuario findByConsulta_IdWithFetch(Long consultaId);
+           "WHERE c.id = :consultaId AND c.organizacao.id = :orgId")
+    Prontuario findByConsultaIdAndOrganizacaoIdWithFetch(@Param("consultaId") Long consultaId,
+                                                         @Param("orgId") Long orgId);
 
     /**
-     * Busca apenas o ID do prontuário mais recente de uma consulta.
+     * Busca apenas o ID do prontuário mais recente de uma consulta da organização informada.
      * Permite usar LIMIT sem warning de coleção.
      */
     @Query("""
         SELECT p.prontCodigoProntuario FROM Prontuario p
-        WHERE p.consulta.id = :consultaId
+        WHERE p.consulta.id = :consultaId AND p.consulta.organizacao.id = :orgId
         ORDER BY p.prontDataFinalizado DESC
         LIMIT 1
     """)
-    Optional<Long> findIdMaisRecentePorConsulta(@Param("consultaId") Long consultaId);
+    Optional<Long> findIdMaisRecentePorConsulta(@Param("consultaId") Long consultaId, @Param("orgId") Long orgId);
 
     /**
      * Busca prontuário por ID com fetch completo de relacionamentos.

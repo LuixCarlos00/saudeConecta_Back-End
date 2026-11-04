@@ -188,4 +188,94 @@ class ConsultaControllerIntegrationTest {
                     .andExpect(status().isNotFound());
         }
     }
+
+    // ========== Isolamento multi-tenant (dashboards e buscas por organização) ==========
+
+    @Nested
+    @DisplayName("Isolamento entre clínicas")
+    class IsolamentoEntreClinicas {
+
+        @AfterEach
+        void limparTenant() {
+            br.com.saudeConecta.infra.tenant.TenantContext.clear();
+        }
+
+        private void tenant(Long orgId, Long usuarioId) {
+            br.com.saudeConecta.infra.tenant.TenantContext.setCurrentTenant(orgId);
+            br.com.saudeConecta.infra.tenant.TenantContext.setCurrentUser(usuarioId);
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("Endpoints com {organizacaoId} de outra clínica retornam 403 sem chamar o service")
+        void organizacaoDaUrlDeOutraClinica403() throws Exception {
+            tenant(1L, 5L);
+            String[] urls = {
+                    "/consultas/organizacao/2/especialidade/Cardiologia",
+                    "/consultas/estatisticas/organizacao/2/dashboard",
+                    "/consultas/estatisticas/organizacao/2/consultas-hoje",
+                    "/consultas/estatisticas/organizacao/2/consultas-atendidas-hoje",
+                    "/consultas/estatisticas/organizacao/2/consultas-agendadas-hoje",
+                    "/consultas/estatisticas/organizacao/2/consultas-semana",
+                    "/consultas/organizacao/2/intervalo?dataInicial=2026-01-01&dataFinal=2026-01-31"
+            };
+            for (String url : urls) {
+                tenant(1L, 5L);
+                mockMvc.perform(get(url)).andExpect(status().isForbidden());
+            }
+            verifyNoInteractions(consultaService);
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("Dashboard da própria clínica continua 200")
+        void dashboardPropriaClinica200() throws Exception {
+            tenant(1L, 5L);
+            when(consultaService.getEstatisticasDashboardAdminOrg(1L)).thenReturn(null);
+
+            mockMvc.perform(get("/consultas/estatisticas/organizacao/1/dashboard"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @WithMockUser(roles = "PROFISSIONAL")
+        @DisplayName("Dashboard do profissional com usuarioId de outro usuário retorna 403")
+        void dashboardProfissionalOutroUsuario403() throws Exception {
+            tenant(1L, 5L);
+
+            mockMvc.perform(get("/consultas/estatisticas/dashboard/profissional").param("usuarioId", "99"))
+                    .andExpect(status().isForbidden());
+            verify(consultaService, never()).getEstatisticasDashboardProfissional(anyLong());
+        }
+
+        @Test
+        @WithMockUser(roles = "PROFISSIONAL")
+        @DisplayName("Dashboard do profissional com o próprio usuarioId retorna 200")
+        void dashboardProfissionalProprio200() throws Exception {
+            tenant(1L, 5L);
+            when(consultaService.getEstatisticasDashboardProfissional(5L)).thenReturn(null);
+
+            mockMvc.perform(get("/consultas/estatisticas/dashboard/profissional").param("usuarioId", "5"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("Dashboard global é exclusivo do SUPER_ADMIN (GESTOR recebe 403)")
+        void dashboardSuperAdminGestor403() throws Exception {
+            mockMvc.perform(get("/consultas/estatisticas/dashboard/super-admin"))
+                    .andExpect(status().isForbidden());
+            verify(consultaService, never()).getEstatisticasDashboardSuperAdmin();
+        }
+
+        @Test
+        @WithMockUser(roles = {"SUPER_ADMIN", "ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("Dashboard global liberado para o SUPER_ADMIN")
+        void dashboardSuperAdminRoot200() throws Exception {
+            when(consultaService.getEstatisticasDashboardSuperAdmin()).thenReturn(null);
+
+            mockMvc.perform(get("/consultas/estatisticas/dashboard/super-admin"))
+                    .andExpect(status().isOk());
+        }
+    }
 }

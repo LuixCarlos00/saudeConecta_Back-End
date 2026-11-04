@@ -56,14 +56,14 @@ public class MensageriaService {
      */
     @Cacheable(
         value = "mensageria-lista",
-        key = "(@tenantHelper.getCurrentTenantIdOrNull() != null ? 'org-' + @tenantHelper.getCurrentTenantIdOrNull() : 'super-admin')"
+        key = "(@tenantHelper.getCurrentTenantIdOrNull() != null ? 'org-' + @tenantHelper.getCurrentTenantIdOrNull() : (@tenantHelper.isSuperAdmin() ? 'super-admin' : 'sem-tenant'))"
             + " + '-s:' + (#status != null ? #status.name() : 'ALL')"
             + " + '-t:' + (#tipo != null ? #tipo.name() : 'ALL')"
             + " + '-p:' + #pageable.pageNumber + '-sz:' + #pageable.pageSize"
     )
     @Transactional(readOnly = true)
     public Page<MensageriaResponse> listarMensagens(StatusMensagem status, TipoMensagem tipo, Pageable pageable) {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
+        Long orgId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
         if (orgId == null) {
             log.info("SUPER_ADMIN: listando mensagens globais");
             return mensageriaRepository
@@ -83,7 +83,7 @@ public class MensageriaService {
      */
     @Transactional(readOnly = true)
     public List<MensageriaResponse> listarFalhasPendentesNotificacao() {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
+        Long orgId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
         if (orgId == null) {
             log.info("SUPER_ADMIN: listando falhas pendentes globais");
             return mensageriaRepository
@@ -108,7 +108,7 @@ public class MensageriaService {
     @CacheEvict(value = {"mensageria-contagem", "mensageria-lista"}, allEntries = true)
     @Transactional
     public void marcarComoNotificado(Long mensageriaId) {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
+        Long orgId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
         Mensageria mensageria = mensageriaRepository.findById(mensageriaId)
                 .orElseThrow(() -> new IllegalArgumentException("Mensagem não encontrada: " + mensageriaId));
 
@@ -128,10 +128,10 @@ public class MensageriaService {
      *
      * @return Quantidade de falhas pendentes
      */
-    @Cacheable(value = "mensageria-contagem", key = "(@tenantHelper.getCurrentTenantIdOrNull() != null ? 'org-' + @tenantHelper.getCurrentTenantIdOrNull() : 'super-admin') + '-falhas-pendentes'")
+    @Cacheable(value = "mensageria-contagem", key = "(@tenantHelper.getCurrentTenantIdOrNull() != null ? 'org-' + @tenantHelper.getCurrentTenantIdOrNull() : (@tenantHelper.isSuperAdmin() ? 'super-admin' : 'sem-tenant')) + '-falhas-pendentes'")
     @Transactional(readOnly = true)
     public long contarFalhasPendentes() {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
+        Long orgId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
         if (orgId == null) {
             return mensageriaRepository.countByAdminNotificadoFalseAndStatus(StatusMensagem.FALHOU);
         }
@@ -147,7 +147,7 @@ public class MensageriaService {
      */
     @Transactional(readOnly = true)
     public MensageriaResponse buscarPorId(Long mensageriaId) {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
+        Long orgId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
         Mensageria mensageria = mensageriaRepository.findById(mensageriaId)
                 .orElseThrow(() -> new IllegalArgumentException("Mensagem não encontrada: " + mensageriaId));
 
@@ -169,7 +169,7 @@ public class MensageriaService {
     @CacheEvict(value = {"mensageria-contagem", "mensageria-lista"}, allEntries = true)
     @Transactional
     public void reenviarMensagem(Long mensageriaId) {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
+        Long orgId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
         Mensageria mensageria = mensageriaRepository.findById(mensageriaId)
                 .orElseThrow(() -> new IllegalArgumentException("Mensagem não encontrada: " + mensageriaId));
 

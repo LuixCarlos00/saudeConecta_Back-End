@@ -6,6 +6,7 @@ import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
 import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
@@ -13,12 +14,14 @@ import br.com.saudeConecta.infrastructure.persistence.repository.ProntuarioDenti
 import br.com.saudeConecta.presentation.dto.prontuario.CadastrarProntuarioDentistaRequest;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
@@ -35,6 +38,13 @@ import static org.mockito.Mockito.*;
 @DisplayName("ProntuarioDentistaService - Testes unitários")
 class ProntuarioDentistaServiceTest {
 
+    private static final Long ORG = 1L;
+
+    @BeforeEach
+    void definirTenant() {
+        TenantContext.setCurrentTenant(ORG);
+    }
+
     @AfterEach
     void limparTenantContext() {
         TenantContext.clear();
@@ -45,6 +55,7 @@ class ProntuarioDentistaServiceTest {
     @Mock private ConsultaRepository consultaRepository;
     @Mock private PacienteRepository pacienteRepository;
     @Mock private EntityManager entityManager;
+    @Spy private TenantHelper tenantHelper = new TenantHelper();
 
     @InjectMocks
     private ProntuarioDentistaService service;
@@ -117,8 +128,8 @@ class ProntuarioDentistaServiceTest {
             CadastrarProntuarioDentistaRequest request = criarRequest();
             ProntuarioDentista prontuario = criarProntuario(100L);
 
-            when(profissionalRepository.findById(1L)).thenReturn(Optional.of(criarProfissional(1L)));
-            when(consultaRepository.findById(10L)).thenReturn(Optional.of(criarConsulta(10L)));
+            when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
+            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
             when(prontuarioDentistaRepository.save(any())).thenReturn(prontuario);
             when(consultaRepository.save(any())).thenReturn(criarConsulta(10L));
 
@@ -133,7 +144,7 @@ class ProntuarioDentistaServiceTest {
         @DisplayName("Deve lançar exceção quando profissional não encontrado")
         void deveLancarExcecaoQuandoProfissionalNaoEncontrado() {
             CadastrarProntuarioDentistaRequest request = criarRequest();
-            when(profissionalRepository.findById(1L)).thenReturn(Optional.empty());
+            when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.cadastrarProntuarioByOrg(request))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -144,8 +155,8 @@ class ProntuarioDentistaServiceTest {
         @DisplayName("Deve lançar exceção quando consulta não encontrada")
         void deveLancarExcecaoQuandoConsultaNaoEncontrada() {
             CadastrarProntuarioDentistaRequest request = criarRequest();
-            when(profissionalRepository.findById(1L)).thenReturn(Optional.of(criarProfissional(1L)));
-            when(consultaRepository.findById(10L)).thenReturn(Optional.empty());
+            when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
+            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.cadastrarProntuarioByOrg(request))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -159,8 +170,8 @@ class ProntuarioDentistaServiceTest {
             Consulta consulta = criarConsulta(10L);
             ProntuarioDentista prontuario = criarProntuario(100L);
 
-            when(profissionalRepository.findById(1L)).thenReturn(Optional.of(criarProfissional(1L)));
-            when(consultaRepository.findById(10L)).thenReturn(Optional.of(consulta));
+            when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
+            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.of(consulta));
             when(prontuarioDentistaRepository.save(any())).thenReturn(prontuario);
             when(consultaRepository.save(any())).thenReturn(consulta);
 
@@ -179,8 +190,8 @@ class ProntuarioDentistaServiceTest {
             ));
             ProntuarioDentista prontuario = criarProntuario(100L);
 
-            when(profissionalRepository.findById(1L)).thenReturn(Optional.of(criarProfissional(1L)));
-            when(consultaRepository.findById(10L)).thenReturn(Optional.of(criarConsulta(10L)));
+            when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
+            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
             when(prontuarioDentistaRepository.save(any())).thenReturn(prontuario);
             when(consultaRepository.save(any())).thenReturn(criarConsulta(10L));
 
@@ -193,8 +204,6 @@ class ProntuarioDentistaServiceTest {
         @Test
         @DisplayName("Deve cadastrar com planejamentos quando pacienteId informado")
         void deveCadastrarComPlanejamentosComPaciente() {
-            TenantContext.setCurrentTenant(1L);
-
             CadastrarProntuarioDentistaRequest request = criarRequest();
             request.setPlanejamentos(List.of(criarItemPlanejamento(5L)));
 
@@ -202,38 +211,36 @@ class ProntuarioDentistaServiceTest {
             Paciente paciente = new Paciente();
             paciente.setPaciCodigo(5L);
 
-            when(profissionalRepository.findById(1L)).thenReturn(Optional.of(criarProfissional(1L)));
-            when(consultaRepository.findById(10L)).thenReturn(Optional.of(criarConsulta(10L)));
+            when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
+            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
             when(prontuarioDentistaRepository.save(any())).thenReturn(prontuario);
-            when(pacienteRepository.findById(5L)).thenReturn(Optional.of(paciente));
+            when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(5L, ORG)).thenReturn(Optional.of(paciente));
             when(consultaRepository.save(any())).thenReturn(criarConsulta(10L));
 
             ProntuarioDentista resultado = service.cadastrarProntuarioByOrg(request);
 
             assertThat(resultado).isNotNull();
-            verify(pacienteRepository).findById(5L);
+            verify(pacienteRepository).findByPaciCodigoAndOrganizacao_IdWithEndereco(5L, ORG);
             verify(prontuarioDentistaRepository, times(2)).save(any());
         }
 
         @Test
         @DisplayName("Deve cadastrar com planejamentos quando pacienteId é nulo")
         void deveCadastrarComPlanejamentosSemPaciente() {
-            TenantContext.setCurrentTenant(1L);
-
             CadastrarProntuarioDentistaRequest request = criarRequest();
             request.setPlanejamentos(List.of(criarItemPlanejamento(null)));
 
             ProntuarioDentista prontuario = criarProntuario(100L);
 
-            when(profissionalRepository.findById(1L)).thenReturn(Optional.of(criarProfissional(1L)));
-            when(consultaRepository.findById(10L)).thenReturn(Optional.of(criarConsulta(10L)));
+            when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
+            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
             when(prontuarioDentistaRepository.save(any())).thenReturn(prontuario);
             when(consultaRepository.save(any())).thenReturn(criarConsulta(10L));
 
             ProntuarioDentista resultado = service.cadastrarProntuarioByOrg(request);
 
             assertThat(resultado).isNotNull();
-            verify(pacienteRepository, never()).findById(any());
+            verify(pacienteRepository, never()).findByPaciCodigoAndOrganizacao_IdWithEndereco(any(), any());
             verify(prontuarioDentistaRepository, times(2)).save(any());
         }
     }
@@ -248,7 +255,7 @@ class ProntuarioDentistaServiceTest {
         @DisplayName("Deve retornar prontuário quando encontrado")
         void deveRetornarProntuario() {
             ProntuarioDentista prontuario = criarProntuario(1L);
-            when(prontuarioDentistaRepository.findById(1L)).thenReturn(Optional.of(prontuario));
+            when(prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(1L, ORG)).thenReturn(Optional.of(prontuario));
 
             ProntuarioDentista resultado = service.buscarPorId(1L);
 
@@ -259,7 +266,7 @@ class ProntuarioDentistaServiceTest {
         @Test
         @DisplayName("Deve lançar exceção quando prontuário não encontrado")
         void deveLancarExcecaoQuandoNaoEncontrado() {
-            when(prontuarioDentistaRepository.findById(99L)).thenReturn(Optional.empty());
+            when(prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(99L, ORG)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.buscarPorId(99L))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -276,7 +283,7 @@ class ProntuarioDentistaServiceTest {
         @Test
         @DisplayName("Deve retornar lista de prontuários da consulta")
         void deveRetornarListaPorConsulta() {
-            when(prontuarioDentistaRepository.findByConsultaId(10L))
+            when(prontuarioDentistaRepository.findByConsultaIdAndOrganizacaoId(10L, ORG))
                     .thenReturn(List.of(criarProntuario(1L), criarProntuario(2L)));
 
             List<ProntuarioDentista> resultado = service.listarPorConsulta(10L);
@@ -287,7 +294,7 @@ class ProntuarioDentistaServiceTest {
         @Test
         @DisplayName("Deve retornar lista vazia quando não há prontuários")
         void deveRetornarVazioQuandoSemProntuarios() {
-            when(prontuarioDentistaRepository.findByConsultaId(99L))
+            when(prontuarioDentistaRepository.findByConsultaIdAndOrganizacaoId(99L, ORG))
                     .thenReturn(Collections.emptyList());
 
             List<ProntuarioDentista> resultado = service.listarPorConsulta(99L);
@@ -306,7 +313,7 @@ class ProntuarioDentistaServiceTest {
         @DisplayName("Deve retornar prontuário mais recente da consulta")
         void deveRetornarMaisRecente() {
             ProntuarioDentista prontuario = criarProntuario(5L);
-            when(prontuarioDentistaRepository.findIdMaisRecentePorConsulta(10L))
+            when(prontuarioDentistaRepository.findIdMaisRecentePorConsulta(10L, ORG))
                     .thenReturn(Optional.of(5L));
             when(prontuarioDentistaRepository.findByIdComDentes(5L))
                     .thenReturn(Optional.of(prontuario));
@@ -320,7 +327,7 @@ class ProntuarioDentistaServiceTest {
         @Test
         @DisplayName("Deve lançar exceção quando não há prontuário recente")
         void deveLancarExcecaoQuandoNaoEncontrado() {
-            when(prontuarioDentistaRepository.findIdMaisRecentePorConsulta(99L))
+            when(prontuarioDentistaRepository.findIdMaisRecentePorConsulta(99L, ORG))
                     .thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.buscarMaisRecentePorConsulta(99L))
@@ -338,7 +345,7 @@ class ProntuarioDentistaServiceTest {
         @Test
         @DisplayName("Deve retornar prontuários do profissional")
         void deveRetornarPorProfissional() {
-            when(prontuarioDentistaRepository.findByProfissionalId(1L))
+            when(prontuarioDentistaRepository.findByProfissionalId(1L, ORG))
                     .thenReturn(List.of(criarProntuario(1L)));
 
             List<ProntuarioDentista> resultado = service.listarPorProfissional(1L);
@@ -349,7 +356,7 @@ class ProntuarioDentistaServiceTest {
         @Test
         @DisplayName("Deve retornar prontuários do paciente")
         void deveRetornarPorPaciente() {
-            when(prontuarioDentistaRepository.findByPacienteId(1L))
+            when(prontuarioDentistaRepository.findByPacienteId(1L, ORG))
                     .thenReturn(List.of(criarProntuario(1L), criarProntuario(2L)));
 
             List<ProntuarioDentista> resultado = service.listarPorPaciente(1L);
@@ -360,7 +367,7 @@ class ProntuarioDentistaServiceTest {
         @Test
         @DisplayName("Deve retornar lista vazia para paciente sem prontuários")
         void deveRetornarVazioParaPacienteSemProntuarios() {
-            when(prontuarioDentistaRepository.findByPacienteId(99L))
+            when(prontuarioDentistaRepository.findByPacienteId(99L, ORG))
                     .thenReturn(Collections.emptyList());
 
             List<ProntuarioDentista> resultado = service.listarPorPaciente(99L);
@@ -378,7 +385,7 @@ class ProntuarioDentistaServiceTest {
         @Test
         @DisplayName("Deve lançar exceção quando prontuário não encontrado ao atualizar")
         void deveLancarExcecaoQuandoNaoEncontrado() {
-            when(prontuarioDentistaRepository.findById(99L)).thenReturn(Optional.empty());
+            when(prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(99L, ORG)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.atualizarProntuario(99L, criarRequest()))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -391,7 +398,7 @@ class ProntuarioDentistaServiceTest {
             ProntuarioDentista prontuario = criarProntuario(1L);
             CadastrarProntuarioDentistaRequest request = criarRequest();
 
-            when(prontuarioDentistaRepository.findById(1L)).thenReturn(Optional.of(prontuario));
+            when(prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(1L, ORG)).thenReturn(Optional.of(prontuario));
             when(prontuarioDentistaRepository.saveAndFlush(any())).thenReturn(prontuario);
             when(prontuarioDentistaRepository.save(any())).thenReturn(prontuario);
 
@@ -413,7 +420,7 @@ class ProntuarioDentistaServiceTest {
                     criarDente(22, "sadio", "")    // sadio sem obs — deve ser ignorado
             ));
 
-            when(prontuarioDentistaRepository.findById(1L)).thenReturn(Optional.of(prontuario));
+            when(prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(1L, ORG)).thenReturn(Optional.of(prontuario));
             when(prontuarioDentistaRepository.saveAndFlush(any())).thenReturn(prontuario);
             when(prontuarioDentistaRepository.save(any())).thenReturn(prontuario);
 
@@ -426,8 +433,6 @@ class ProntuarioDentistaServiceTest {
         @Test
         @DisplayName("Deve atualizar com planejamentos quando pacienteId informado")
         void deveAtualizarComPlanejamentosComPaciente() {
-            TenantContext.setCurrentTenant(1L);
-
             ProntuarioDentista prontuario = criarProntuario(1L);
             CadastrarProntuarioDentistaRequest request = criarRequest();
             request.setPlanejamentos(List.of(criarItemPlanejamento(5L)));
@@ -435,14 +440,14 @@ class ProntuarioDentistaServiceTest {
             Paciente paciente = new Paciente();
             paciente.setPaciCodigo(5L);
 
-            when(prontuarioDentistaRepository.findById(1L)).thenReturn(Optional.of(prontuario));
+            when(prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(1L, ORG)).thenReturn(Optional.of(prontuario));
             when(prontuarioDentistaRepository.saveAndFlush(any())).thenReturn(prontuario);
             when(prontuarioDentistaRepository.save(any())).thenReturn(prontuario);
-            when(pacienteRepository.findById(5L)).thenReturn(Optional.of(paciente));
+            when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(5L, ORG)).thenReturn(Optional.of(paciente));
 
             service.atualizarProntuario(1L, request);
 
-            verify(pacienteRepository).findById(5L);
+            verify(pacienteRepository).findByPaciCodigoAndOrganizacao_IdWithEndereco(5L, ORG);
             assertThat(prontuario.getPlanejamentos()).hasSize(1);
             assertThat(prontuario.getPlanejamentos().get(0).getProcedimentoRealizado())
                     .isEqualTo("Exodontia");
@@ -452,19 +457,17 @@ class ProntuarioDentistaServiceTest {
         @Test
         @DisplayName("Deve atualizar com planejamentos quando pacienteId é nulo")
         void deveAtualizarComPlanejamentosSemPaciente() {
-            TenantContext.setCurrentTenant(1L);
-
             ProntuarioDentista prontuario = criarProntuario(1L);
             CadastrarProntuarioDentistaRequest request = criarRequest();
             request.setPlanejamentos(List.of(criarItemPlanejamento(null)));
 
-            when(prontuarioDentistaRepository.findById(1L)).thenReturn(Optional.of(prontuario));
+            when(prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(1L, ORG)).thenReturn(Optional.of(prontuario));
             when(prontuarioDentistaRepository.saveAndFlush(any())).thenReturn(prontuario);
             when(prontuarioDentistaRepository.save(any())).thenReturn(prontuario);
 
             service.atualizarProntuario(1L, request);
 
-            verify(pacienteRepository, never()).findById(any());
+            verify(pacienteRepository, never()).findByPaciCodigoAndOrganizacao_IdWithEndereco(any(), any());
             assertThat(prontuario.getPlanejamentos()).hasSize(1);
             assertThat(prontuario.getPlanejamentos().get(0).getPaciente()).isNull();
         }
@@ -474,7 +477,7 @@ class ProntuarioDentistaServiceTest {
         void deveLimparPlanejamentosAntesDeRecriar() {
             ProntuarioDentista prontuario = criarProntuario(1L);
 
-            when(prontuarioDentistaRepository.findById(1L)).thenReturn(Optional.of(prontuario));
+            when(prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(1L, ORG)).thenReturn(Optional.of(prontuario));
             when(prontuarioDentistaRepository.saveAndFlush(any())).thenReturn(prontuario);
             when(prontuarioDentistaRepository.save(any())).thenReturn(prontuario);
 
@@ -482,6 +485,70 @@ class ProntuarioDentistaServiceTest {
 
             assertThat(prontuario.getPlanejamentos()).isEmpty();
             assertThat(prontuario.getDentes()).isEmpty();
+        }
+    }
+
+    // ========== Isolamento multi-tenant ==========
+
+    @Nested
+    @DisplayName("Isolamento entre clínicas")
+    class IsolamentoEntreClinicas {
+
+        @Test
+        @DisplayName("buscarPorId não devolve prontuário odontológico de outra clínica")
+        void buscarPorIdOutraClinica() {
+            lenient().when(prontuarioDentistaRepository.findById(1L)).thenReturn(Optional.of(criarProntuario(1L)));
+
+            assertThatThrownBy(() -> service.buscarPorId(1L))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("nao encontrado");
+            verify(prontuarioDentistaRepository).findByCodigoAndConsulta_Organizacao_Id(1L, ORG);
+        }
+
+        @Test
+        @DisplayName("Listagens por consulta, profissional e paciente filtram pela organização do token")
+        void listasFiltradas() {
+            service.listarPorConsulta(10L);
+            service.listarPorProfissional(8L);
+            service.listarPorPaciente(7L);
+
+            verify(prontuarioDentistaRepository).findByConsultaIdAndOrganizacaoId(10L, ORG);
+            verify(prontuarioDentistaRepository).findByProfissionalId(8L, ORG);
+            verify(prontuarioDentistaRepository).findByPacienteId(7L, ORG);
+            verify(prontuarioDentistaRepository, never()).findByConsultaId(any());
+        }
+
+        @Test
+        @DisplayName("buscarMaisRecentePorConsulta filtra pela organização do token")
+        void maisRecenteFiltrado() {
+            when(prontuarioDentistaRepository.findIdMaisRecentePorConsulta(10L, ORG)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.buscarMaisRecentePorConsulta(10L))
+                    .isInstanceOf(IllegalArgumentException.class);
+            verify(prontuarioDentistaRepository, never()).findByIdComDentes(any());
+        }
+
+        @Test
+        @DisplayName("cadastrar recusa consulta de outra clínica e não grava nada")
+        void cadastrarConsultaOutraClinica() {
+            when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
+            lenient().when(consultaRepository.findById(10L)).thenReturn(Optional.of(criarConsulta(10L)));
+
+            assertThatThrownBy(() -> service.cadastrarProntuarioByOrg(criarRequest()))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Consulta nao encontrada");
+            verify(prontuarioDentistaRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("atualizar recusa prontuário de outra clínica e não grava nada")
+        void atualizarOutraClinica() {
+            lenient().when(prontuarioDentistaRepository.findById(1L)).thenReturn(Optional.of(criarProntuario(1L)));
+
+            assertThatThrownBy(() -> service.atualizarProntuario(1L, criarRequest()))
+                    .isInstanceOf(IllegalArgumentException.class);
+            verify(prontuarioDentistaRepository, never()).saveAndFlush(any());
+            verify(prontuarioDentistaRepository, never()).save(any());
         }
     }
 }

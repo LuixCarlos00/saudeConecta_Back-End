@@ -1,5 +1,7 @@
 package br.com.saudeConecta.integration;
 
+import org.junit.jupiter.api.AfterEach;
+import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.profissional.StatusProfissional;
@@ -143,6 +145,7 @@ class ProfissionalControllerIntegrationTest {
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Deve retornar 200 com lista de profissionais da organização")
         void deveRetornar200ComListaDeProfissionaisDaOrg() throws Exception {
+            TenantContext.setCurrentTenant(1L);
             when(profissionalService.buscarPorOrganizacao(1L)).thenReturn(List.of(profissionalMock));
 
             mockMvc.perform(get("/profissionais/organizacao/1"))
@@ -154,11 +157,76 @@ class ProfissionalControllerIntegrationTest {
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Deve retornar 200 com lista vazia quando não houver profissionais")
         void deveRetornar200ComListaVazia() throws Exception {
+            TenantContext.setCurrentTenant(99L);
             when(profissionalService.buscarPorOrganizacao(99L)).thenReturn(List.of());
 
             mockMvc.perform(get("/profissionais/organizacao/99"))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        }
+    }
+
+    // ========== Isolamento multi-tenant ==========
+
+    @Nested
+    @DisplayName("Isolamento entre clínicas")
+    class IsolamentoEntreClinicas {
+
+        @AfterEach
+        void limparTenant() {
+            TenantContext.clear();
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("GET /profissionais/organizacao/{outraOrg} retorna 403 e não lista CPF/RG/e-mail de outra clínica")
+        void listarOutraClinica403() throws Exception {
+            TenantContext.setCurrentTenant(1L);
+
+            mockMvc.perform(get("/profissionais/organizacao/2"))
+                    .andExpect(status().isForbidden());
+            verify(profissionalService, never()).buscarPorOrganizacao(anyLong());
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("GET /profissionais/estatisticas/organizacao/{outraOrg}/medicos-ativos retorna 403")
+        void contarOutraClinica403() throws Exception {
+            TenantContext.setCurrentTenant(1L);
+
+            mockMvc.perform(get("/profissionais/estatisticas/organizacao/2/medicos-ativos"))
+                    .andExpect(status().isForbidden());
+            verify(profissionalService, never()).contarAtivosPorOrganizacao(anyLong());
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("GET /profissionais/estatisticas/organizacao/{propriaOrg}/medicos-ativos retorna 200")
+        void contarPropriaClinica200() throws Exception {
+            TenantContext.setCurrentTenant(1L);
+            when(profissionalService.contarAtivosPorOrganizacao(1L)).thenReturn(3L);
+
+            mockMvc.perform(get("/profissionais/estatisticas/organizacao/1/medicos-ativos"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("Estatística global de médicos ativos é exclusiva do SUPER_ADMIN (GESTOR recebe 403)")
+        void estatisticaGlobalGestor403() throws Exception {
+            mockMvc.perform(get("/profissionais/estatisticas/medicos-ativos"))
+                    .andExpect(status().isForbidden());
+            verify(profissionalService, never()).getEstatisticasMedicosAtivosByOrg();
+        }
+
+        @Test
+        @WithMockUser(roles = {"SUPER_ADMIN", "ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("Estatística global de médicos ativos liberada para o SUPER_ADMIN")
+        void estatisticaGlobalRoot200() throws Exception {
+            when(profissionalService.getEstatisticasMedicosAtivosByOrg()).thenReturn(10L);
+
+            mockMvc.perform(get("/profissionais/estatisticas/medicos-ativos"))
+                    .andExpect(status().isOk());
         }
     }
 }

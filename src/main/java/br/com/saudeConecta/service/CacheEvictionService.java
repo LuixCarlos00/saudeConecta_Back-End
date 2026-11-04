@@ -23,6 +23,8 @@ public class CacheEvictionService {
     private static final String CACHE_PERFIL_USUARIO = "perfil-usuario";
     private static final String CACHE_USUARIOS_AGRUPADOS = "usuarios-agrupados";
     private static final String CHAVE_SUPER_ADMIN = "super-admin";
+    private static final String CACHE_PRONTUARIO_RECENTE = "prontuario-recente";
+    private static final String CACHE_QUESTIONARIO_SAUDE = "questionario-saude";
 
     private final CacheManager cacheManager;
 
@@ -77,6 +79,42 @@ public class CacheEvictionService {
         evictPerfilUsuario(usuarioId);
         evictUsuariosAgrupados(organizacaoId);
         evictUsuariosAgrupadosSuperAdmin();
+    }
+
+    /**
+     * Monta a chave dos caches indexados por consulta, sempre prefixada pela organização.
+     * Usada tanto nas anotações {@code @Cacheable} (via SpEL) quanto nas evicções manuais,
+     * garantindo o mesmo formato nos dois lados e impedindo que uma clínica leia o
+     * valor em cache de outra apenas trocando o ID da consulta.
+     *
+     * @param organizacaoId ID da organização dona da consulta
+     * @param consultaId    ID da consulta
+     * @return chave no formato {@code org-<organizacaoId>-<consultaId>}
+     */
+    public static String chaveConsultaPorTenant(Long organizacaoId, Long consultaId) {
+        return "org-" + organizacaoId + "-" + consultaId;
+    }
+
+    /**
+     * Invalida o prontuário médico mais recente em cache de uma consulta.
+     * Chamado via bean (e não por {@code @CacheEvict} na própria classe) porque a
+     * auto-invocação não passa pelo proxy do Spring e a anotação seria ignorada.
+     *
+     * @param organizacaoId ID da organização dona da consulta
+     * @param consultaId    ID da consulta
+     */
+    public void evictProntuarioRecente(Long organizacaoId, Long consultaId) {
+        evict(CACHE_PRONTUARIO_RECENTE, chaveConsultaPorTenant(organizacaoId, consultaId));
+    }
+
+    /**
+     * Invalida o questionário de saúde em cache de uma consulta.
+     *
+     * @param organizacaoId ID da organização dona da consulta
+     * @param consultaId    ID da consulta
+     */
+    public void evictQuestionarioSaude(Long organizacaoId, Long consultaId) {
+        evict(CACHE_QUESTIONARIO_SAUDE, chaveConsultaPorTenant(organizacaoId, consultaId));
     }
 
     private void evict(String cacheName, Object key) {

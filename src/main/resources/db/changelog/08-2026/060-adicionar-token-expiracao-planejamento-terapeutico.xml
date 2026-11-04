@@ -1,0 +1,31 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ================================================================ -->
+    <!-- VALIDADE DO LINK PUBLICO DE ASSINATURA DO PLANEJAMENTO           -->
+    <!-- Coluna NULLABLE e sem default: retrocompativel com a versao      -->
+    <!-- anterior da aplicacao. Linhas existentes ficam com NULL, que a   -->
+    <!-- aplicacao trata como "link legado, sem expiracao".               -->
+    <!-- ================================================================ -->
+
+    <changeSet id="060-adicionar-token-expiracao-planejamento-terapeutico" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="tb_planejamento_terapeutico" columnName="token_expiracao"/></not>
+        </preConditions>
+        <comment>Adiciona a validade (token_expiracao) do link publico de assinatura do planejamento terapeutico</comment>
+
+        <addColumn tableName="tb_planejamento_terapeutico">
+            <column name="token_expiracao" type="DATETIME">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="tb_planejamento_terapeutico" columnName="token_expiracao"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
