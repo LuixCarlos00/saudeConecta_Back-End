@@ -335,7 +335,10 @@ public class MercadoPagoWebhookService {
         if (assinatura.getMpPreapprovalId() != null && !assinatura.getMpPreapprovalId().equals(remoto.id())) {
             log.info("Preapproval {} (status {}) ignorado: a assinatura {} está vinculada ao preapproval {}",
                     remoto.id(), remoto.status(), assinatura.getId(), assinatura.getMpPreapprovalId());
-            return true;
+            // Só o cancelado é estado final. Um preapproval ainda vivo pode ser o NOVO, cujo vínculo
+            // ainda não foi commitado por gerarLinkPagamento: encerrar o evento descartaria as
+            // próximas notificações dele, então fica aberto para ser reaplicado na reentrega.
+            return MercadoPagoClient.STATUS_CANCELLED.equals(remoto.status());
         }
 
         assinatura.setMpPreapprovalId(remoto.id());

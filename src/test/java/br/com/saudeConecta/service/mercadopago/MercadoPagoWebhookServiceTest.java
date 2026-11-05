@@ -554,6 +554,27 @@ class MercadoPagoWebhookServiceTest {
     }
 
     @Test
+    @DisplayName("Preapproval novo cujo vínculo ainda não foi commitado é ignorado sem encerrar o evento")
+    void preapprovalNovoAntesDoVinculoFicaAbertoParaReentrega() {
+        String novo = "preapproval-novo";
+        assinatura.setStatus(StatusAssinatura.INADIMPLENTE);
+        assinatura.setMpStatus("pending");
+        when(assinaturaTenantRepository.findByMpPreapprovalId(novo)).thenReturn(Optional.empty());
+        when(assinaturaTenantRepository.findById(ASSINATURA_ID)).thenReturn(Optional.of(assinatura));
+        when(mercadoPagoClient.buscarPreapproval(novo)).thenReturn(
+                new PreapprovalResponse(novo, "authorized", null, null, "ASSINATURA-42", null, null));
+
+        service.processar(MercadoPagoWebhookService.TOPICO_PREAPPROVAL, novo, "{}");
+
+        assertThat(assinatura.getMpPreapprovalId()).isEqualTo(PREAPPROVAL_ID);
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.INADIMPLENTE);
+        verify(assinaturaTenantRepository, never()).save(any());
+        // Aberto: a próxima entrega, já com o vínculo novo commitado, aplica o status
+        assertThat(ultimoEventoSalvo().getProcessado()).isFalse();
+        assertThat(ultimoEventoSalvo().getErro()).isNull();
+    }
+
+    @Test
     @DisplayName("Primeiro vínculo: assinatura sem preapproval é achada pela external_reference e vinculada")
     void primeiroVinculoPelaExternalReferenceContinuaFuncionando() {
         String novo = "preapproval-novo";
