@@ -6,9 +6,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import jakarta.persistence.LockModeType;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -21,6 +24,19 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
     Page<Consulta> findByOrganizacao_Id(Long organizacaoId, Pageable pageable);
 
     Optional<Consulta> findByIdAndOrganizacao_Id(Long id, Long organizacaoId);
+
+    /**
+     * Mesma busca de {@link #findByIdAndOrganizacao_Id}, travando a linha (SELECT ... FOR UPDATE) até o
+     * fim da transação. Serializa a gravação do rascunho com a finalização do prontuário, que atualiza a
+     * mesma linha. Só vale dentro de @Transactional.
+     *
+     * @param id            ID da consulta
+     * @param organizacaoId clínica do token
+     * @return consulta travada, ou vazio se não existir na clínica
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM Consulta c WHERE c.id = :id AND c.organizacao.id = :organizacaoId")
+    Optional<Consulta> buscarComLock(@Param("id") Long id, @Param("organizacaoId") Long organizacaoId);
 
     // Métodos com JOIN FETCH para evitar LazyInitializationException
     
