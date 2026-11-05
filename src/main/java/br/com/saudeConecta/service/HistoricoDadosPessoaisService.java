@@ -64,7 +64,7 @@ public class HistoricoDadosPessoaisService {
         if (!tenantHelper.isSuperAdmin()) {
             throw new TenantAccessDeniedException("Acesso negado: apenas SUPER_ADMIN pode acessar histórico por entidade");
         }
-        log.info("SUPER_ADMIN: buscando histórico global por entidade: {}, ID: {}", entidade, idEntidade);
+        log.debug("historico.buscar escopo=ENTIDADE entidade={} entidadeId={}", entidade, idEntidade);
         return historicoRepository.findByEntidadeAndIdEntidadeOrderByCriadoEmDesc(entidade, idEntidade);
     }
 
@@ -81,7 +81,7 @@ public class HistoricoDadosPessoaisService {
         if (!tenantHelper.isSuperAdmin()) {
             throw new TenantAccessDeniedException("Acesso negado: apenas SUPER_ADMIN pode acessar histórico por usuário");
         }
-        log.info("SUPER_ADMIN: buscando histórico global por usuário ID: {}", idUsuario);
+        log.debug("historico.buscar escopo=USUARIO usuarioId={}", idUsuario);
         return historicoRepository.findByUsuario_IdOrderByCriadoEmDesc(idUsuario);
     }
 
@@ -97,7 +97,7 @@ public class HistoricoDadosPessoaisService {
         if (!tenantHelper.isSuperAdmin()) {
             throw new TenantAccessDeniedException("Acesso negado: apenas SUPER_ADMIN pode acessar histórico");
         }
-        log.info("SUPER_ADMIN: buscando 10 registros mais recentes de histórico");
+        log.debug("historico.buscar escopo=RECENTES");
         return historicoRepository.findTop10ByOrderByCriadoEmDesc();
     }
 
@@ -119,7 +119,7 @@ public class HistoricoDadosPessoaisService {
     public void registrarAlteracoesDeObjeto(EntidadeTipo entidade, Long idEntidade,
                                             Long idUsuario, Object antes, Object depois) {
         if (antes == null || depois == null) {
-            log.warn("Historico ignorado - objeto antes ou depois e nulo. Entidade: {}, ID: {}", entidade, idEntidade);
+            log.warn("historico.registrar ignorado motivo=OBJETO_NULO entidade={} entidadeId={}", entidade, idEntidade);
             return;
         }
 
@@ -156,8 +156,8 @@ public class HistoricoDadosPessoaisService {
                 String strAntes  = valorAntes  != null ? valorAntes.toString()  : null;
                 String strDepois = valorDepois != null ? valorDepois.toString() : null;
 
-                log.debug("Campo alterado - Entidade: {}, ID: {}, Campo: {}, Antes: {}, Depois: {}",
-                        entidade, idEntidade, campo.getName(), strAntes, strDepois);
+                log.debug("historico.registrar campo alterado entidade={} entidadeId={} campo={}",
+                        entidade, idEntidade, campo.getName());
 
                 registros.add(HistoricoDadosPessoais.builder()
                         .organizacao(organizacao)
@@ -170,17 +170,17 @@ public class HistoricoDadosPessoaisService {
                         .build());
 
             } catch (IllegalAccessException e) {
-                log.warn("Nao foi possivel acessar campo '{}' para historico: {}", campo.getName(), e.getMessage());
+                log.warn("historico.registrar falha motivo=CAMPO_INACESSIVEL campo={} causa={}", campo.getName(), e.getClass().getSimpleName());
             }
         }
 
         if (registros.isEmpty()) {
-            log.debug("Nenhuma alteracao detectada para Entidade: {}, ID: {}", entidade, idEntidade);
+            log.debug("historico.registrar sem alteracao entidade={} entidadeId={}", entidade, idEntidade);
             return;
         }
 
         historicoRepository.saveAll(registros);
-        log.info("{} campo(s) registrado(s) no historico. Entidade: {}, ID: {}", registros.size(), entidade, idEntidade);
+        log.debug("historico.registrar ok campos={} entidade={} entidadeId={}", registros.size(), entidade, idEntidade);
     }
 
     /**

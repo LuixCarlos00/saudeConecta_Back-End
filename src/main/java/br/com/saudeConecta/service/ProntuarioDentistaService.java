@@ -43,7 +43,7 @@ public class ProntuarioDentistaService {
 
     @Transactional
     public ProntuarioDentista cadastrarProntuarioByOrg(CadastrarProntuarioDentistaRequest request) {
-        log.info("Cadastrando prontuario odontologico — consulta={}", request.getConsulta());
+        log.info("prontuario.dentista.cadastrar inicio consultaId={} profissionalId={}", request.getConsulta(), request.getCodigoMedico());
         Long orgId = tenantHelper.getCurrentTenantId();
 
         // Profissional e consulta precisam ser da clínica do token; de outra clínica = "não encontrado".
@@ -132,7 +132,7 @@ public class ProntuarioDentistaService {
         }
 
         ProntuarioDentista salvo = prontuarioDentistaRepository.save(prontuario);
-        log.info("Prontuario odontologico salvo — id={}, dentes={}",
+        log.info("prontuario.dentista.cadastrar ok prontuarioId={} dentes={}",
                 salvo.getCodigo(), salvo.getDentes().size());
 
         // ── Adiciona planejamentos terapêuticos ─────────────────────────────────
@@ -162,12 +162,12 @@ public class ProntuarioDentistaService {
                 salvo.addPlanejamento(planejamento);
             }
             prontuarioDentistaRepository.save(salvo);
-            log.info("Planejamentos salvos — total={}", request.getPlanejamentos().size());
+            log.debug("prontuario.dentista.cadastrar planejamentos total={}", request.getPlanejamentos().size());
         }
 
         consulta.setStatus(StatusConsulta.REALIZADA);
         consultaRepository.save(consulta);
-        log.info("Status da consulta ID: {} atualizado para REALIZADA", consulta.getId());
+        log.info("prontuario.dentista.cadastrar consulta consultaId={} status=REALIZADA", consulta.getId());
 
         return salvo;
     }
@@ -184,7 +184,7 @@ public class ProntuarioDentistaService {
      */
     @Transactional
     public void atualizarProntuario(Long id, CadastrarProntuarioDentistaRequest request) {
-        log.info("Atualizando prontuario odontologico — id={}", id);
+        log.info("prontuario.dentista.atualizar inicio prontuarioId={}", id);
         Long orgId = tenantHelper.getCurrentTenantId();
 
         ProntuarioDentista prontuario = prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(id, orgId)
@@ -299,11 +299,11 @@ public class ProntuarioDentistaService {
                         .build();
                 prontuario.addPlanejamento(planejamento);
             }
-            log.info("Planejamentos atualizados — total={}", request.getPlanejamentos().size());
+            log.debug("prontuario.dentista.atualizar planejamentos total={}", request.getPlanejamentos().size());
         }
 
         prontuarioDentistaRepository.save(prontuario);
-        log.info("Prontuario odontologico atualizado — id={}", id);
+        log.info("prontuario.dentista.atualizar ok prontuarioId={}", id);
     }
 
     // =========================================================================
@@ -370,7 +370,7 @@ public class ProntuarioDentistaService {
         try {
             return LocalDate.parse(data);
         } catch (Exception e) {
-            log.warn("Data inválida '{}', usando data atual.", data);
+            log.warn("prontuario.dentista.data negado motivo=DATA_INVALIDA data={} acao=USA_DATA_ATUAL", data);
             return LocalDate.now();
         }
     }

@@ -68,8 +68,8 @@ public class RelatorioPacienteService {
         LocalDateTime inicio = dataInicio != null ? dataInicio.atStartOfDay() : null;
         LocalDateTime fim = dataFim != null ? dataFim.plusDays(1).atStartOfDay() : null;
 
-        log.debug("Montando relatorios - orgId: {}, profissionalId: {}, pacienteId: {}, termo: {}",
-                orgId, profissionalId, pacienteId, termoNormalizado);
+        log.debug("relatorio.paciente montar profissionalId={} pacienteId={} comTermo={}",
+                profissionalId, pacienteId, termoNormalizado != null);
 
         List<Consulta> consultas = relatorioRepository.buscarConsultasParaRelatorio(
                 orgId, profissionalId, pacienteId, termoNormalizado, inicio, fim);

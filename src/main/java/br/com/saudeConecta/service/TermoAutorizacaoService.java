@@ -43,7 +43,7 @@ public class TermoAutorizacaoService {
      */
     @Transactional
     public String gerarLinkQuestionario(Long consultaId) {
-        log.info("Gerando link do questionário para consulta={}", consultaId);
+        log.info("questionario.gerarLink inicio consultaId={}", consultaId);
         Long orgId = tenantHelper.getCurrentTenantId();
 
         // Consulta de outra clínica responde igual a inexistente.
@@ -56,7 +56,7 @@ public class TermoAutorizacaoService {
             TermoAutorizacao existente = termoExistente.get();
             // Se existe registro com status PENDENTE, deleta e cria novo
             if (existente.isPendente()) {
-                log.info("Deletando termo pendente expirado/antigo para consulta={}", consultaId);
+                log.info("questionario.gerarLink termo pendente removido consultaId={}", consultaId);
                 termoRepository.delete(existente);
                 termoRepository.flush(); // Flush explícito para garantir remoção antes do insert
             } else {
@@ -81,7 +81,7 @@ public class TermoAutorizacaoService {
 
         termoRepository.save(termo);
         cacheEvictionService.evictQuestionarioSaude(orgId, consultaId);
-        log.info("Token gerado={} para consulta={}, expira em {}h",
+        log.info("questionario.gerarLink ok token={} consultaId={} expiraEmHoras={}",
                 MascaraLog.token(token), consultaId, HORAS_EXPIRACAO);
 
         return token;
@@ -117,7 +117,7 @@ public class TermoAutorizacaoService {
      */
     @Transactional
     public void responderQuestionario(QuestionarioSaudeRequest request, String ipOrigem) {
-        log.info("Recebendo respostas do questionário — token={}", MascaraLog.token(request.getToken()));
+        log.info("questionario.responder inicio token={} ip={}", MascaraLog.token(request.getToken()), ipOrigem);
 
         TermoAutorizacao termo = termoRepository.findByToken(request.getToken())
                 .orElseThrow(() -> new IllegalArgumentException("Token invalido."));
@@ -143,7 +143,7 @@ public class TermoAutorizacaoService {
         }
 
         Long consultaId = termo.getConsulta().getId();
-        log.info("Questionário respondido e assinado — consulta={}", consultaId);
+        log.info("questionario.responder ok consultaId={}", consultaId);
         // Rota pública não tem tenant no contexto: a chave usa a organização dona do termo.
         // Evicção via bean porque @CacheEvict em método da própria classe não passa pelo proxy.
         cacheEvictionService.evictQuestionarioSaude(termo.getOrganizacao().getId(), consultaId);

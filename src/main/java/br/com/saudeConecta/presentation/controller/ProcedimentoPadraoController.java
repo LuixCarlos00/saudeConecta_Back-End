@@ -30,7 +30,6 @@ public class ProcedimentoPadraoController {
      */
     @GetMapping("/profissional/{profissionalId}")
     public ResponseEntity<List<Map<String, Object>>> listar(@PathVariable Long profissionalId) {
-        log.info("GET /procedimentos-padrao/profissional/{}", profissionalId);
 
         List<ProcedimentoPadrao> lista = procedimentoService.listarPorProfissional(profissionalId);
 
@@ -55,7 +54,6 @@ public class ProcedimentoPadraoController {
             @PathVariable Long profissionalId,
             @RequestBody ProcedimentoPadraoRequest request) {
 
-        log.info("POST /procedimentos-padrao/profissional/{} — nome={}", profissionalId, request.getNomeProcedimento());
 
         ProcedimentoPadrao criado = procedimentoService.criar(profissionalId, request);
 
@@ -75,7 +73,6 @@ public class ProcedimentoPadraoController {
      */
     @GetMapping("/profissional/{profissionalId}/todos")
     public ResponseEntity<List<Map<String, Object>>> listarTodos(@PathVariable Long profissionalId) {
-        log.info("GET /procedimentos-padrao/profissional/{}/todos", profissionalId);
 
         List<ProcedimentoPadrao> lista = procedimentoService.listarTodosPorProfissional(profissionalId);
 
@@ -97,7 +94,6 @@ public class ProcedimentoPadraoController {
      */
     @PatchMapping("/{id}/toggle")
     public ResponseEntity<Map<String, Object>> toggleAtivo(@PathVariable Long id) {
-        log.info("PATCH /procedimentos-padrao/{}/toggle", id);
 
         ProcedimentoPadrao atualizado = procedimentoService.toggleAtivo(id);
 
@@ -119,7 +115,6 @@ public class ProcedimentoPadraoController {
             @PathVariable Long id,
             @RequestBody ProcedimentoPadraoRequest request) {
 
-        log.info("PUT /procedimentos-padrao/{}", id);
 
         ProcedimentoPadrao atualizado = procedimentoService.atualizar(id, request);
 
@@ -137,7 +132,6 @@ public class ProcedimentoPadraoController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> desativar(@PathVariable Long id) {
-        log.info("DELETE /procedimentos-padrao/{}", id);
         procedimentoService.desativar(id);
         return ResponseEntity.noContent().build();
     }

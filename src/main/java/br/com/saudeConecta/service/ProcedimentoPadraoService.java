@@ -48,7 +48,7 @@ public class ProcedimentoPadraoService {
     @Transactional
     public ProcedimentoPadrao criar(Long profissionalId, ProcedimentoPadraoRequest request) {
         Long orgId = TenantContext.getCurrentTenantOrThrow();
-        log.info("Criando procedimento padrão — profissional={}, nome={}", profissionalId, request.getNomeProcedimento());
+        log.info("procedimento.criar inicio profissionalId={}", profissionalId);
 
         Profissional profissional = profissionalRepository.findByIdAndOrganizacao_Id(profissionalId, orgId)
                 .orElseThrow(() -> new IllegalArgumentException("Profissional nao encontrado: " + profissionalId));
@@ -94,7 +94,7 @@ public class ProcedimentoPadraoService {
 
         procedimento.setAtivo(!procedimento.getAtivo());
         ProcedimentoPadrao salvo = procedimentoRepository.save(procedimento);
-        log.info("Procedimento {} — id={}", salvo.getAtivo() ? "ativado" : "bloqueado", id);
+        log.info("procedimento.toggle ok procedimentoId={} status={}", id, salvo.getAtivo() ? "ATIVO" : "BLOQUEADO");
         return salvo;
     }
 
@@ -128,7 +128,7 @@ public class ProcedimentoPadraoService {
 
         procedimento.setAtivo(false);
         procedimentoRepository.save(procedimento);
-        log.info("Procedimento desativado — id={}", id);
+        log.info("procedimento.desativar ok procedimentoId={}", id);
     }
 
     /**

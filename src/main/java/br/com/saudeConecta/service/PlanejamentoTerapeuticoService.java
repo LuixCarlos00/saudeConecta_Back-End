@@ -63,8 +63,8 @@ public class PlanejamentoTerapeuticoService {
     @Transactional
     public PlanejamentoTerapeutico adicionar(Long profissionalId, PlanejamentoTerapeuticoRequest request) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Adicionando planejamento — prontuario={}, procedimento={}",
-                request.getProntuarioDentistaId(), request.getProcedimentoRealizado());
+        log.info("planejamento.criar inicio prontuarioId={}",
+                request.getProntuarioDentistaId());
 
         // Prontuário, profissional e paciente precisam ser da clínica do token; de outra = "não encontrado".
         ProntuarioDentista prontuario = prontuarioRepository
@@ -100,7 +100,7 @@ public class PlanejamentoTerapeuticoService {
                 .build();
 
         PlanejamentoTerapeutico salvo = planejamentoRepository.save(planejamento);
-        log.info("Planejamento criado — id={}", salvo.getId());
+        log.info("planejamento.criar ok planejamentoId={}", salvo.getId());
         return salvo;
     }
 
@@ -115,7 +115,7 @@ public class PlanejamentoTerapeuticoService {
                 .findByIdAndOrganizacao_Id(id, tenantHelper.getCurrentTenantId())
                 .orElseThrow(() -> new IllegalArgumentException("Planejamento nao encontrado: " + id));
         planejamentoRepository.delete(planejamento);
-        log.info("Planejamento removido — id={}", id);
+        log.info("planejamento.remover ok planejamentoId={}", id);
     }
 
     /**
@@ -128,7 +128,7 @@ public class PlanejamentoTerapeuticoService {
      */
     @Transactional
     public String gerarLinkAssinatura(Long prontuarioId, String tipo) {
-        log.info("Gerando link de assinatura para prontuario={}, tipo={}", prontuarioId, tipo);
+        log.info("planejamento.gerarLink inicio prontuarioId={} tipo={}", prontuarioId, tipo);
         Long orgId = tenantHelper.getCurrentTenantId();
 
         List<PlanejamentoTerapeutico> planejamentos;
@@ -155,7 +155,7 @@ public class PlanejamentoTerapeuticoService {
             }
         }
 
-        log.info("Token de assinatura gerado={} para {} itens", MascaraLog.token(token), planejamentos.size());
+        log.info("planejamento.gerarLink ok token={} itens={}", MascaraLog.token(token), planejamentos.size());
         return token;
     }
 
@@ -194,14 +194,14 @@ public class PlanejamentoTerapeuticoService {
      */
     @Transactional
     public void assinarPorToken(String token, String assinaturaBase64, String ipOrigem) {
-        log.info("Assinando planejamento — token={}, ip={}", MascaraLog.token(token), ipOrigem);
+        log.info("planejamento.assinar inicio token={} ip={}", MascaraLog.token(token), ipOrigem);
 
         int atualizados = planejamentoRepository.assinarPorToken(token, assinaturaBase64, ipOrigem, LocalDateTime.now());
         if (atualizados == 0) {
             throw new IllegalArgumentException("Nenhum planejamento encontrado para o token informado.");
         }
 
-        log.info("Planejamento assinado — {} itens atualizados", atualizados);
+        log.info("planejamento.assinar ok itens={}", atualizados);
     }
 
     private LocalDate parseData(String data) {
@@ -209,7 +209,7 @@ public class PlanejamentoTerapeuticoService {
         try {
             return LocalDate.parse(data);
         } catch (Exception e) {
-            log.warn("Data inválida '{}', usando data atual.", data);
+            log.warn("planejamento.data negado motivo=DATA_INVALIDA data={} acao=USA_DATA_ATUAL", data);
             return LocalDate.now();
         }
     }

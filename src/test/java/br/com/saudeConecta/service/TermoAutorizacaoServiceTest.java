@@ -96,7 +96,7 @@ class TermoAutorizacaoServiceTest {
         String token = service.gerarLinkQuestionario(10L);
 
         verify(cacheEvictionService).evictQuestionarioSaude(ORG, 10L);
-        assertThat(output.getAll()).contains("Token gerado=" + token.substring(0, 6)).doesNotContain(token);
+        assertThat(output.getAll()).contains("token=" + token.substring(0, 6)).doesNotContain(token);
     }
 
     @Test

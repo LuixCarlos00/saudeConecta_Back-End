@@ -31,8 +31,6 @@ public class ProntuarioDentistaController {
     public ResponseEntity<Void> cadastrarProntuarioByOrg(
             @RequestBody CadastrarProntuarioDentistaRequest request) {
 
-        log.info("POST /prontuario-dentista/cadastrar — consulta={} profissional={}",
-                request.getConsulta(), request.getCodigoMedico());
 
         prontuarioDentistaService.cadastrarProntuarioByOrg(request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -47,7 +45,6 @@ public class ProntuarioDentistaController {
             @PathVariable Long id,
             @RequestBody CadastrarProntuarioDentistaRequest request) {
 
-        log.info("PUT /prontuario-dentista/{} — atualizando prontuário", id);
         prontuarioDentistaService.atualizarProntuario(id, request);
         return ResponseEntity.ok().build();
     }
@@ -78,7 +75,6 @@ public class ProntuarioDentistaController {
     @GetMapping("/consulta/{consultaId}/recente")
     public ResponseEntity<ProntuarioDentista> buscarMaisRecente(
             @PathVariable Long consultaId) {
-        log.info("  /prontuario-dentista/consulta/{}/recente", consultaId);
         return ResponseEntity.ok(
                 prontuarioDentistaService.buscarMaisRecentePorConsulta(consultaId));
     }
@@ -101,7 +97,6 @@ public class ProntuarioDentistaController {
     @GetMapping("/paciente/{pacienteId}")
     public ResponseEntity<List<ProntuarioDentista>> listarPorPaciente(
             @PathVariable Long pacienteId) {
-        log.info("GET /prontuario-dentista/paciente/{}", pacienteId);
         return ResponseEntity.ok(
                 prontuarioDentistaService.listarPorPaciente(pacienteId));
     }
@@ -114,7 +109,6 @@ public class ProntuarioDentistaController {
     public ResponseEntity<Map<String, String>> gerarLinkQuestionario(
             @PathVariable Long consultaId) {
 
-        log.info("POST /prontuario-dentista/gerar-link-questionario/{}", consultaId);
 
         String token = termoAutorizacaoService.gerarLinkQuestionario(consultaId);
 
@@ -132,7 +126,6 @@ public class ProntuarioDentistaController {
     public ResponseEntity<Map<String, Object>> buscarQuestionarioSaude(
             @PathVariable Long consultaId) {
 
-        log.info("GET /prontuario-dentista/questionario-saude/{}", consultaId);
 
         TermoAutorizacao termo = termoAutorizacaoService.buscarPorConsultaId(consultaId);
 

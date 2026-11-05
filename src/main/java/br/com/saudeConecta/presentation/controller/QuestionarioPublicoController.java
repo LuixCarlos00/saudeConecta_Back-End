@@ -41,7 +41,7 @@ public class QuestionarioPublicoController {
      */
     @GetMapping("/questionario/{token}")
     public ResponseEntity<Map<String, Object>> buscarQuestionario(@PathVariable String token) {
-        log.info("GET /publico/questionario/{}", MascaraLog.token(token));
+        log.info("questionario.publico consultar token={}", MascaraLog.token(token));
 
         TermoAutorizacao termo = termoService.buscarPorToken(token);
 
@@ -66,7 +66,7 @@ public class QuestionarioPublicoController {
             HttpServletRequest httpRequest) {
 
         String ipOrigem = obterIpOrigem(httpRequest);
-        log.info("POST /publico/questionario/responder — token={}, ip={}",
+        log.info("questionario.responder recebido token={} ip={}",
                 MascaraLog.token(request.getToken()), ipOrigem);
 
         termoService.responderQuestionario(request, ipOrigem);
@@ -87,7 +87,7 @@ public class QuestionarioPublicoController {
      */
     @GetMapping("/planejamento/{token}")
     public ResponseEntity<Map<String, Object>> buscarPlanejamento(@PathVariable String token) {
-        log.info("GET /publico/planejamento/{}", MascaraLog.token(token));
+        log.info("planejamento.publico consultar token={}", MascaraLog.token(token));
 
         List<PlanejamentoTerapeutico> planejamentos = planejamentoService.buscarPorToken(token);
 
@@ -126,7 +126,7 @@ public class QuestionarioPublicoController {
             HttpServletRequest httpRequest) {
 
         String ipOrigem = obterIpOrigem(httpRequest);
-        log.info("POST /publico/planejamento/assinar — token={}, ip={}",
+        log.info("planejamento.assinar recebido token={} ip={}",
                 MascaraLog.token(request.getToken()), ipOrigem);
 
         planejamentoService.assinarPorToken(request.getToken(), request.getAssinaturaBase64(), ipOrigem);

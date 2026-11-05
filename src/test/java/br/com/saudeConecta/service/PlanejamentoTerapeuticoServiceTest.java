@@ -145,7 +145,7 @@ class PlanejamentoTerapeuticoServiceTest {
         assertThat(p.getTokenExpiracao())
                 .isAfter(LocalDateTime.now().plusDays(6))
                 .isBefore(LocalDateTime.now().plusDays(7).plusMinutes(1));
-        assertThat(output.getAll()).contains("Token de assinatura gerado=" + token.substring(0, 6))
+        assertThat(output.getAll()).contains("token=" + token.substring(0, 6))
                 .doesNotContain(token);
     }
 

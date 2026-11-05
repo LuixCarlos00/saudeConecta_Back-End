@@ -31,7 +31,6 @@ public class PlanejamentoTerapeuticoController {
      */
     @GetMapping("/prontuario/{prontuarioId}")
     public ResponseEntity<List<Map<String, Object>>> listar(@PathVariable Long prontuarioId) {
-        log.info("GET /planejamento-terapeutico/prontuario/{}", prontuarioId);
 
         List<PlanejamentoTerapeutico> lista = planejamentoService.listarPorProntuario(prontuarioId);
         return ResponseEntity.ok(converterParaResponse(lista));
@@ -46,7 +45,6 @@ public class PlanejamentoTerapeuticoController {
             @PathVariable Long profissionalId,
             @RequestBody PlanejamentoTerapeuticoRequest request) {
 
-        log.info("POST /planejamento-terapeutico/profissional/{}", profissionalId);
 
         PlanejamentoTerapeutico criado = planejamentoService.adicionar(profissionalId, request);
 
@@ -66,7 +64,6 @@ public class PlanejamentoTerapeuticoController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> remover(@PathVariable Long id) {
-        log.info("DELETE /planejamento-terapeutico/{}", id);
         planejamentoService.remover(id);
         return ResponseEntity.noContent().build();
     }
@@ -82,7 +79,6 @@ public class PlanejamentoTerapeuticoController {
     public ResponseEntity<Map<String, String>> gerarLink(
             @PathVariable Long prontuarioId,
             @RequestParam(defaultValue = "DENTISTA") String tipo) {
-        log.info("POST /planejamento-terapeutico/gerar-link/{} tipo={}", prontuarioId, tipo);
 
         String token = planejamentoService.gerarLinkAssinatura(prontuarioId, tipo);
 

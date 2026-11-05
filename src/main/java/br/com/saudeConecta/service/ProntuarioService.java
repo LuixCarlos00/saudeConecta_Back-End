@@ -53,7 +53,7 @@ public class ProntuarioService {
      */
     @Transactional
     public Prontuario cadastrarProntuarioMedico(CadastrarProntuarioRequest request) {
-        log.info("Cadastrando prontuario médico — consulta={}", request.getConsulta());
+        log.info("prontuario.medico.cadastrar inicio consultaId={} profissionalId={}", request.getConsulta(), request.getCodigoMedico());
         Long orgId = tenantHelper.getCurrentTenantId();
 
         // Profissional e consulta precisam ser da clínica do token; de outra clínica = "não encontrado".
@@ -106,17 +106,17 @@ public class ProntuarioService {
                 .build();
 
         Prontuario salvo = prontuarioRepository.save(prontuario);
-        log.info("Prontuario médico salvo — id={}", salvo.getProntCodigoProntuario());
+        log.info("prontuario.medico.cadastrar ok prontuarioId={}", salvo.getProntCodigoProntuario());
 
         // ── Adiciona planejamentos terapêuticos ─────────────────────────────────
         if (!CollectionUtils.isEmpty(request.getPlanejamentos())) {
-            log.info("Processando {} planejamentos", request.getPlanejamentos().size());
+            log.debug("prontuario.medico.cadastrar planejamentos quantidade={}", request.getPlanejamentos().size());
             Organizacao organizacao = new Organizacao();
             organizacao.setId(orgId);
 
             for (CadastrarProntuarioRequest.PlanejamentoItem item : request.getPlanejamentos()) {
-                log.info("Processando planejamento: procedimento={}, valor={}, pacienteId={}", 
-                    item.getProcedimentoRealizado(), item.getValor(), item.getPacienteId());
+                log.debug("prontuario.medico.cadastrar planejamento valor={} pacienteId={}",
+                        item.getValor(), item.getPacienteId());
                 
                 Paciente paciente = null;
                 if (item.getPacienteId() != null) {
@@ -137,23 +137,23 @@ public class ProntuarioService {
                         .statusAssinatura("PENDENTE")
                         .build();
                 salvo.addPlanejamento(planejamento);
-                log.info("Planejamento adicionado ao prontuario");
+                log.debug("prontuario.medico.cadastrar planejamento adicionado");
             }
             prontuarioRepository.save(salvo);
-            log.info("Prontuario salvo com {} planejamentos", salvo.getPlanejamentos().size());
+            log.debug("prontuario.medico.cadastrar salvo planejamentos={}", salvo.getPlanejamentos().size());
             
             // Verificação adicional
             salvo.getPlanejamentos().forEach(p -> {
-                log.info("Planejamento salvo: ID={}, Procedimento={}, Valor={}", 
-                    p.getId(), p.getProcedimentoRealizado(), p.getValor());
+                log.debug("prontuario.medico.cadastrar planejamento salvo planejamentoId={} valor={}",
+                        p.getId(), p.getValor());
             });
         } else {
-            log.info("Nenhum planejamento para processar");
+            log.debug("prontuario.medico.cadastrar planejamentos quantidade=0");
         }
 
         consulta.setStatus(StatusConsulta.REALIZADA);
         consultaRepository.save(consulta);
-        log.info("Status da consulta ID: {} atualizado para REALIZADA", consulta.getId());
+        log.info("prontuario.medico.cadastrar consulta consultaId={} status=REALIZADA", consulta.getId());
         cacheEvictionService.evictProntuarioRecente(orgId, consulta.getId());
 
         return salvo;
@@ -161,7 +161,7 @@ public class ProntuarioService {
 
     @Transactional
     public void atualizarProntuarioMedico(Long id, CadastrarProntuarioRequest request) {
-        log.info("Atualizando prontuário médico — id={}", id);
+        log.info("prontuario.medico.atualizar inicio prontuarioId={}", id);
         Long orgId = tenantHelper.getCurrentTenantId();
 
         Prontuario prontuario = prontuarioRepository.findByProntCodigoProntuarioAndConsulta_Organizacao_Id(id, orgId)
@@ -226,7 +226,7 @@ public class ProntuarioService {
         }
 
         prontuarioRepository.save(prontuario);
-        log.info("Prontuário médico atualizado — id={}", id);
+        log.info("prontuario.medico.atualizar ok prontuarioId={}", id);
     }
 
     // =========================================================================
@@ -248,12 +248,12 @@ public class ProntuarioService {
      */
     @Transactional(readOnly = true)
     public Prontuario buscarProntuarioById(Long consultaId) {
-        log.debug("Buscando prontuario por consulta ID: {}", consultaId);
+        log.debug("prontuario.medico.buscar consultaId={}", consultaId);
         Long orgId = tenantHelper.getCurrentTenantId();
         Prontuario prontuario = prontuarioRepository.findByConsultaIdAndOrganizacaoIdWithFetch(consultaId, orgId);
         
         if (prontuario == null) {
-            log.warn("prontuario nao encontrado para consulta ID: {}", consultaId);
+            log.warn("prontuario.medico.buscar negado motivo=NAO_ENCONTRADO consultaId={}", consultaId);
             throw new EntityNotFoundException("prontuario nao encontrado para a consulta ID: " + consultaId);
         }
         
@@ -270,7 +270,7 @@ public class ProntuarioService {
     @Cacheable(value = "prontuario-recente", key = CHAVE_CACHE_CONSULTA_TENANT)
     @Transactional(readOnly = true)
     public Prontuario buscarMaisRecentePorConsulta(Long consultaId) {
-        log.debug("Buscando prontuário médico mais recente para consulta ID: {}", consultaId);
+        log.debug("prontuario.medico.buscarRecente consultaId={}", consultaId);
         Long orgId = tenantHelper.getCurrentTenantId();
 
         Long id = prontuarioRepository
@@ -291,7 +291,7 @@ public class ProntuarioService {
      */
     @Transactional(readOnly = true)
     public List<Prontuario> buscarPorPaciente(Long pacienteId) {
-        log.debug("Buscando prontuarios do paciente ID: {}", pacienteId);
+        log.debug("prontuario.medico.buscar pacienteId={}", pacienteId);
         Long orgId = tenantHelper.getCurrentTenantId();
         return prontuarioRepository.findByPacienteEOrganizacaoComFetch(pacienteId, orgId);
     }
@@ -303,7 +303,7 @@ public class ProntuarioService {
      */
     @Transactional(readOnly = true)
     public List<Prontuario> buscarPorProfissional(Long profissionalId) {
-        log.debug("Buscando prontuarios do profissional ID: {}", profissionalId);
+        log.debug("prontuario.medico.buscar profissionalId={}", profissionalId);
         Long orgId = tenantHelper.getCurrentTenantId();
         return prontuarioRepository.findByProfissionalEOrganizacaoComFetch(profissionalId, orgId);
     }

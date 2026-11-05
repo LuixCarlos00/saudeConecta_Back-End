@@ -35,11 +35,8 @@ public class ProntuarioController {
      */
     @PostMapping("/cadastrarProntuarioMedico")
     public ResponseEntity<ProntuarioResponse> cadastrarProntuarioMedico(@Valid @RequestBody CadastrarProntuarioRequest request) {
-        log.info("=== Requisição recebida: POST /prontuario/cadastrarProntuarioMedico ===");
-        log.debug("Dados recebidos - Medico ID: {}, Consulta ID: {}", request.getCodigoMedico(), request.getConsulta());
         
         Prontuario prontuario = prontuarioService.cadastrarProntuarioMedico(request);
-        log.info("Prontuário cadastrado com sucesso - ID: {}", prontuario.getProntCodigoProntuario());
 
         // Converter para DTO de resposta para evitar LazyInitializationException
         return ResponseEntity.status(HttpStatus.CREATED).body(ProntuarioResponse.fromEntity(prontuario));
@@ -55,7 +52,6 @@ public class ProntuarioController {
      */
     @GetMapping("/buscarProntuarioById/{consultaId}")
     public ResponseEntity<ProntuarioCompletoResponse> buscarProntuarioById(@PathVariable Long consultaId) {
-        log.info("=== Requisição recebida: GET /prontuario/buscarProntuarioById/{} ===", consultaId);
         
         Prontuario prontuario = prontuarioService.buscarProntuarioById(consultaId);
         
@@ -73,7 +69,6 @@ public class ProntuarioController {
      */
     @GetMapping("/consulta/{consultaId}/recente")
     public ResponseEntity<ProntuarioCompletoResponse> buscarMaisRecente(@PathVariable Long consultaId) {
-        log.info("GET /prontuario/consulta/{}/recente", consultaId);
 
         Prontuario prontuario = prontuarioService.buscarMaisRecentePorConsulta(consultaId);
         ProntuarioCompletoResponse response = ProntuarioCompletoResponse.fromEntity(prontuario);
@@ -88,7 +83,6 @@ public class ProntuarioController {
      */
     @GetMapping("/paciente/{pacienteId}")
     public ResponseEntity<List<ProntuarioCompletoResponse>> buscarPorPaciente(@PathVariable Long pacienteId) {
-        log.info("=== Requisição recebida: GET /prontuario/paciente/{} ===", pacienteId);
         
         List<Prontuario> prontuarios = prontuarioService.buscarPorPaciente(pacienteId);
         List<ProntuarioCompletoResponse> response = prontuarios.stream()
@@ -105,7 +99,6 @@ public class ProntuarioController {
      */
     @GetMapping("/profissional/{profissionalId}")
     public ResponseEntity<List<ProntuarioCompletoResponse>> buscarPorProfissional(@PathVariable Long profissionalId) {
-        log.info("=== Requisição recebida: GET /prontuario/profissional/{} ===", profissionalId);
         
         List<Prontuario> prontuarios = prontuarioService.buscarPorProfissional(profissionalId);
         List<ProntuarioCompletoResponse> response = prontuarios.stream()
@@ -125,17 +118,12 @@ public class ProntuarioController {
     @PostMapping("/cadastrarProntuarioMedicoComPlanejamentos")
     public ResponseEntity<ProntuarioResponse> cadastrarProntuarioMedicoComPlanejamentos(
             @Valid @RequestBody CadastrarProntuarioComPlanejamentosRequest request) {
-        log.info("=== Requisição recebida: POST /prontuario/cadastrarProntuarioMedicoComPlanejamentos ===");
         
         CadastrarProntuarioRequest prontuarioRequest = request.getProntuario();
         List<PlanejamentoTerapeuticoRequest> planejamentos = request.getPlanejamentos();
         
-        log.debug("Dados recebidos - Medico ID: {}, Consulta ID: {}, Planejamentos: {}", 
-                prontuarioRequest.getCodigoMedico(), prontuarioRequest.getConsulta(), 
-                planejamentos != null ? planejamentos.size() : 0);
         
         Prontuario prontuario = prontuarioService.cadastrarProntuarioMedico(prontuarioRequest);
-        log.info("Prontuário cadastrado com sucesso - ID: {}", prontuario.getProntCodigoProntuario());
 
         // Converter para DTO de resposta para evitar LazyInitializationException
         return ResponseEntity.status(HttpStatus.CREATED).body(ProntuarioResponse.fromEntity(prontuario));
@@ -150,7 +138,6 @@ public class ProntuarioController {
             @PathVariable Long id,
             @RequestBody CadastrarProntuarioRequest request) {
 
-        log.info("PUT /prontuario/{} — atualizando prontuário médico", id);
         prontuarioService.atualizarProntuarioMedico(id, request);
         return ResponseEntity.ok().build();
     }
