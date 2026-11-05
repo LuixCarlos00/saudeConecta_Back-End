@@ -152,8 +152,9 @@ webhooks de A seguem ignorados. Para resolver, o SUPER_ADMIN estorna/cancela A n
 MP (a reconciliação vê `cancelled` e limpa a coluna) ou religa manualmente.
 
 Enquanto houver um substituído em pendência, uma troca nova que precisaria da coluna (link
-novo, cortesia, troca de plano com link pendente) é recusada com `409` e
-`code = PREAPPROVAL_SUBSTITUIDO_EM_ANALISE`.
+novo, inclusive sem preapproval vinculado, cortesia, troca de plano com link pendente) é
+recusada com `409` e `code = PREAPPROVAL_SUBSTITUIDO_EM_ANALISE`: no caso do link abandonado,
+gerar outro levaria o cliente a pagar duas vezes.
 
 O webhook de A (inclusive `cancelled`) é sempre ignorado: ou a assinatura está
 vinculada a B (`OUTRO_PREAPPROVAL_VINCULADO`), ou A está na coluna de substituído

@@ -894,6 +894,39 @@ class AssinaturaMercadoPagoServiceTest {
     }
 
     @Test
+    @DisplayName("R2 - Sem preapproval vinculado e com o abandonado autorizado: Pagar de novo recebe 409 (evita pagar duas vezes)")
+    void pagarDeNovoComAbandonadoAutorizadoRecebe409() {
+        assinatura.setMpPreapprovalSubstituidoId("pa-abandonado");
+        when(mercadoPagoClient.buscarPreapproval("pa-abandonado")).thenReturn(noMp("pa-abandonado", "authorized"));
+        when(eventoRepository.findByTipoAndDataId(any(), any())).thenReturn(Optional.of(new MpWebhookEvento()));
+
+        assertThatThrownBy(() -> linkService.gerarLinkPagamento(ORG_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo("PREAPPROVAL_SUBSTITUIDO_EM_ANALISE"));
+
+        verify(mercadoPagoClient, never()).criarPreapprovalPendente(any(), any(), any(), any());
+        verify(mercadoPagoClient, never()).cancelarPreapproval(any());
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isEqualTo("pa-abandonado");
+    }
+
+    @Test
+    @DisplayName("R2 - Sem preapproval vinculado e com o abandonado ainda pendente: cancela o antigo e gera o link")
+    void pagarDeNovoComAbandonadoPendenteCancelaEGera() {
+        assinatura.setMpPreapprovalSubstituidoId("pa-abandonado");
+        when(mercadoPagoClient.buscarPreapproval("pa-abandonado")).thenReturn(noMp("pa-abandonado", "pending"));
+        when(mercadoPagoClient.criarPreapprovalPendente(any(), any(), any(), any()))
+                .thenReturn(new PreapprovalResponse(PREAPPROVAL_ID, "pending", INIT_POINT,
+                        EMAIL_ADMIN, "ASSINATURA-42", null, null));
+
+        LinkPagamentoResponse link = linkService.gerarLinkPagamento(ORG_ID);
+
+        assertThat(link.initPoint()).isEqualTo(INIT_POINT);
+        verify(mercadoPagoClient).cancelarPreapproval("pa-abandonado");
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isNull();
+    }
+
+    @Test
     @DisplayName("R2 - Substituído anterior em pendência ocupa a coluna: troca nova é recusada com 409")
     void substituidoAnteriorEmPendenciaRecusaTroca() {
         assinatura.setStatus(StatusAssinatura.SUSPENSA);

@@ -349,8 +349,10 @@ public class AssinaturaMercadoPagoService {
                     assinatura.getMpPreapprovalId(), assinaturaId);
             return montarResposta(assinatura);
         }
-        if (assinatura.temPreapproval() && assinatura.temPreapprovalSubstituidoPendente()) {
-            // Só há uma coluna para o antigo: o substituído anterior precisa estar cancelado antes
+        if (assinatura.temPreapprovalSubstituidoPendente()) {
+            // Só há uma coluna para o antigo: o substituído anterior precisa estar cancelado antes.
+            // Mesmo sem preapproval vinculado: se o antigo foi autorizado ou pago depois da troca,
+            // um link novo levaria o cliente a pagar duas vezes (409 até o SUPER_ADMIN decidir)
             cancelarSubstituidoAnteriorOuRecusar(assinatura);
             assinatura.setMpPreapprovalSubstituidoId(null);
         }
