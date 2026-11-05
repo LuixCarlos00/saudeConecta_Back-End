@@ -313,7 +313,8 @@ public class MercadoPagoWebhookService {
      * {@link AssinaturaMercadoPagoService#aplicarStatusRemoto}); {@code authorized}
      * apenas atualiza o espelho do MP, sem ativar nem renovar.
      *
-     * @return true quando o preapproval está cancelado (estado final)
+     * @return true quando o preapproval está cancelado (estado final) ou não é mais o
+     *         vinculado à assinatura (nada a aplicar)
      */
     private boolean processarPreapproval(String preapprovalId) {
         PreapprovalResponse remoto = mercadoPagoClient.buscarPreapproval(preapprovalId);
@@ -328,6 +329,13 @@ public class MercadoPagoWebhookService {
         AssinaturaTenant assinatura = localizarAssinatura(preapprovalId, remoto.externalReference());
         if (assinatura == null) {
             return false;
+        }
+        // Achada pela external_reference, mas já vinculada a outro preapproval: é o antigo, cancelado
+        // ao gerar um link novo. Aplicar o status dele cancelaria a assinatura e trocaria o vínculo.
+        if (assinatura.getMpPreapprovalId() != null && !assinatura.getMpPreapprovalId().equals(remoto.id())) {
+            log.info("Preapproval {} (status {}) ignorado: a assinatura {} está vinculada ao preapproval {}",
+                    remoto.id(), remoto.status(), assinatura.getId(), assinatura.getMpPreapprovalId());
+            return true;
         }
 
         assinatura.setMpPreapprovalId(remoto.id());
@@ -360,6 +368,13 @@ public class MercadoPagoWebhookService {
 
         AssinaturaTenant assinatura = localizarAssinatura(fatura.preapprovalId(), null);
         if (assinatura == null) {
+            // Sem fallback por external_reference: a fatura de um preapproval substituído nunca é
+            // aplicada a outra assinatura. Se foi aprovada, o dinheiro entrou e não pode sumir no log.
+            if (PAGAMENTO_APROVADO.equals(fatura.statusPagamento())) {
+                evento.marcarParaAtencao(MpWebhookEvento.MOTIVO_PAGAMENTO_SEM_ASSINATURA,
+                        "fatura " + authorizedPaymentId + " do preapproval " + fatura.preapprovalId()
+                                + " — conferir a assinatura e registrar manualmente");
+            }
             return false;
         }
 

@@ -530,6 +530,95 @@ class MercadoPagoWebhookServiceTest {
         verify(assinaturaTenantService, never()).renovarAposPagamento(any());
     }
 
+    @Test
+    @DisplayName("Preapproval antigo cancelado não altera a assinatura já vinculada a outro preapproval")
+    void preapprovalAntigoCanceladoNaoAlteraAssinaturaVinculadaAOutro() {
+        String antigo = "preapproval-antigo";
+        assinatura.setStatus(StatusAssinatura.INADIMPLENTE);
+        assinatura.setMpStatus("pending");
+        when(assinaturaTenantRepository.findByMpPreapprovalId(antigo)).thenReturn(Optional.empty());
+        when(assinaturaTenantRepository.findById(ASSINATURA_ID)).thenReturn(Optional.of(assinatura));
+        when(mercadoPagoClient.buscarPreapproval(antigo)).thenReturn(
+                new PreapprovalResponse(antigo, "cancelled", null, null, "ASSINATURA-42", null, null));
+
+        service.processar(MercadoPagoWebhookService.TOPICO_PREAPPROVAL, antigo, "{}");
+
+        assertThat(assinatura.getMpPreapprovalId()).isEqualTo(PREAPPROVAL_ID);
+        assertThat(assinatura.getMpStatus()).isEqualTo("pending");
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.INADIMPLENTE);
+        assertThat(assinatura.getCanceladoPor()).isNull();
+        verify(assinaturaTenantRepository, never()).save(any());
+        // Encerrado: não há nada a reaplicar para um preapproval que não é mais o vinculado
+        assertThat(ultimoEventoSalvo().getProcessado()).isTrue();
+        assertThat(ultimoEventoSalvo().getErro()).isNull();
+    }
+
+    @Test
+    @DisplayName("Primeiro vínculo: assinatura sem preapproval é achada pela external_reference e vinculada")
+    void primeiroVinculoPelaExternalReferenceContinuaFuncionando() {
+        String novo = "preapproval-novo";
+        assinatura.setMpPreapprovalId(null);
+        when(assinaturaTenantRepository.findByMpPreapprovalId(novo)).thenReturn(Optional.empty());
+        when(assinaturaTenantRepository.findById(ASSINATURA_ID)).thenReturn(Optional.of(assinatura));
+        when(mercadoPagoClient.buscarPreapproval(novo)).thenReturn(
+                new PreapprovalResponse(novo, "authorized", null, null, "ASSINATURA-42", null, null));
+
+        service.processar(MercadoPagoWebhookService.TOPICO_PREAPPROVAL, novo, "{}");
+
+        assertThat(assinatura.getMpPreapprovalId()).isEqualTo(novo);
+        assertThat(assinatura.getMpStatus()).isEqualTo("authorized");
+        verify(assinaturaTenantRepository).save(assinatura);
+    }
+
+    @Test
+    @DisplayName("Mesmo preapproval achado pela external_reference continua aplicando o status")
+    void mesmoPreapprovalPeloFallbackAplicaStatus() {
+        when(assinaturaTenantRepository.findByMpPreapprovalId(PREAPPROVAL_ID)).thenReturn(Optional.empty());
+        when(assinaturaTenantRepository.findById(ASSINATURA_ID)).thenReturn(Optional.of(assinatura));
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(
+                new PreapprovalResponse(PREAPPROVAL_ID, "cancelled", null, null, "ASSINATURA-42", null, null));
+
+        service.processar(MercadoPagoWebhookService.TOPICO_PREAPPROVAL, PREAPPROVAL_ID, "{}");
+
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.CANCELADA);
+        assertThat(ultimoEventoSalvo().getProcessado()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Fatura aprovada de preapproval sem assinatura vinculada vira pendência manual, sem mexer em outra assinatura")
+    void faturaAprovadaDePreapprovalAntigoViraPendenciaManual() {
+        String antigo = "preapproval-antigo";
+        when(assinaturaTenantRepository.findByMpPreapprovalId(antigo)).thenReturn(Optional.empty());
+        when(mercadoPagoClient.buscarAuthorizedPayment(AUTHORIZED_PAYMENT_ID)).thenReturn(
+                new AuthorizedPaymentResponse(AUTHORIZED_PAYMENT_ID, antigo, "processed", BigDecimal.valueOf(279),
+                        new AuthorizedPaymentResponse.Payment(1234L, "approved", "accredited")));
+
+        service.processar(MercadoPagoWebhookService.TOPICO_AUTHORIZED_PAYMENT, AUTHORIZED_PAYMENT_ID, "{}");
+
+        MpWebhookEvento salvo = ultimoEventoSalvo();
+        assertThat(salvo.getRequerAtencao()).isTrue();
+        assertThat(salvo.getMotivoAtencao()).startsWith(MpWebhookEvento.MOTIVO_PAGAMENTO_SEM_ASSINATURA);
+        assertThat(salvo.getProcessado()).isFalse();
+        verify(cobrancaTenantRepository, never()).save(any());
+        verifyNoInteractions(assinaturaTenantService);
+    }
+
+    @Test
+    @DisplayName("Fatura não aprovada de preapproval sem assinatura vinculada não vira pendência")
+    void faturaRecusadaDePreapprovalAntigoNaoViraPendencia() {
+        String antigo = "preapproval-antigo";
+        when(assinaturaTenantRepository.findByMpPreapprovalId(antigo)).thenReturn(Optional.empty());
+        when(mercadoPagoClient.buscarAuthorizedPayment(AUTHORIZED_PAYMENT_ID)).thenReturn(
+                new AuthorizedPaymentResponse(AUTHORIZED_PAYMENT_ID, antigo, "processed", BigDecimal.valueOf(279),
+                        new AuthorizedPaymentResponse.Payment(1234L, "rejected", "cc_rejected_other_reason")));
+
+        service.processar(MercadoPagoWebhookService.TOPICO_AUTHORIZED_PAYMENT, AUTHORIZED_PAYMENT_ID, "{}");
+
+        assertThat(ultimoEventoSalvo().getRequerAtencao()).isFalse();
+        verify(cobrancaTenantRepository, never()).save(any());
+        verifyNoInteractions(assinaturaTenantService);
+    }
+
     private MpWebhookEvento ultimoEventoSalvo() {
         ArgumentCaptor<MpWebhookEvento> captor = ArgumentCaptor.forClass(MpWebhookEvento.class);
         verify(eventoRepository, atLeastOnce()).save(captor.capture());
