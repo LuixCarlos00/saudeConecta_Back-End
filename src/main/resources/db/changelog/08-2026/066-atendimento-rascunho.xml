@@ -1,0 +1,90 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ================================================================ -->
+    <!-- RASCUNHO DO ATENDIMENTO (CONTRATO-RASCUNHO-ATENDIMENTO.md)       -->
+    <!-- Tabela nova: o que o profissional digitou antes de "Finalizar".  -->
+    <!-- Retrocompativel: a versao anterior da aplicacao nao conhece a    -->
+    <!-- tabela. Sem impacto em dados existentes.                         -->
+    <!-- ================================================================ -->
+    <changeSet id="066-001-atendimento-rascunho" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="atendimento_rascunho"/></not>
+        </preConditions>
+        <comment>Rascunho do atendimento: um por consulta, lido/gravado so pelo profissional dono, apagado ao finalizar o prontuario</comment>
+
+        <createTable tableName="atendimento_rascunho">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="consulta_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="organizacao_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="profissional_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tipo" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="dados" type="LONGTEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tempo_acumulado_segundos" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="versao" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="criado_em" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="atualizado_em" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Um rascunho por consulta: e o que decide a corrida de duas primeiras gravacoes simultaneas -->
+        <addUniqueConstraint tableName="atendimento_rascunho"
+                             columnNames="consulta_id"
+                             constraintName="uk_atendimento_rascunho_consulta"/>
+
+        <!-- CASCADE: a exclusao de consulta (ConsultaService.excluir) nao pode ser barrada por um rascunho -->
+        <addForeignKeyConstraint
+                baseTableName="atendimento_rascunho"
+                baseColumnNames="consulta_id"
+                constraintName="fk_atendimento_rascunho_consulta"
+                referencedTableName="consulta"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="atendimento_rascunho"
+                baseColumnNames="organizacao_id"
+                constraintName="fk_atendimento_rascunho_organizacao"
+                referencedTableName="organizacao"
+                referencedColumnNames="id"/>
+
+        <addForeignKeyConstraint
+                baseTableName="atendimento_rascunho"
+                baseColumnNames="profissional_id"
+                constraintName="fk_atendimento_rascunho_profissional"
+                referencedTableName="profissional"
+                referencedColumnNames="id"/>
+
+        <!-- GET /atendimentos/rascunhos/meus filtra por clinica + profissional -->
+        <createIndex tableName="atendimento_rascunho" indexName="idx_atendimento_rascunho_org_prof">
+            <column name="organizacao_id"/>
+            <column name="profissional_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="atendimento_rascunho"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

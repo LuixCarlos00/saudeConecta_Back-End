@@ -163,4 +163,7 @@
 
     <!-- Fase 5.4: trilha de auditoria persistente do acesso do ROOT via senha master -->
     <include file="db/changelog/08-2026/065-auditoria-acesso-master.xml"/>
+
+    <!-- Rascunho do atendimento: um por consulta, apagado ao finalizar o prontuario -->
+    <include file="db/changelog/08-2026/066-atendimento-rascunho.xml"/>
 </databaseChangeLog>
