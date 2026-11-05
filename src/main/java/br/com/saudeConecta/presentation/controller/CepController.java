@@ -3,6 +3,7 @@ package br.com.saudeConecta.presentation.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import br.com.saudeConecta.infra.exceptions.ErrorResponse;
+import br.com.saudeConecta.util.MascaraLog;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,7 +32,7 @@ public class CepController {
     @GetMapping("/{cep}")
     public ResponseEntity<?> buscarEnderecoPorCep(@PathVariable String cep) {
         try {
-            log.debug("cep.buscar inicio cep={}", cep);
+            log.debug("cep.buscar inicio cep={}", MascaraLog.cep(cep));
             
             // Remove caracteres não numéricos do CEP
             String cepLimpo = cep.replaceAll("[^0-9]", "");
@@ -42,7 +43,7 @@ public class CepController {
             }
 
             String url = VIACEP_URL + "/" + cepLimpo + "/json";
-            log.debug("cep.buscar viacep url={}", url);
+            log.debug("cep.buscar viacep cep={}", MascaraLog.cep(cepLimpo));
             
             ResponseEntity<Object> response = restTemplate.getForEntity(url, Object.class);
             
@@ -51,23 +52,23 @@ public class CepController {
                 
                 // Verifica se o CEP foi encontrado
                 if (responseBody.containsKey("erro") && Boolean.TRUE.equals(responseBody.get("erro"))) {
-                    log.warn("cep.buscar negado motivo=NAO_ENCONTRADO cep={}", cep);
+                    log.warn("cep.buscar negado motivo=NAO_ENCONTRADO cep={}", MascaraLog.cep(cep));
                     return ResponseEntity.notFound().build();
                 }
                 
                 // Verifica se os campos essenciais estão vazios
                 if (!responseBody.containsKey("logradouro") && !responseBody.containsKey("localidade")) {
-                    log.warn("cep.buscar negado motivo=CEP_INCOMPLETO cep={}", cep);
+                    log.warn("cep.buscar negado motivo=CEP_INCOMPLETO cep={}", MascaraLog.cep(cep));
                     return ResponseEntity.notFound().build();
                 }
             }
             
-            log.debug("cep.buscar ok cep={}", cep);
+            log.debug("cep.buscar ok cep={}", MascaraLog.cep(cep));
             return ResponseEntity.ok(response.getBody());
             
         } catch (RestClientException e) {
             // ViaCEP fora do ar/lento é falha do serviço externo, não nossa: 502 com mensagem para o usuário
-            log.warn("cep.buscar falha motivo=VIACEP_INDISPONIVEL cep={}", cep, e);
+            log.warn("cep.buscar falha motivo=VIACEP_INDISPONIVEL cep={}", MascaraLog.cep(cep), e);
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(ErrorResponse.of(HttpStatus.BAD_GATEWAY.value(), "CEP_INDISPONIVEL",
                         "Servico de CEP indisponivel no momento. Tente novamente.", "/cep/" + cep));

@@ -147,7 +147,7 @@ public class AssinaturaMercadoPagoService {
         PreapprovalResponse cancelado = mercadoPagoClient.cancelarPreapproval(anterior);
         assinatura.setMpStatus(cancelado != null && cancelado.status() != null
                 ? cancelado.status() : MercadoPagoClient.STATUS_CANCELLED);
-        log.warn("mp.preapproval.abandonar anterior preapprovalId={} statusMp={} assinaturaId={} motivo=SUBSTITUIDO_POR_NOVO_LINK",
+        log.info("mp.preapproval.abandonar anterior preapprovalId={} statusMp={} assinaturaId={} motivo=SUBSTITUIDO_POR_NOVO_LINK",
                 anterior, remoto.status(), assinatura.getId());
     }
 

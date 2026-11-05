@@ -49,4 +49,35 @@ class MascaraLogTest {
         assertThat(MascaraLog.cpf(null)).isEqualTo("null");
         assertThat(MascaraLog.cpf("1")).isEqualTo("***");
     }
+
+    @Test
+    @DisplayName("CEP: mantém os 5 primeiros dígitos, com ou sem hífen")
+    void cepMantemCincoPrimeiros() {
+        assertThat(MascaraLog.cep("01310-100")).isEqualTo("01310***");
+        assertThat(MascaraLog.cep("01310100")).isEqualTo("01310***");
+    }
+
+    @Test
+    @DisplayName("CEP curto e nulo não quebram nem vazam")
+    void cepCurtoENulo() {
+        assertThat(MascaraLog.cep("123")).isEqualTo("***");
+        assertThat(MascaraLog.cep(null)).isEqualTo("null");
+    }
+
+    @Test
+    @DisplayName("seguro: troca CR/LF e caracteres fora de [0-9A-Za-z._:-] por '_'")
+    void seguroNeutralizaQuebraDeLinha() {
+        assertThat(MascaraLog.seguro("123\r\n2026 INFO forjado")).isEqualTo("123__2026_INFO_forjado");
+        assertThat(MascaraLog.seguro("1704908010")).isEqualTo("1704908010");
+        assertThat(MascaraLog.seguro("a.b_c:d-e")).isEqualTo("a.b_c:d-e");
+    }
+
+    @Test
+    @DisplayName("seguro: limita a 32 caracteres, aceita limite informado e trata nulo")
+    void seguroLimitaTamanho() {
+        assertThat(MascaraLog.seguro("x".repeat(100))).hasSize(32);
+        assertThat(MascaraLog.seguro("x".repeat(100), 120)).hasSize(100);
+        assertThat(MascaraLog.seguro("x".repeat(200), 120)).hasSize(120);
+        assertThat(MascaraLog.seguro(null)).isEqualTo("null");
+    }
 }

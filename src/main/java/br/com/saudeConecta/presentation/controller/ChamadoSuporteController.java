@@ -42,7 +42,7 @@ public class ChamadoSuporteController {
             ChamadoSuporteResponse response = chamadoSuporteService.cadastrar(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException | IllegalStateException e) {
-            log.warn("chamado.cadastrar negado motivo=VALIDACAO causa={}", e.getClass().getSimpleName());
+            log.warn("chamado.cadastrar negado motivo=VALIDACAO detalhe={}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }

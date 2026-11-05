@@ -78,7 +78,7 @@ public class CobrancaScheduler {
         }
         log.info("cobranca.links inicio trials={} vencimentoAte={}", trials.size(), dataAlvo);
 
-        int gerados = processarCadaUm(trials, "gerar link de pagamento",
+        int gerados = processarCadaUm(trials, "cobranca.links", "gerar link de pagamento",
                 assinatura -> assinaturaMercadoPagoService.gerarLinkENotificar(assinatura.getId()) != null);
         log.info("cobranca.links ok processados={} falhas={}", gerados, trials.size() - gerados);
     }
@@ -92,18 +92,18 @@ public class CobrancaScheduler {
     public void aplicarReguaDeCarencia() {
         LocalDate limiteInadimplencia = LocalDate.now(clock).minusDays(DIAS_CARENCIA_INADIMPLENCIA);
         List<AssinaturaTenant> vencidas = assinaturaTenantRepository.findVencidasNaoInadimplentes(limiteInadimplencia);
-        int marcadas = processarCadaUm(vencidas, "marcar inadimplente",
+        int marcadas = processarCadaUm(vencidas, "cobranca.regua", "marcar inadimplente",
                 assinatura -> processador.marcarInadimplente(assinatura.getId(), limiteInadimplencia));
 
         LocalDate limiteSuspensao = LocalDate.now(clock).minusDays(DIAS_CARENCIA_SUSPENSAO);
         List<AssinaturaTenant> inadimplentes = assinaturaTenantRepository.findInadimplentesParaSuspender(limiteSuspensao);
-        int suspensas = processarCadaUm(inadimplentes, "suspender", assinatura ->
+        int suspensas = processarCadaUm(inadimplentes, "cobranca.regua", "suspender", assinatura ->
                 !pagamentoAprovadoRecuperado(assinatura, true)
                         && processador.suspender(assinatura.getId(), limiteSuspensao));
 
         LocalDateTime limiteCancelamento = LocalDate.now(clock).minusDays(DIAS_CARENCIA_CANCELAMENTO).atStartOfDay();
         List<AssinaturaTenant> suspensasAntigas = assinaturaTenantRepository.findSuspensasParaCancelar(limiteCancelamento);
-        int canceladas = processarCadaUm(suspensasAntigas, "cancelar", assinatura ->
+        int canceladas = processarCadaUm(suspensasAntigas, "cobranca.regua", "cancelar", assinatura ->
                 !pagamentoAprovadoRecuperado(assinatura, false)
                         && processador.cancelar(assinatura.getId(), limiteCancelamento));
 
@@ -124,7 +124,7 @@ public class CobrancaScheduler {
             return;
         }
 
-        int divergentes = processarCadaUm(assinaturas, "reconciliar", assinatura -> {
+        int divergentes = processarCadaUm(assinaturas, "cobranca.reconciliar", "reconciliar", assinatura -> {
             // Faturas primeiro: a renovação por pagamento aprovado reativa um preapproval pausado,
             // e a sincronização seguinte já enxerga o status atualizado.
             recuperarFaturasAprovadas(assinatura);
@@ -170,9 +170,9 @@ public class CobrancaScheduler {
             }
             return false;
         } catch (Exception e) {
-            log.warn("cobranca.regua falha motivo=MP_INDISPONIVEL assinaturaId={} causa={} proximo={}",
-                    assinatura.getId(), e.getClass().getSimpleName(),
-                    prosseguirSeMpFalhar ? "SEGUE_COM_REGUA" : "ADIADO_PROXIMO_CICLO");
+            log.warn("cobranca.regua falha motivo=MP_INDISPONIVEL assinaturaId={} proximo={}",
+                    assinatura.getId(),
+                    prosseguirSeMpFalhar ? "SEGUE_COM_REGUA" : "ADIADO_PROXIMO_CICLO", e);
             return !prosseguirSeMpFalhar;
         }
     }
@@ -182,8 +182,8 @@ public class CobrancaScheduler {
         try {
             webhookService.recuperarFaturasAprovadas(assinatura.getMpPreapprovalId());
         } catch (Exception e) {
-            log.warn("cobranca.reconciliar falha motivo=MP_INDISPONIVEL assinaturaId={} causa={}",
-                    assinatura.getId(), e.getClass().getSimpleName());
+            log.warn("cobranca.reconciliar falha motivo=MP_INDISPONIVEL assinaturaId={}",
+                    assinatura.getId(), e);
         }
     }
 
@@ -191,9 +191,11 @@ public class CobrancaScheduler {
      * Aplica a ação a cada assinatura isoladamente: a ação roda em transação própria
      * e qualquer erro é registrado e não impede as próximas.
      *
+     * @param evento nome do evento de log da rotina chamadora (ex.: {@code cobranca.regua}),
+     *               para a falha de um item aparecer sob o mesmo evento do resumo da rotina
      * @return quantas assinaturas tiveram a ação concluída com resultado positivo
      */
-    private int processarCadaUm(List<AssinaturaTenant> assinaturas, String acao,
+    private int processarCadaUm(List<AssinaturaTenant> assinaturas, String evento, String acao,
                                 Predicate<AssinaturaTenant> acaoPorItem) {
         int sucesso = 0;
         for (AssinaturaTenant assinatura : assinaturas) {
@@ -203,10 +205,10 @@ public class CobrancaScheduler {
                 }
             } catch (OptimisticLockingFailureException e) {
                 // Outra transação (webhook/admin) alterou a assinatura; o item volta no próximo ciclo
-                log.warn("cobranca.job conflito.versao acao={} assinaturaId={} proximo=RETOMAR_NO_PROXIMO_CICLO",
-                        acao, assinatura.getId());
+                log.warn("{} conflito.versao acao={} assinaturaId={} proximo=RETOMAR_NO_PROXIMO_CICLO",
+                        evento, acao, assinatura.getId());
             } catch (Exception e) {
-                log.error("cobranca.job falha acao={} assinaturaId={}", acao, assinatura.getId(), e);
+                log.error("{} falha acao={} assinaturaId={}", evento, acao, assinatura.getId(), e);
             }
         }
         return sucesso;

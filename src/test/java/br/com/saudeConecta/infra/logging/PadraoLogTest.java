@@ -21,32 +21,35 @@ import static org.assertj.core.api.Assertions.fail;
  * que viola uma destas regras:
  *
  * <ol>
- *   <li><b>(a)</b> {@code getMessage()} logo antes da exceção como último argumento
- *       (ex.: {@code log.error("x: {}", e.getMessage(), e)}): a mensagem já vem no stack trace.</li>
+ *   <li><b>(a)</b> {@code getMessage()} em qualquer posição quando o último argumento é uma variável de
+ *       exceção típica ({@code e}, {@code ex}, {@code erro}, {@code exception}, {@code t}), como em
+ *       {@code log.error("x: {}", e.getMessage(), e)}: a mensagem já vem no stack trace.</li>
  *   <li><b>(b)</b> mensagem de log contendo {@code ===}.</li>
- *   <li><b>(c)</b> placeholder de dado pessoal ({@code email={}}, {@code cpf={}}, {@code token={}},
- *       {@code login={}}) cujo argumento correspondente não passa por {@code MascaraLog.} na mesma chamada.</li>
+ *   <li><b>(c)</b> placeholder cuja chave <i>contém</i> dado pessoal ({@code email}, {@code cpf},
+ *       {@code token}, {@code login}, {@code telefone}, {@code destinatario}; ex.: {@code emailAdmin={}},
+ *       {@code destinatario={}}) e cujo argumento correspondente não passa por {@code MascaraLog.} na mesma chamada.</li>
  * </ol>
  *
  * <p><b>Heurística:</b> não há parser Java. Cada chamada é recortada do texto, do {@code log.nivel(} até o
  * parêntese que o fecha, respeitando aspas, caracteres e parênteses aninhados. Os argumentos são separados
  * por vírgula de nível zero. O primeiro é a mensagem (literais concatenados com {@code +} são unidos) e
  * o k-ésimo {@code {}} da mensagem corresponde ao k-ésimo argumento seguinte. A regra (a) olha o texto
- * bruto da chamada: {@code getMessage()} seguido de vírgula e de um único identificador antes do
- * parêntese final. A regra (c) só reconhece as chaves exatas {@code email}, {@code cpf}, {@code token} e
- * {@code login}, sem diferenciar maiúsculas de minúsculas; o argumento é aceito se contém
- * {@code MascaraLog.}. Comentários e blocos de texto não são tratados: uma ocorrência de {@code log.info(}
- * dentro de comentário seria avaliada como código.</p>
+ * bruto dos argumentos. A regra (c) reconhece a chave pelo trecho que antecede o {@code =}, sem diferenciar
+ * maiúsculas de minúsculas; o argumento é aceito se contém {@code MascaraLog.}. Comentários ({@code //} e
+ * {@code /* *}{@code /}) são trocados por espaços antes da análise, preservando as linhas; blocos de texto
+ * ({@code """}) não são tratados.</p>
  */
 class PadraoLogTest {
 
     private static final Path RAIZ_FONTES = Paths.get("src", "main", "java");
 
     private static final Pattern INICIO_CHAMADA = Pattern.compile("\\blog\\.(?:debug|info|warn|error|trace)\\(");
-    private static final Pattern GET_MESSAGE_ANTES_DA_EXCECAO =
-            Pattern.compile("getMessage\\(\\)\\s*,\\s*[A-Za-z_][A-Za-z0-9_]*\\s*\\)\\s*;?\\s*$");
+    private static final Pattern VARIAVEL_DE_EXCECAO =
+            Pattern.compile("e|ex|erro|exception|t");
     private static final Pattern PLACEHOLDER_SENSIVEL =
-            Pattern.compile("\\b(email|cpf|token|login)=\\{}", Pattern.CASE_INSENSITIVE);
+            Pattern.compile("[A-Za-z0-9_]*(email|cpf|token|login|telefone|destinatario)[A-Za-z0-9_]*=\\{}",
+                    Pattern.CASE_INSENSITIVE);
+    private static final int JANELA_CHAVE = 40;
 
     @Test
     @DisplayName("Logs de produção seguem o padrão: sem getMessage() duplicado, sem '===' e dados pessoais mascarados")
@@ -55,7 +58,7 @@ class PadraoLogTest {
 
         try (Stream<Path> arquivos = Files.walk(RAIZ_FONTES)) {
             for (Path arquivo : arquivos.filter(p -> p.toString().endsWith(".java")).sorted().toList()) {
-                verificar(arquivo, Files.readString(arquivo), violacoes);
+                verificar(arquivo, semComentarios(Files.readString(arquivo)), violacoes);
             }
         }
 
@@ -80,7 +83,7 @@ class PadraoLogTest {
             List<String> argumentos = separarArgumentos(corpo);
             String mensagem = argumentos.isEmpty() ? "" : unirLiterais(argumentos.get(0));
 
-            if (GET_MESSAGE_ANTES_DA_EXCECAO.matcher(chamada + ";").find()) {
+            if (getMessageComExcecaoNoFim(argumentos)) {
                 violacoes.add(onde + " (a) getMessage() antes da exceção: " + resumo(chamada));
             }
             if (mensagem.contains("===")) {
@@ -99,7 +102,7 @@ class PadraoLogTest {
             if (proximo < 0) {
                 return;
             }
-            String trecho = mensagem.substring(Math.max(posicao, proximo - 12), proximo + 2);
+            String trecho = mensagem.substring(Math.max(posicao, proximo - JANELA_CHAVE), proximo + 2);
             if (PLACEHOLDER_SENSIVEL.matcher(trecho).find()) {
                 int indiceArgumento = indicePlaceholder + 1;
                 String argumento = indiceArgumento < argumentos.size() ? argumentos.get(indiceArgumento) : "";
@@ -110,6 +113,47 @@ class PadraoLogTest {
             indicePlaceholder++;
             posicao = proximo + 2;
         }
+    }
+
+    /** Verdadeiro quando o último argumento é uma variável de exceção típica e algum outro chama getMessage(). */
+    private boolean getMessageComExcecaoNoFim(List<String> argumentos) {
+        if (argumentos.size() < 2) {
+            return false;
+        }
+        String ultimo = argumentos.get(argumentos.size() - 1);
+        if (!VARIAVEL_DE_EXCECAO.matcher(ultimo).matches()) {
+            return false;
+        }
+        return argumentos.subList(1, argumentos.size() - 1).stream().anyMatch(a -> a.contains("getMessage()"));
+    }
+
+    /** Troca comentários por espaços (mantendo as quebras de linha), respeitando literais de texto e char. */
+    private String semComentarios(String fonte) {
+        StringBuilder saida = new StringBuilder(fonte.length());
+        for (int i = 0; i < fonte.length(); i++) {
+            char c = fonte.charAt(i);
+            if (c == '"' || c == '\'') {
+                int fim = pularLiteral(fonte, i);
+                saida.append(fonte, i, fim + 1);
+                i = fim;
+            } else if (c == '/' && i + 1 < fonte.length() && fonte.charAt(i + 1) == '/') {
+                while (i < fonte.length() && fonte.charAt(i) != '\n') {
+                    saida.append(' ');
+                    i++;
+                }
+                i--;
+            } else if (c == '/' && i + 1 < fonte.length() && fonte.charAt(i + 1) == '*') {
+                int fim = fonte.indexOf("*/", i + 2);
+                fim = fim < 0 ? fonte.length() - 1 : fim + 1;
+                for (int j = i; j <= fim; j++) {
+                    saida.append(fonte.charAt(j) == '\n' ? '\n' : ' ');
+                }
+                i = fim;
+            } else {
+                saida.append(c);
+            }
+        }
+        return saida.toString();
     }
 
     /** Índice do parêntese que fecha o aberto em {@code abre}, ignorando aspas; -1 se não fechar. */

@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import br.com.saudeConecta.util.MascaraLog;
 import java.util.List;
 import java.util.Optional;
 
@@ -159,8 +160,8 @@ public class ConsultaController {
             Consulta consulta = consultaService.atualizarStatus(id, novoStatus, motivo);
             return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
         } catch (IllegalArgumentException e) {
-            log.warn("consulta.status negado motivo=STATUS_INVALIDO_OU_NAO_ENCONTRADA consultaId={} status={} causa={}",
-                    id, status, e.getClass().getSimpleName());
+            log.warn("consulta.status negado motivo=STATUS_INVALIDO_OU_NAO_ENCONTRADA consultaId={} status={} detalhe={}",
+                    id, MascaraLog.seguro(status), MascaraLog.seguro(e.getMessage(), 120));
             return ResponseEntity.badRequest().build();
         }
     }

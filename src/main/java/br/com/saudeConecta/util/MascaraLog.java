@@ -7,6 +7,7 @@ package br.com.saudeConecta.util;
 public final class MascaraLog {
 
     private static final int PREFIXO_TOKEN_VISIVEL = 6;
+    private static final int TAMANHO_MAXIMO_SEGURO = 32;
 
     private MascaraLog() {
     }
@@ -60,5 +61,49 @@ public final class MascaraLog {
             return "***";
         }
         return "***.***.***-" + digitos.substring(digitos.length() - 2);
+    }
+
+    /**
+     * Mascara CEP (dado de endereço) mantendo os 5 primeiros dígitos ("01310-100" vira "01310***").
+     *
+     * @param cep CEP com ou sem hífen (pode ser nulo)
+     * @return 5 primeiros dígitos + "***", "***" quando tem menos de 5 dígitos, ou "null" quando nulo
+     */
+    public static String cep(String cep) {
+        if (cep == null) {
+            return "null";
+        }
+        String digitos = cep.replaceAll("\\D", "");
+        if (digitos.length() < 5) {
+            return "***";
+        }
+        return digitos.substring(0, 5) + "***";
+    }
+
+    /**
+     * Neutraliza texto controlado pelo cliente (header, parâmetro) antes de ir para o log: troca por
+     * {@code _} qualquer caractere fora de {@code [0-9A-Za-z._:-]} (inclusive CR/LF, que permitiriam
+     * forjar linhas de log) e limita a {@value #TAMANHO_MAXIMO_SEGURO} caracteres.
+     *
+     * @param valor texto cru (pode ser nulo)
+     * @return texto sanitizado e truncado, ou "null" quando nulo
+     */
+    public static String seguro(String valor) {
+        return seguro(valor, TAMANHO_MAXIMO_SEGURO);
+    }
+
+    /**
+     * Igual a {@link #seguro(String)}, com limite de tamanho informado (para mensagens mais longas).
+     *
+     * @param valor texto cru (pode ser nulo)
+     * @param maximo quantidade máxima de caracteres devolvidos
+     * @return texto sanitizado e truncado, ou "null" quando nulo
+     */
+    public static String seguro(String valor, int maximo) {
+        if (valor == null) {
+            return "null";
+        }
+        String limpo = valor.replaceAll("[^0-9A-Za-z._:-]", "_");
+        return limpo.length() > maximo ? limpo.substring(0, maximo) : limpo;
     }
 }

@@ -140,7 +140,7 @@ public class HomeController {
             return usuarioAlvo;
 
         } catch (Exception e) {
-            log.error("auth.senhaMaster falha acao=ACESSO_NEGADO", e);
+            log.error("auth.senhaMaster falha motivo=ERRO_AUDITORIA acao=ACESSO_NEGADO", e);
             return null;
         }
     }

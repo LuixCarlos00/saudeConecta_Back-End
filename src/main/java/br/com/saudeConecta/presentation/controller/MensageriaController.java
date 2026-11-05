@@ -98,7 +98,7 @@ public class MensageriaController {
             mensageriaService.marcarComoNotificado(id);
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException e) {
-            log.warn("mensageria.notificar negado motivo=ERRO mensageriaId={} causa={}", id, e.getClass().getSimpleName());
+            log.warn("mensageria.notificar negado motivo=NAO_ENCONTRADA_OU_ACESSO_NEGADO mensageriaId={} detalhe={}", id, e.getMessage());
             return ResponseEntity.notFound().build();
         }
     }

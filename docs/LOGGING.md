@@ -58,6 +58,8 @@ Com máscara obrigatória (`util/MascaraLog`):
 | e-mail | `MascaraLog.email(email)` |
 | CPF / login | `MascaraLog.cpf(cpf)` |
 | token de link público, preapproval etc. | `MascaraLog.token(token)` |
+| CEP | `MascaraLog.cep(cep)` |
+| texto vindo do cliente (header, parâmetro; risco de CR/LF) | `MascaraLog.seguro(valor)` |
 
 Prefira sempre o **id** da entidade ao dado pessoal.
 

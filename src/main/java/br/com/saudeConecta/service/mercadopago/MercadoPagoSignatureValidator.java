@@ -6,6 +6,8 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import br.com.saudeConecta.util.MascaraLog;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
@@ -85,7 +87,7 @@ public class MercadoPagoSignatureValidator {
             }
             return true;
         } catch (NumberFormatException e) {
-            log.warn("mp.webhook.assinatura negado motivo=TIMESTAMP_INVALIDO ts={}", ts);
+            log.warn("mp.webhook.assinatura negado motivo=TIMESTAMP_INVALIDO ts={}", MascaraLog.seguro(ts));
             return false;
         }
     }

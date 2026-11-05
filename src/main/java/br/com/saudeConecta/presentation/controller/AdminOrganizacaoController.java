@@ -82,7 +82,7 @@ public class AdminOrganizacaoController {
             AdminOrganizacao admin = adminOrganizacaoService.cadastrarAdminOrgCompleto(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(admin);
         } catch (IllegalArgumentException e) {
-            log.warn("adminOrg.cadastrarCompleto negado motivo=VALIDACAO causa={}", e.getClass().getSimpleName());
+            log.warn("adminOrg.cadastrarCompleto negado motivo=VALIDACAO detalhe={}", e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
