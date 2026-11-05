@@ -522,7 +522,9 @@ class CobrancaMercadoPagoFluxoE2ETest {
         mockMvc.perform(get("/assinaturas/pendencias-manuais").with(user("admin").roles("ADMIN")))
                 .andExpect(status().isForbidden());
 
-        // Resolver: sai das abertas e da contagem do dashboard, entra nas resolvidas
+        // Resolver: sai das abertas e da contagem do dashboard (cache invalidado), entra nas resolvidas
+        mockMvc.perform(get("/plataforma/dashboard").with(user("root").roles("SUPER_ADMIN")))
+                .andExpect(jsonPath("$.resumo.pendenciasManuais").value(1));
         mockMvc.perform(patch("/assinaturas/pendencias-manuais/" + evento.getId() + "/resolver")
                         .with(user("admin").roles("ADMIN")).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"observacao\":\"Estornado\"}"))
@@ -534,6 +536,8 @@ class CobrancaMercadoPagoFluxoE2ETest {
                 .andExpect(jsonPath("$.resolvida").value(true))
                 .andExpect(jsonPath("$.observacaoResolucao").value("Estornado no painel"));
         assertThat(eventoRepository.countByRequerAtencaoTrue()).isZero();
+        mockMvc.perform(get("/plataforma/dashboard").with(user("root").roles("SUPER_ADMIN")))
+                .andExpect(jsonPath("$.resumo.pendenciasManuais").value(0));
         mockMvc.perform(get("/assinaturas/pendencias-manuais").with(user("root").roles("SUPER_ADMIN")))
                 .andExpect(jsonPath("$").isEmpty());
         mockMvc.perform(get("/assinaturas/pendencias-manuais?resolvidas=true").with(user("root").roles("SUPER_ADMIN")))

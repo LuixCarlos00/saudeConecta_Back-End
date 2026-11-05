@@ -9,6 +9,7 @@ import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepo
 import br.com.saudeConecta.presentation.dto.planos.PendenciaManualResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,6 +69,8 @@ public class PendenciaManualService {
      * @throws BusinessException         409 {@code PENDENCIA_JA_RESOLVIDA}
      */
     @Transactional
+    // O dashboard da plataforma guarda a contagem de pendências por 5 min: sem evict o badge não baixaria
+    @CacheEvict(value = "plataforma-dashboard", allEntries = true)
     public PendenciaManualResponse resolver(Long eventoId, Long usuarioId, String observacao) {
         log.info("assinatura.pendencia.resolver inicio eventoId={}", eventoId);
         MpWebhookEvento evento = eventoRepository.findByIdParaAtualizacao(eventoId)
