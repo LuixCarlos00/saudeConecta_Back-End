@@ -276,7 +276,7 @@ public class ConsultaService {
         
         FormaPagamento formaPagamento = null;
         if (request.formaPagamentoId() != null) {
-            formaPagamento = formaPagamentoRepository.findById(request.formaPagamentoId()).orElse(null);
+            formaPagamento = buscarFormaPagamentoDaClinica(request.formaPagamentoId(), orgId);
         }
         
         Usuario criadoPor = null;
@@ -563,8 +563,7 @@ log.info("consulta.concluir ok consultaId={} status=REALIZADA", salva.getId());
         }
 
         if (request.formaPagamentoId() != null) {
-            FormaPagamento formaPagamento = formaPagamentoRepository.findById(request.formaPagamentoId())
-                .orElseThrow(() -> new IllegalArgumentException("Forma de pagamento nao encontrada"));
+            FormaPagamento formaPagamento = buscarFormaPagamentoDaClinica(request.formaPagamentoId(), orgId);
             consulta.setFormaPagamento(formaPagamento);
         }
 
@@ -1502,5 +1501,23 @@ log.info("consulta.concluir ok consultaId={} status=REALIZADA", salva.getId());
         return profissionalRepository.findByUsuarioIdWithRelations(usuario.getId())
                 .map(Profissional::getId)
                 .orElse(null);
+    }
+
+    /**
+     * Forma de pagamento global ou da própria clínica. Id de outra clínica (ou inexistente) é
+     * recusado como "não encontrada", sem revelar que existe em outro tenant.
+     *
+     * @param formaPagamentoId ID enviado pelo cliente
+     * @param orgId            organização do token
+     * @return a forma de pagamento permitida
+     * @throws IllegalArgumentException se não existir ou for de outra clínica
+     */
+    private FormaPagamento buscarFormaPagamentoDaClinica(Long formaPagamentoId, Long orgId) {
+        return formaPagamentoRepository.findDisponivelParaOrganizacao(formaPagamentoId, orgId)
+                .orElseThrow(() -> {
+                    log.warn("consulta.formaPagamento negado motivo=NAO_ENCONTRADA_OU_OUTRA_CLINICA formaPagamentoId={}",
+                            formaPagamentoId);
+                    return new IllegalArgumentException("Forma de pagamento nao encontrada");
+                });
     }
 }

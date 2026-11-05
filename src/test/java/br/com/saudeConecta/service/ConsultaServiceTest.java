@@ -1,5 +1,6 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.domain.pagamento.FormaPagamento;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.ConsultaHistorico;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
@@ -239,6 +240,22 @@ class ConsultaServiceTest {
             assertThatThrownBy(() -> consultaService.cadastrarConsultaByOrg(requestValido))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Paciente não encontrado");
+            verify(consultaRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Forma de pagamento de outra clínica não pode ser usada ao agendar")
+        void naoAgendaComFormaPagamentoDeOutraClinica() {
+            prepararCadastro();
+            AgendarConsultaRequest comFormaAlheia = new AgendarConsultaRequest(
+                    5L, 20L, null, LocalDateTime.now().plusDays(1), 45, "Observação teste", 99L, BigDecimal.TEN);
+            // A forma 99 existe, mas é de outra clínica: a busca por (id, org do token) não a encontra
+            lenient().when(formaPagamentoRepository.findById(99L)).thenReturn(Optional.of(new FormaPagamento()));
+            when(formaPagamentoRepository.findDisponivelParaOrganizacao(99L, ORG_ID)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> consultaService.cadastrarConsultaByOrg(comFormaAlheia))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Forma de pagamento nao encontrada");
             verify(consultaRepository, never()).save(any());
         }
 
@@ -1175,6 +1192,26 @@ class ConsultaServiceTest {
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Paciente não encontrado");
             assertThat(consultaAgendada.getPaciente()).isSameAs(pacienteOriginal);
+            verify(consultaRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Trocar a forma de pagamento por uma de outra clínica é recusado")
+        void naoTrocaParaFormaPagamentoDeOutraClinica() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(consultaRepository.findByIdAndOrganizacao_Id(100L, ORG_ID))
+                    .thenReturn(Optional.of(consultaAgendada));
+            when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.of(profissional));
+            when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(20L, ORG_ID)).thenReturn(Optional.of(paciente));
+            when(formaPagamentoRepository.findDisponivelParaOrganizacao(99L, ORG_ID)).thenReturn(Optional.empty());
+            FormaPagamento original = consultaAgendada.getFormaPagamento();
+            AtualizarConsultaRequest comFormaAlheia = new AtualizarConsultaRequest(
+                    5L, 20L, null, LocalDateTime.now().plusDays(2), 45, "Obs atualizada", 99L, BigDecimal.valueOf(200), null);
+
+            assertThatThrownBy(() -> consultaService.atualizarConsultaByOrg(100L, comFormaAlheia))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Forma de pagamento nao encontrada");
+            assertThat(consultaAgendada.getFormaPagamento()).isSameAs(original);
             verify(consultaRepository, never()).save(any());
         }
 

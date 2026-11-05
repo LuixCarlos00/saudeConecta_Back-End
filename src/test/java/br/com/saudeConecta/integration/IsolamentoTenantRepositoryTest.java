@@ -4,9 +4,11 @@ import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.domain.pagamento.FormaPagamento;
 import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
 import br.com.saudeConecta.domain.prontuario.Prontuario;
 import br.com.saudeConecta.domain.prontuario.TermoAutorizacao;
+import br.com.saudeConecta.infrastructure.persistence.repository.FormaPagamentoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.PlanejamentoTerapeuticoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProntuarioRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.TermoAutorizacaoRepository;
@@ -43,6 +45,7 @@ class IsolamentoTenantRepositoryTest {
 
     @Autowired private EntityManager em;
     @Autowired private ProntuarioRepository prontuarioRepository;
+    @Autowired private FormaPagamentoRepository formaPagamentoRepository;
     @Autowired private TermoAutorizacaoRepository termoRepository;
     @Autowired private PlanejamentoTerapeuticoRepository planejamentoRepository;
 
@@ -135,6 +138,27 @@ class IsolamentoTenantRepositoryTest {
             ProntuarioCompletoResponse dto = ProntuarioCompletoResponse.fromEntity(p);
             assertThat(dto.getConsulta().getId()).isEqualTo(consultaA.getId());
         }
+    }
+
+    @Test
+    @DisplayName("Forma de pagamento: global e da própria clínica são encontradas; de outra clínica, não")
+    void formaPagamentoFiltradaPorOrganizacao() {
+        FormaPagamento global = new FormaPagamento();
+        global.setNome("Dinheiro");
+        global.setCodigo("DINHEIRO_T");
+        em.persist(global);
+        FormaPagamento daB = new FormaPagamento();
+        daB.setNome("Convênio B");
+        daB.setCodigo("CONVENIO_B_T");
+        daB.setOrganizacao(em.getReference(Organizacao.class, ORG_B));
+        em.persist(daB);
+        em.flush();
+        em.clear();
+
+        assertThat(formaPagamentoRepository.findDisponivelParaOrganizacao(global.getId(), ORG_A)).isPresent();
+        assertThat(formaPagamentoRepository.findDisponivelParaOrganizacao(daB.getId(), ORG_A)).isEmpty();
+        // Controle: a própria clínica continua enxergando a forma dela
+        assertThat(formaPagamentoRepository.findDisponivelParaOrganizacao(daB.getId(), ORG_B)).isPresent();
     }
 
     @Test
