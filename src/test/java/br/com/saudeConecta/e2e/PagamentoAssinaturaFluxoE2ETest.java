@@ -506,18 +506,52 @@ class PagamentoAssinaturaFluxoE2ETest {
     }
 
     @Test
-    @DisplayName("A2 - Reconciliação ignora cortesia legada com preapproval pausado (não reativa no MP)")
-    void reconciliacaoIgnoraCortesia() {
+    @DisplayName("R3 - Reconciliação não reativa a cortesia legada: desvincula o preapproval pausado e o cancela no MP")
+    void reconciliacaoLimpaCortesiaLegada() {
         AssinaturaTenant legada = salvarAssinatura(StatusAssinatura.ATIVA, "pa-a2-legado", "paused",
                 LocalDate.now().plusDays(20));
         legada.setCortesia(true);
         assinaturaTenantRepository.save(legada);
+        String referencia = "ASSINATURA-" + legada.getId();
+        when(mercadoPagoClient.buscarPreapproval("pa-a2-legado")).thenReturn(preapproval("pa-a2-legado", "paused", referencia));
 
         cobrancaScheduler.reconciliarComMercadoPago();
 
-        verify(mercadoPagoClient, never()).buscarPreapproval("pa-a2-legado");
-        verify(mercadoPagoClient, never()).buscarAuthorizedPaymentsDoPreapproval("pa-a2-legado");
+        AssinaturaTenant depois = recarregar(legada);
+        assertThat(depois.getMpPreapprovalId()).isNull();
+        assertThat(depois.getMpPreapprovalSubstituidoId()).isNull();
+        assertThat(depois.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
+        assertThat(depois.isCortesia()).isTrue();
+        verify(mercadoPagoClient).cancelarPreapproval("pa-a2-legado");
         verify(mercadoPagoClient, never()).reativarPreapproval(anyString());
+    }
+
+    @Test
+    @DisplayName("R3 - Cortesia legada com preapproval authorized: desvincula, não cancela e vira pendência manual")
+    void reconciliacaoCortesiaLegadaAutorizadaViraPendencia() {
+        AssinaturaTenant legada = salvarAssinatura(StatusAssinatura.ATIVA, "pa-r3-auth", "authorized",
+                LocalDate.now().plusDays(20));
+        legada.setCortesia(true);
+        assinaturaTenantRepository.save(legada);
+        String referencia = "ASSINATURA-" + legada.getId();
+        when(mercadoPagoClient.buscarPreapproval("pa-r3-auth")).thenReturn(preapproval("pa-r3-auth", "authorized", referencia));
+
+        cobrancaScheduler.reconciliarComMercadoPago();
+        // A nova tentativa (próxima reconciliação) não duplica a pendência
+        cobrancaScheduler.reconciliarComMercadoPago();
+
+        AssinaturaTenant depois = recarregar(legada);
+        assertThat(depois.getMpPreapprovalId()).isNull();
+        assertThat(depois.getMpPreapprovalSubstituidoId()).isEqualTo("pa-r3-auth");
+        verify(mercadoPagoClient, never()).cancelarPreapproval("pa-r3-auth");
+        var pendencias = eventoRepository.findByRequerAtencaoTrueOrderByRecebidoEmDesc();
+        assertThat(pendencias).hasSize(1);
+        assertThat(pendencias.get(0).getDataId()).isEqualTo("pa-r3-auth");
+        assertThat(pendencias.get(0).getMotivoAtencao()).startsWith(MpWebhookEvento.MOTIVO_PREAPPROVAL_SUBSTITUIDO_AUTORIZADO);
+
+        // O webhook do preapproval que saiu continua ignorado: não religa nem mexe na cortesia
+        webhookService.processar(MercadoPagoWebhookService.TOPICO_PREAPPROVAL, "pa-r3-auth", "{}");
+        assertThat(recarregar(legada).getMpPreapprovalId()).isNull();
     }
 
     private void gerarLink(AssinaturaTenant assinatura) {

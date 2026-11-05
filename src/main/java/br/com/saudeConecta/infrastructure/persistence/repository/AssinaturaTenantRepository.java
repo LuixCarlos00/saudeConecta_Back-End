@@ -119,6 +119,13 @@ public interface AssinaturaTenantRepository extends JpaRepository<AssinaturaTena
     List<Long> findIdsComPreapprovalSubstituidoPendente();
 
     /**
+     * IDs das cortesias que ainda têm preapproval vinculado (dadas antes de a cortesia passar a
+     * desvincular o preapproval). Esse preapproval pode seguir cobrando; a reconciliação o limpa.
+     */
+    @Query("SELECT a.id FROM AssinaturaTenant a WHERE a.cortesia = true AND a.mpPreapprovalId IS NOT NULL")
+    List<Long> findIdsCortesiaComPreapproval();
+
+    /**
      * Busca assinaturas vencidas que ainda não foram marcadas como inadimplentes.
      * TRIAL vencido segue a mesma régua da ATIVA vencida. Cortesias são ignoradas.
      */

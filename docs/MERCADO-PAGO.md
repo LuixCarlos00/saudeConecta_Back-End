@@ -196,7 +196,11 @@ a cortesia de quem já tem cartão autorizado.
 | `0 0 */4 * * *` | Reconciliação com o Mercado Pago (rede de segurança para webhooks perdidos), correção do valor do preapproval (`authorized`/`paused`) que diverge de `valor_mensal` (o banco vale; log WARN `motivo=VALOR_DIVERGENTE`) e nova tentativa de cancelar preapprovals substituídos (`mp_preapproval_substituido_id` preenchido) |
 
 Assinaturas com `cortesia = true` são ignoradas por todas as rotinas (régua, links,
-reconciliação e recuperação de faturas).
+reconciliação e recuperação de faturas), com uma exceção: a reconciliação busca as cortesias
+que ainda têm `mp_preapproval_id` (dadas antes de a cortesia desvincular o preapproval, que
+seguiriam cobrando), desvincula o preapproval e o cancela no MP depois do commit, com a mesma
+regra da troca de preapproval (`authorized` ou com fatura aprovada sem registro vira pendência
+manual em vez de ser cancelado). Log INFO `assinatura.cortesia.limpeza`. Não precisa de script.
 
 **Dar cortesia** leva a assinatura para `ATIVA` (inclusive vinda de `SUSPENSA` ou
 `INADIMPLENTE`) e para a cobrança: o preapproval é desvinculado e cancelado no MP depois

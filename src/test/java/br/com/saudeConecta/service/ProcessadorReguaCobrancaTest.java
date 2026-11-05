@@ -171,4 +171,24 @@ class ProcessadorReguaCobrancaTest {
 
         assertThatThrownBy(() -> processador.cancelar(ID, LIMITE_CANCELAMENTO)).isInstanceOf(BusinessException.class);
     }
+
+    @Test
+    @DisplayName("R3 - Limpeza de cortesia: relê com lock e só desvincula cortesia que ainda tem preapproval")
+    void limparPreapprovalDeCortesia() {
+        assinatura.setCortesia(true);
+        assinatura.setMpPreapprovalId("pa-1");
+
+        assertThat(processador.limparPreapprovalDeCortesia(ID)).isTrue();
+        verify(assinaturaTenantRepository).findByIdParaAtualizacao(ID);
+        verify(assinaturaMercadoPagoService).limparPreapprovalDeCortesia(assinatura);
+
+        // Deixou de ser cortesia (ou já não tem preapproval) entre a leitura do lote e o lock
+        reset(assinaturaMercadoPagoService);
+        assinatura.setCortesia(false);
+        assertThat(processador.limparPreapprovalDeCortesia(ID)).isFalse();
+        assinatura.setCortesia(true);
+        assinatura.setMpPreapprovalId(null);
+        assertThat(processador.limparPreapprovalDeCortesia(ID)).isFalse();
+        verifyNoInteractions(assinaturaMercadoPagoService);
+    }
 }

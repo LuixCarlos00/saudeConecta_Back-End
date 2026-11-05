@@ -870,4 +870,51 @@ class AssinaturaMercadoPagoServiceTest {
         assertThat(assinatura.getMpPreapprovalId()).isEqualTo("pa-b");
         assertThat(assinatura.getMpPreapprovalSubstituidoId()).isEqualTo("pa-a");
     }
+
+    @Test
+    @DisplayName("R3 - Cortesia antiga com preapproval: desvincula e cancela no MP quando ele não está authorized nem pago")
+    void limpezaDeCortesiaCancelaPreapproval() {
+        assinatura.setStatus(StatusAssinatura.ATIVA);
+        assinatura.setCortesia(true);
+        assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
+        assinatura.setMpStatus("paused");
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(noMp(PREAPPROVAL_ID, "paused"));
+
+        service.limparPreapprovalDeCortesia(assinatura);
+
+        assertThat(assinatura.temPreapproval()).isFalse();
+        verify(mercadoPagoClient).cancelarPreapproval(PREAPPROVAL_ID);
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isNull();
+        verify(eventoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("R3 - Cortesia antiga com preapproval authorized: desvincula, não cancela e vira pendência manual")
+    void limpezaDeCortesiaAutorizadaViraPendencia() {
+        assinatura.setStatus(StatusAssinatura.ATIVA);
+        assinatura.setCortesia(true);
+        assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
+        // Mesmo com o espelho local dizendo authorized: o status local da cortesia antiga não vale
+        assinatura.setMpStatus("authorized");
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(noMp(PREAPPROVAL_ID, "authorized"));
+        when(eventoRepository.findByTipoAndDataId(any(), any())).thenReturn(Optional.empty());
+
+        service.limparPreapprovalDeCortesia(assinatura);
+
+        assertThat(assinatura.temPreapproval()).isFalse();
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isEqualTo(PREAPPROVAL_ID);
+        verify(mercadoPagoClient, never()).cancelarPreapproval(any());
+        verify(eventoRepository).save(any());
+    }
+
+    @Test
+    @DisplayName("R3 - Limpeza ignora quem não é cortesia ou não tem preapproval")
+    void limpezaDeCortesiaIgnoraNaoCortesia() {
+        assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
+
+        service.limparPreapprovalDeCortesia(assinatura);
+
+        assertThat(assinatura.getMpPreapprovalId()).isEqualTo(PREAPPROVAL_ID);
+        verifyNoInteractions(mercadoPagoClient);
+    }
 }

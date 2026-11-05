@@ -267,6 +267,31 @@ public class AssinaturaMercadoPagoService {
      * @throws BusinessException se um substituído anterior ainda pendente não puder ser cancelado
      */
     public void desvincularECancelarAposCommit(AssinaturaTenant assinatura, String motivo) {
+        desvincularECancelarAposCommit(assinatura, motivo, assinatura.getMpStatus());
+    }
+
+    /**
+     * Limpeza da cortesia antiga que ainda tem preapproval vinculado (de antes de a cortesia
+     * desvincular o preapproval): desvincula e cancela depois do commit. O status local desse
+     * preapproval não é confiável, então um {@code authorized} vai para pendência manual em vez
+     * de ser cancelado (o cliente pode estar sendo cobrado e o estorno é decisão do SUPER_ADMIN).
+     *
+     * @param assinatura cortesia gerenciada pela transação do chamador (linha travada)
+     */
+    public void limparPreapprovalDeCortesia(AssinaturaTenant assinatura) {
+        if (!assinatura.isCortesia() || !assinatura.temPreapproval()) {
+            return;
+        }
+        log.info("assinatura.cortesia.limpeza inicio preapprovalId={} assinaturaId={} statusMpLocal={}",
+                assinatura.getMpPreapprovalId(), assinatura.getId(), assinatura.getMpStatus());
+        desvincularECancelarAposCommit(assinatura, "CORTESIA_COM_PREAPPROVAL", null);
+    }
+
+    /**
+     * @param statusNaTroca status do preapproval considerado na decisão de cancelar depois do
+     *                      commit (null quando o status local não é confiável)
+     */
+    private void desvincularECancelarAposCommit(AssinaturaTenant assinatura, String motivo, String statusNaTroca) {
         if (!assinatura.temPreapproval()) {
             return;
         }
@@ -275,7 +300,6 @@ public class AssinaturaMercadoPagoService {
             cancelarSubstituidoAnteriorOuRecusar(assinatura);
         }
         String preapprovalId = assinatura.getMpPreapprovalId();
-        String statusNaTroca = assinatura.getMpStatus();
         assinatura.desvincularPreapproval();
         Long assinaturaId = assinatura.getId();
         executarAposCommit("mp.preapproval.desvincular", assinaturaId,

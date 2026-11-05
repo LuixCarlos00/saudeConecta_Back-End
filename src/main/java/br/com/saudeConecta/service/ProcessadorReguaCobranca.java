@@ -122,6 +122,27 @@ public class ProcessadorReguaCobranca {
      * Relê a assinatura com PESSIMISTIC_WRITE (a linha fica travada até o fim da transação)
      * e confere a condição do lote. Cortesia sempre tira a assinatura da régua.
      */
+    /**
+     * Cortesia antiga com preapproval vinculado: desvincula e agenda o cancelamento no MP para
+     * depois do commit (com a regra de pendência manual para authorized ou pago). A linha é
+     * relida travada para decidir sobre o estado atual.
+     *
+     * @param assinaturaId ID da assinatura
+     * @return true se o preapproval foi desvinculado
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean limparPreapprovalDeCortesia(Long assinaturaId) {
+        AssinaturaTenant atual = assinaturaTenantRepository.findByIdParaAtualizacao(assinaturaId)
+                .orElseThrow(() -> new BusinessException(
+                        "Assinatura não encontrada: " + assinaturaId, HttpStatus.NOT_FOUND));
+        if (!atual.isCortesia() || !atual.temPreapproval()) {
+            return false;
+        }
+        assinaturaMercadoPagoService.limparPreapprovalDeCortesia(atual);
+        assinaturaTenantRepository.save(atual);
+        return true;
+    }
+
     private boolean aindaValida(Long assinaturaId, String acao, Predicate<AssinaturaTenant> condicao) {
         AssinaturaTenant atual = assinaturaTenantRepository.findByIdParaAtualizacao(assinaturaId)
                 .orElseThrow(() -> new BusinessException(

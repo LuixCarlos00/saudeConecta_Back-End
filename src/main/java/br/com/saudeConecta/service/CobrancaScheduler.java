@@ -26,7 +26,8 @@ import java.util.function.Predicate;
  * aprovados que não chegaram a ser registrados.
  *
  * Assinaturas marcadas como cortesia são ignoradas por todas as rotinas
- * (o filtro vive nas próprias queries do repositório).
+ * (o filtro vive nas próprias queries do repositório), exceto a limpeza da cortesia
+ * antiga que ainda tem preapproval vinculado, feita na reconciliação.
  *
  * Nenhuma rotina abre transação de lote: cada assinatura é processada em transação
  * própria (via {@link ProcessadorReguaCobranca} e
@@ -120,6 +121,7 @@ public class CobrancaScheduler {
     @Scheduled(cron = "0 0 */4 * * *", zone = FusoHorarioConfig.FUSO)
     public void reconciliarComMercadoPago() {
         cancelarPreapprovalsSubstituidos();
+        limparCortesiasComPreapproval();
 
         List<AssinaturaTenant> assinaturas = assinaturaTenantRepository.findComPreapprovalParaReconciliar();
         if (assinaturas.isEmpty()) {
@@ -158,6 +160,29 @@ public class CobrancaScheduler {
             }
         }
         log.info("cobranca.reconciliar substituidos pendentes={} cancelados={}", pendentes.size(), cancelados);
+    }
+
+    /**
+     * Cortesias antigas (de antes de a cortesia desvincular o preapproval) com preapproval vivo
+     * continuam cobrando no MP. Cada uma é desvinculada e o preapproval é cancelado depois do
+     * commit; authorized ou com fatura aprovada sem registro vira pendência manual.
+     */
+    private void limparCortesiasComPreapproval() {
+        List<Long> cortesias = assinaturaTenantRepository.findIdsCortesiaComPreapproval();
+        if (cortesias.isEmpty()) {
+            return;
+        }
+        int desvinculadas = 0;
+        for (Long assinaturaId : cortesias) {
+            try {
+                if (processador.limparPreapprovalDeCortesia(assinaturaId)) {
+                    desvinculadas++;
+                }
+            } catch (Exception e) {
+                log.error("assinatura.cortesia.limpeza falha assinaturaId={}", assinaturaId, e);
+            }
+        }
+        log.info("assinatura.cortesia.limpeza ok encontradas={} desvinculadas={}", cortesias.size(), desvinculadas);
     }
 
     /**

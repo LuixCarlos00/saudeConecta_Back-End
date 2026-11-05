@@ -294,4 +294,17 @@ class CobrancaSchedulerTest {
                 m.getAnnotation(org.springframework.scheduling.annotation.Scheduled.class).zone())
                 .isEqualTo("America/Sao_Paulo"));
     }
+
+    @Test
+    @DisplayName("R3 - Reconciliação limpa as cortesias antigas com preapproval, item a item")
+    void reconciliacaoLimpaCortesiasComPreapproval() {
+        when(assinaturaTenantRepository.findIdsCortesiaComPreapproval()).thenReturn(List.of(ASSINATURA_ID, OUTRA_ID));
+        when(processador.limparPreapprovalDeCortesia(ASSINATURA_ID)).thenThrow(new RuntimeException("timeout"));
+        when(processador.limparPreapprovalDeCortesia(OUTRA_ID)).thenReturn(true);
+
+        scheduler.reconciliarComMercadoPago();
+
+        verify(processador).limparPreapprovalDeCortesia(ASSINATURA_ID);
+        verify(processador).limparPreapprovalDeCortesia(OUTRA_ID);
+    }
 }
