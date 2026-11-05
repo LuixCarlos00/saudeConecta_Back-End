@@ -147,6 +147,26 @@ class ProntuarioServiceTest {
         }
 
         @Test
+        @DisplayName("Segundo Finalizar da mesma consulta recebe 409 PRONTUARIO_JA_FINALIZADO e não grava nada")
+        void segundoFinalizarDaMesmaConsultaRecebe409() {
+            when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
+            when(consultaRepository.buscarComLock(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
+            when(prontuarioRepository.existsByConsulta_Id(10L)).thenReturn(true);
+
+            assertThatThrownBy(() -> service.cadastrarProntuarioMedico(criarRequest()))
+                    .isInstanceOf(br.com.saudeConecta.infra.exceptions.BusinessException.class)
+                    .satisfies(ex -> {
+                        var be = (br.com.saudeConecta.infra.exceptions.BusinessException) ex;
+                        assertThat(be.getStatus()).isEqualTo(org.springframework.http.HttpStatus.CONFLICT);
+                        assertThat(be.getErrorCode()).isEqualTo("PRONTUARIO_JA_FINALIZADO");
+                    });
+
+            verify(prontuarioRepository, never()).save(any(Prontuario.class));
+            verify(consultaRepository, never()).save(any());
+            verify(atendimentoRascunhoRepository, never()).apagarPorConsulta(any());
+        }
+
+        @Test
         @DisplayName("Deve cadastrar prontuário médico com sucesso")
         void deveCadastrarComSucesso() {
             CadastrarProntuarioRequest request = criarRequest();

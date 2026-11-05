@@ -1,5 +1,7 @@
 package br.com.saudeConecta.service;
 
+import org.springframework.http.HttpStatus;
+import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
@@ -33,6 +35,9 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 @Slf4j
 public class ProntuarioService {
+
+    /** Código do 409 quando a consulta já tem prontuário (ver docs do ErrorResponse). */
+    public static final String CODE_PRONTUARIO_JA_FINALIZADO = "PRONTUARIO_JA_FINALIZADO";
 
     private final ProntuarioRepository prontuarioRepository;
     private final ProfissionalRepository profissionalRepository;
@@ -70,6 +75,15 @@ public class ProntuarioService {
                 .buscarComLock(request.getConsulta(), orgId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Consulta nao encontrada: " + request.getConsulta()));
+
+        // Regra: um prontuário por consulta. Com o lock acima, o segundo "Finalizar" (duplo clique,
+        // duas abas) espera o primeiro terminar e cai aqui em vez de gravar um prontuário duplicado.
+        if (prontuarioRepository.existsByConsulta_Id(consulta.getId())) {
+            log.warn("prontuario.medico.cadastrar negado motivo=PRONTUARIO_JA_FINALIZADO consultaId={}", consulta.getId());
+            throw new BusinessException(
+                    "Esta consulta já foi finalizada. Para corrigir o prontuário, use a edição.",
+                    HttpStatus.CONFLICT, CODE_PRONTUARIO_JA_FINALIZADO);
+        }
 
         // ── Monta Prontuario principal ────────────────────────────────────────
         Prontuario prontuario = Prontuario.builder()

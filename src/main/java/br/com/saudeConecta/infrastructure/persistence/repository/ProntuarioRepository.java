@@ -14,6 +14,14 @@ import java.util.Optional;
 public interface ProntuarioRepository extends JpaRepository<Prontuario, Long> {
 
     Prontuario findByConsulta_Id(Long consultaId);
+
+    /**
+     * Indica se a consulta já tem prontuário finalizado (regra: um prontuário por consulta).
+     *
+     * @param consultaId ID da consulta
+     * @return true se já existe prontuário para a consulta
+     */
+    boolean existsByConsulta_Id(Long consultaId);
     
     /**
      * Busca um prontuário médico somente se a consulta pertencer à organização informada.

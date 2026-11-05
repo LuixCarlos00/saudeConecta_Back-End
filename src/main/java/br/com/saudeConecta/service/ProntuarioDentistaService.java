@@ -1,5 +1,7 @@
 package br.com.saudeConecta.service;
 
+import org.springframework.http.HttpStatus;
+import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
@@ -31,6 +33,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProntuarioDentistaService {
 
+    /** Código do 409 quando a consulta já tem prontuário (ver docs do ErrorResponse). */
+    public static final String CODE_PRONTUARIO_JA_FINALIZADO = "PRONTUARIO_JA_FINALIZADO";
+
     private final ProntuarioDentistaRepository prontuarioDentistaRepository;
     private final ProfissionalRepository profissionalRepository;
     private final ConsultaRepository consultaRepository;
@@ -60,6 +65,15 @@ public class ProntuarioDentistaService {
                 .buscarComLock(request.getConsulta(), orgId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Consulta nao encontrada: " + request.getConsulta()));
+
+        // Regra: um prontuário por consulta. Com o lock acima, o segundo "Finalizar" (duplo clique,
+        // duas abas) espera o primeiro terminar e cai aqui em vez de gravar um prontuário duplicado.
+        if (prontuarioDentistaRepository.existsByConsulta_Id(consulta.getId())) {
+            log.warn("prontuario.dentista.cadastrar negado motivo=PRONTUARIO_JA_FINALIZADO consultaId={}", consulta.getId());
+            throw new BusinessException(
+                    "Esta consulta já foi finalizada. Para corrigir o prontuário, use a edição.",
+                    HttpStatus.CONFLICT, CODE_PRONTUARIO_JA_FINALIZADO);
+        }
 
         // ── Monta Prontuario principal ────────────────────────────────────────
         ProntuarioDentista prontuario = ProntuarioDentista.builder()

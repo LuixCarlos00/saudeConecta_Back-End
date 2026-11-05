@@ -132,4 +132,12 @@ public interface ProntuarioDentistaRepository extends JpaRepository<ProntuarioDe
     @Modifying
     @Query("DELETE FROM ProntuarioDentista pd WHERE pd.consulta.id = :consultaId")
     void deleteByConsultaId(@Param("consultaId") Long consultaId);
+
+    /**
+     * Indica se a consulta já tem prontuário finalizado (regra: um prontuário por consulta).
+     *
+     * @param consultaId ID da consulta
+     * @return true se já existe prontuário para a consulta
+     */
+    boolean existsByConsulta_Id(Long consultaId);
 }
