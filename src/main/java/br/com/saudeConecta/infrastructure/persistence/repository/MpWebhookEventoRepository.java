@@ -1,5 +1,7 @@
 package br.com.saudeConecta.infrastructure.persistence.repository;
 
+import org.springframework.data.domain.Pageable;
+import br.com.saudeConecta.infrastructure.persistence.projection.PlataformaProjecoes;
 import br.com.saudeConecta.domain.planos.MpWebhookEvento;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -80,4 +82,12 @@ public interface MpWebhookEventoRepository extends JpaRepository<MpWebhookEvento
      * Eventos que precisam de tratamento manual, do mais recente para o mais antigo.
      */
     List<MpWebhookEvento> findByRequerAtencaoTrueOrderByRecebidoEmDesc();
+
+    /** Quantidade de eventos que exigem tratamento manual. */
+    long countByRequerAtencaoTrue();
+
+    /** Eventos que exigem tratamento manual, do mais recente, sem carregar o payload. */
+    @Query("SELECT e.id AS id, e.recebidoEm AS recebidoEm FROM MpWebhookEvento e " +
+           "WHERE e.requerAtencao = true ORDER BY e.recebidoEm DESC, e.id DESC")
+    List<PlataformaProjecoes.EventoPendente> buscarPendentesManuais(Pageable pageable);
 }

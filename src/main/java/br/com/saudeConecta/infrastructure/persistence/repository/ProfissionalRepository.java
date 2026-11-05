@@ -1,5 +1,6 @@
 package br.com.saudeConecta.infrastructure.persistence.repository;
 
+import br.com.saudeConecta.infrastructure.persistence.projection.PlataformaProjecoes;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.profissional.StatusProfissional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -148,4 +149,10 @@ public interface ProfissionalRepository extends JpaRepository<Profissional, Long
         @Param("especialidade") String especialidade,
         @Param("filtro") String filtro,
         @Param("status") StatusProfissional status);
+
+    /** Profissionais ativos por clínica, só das clínicas informadas. */
+    @Query("SELECT p.organizacao.id AS organizacaoId, COUNT(p) AS quantidade FROM Profissional p " +
+           "WHERE p.organizacao.id IN :organizacaoIds AND p.status = 'ATIVO' GROUP BY p.organizacao.id")
+    List<PlataformaProjecoes.ProfissionaisPorClinica> contarAtivosPorOrganizacao(
+            @Param("organizacaoIds") java.util.Collection<Long> organizacaoIds);
 }

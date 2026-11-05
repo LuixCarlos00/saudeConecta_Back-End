@@ -1,5 +1,8 @@
 package br.com.saudeConecta.infrastructure.persistence.repository;
 
+import java.time.LocalDateTime;
+import java.math.BigDecimal;
+import br.com.saudeConecta.infrastructure.persistence.projection.PlataformaProjecoes;
 import br.com.saudeConecta.domain.planos.CobrancaTenant;
 import br.com.saudeConecta.domain.planos.StatusCobranca;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -61,4 +64,17 @@ public interface CobrancaTenantRepository extends JpaRepository<CobrancaTenant, 
            "WHERE c.organizacao.id = :orgId " +
            "ORDER BY c.criadaEm DESC")
     List<CobrancaTenant> findByOrganizacaoIdWithRelations(@Param("orgId") Long orgId);
+
+    /** Soma das cobranças PAGO com pagamento em [inicio, fim); nulo quando não há nenhuma. */
+    @Query("SELECT SUM(c.valorTotal) FROM CobrancaTenant c " +
+           "WHERE c.status = 'PAGO' AND c.dataPagamento >= :inicio AND c.dataPagamento < :fim")
+    BigDecimal somarRecebidoNoPeriodo(@Param("inicio") LocalDateTime inicio, @Param("fim") LocalDateTime fim);
+
+    /** Receita recebida (PAGO) por mês de pagamento no intervalo [inicio, fim). */
+    @Query("SELECT YEAR(c.dataPagamento) AS ano, MONTH(c.dataPagamento) AS mes, SUM(c.valorTotal) AS valor " +
+           "FROM CobrancaTenant c " +
+           "WHERE c.status = 'PAGO' AND c.dataPagamento >= :inicio AND c.dataPagamento < :fim " +
+           "GROUP BY YEAR(c.dataPagamento), MONTH(c.dataPagamento)")
+    List<PlataformaProjecoes.ValorMensal> somarRecebidoPorMes(@Param("inicio") LocalDateTime inicio,
+                                                              @Param("fim") LocalDateTime fim);
 }

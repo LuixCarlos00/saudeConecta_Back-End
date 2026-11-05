@@ -1,5 +1,7 @@
 package br.com.saudeConecta.infrastructure.persistence.repository;
 
+import org.springframework.data.domain.Pageable;
+import br.com.saudeConecta.infrastructure.persistence.projection.PlataformaProjecoes;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
 import br.com.saudeConecta.domain.planos.StatusAssinatura;
 import jakarta.persistence.LockModeType;
@@ -141,4 +143,72 @@ public interface AssinaturaTenantRepository extends JpaRepository<AssinaturaTena
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT a FROM AssinaturaTenant a WHERE a.id = :id")
     Optional<AssinaturaTenant> findByIdParaAtualizacao(@Param("id") Long id);
+
+    // ===== Dashboard da plataforma (SUPER_ADMIN): visão global, sem filtro de tenant =====
+
+    /**
+     * Assinatura vigente da clínica = a mais recente. Uma clínica que cancelou e assinou de novo
+     * guarda o histórico; contar todas as linhas duplicaria a clínica nos totais por status.
+     */
+    String VIGENTE = "a.id = (SELECT MAX(v.id) FROM AssinaturaTenant v WHERE v.organizacao.id = a.organizacao.id)";
+
+    /** Clínicas por status da assinatura vigente (status sem clínica não aparece). */
+    @Query("SELECT a.status AS status, COUNT(a) AS quantidade FROM AssinaturaTenant a " +
+           "WHERE " + VIGENTE + " GROUP BY a.status")
+    List<PlataformaProjecoes.ContagemPorStatus> contarVigentesPorStatus();
+
+    /** Clínicas ativas (TRIAL, ATIVA, INADIMPLENTE, cortesia incluída) por plano base. */
+    @Query("SELECT p.tipo AS plano, COUNT(a) AS quantidade FROM AssinaturaTenant a " +
+           "JOIN a.planoAssinatura p " +
+           "WHERE a.status IN ('TRIAL', 'ATIVA', 'INADIMPLENTE') AND " + VIGENTE + " GROUP BY p.tipo")
+    List<PlataformaProjecoes.ContagemPorPlano> contarAtivasPorPlano();
+
+    /** MRR por plano base: ATIVA e INADIMPLENTE, sem cortesia. */
+    @Query("SELECT p.tipo AS plano, COUNT(a) AS quantidade, SUM(a.valorMensal) AS mrr " +
+           "FROM AssinaturaTenant a JOIN a.planoAssinatura p " +
+           "WHERE a.status IN ('ATIVA', 'INADIMPLENTE') AND a.cortesia = false AND " + VIGENTE +
+           " GROUP BY p.tipo")
+    List<PlataformaProjecoes.MrrPorPlano> somarMrrPorPlano();
+
+    /** Clínicas ativas que estão em cortesia. */
+    @Query("SELECT COUNT(a) FROM AssinaturaTenant a " +
+           "WHERE a.cortesia = true AND a.status IN ('TRIAL', 'ATIVA', 'INADIMPLENTE') AND " + VIGENTE)
+    long contarCortesiasAtivas();
+
+    /** Trials com vencimento entre as datas (inclusive). */
+    @Query("SELECT COUNT(a) FROM AssinaturaTenant a " +
+           "WHERE a.status = 'TRIAL' AND a.dataVencimento BETWEEN :de AND :ate AND " + VIGENTE)
+    long contarTrialsVencendo(@Param("de") LocalDate de, @Param("ate") LocalDate ate);
+
+    /** Assinaturas criadas por mês no intervalo [inicio, fim). */
+    @Query("SELECT YEAR(a.criadoEm) AS ano, MONTH(a.criadoEm) AS mes, COUNT(a) AS quantidade " +
+           "FROM AssinaturaTenant a WHERE a.criadoEm >= :inicio AND a.criadoEm < :fim " +
+           "GROUP BY YEAR(a.criadoEm), MONTH(a.criadoEm)")
+    List<PlataformaProjecoes.ContagemMensal> contarCriadasPorMes(@Param("inicio") LocalDateTime inicio,
+                                                                 @Param("fim") LocalDateTime fim);
+
+    /** Assinaturas canceladas por mês no intervalo [inicio, fim). */
+    @Query("SELECT YEAR(a.dataCancelamento) AS ano, MONTH(a.dataCancelamento) AS mes, COUNT(a) AS quantidade " +
+           "FROM AssinaturaTenant a WHERE a.dataCancelamento >= :inicio AND a.dataCancelamento < :fim " +
+           "GROUP BY YEAR(a.dataCancelamento), MONTH(a.dataCancelamento)")
+    List<PlataformaProjecoes.ContagemMensal> contarCanceladasPorMes(@Param("inicio") LocalDateTime inicio,
+                                                                    @Param("fim") LocalDateTime fim);
+
+    /** Clínicas vigentes em um status, pelo vencimento mais antigo (limite pelo Pageable). */
+    @Query("SELECT o.id AS organizacaoId, o.nome AS nome, p.tipo AS plano, a.status AS status, " +
+           "a.dataVencimento AS dataVencimento, a.valorMensal AS valorMensal " +
+           "FROM AssinaturaTenant a JOIN a.organizacao o JOIN a.planoAssinatura p " +
+           "WHERE a.status = :status AND " + VIGENTE + " ORDER BY a.dataVencimento ASC, o.id ASC")
+    List<PlataformaProjecoes.ClinicaAtencao> buscarAtencaoPorStatus(@Param("status") StatusAssinatura status,
+                                                                    Pageable pageable);
+
+    /** Trials com vencimento entre as datas, do mais próximo do vencimento (limite pelo Pageable). */
+    @Query("SELECT o.id AS organizacaoId, o.nome AS nome, p.tipo AS plano, a.status AS status, " +
+           "a.dataVencimento AS dataVencimento, a.valorMensal AS valorMensal " +
+           "FROM AssinaturaTenant a JOIN a.organizacao o JOIN a.planoAssinatura p " +
+           "WHERE a.status = 'TRIAL' AND a.dataVencimento BETWEEN :de AND :ate AND " + VIGENTE +
+           " ORDER BY a.dataVencimento ASC, o.id ASC")
+    List<PlataformaProjecoes.ClinicaAtencao> buscarTrialsVencendo(@Param("de") LocalDate de,
+                                                                  @Param("ate") LocalDate ate,
+                                                                  Pageable pageable);
 }

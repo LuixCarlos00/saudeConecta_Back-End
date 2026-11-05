@@ -1,5 +1,6 @@
 package br.com.saudeConecta.infrastructure.persistence.repository;
 
+import br.com.saudeConecta.infrastructure.persistence.projection.PlataformaProjecoes;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
 import org.springframework.data.domain.Page;
@@ -670,4 +671,33 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("orgId") Long organizacaoId,
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
+
+    // ===== Dashboard da plataforma (SUPER_ADMIN): visão global, sem filtro de tenant =====
+
+    /** Consultas em [inicio, fim) de todas as clínicas, exceto canceladas. */
+    @Query("SELECT COUNT(c) FROM Consulta c " +
+           "WHERE c.dataHora >= :inicio AND c.dataHora < :fim AND c.status <> 'CANCELADA'")
+    long contarNaoCanceladasNoPeriodo(@Param("inicio") LocalDateTime inicio, @Param("fim") LocalDateTime fim);
+
+    /** Consultas por mês em [inicio, fim), exceto canceladas. */
+    @Query("SELECT YEAR(c.dataHora) AS ano, MONTH(c.dataHora) AS mes, COUNT(c) AS quantidade " +
+           "FROM Consulta c " +
+           "WHERE c.dataHora >= :inicio AND c.dataHora < :fim AND c.status <> 'CANCELADA' " +
+           "GROUP BY YEAR(c.dataHora), MONTH(c.dataHora)")
+    List<PlataformaProjecoes.ContagemMensal> contarNaoCanceladasPorMes(@Param("inicio") LocalDateTime inicio,
+                                                                       @Param("fim") LocalDateTime fim);
+
+    /**
+     * Clínicas ativas (assinatura vigente em TRIAL, ATIVA ou INADIMPLENTE) com mais consultas em
+     * [inicio, fim), exceto canceladas. O limite vem do Pageable.
+     */
+    @Query("SELECT o.id AS organizacaoId, o.nome AS nome, p.tipo AS plano, a.status AS status, " +
+           "COUNT(c) AS consultasMes " +
+           "FROM Consulta c JOIN c.organizacao o " +
+           "JOIN AssinaturaTenant a ON a.organizacao.id = o.id JOIN a.planoAssinatura p " +
+           "WHERE c.dataHora >= :inicio AND c.dataHora < :fim AND c.status <> 'CANCELADA' " +
+           "AND a.status IN ('TRIAL', 'ATIVA', 'INADIMPLENTE') AND " + AssinaturaTenantRepository.VIGENTE +
+           " GROUP BY o.id, o.nome, p.tipo, a.status ORDER BY COUNT(c) DESC, o.id ASC")
+    List<PlataformaProjecoes.ConsultasPorClinica> buscarTopClinicasPorConsultas(
+            @Param("inicio") LocalDateTime inicio, @Param("fim") LocalDateTime fim, Pageable pageable);
 }

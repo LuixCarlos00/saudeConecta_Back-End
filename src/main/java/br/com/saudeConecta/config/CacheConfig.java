@@ -34,6 +34,7 @@ public class CacheConfig {
             buildCache("dashboard-admin-org",    5,  200),
             buildCache("dashboard-profissional", 5,  200),
             buildCache("dashboard-super-admin",  5,   50),
+            buildCache("plataforma-dashboard",   5,   24),
             buildCache("mensageria-contagem",    5,  500),
             buildCache("profissionais-org",      5,  500),
             buildCache("pacientes-org",          5,  500),
