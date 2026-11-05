@@ -47,7 +47,7 @@ public class HomeService {
 
     @Transactional
     public void recuperarSenhaPorEmail(String email) {
-        log.info("Iniciando recuperacao de senha para email: {}", MascaraLog.email(email));
+        log.info("auth.senha.recuperar inicio email={}", MascaraLog.email(email));
 
         Usuario usuario = null;
         String nome = null;
@@ -78,7 +78,7 @@ public class HomeService {
                     if (usuarioOpt.isPresent()) {
                         usuario = usuarioOpt.get();
                         nome = usuario.getLogin();
-                        log.info("Usuario sem organizacao encontrado pelo email: {}", MascaraLog.email(email));
+                        log.debug("auth.senha.recuperar usuario sem organizacao email={}", MascaraLog.email(email));
                     }
                 }
             }
@@ -89,7 +89,7 @@ public class HomeService {
             return;
         }
 
-        log.warn("Email nao encontrado no sistema: {}", MascaraLog.email(email));
+        log.warn("auth.senha.recuperar negado motivo=EMAIL_NAO_CADASTRADO email={}", MascaraLog.email(email));
         throw new EmailNaoEncontradoException("Email nao encontrado no sistema");
     }
 
@@ -101,7 +101,7 @@ public class HomeService {
         Long organizacaoId = usuario.getOrganizacao() != null ? usuario.getOrganizacao().getId() : null;
         emailNotificacaoService.enviarRecuperacaoSenha(email, "Usuário", usuario.getLogin(), novaSenha, organizacaoId);
 
-        log.info("Senha atualizada para: {}", MascaraLog.email(email));
+        log.info("auth.senha.recuperar ok email={}", MascaraLog.email(email));
     }
 
     private String gerarSenhaAleatoria() {

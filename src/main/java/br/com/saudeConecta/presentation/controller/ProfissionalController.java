@@ -32,11 +32,10 @@ public class ProfissionalController {
     public ResponseEntity<?> atualizarClinicoIdByOrg(@PathVariable Long id,
                                                      @Valid @RequestBody AtualizarClinicoRequest request) {
         try {
-            log.info("Atualizando clinico: {}", request.nome());
             Profissional atualizado = profissionalService.atualizarClinicoIdByOrg(id, request);
             return ResponseEntity.ok(ProfissionalResponse.fromEntity(atualizado));
         } catch (IllegalArgumentException e) {
-            log.warn("Erro ao atualizar profissional: {}", e.getMessage());
+            log.warn("profissional.atualizar negado motivo=NAO_ENCONTRADO profissionalId={}", id);
             return ResponseEntity.notFound().build();
         }
     }
@@ -45,7 +44,6 @@ public class ProfissionalController {
     @PreAuthorize("hasRole('ADMIN')")
     @Description("Cadastra médico/clínico com CPF como login e envia credenciais por email. Utilizado em: CadastroMedicoComponent")
     public ResponseEntity<?> cadastraClinicoByOrg(@Valid @RequestBody CadastrarClinicoRequest request) {
-        log.info("Cadastrando clinico: {}", request.nome());
         Profissional profissional = profissionalService.cadastraClinicoByOrg(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ProfissionalResponse.fromEntity(profissional));
@@ -54,7 +52,6 @@ public class ProfissionalController {
     @GetMapping("/buscarClinicoIdByOrg/{id}")
     @Description("Busca médico/clínico por ID dentro da organização")
     public ResponseEntity<ProfissionalResponse> buscarClinicoIdByOrg(@PathVariable Long id) {
-        log.info("Buscando clinico por ID: {}", id);
         return profissionalService.buscarClinicoIdByOrg(id)
                 .map(ProfissionalResponse::fromEntity)
                 .map(ResponseEntity::ok)
@@ -65,12 +62,11 @@ public class ProfissionalController {
     @PreAuthorize("hasRole('ADMIN')")
     @Description("Deleta médico/clínico por ID")
     public ResponseEntity<?> deletarClinicoIdByOrg(@PathVariable Long id) {
-        log.info("Deletando clinico ID: {}", id);
         try {
             profissionalService.deletarClinicoIdByOrg(id);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
-            log.warn("Clinico nao encontrado: {}", e.getMessage());
+            log.warn("profissional.deletar negado motivo=NAO_ENCONTRADO profissionalId={}", id);
             return ResponseEntity.notFound().build();
         }
     }
@@ -108,7 +104,6 @@ public class ProfissionalController {
     @GetMapping
     public ResponseEntity<List<ProfissionalResponse>> buscarTodos(
             @RequestParam(required = false, defaultValue = "ALL") String filtro) {
-        log.debug("Buscando todos os profissionais do tenant com filtro: {}", filtro);
         List<ProfissionalResponse> profissionais = profissionalService.buscarTodosComFiltro(filtro)
                 .stream()
                 .map(ProfissionalResponse::fromEntity)
@@ -120,7 +115,6 @@ public class ProfissionalController {
     public ResponseEntity<List<ProfissionalResponse>> buscarPorNome(
             @RequestParam String nome, 
             @RequestParam(required = false, defaultValue = "ALL") String filtro) {
-        log.debug("Buscando profissionais por nome: {} no tenant com filtro: {}", nome, filtro);
         List<ProfissionalResponse> profissionais = profissionalService.buscarPorNomeComFiltro(nome, filtro)
                 .stream()
                 .map(ProfissionalResponse::fromEntity)
@@ -132,7 +126,6 @@ public class ProfissionalController {
     public ResponseEntity<List<ProfissionalResponse>> buscarPorCRM(
             @RequestParam String crm, 
             @RequestParam(required = false, defaultValue = "ALL") String filtro) {
-        log.debug("Buscando profissionais por CRM: {} no tenant com filtro: {}", crm, filtro);
         List<ProfissionalResponse> profissionais = profissionalService.buscarPorCRMComFiltro(crm, filtro)
                 .stream()
                 .map(ProfissionalResponse::fromEntity)
@@ -144,7 +137,6 @@ public class ProfissionalController {
     public ResponseEntity<List<ProfissionalResponse>> buscarPorCidade(
             @RequestParam String cidade, 
             @RequestParam(required = false, defaultValue = "ALL") String filtro) {
-        log.debug("Buscando profissionais por cidade: {} no tenant com filtro: {}", cidade, filtro);
         List<ProfissionalResponse> profissionais = profissionalService.buscarPorCidadeComFiltro(cidade, filtro)
                 .stream()
                 .map(ProfissionalResponse::fromEntity)
@@ -156,7 +148,6 @@ public class ProfissionalController {
     public ResponseEntity<List<ProfissionalResponse>> buscarPorEspecialidade(
             @RequestParam String especialidade, 
             @RequestParam(required = false, defaultValue = "ALL") String filtro) {
-        log.debug("Buscando profissionais por especialidade: {} no tenant com filtro: {}", especialidade, filtro);
         List<ProfissionalResponse> profissionais = profissionalService.buscarPorEspecialidadeComFiltro(especialidade, filtro)
                 .stream()
                 .map(ProfissionalResponse::fromEntity)

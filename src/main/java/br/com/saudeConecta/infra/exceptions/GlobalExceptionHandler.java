@@ -117,7 +117,7 @@ public class GlobalExceptionHandler {
         String mensagem = erros.isEmpty()
                 ? "Erro de validacao nos campos"
                 : String.join("; ", erros.values());
-        log.warn("Validacao falhou em {} {}: campos {}", req.getMethod(), rota(req), erros.keySet());
+        log.warn("http.erro negado motivo=VALIDACAO metodo={} rota={} campos={}", req.getMethod(), rota(req), erros.keySet());
         return ResponseEntity.badRequest().body(ErrorResponse.ofValidation(
                 HttpStatus.BAD_REQUEST.value(), "VALIDACAO", mensagem, req.getRequestURI(), erros));
     }
@@ -136,7 +136,7 @@ public class GlobalExceptionHandler {
     /** Violação de constraint: a mensagem do banco (tabela, índice, valor) fica só no log. */
     @ExceptionHandler({DataIntegrityViolationException.class, SQLException.class})
     public ResponseEntity<ErrorResponse> handleIntegridade(Exception ex, HttpServletRequest req) {
-        log.warn("Violacao de integridade em {} {}", req.getMethod(), rota(req), ex);
+        log.warn("http.erro negado motivo=INTEGRIDADE metodo={} rota={}", req.getMethod(), rota(req), ex);
         return ResponseEntity.status(HttpStatus.CONFLICT).body(
                 ErrorResponse.of(HttpStatus.CONFLICT.value(), "INTEGRIDADE", MSG_INTEGRIDADE, req.getRequestURI()));
     }
@@ -152,7 +152,7 @@ public class GlobalExceptionHandler {
             return cliente(HttpStatus.valueOf(statusConhecido.value()), "REQUISICAO_INVALIDA",
                     HttpStatus.valueOf(statusConhecido.value()).getReasonPhrase(), req, ex);
         }
-        log.error("Erro interno em {} {}", req.getMethod(), rota(req), ex);
+        log.error("http.erro falha metodo={} rota={}", req.getMethod(), rota(req), ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ErrorResponse.of(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(), "ERRO_INTERNO", MSG_ERRO_INTERNO, req.getRequestURI()));
     }
@@ -188,7 +188,7 @@ public class GlobalExceptionHandler {
         String texto = (mensagem == null || mensagem.isBlank())
                 ? HttpStatus.valueOf(status.value()).getReasonPhrase()
                 : mensagem;
-        log.warn("{} em {} {}: {} ({})", status.value(), req.getMethod(), rota(req),
+        log.warn("http.erro negado status={} metodo={} rota={} motivo={} causa={}", status.value(), req.getMethod(), rota(req),
                 texto, ex.getClass().getSimpleName());
         return ResponseEntity.status(status)
                 .body(ErrorResponse.of(status.value(), code, texto, req.getRequestURI()));

@@ -84,10 +84,10 @@ public class AdminOrganizacaoService {
 
     @Transactional(readOnly = true)
     public Optional<AdminOrganizacao> buscarrAdminByOrg(Long id) {
-        log.debug("Buscando administrador por ID: {}", id);
+        log.debug("adminOrg.buscar adminId={}", id);
         Long orgId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
         if (orgId == null) {
-            log.debug("SUPER_ADMIN: buscando administrador por ID sem filtro de organização");
+            log.debug("adminOrg.buscar escopo=SUPER_ADMIN adminId={}", id);
             return adminOrganizacaoRepository.findById(id);
         }
         return adminOrganizacaoRepository.findByIdAndOrganizacao_Id(id, orgId);
@@ -95,14 +95,14 @@ public class AdminOrganizacaoService {
 
     @Transactional
     public AdminOrganizacao cadastrarAdminByOrg(CadastrarAdminRequest request, Long organizacaoId) {
-        log.info("Cadastrando administrador: {} para organização ID: {}", request.nome(), organizacaoId);
+        log.info("adminOrg.cadastrar inicio organizacaoId={}", organizacaoId);
 
         limitePlanoService.validarLimiteAdminOrg(organizacaoId);
 
         // O login gravado é o CPF limpo: checar o bruto (com máscara) deixava passar duplicado
         String cpfLimpo = limparCpf(request.cpf());
         if (usuarioRepository.existsByLogin(cpfLimpo)) {
-            log.warn("CPF já cadastrado como login na organizacao {}", organizacaoId);
+            log.warn("adminOrg.cadastrar negado motivo=CPF_JA_CADASTRADO organizacaoId={}", organizacaoId);
             throw new IllegalStateException("CPF já cadastrado no sistema");
         }
 
@@ -138,9 +138,9 @@ public class AdminOrganizacaoService {
             .build();
 
         usuario = usuarioRepository.save(usuario);
-        log.debug("Usuário criado com ID: {}", usuario.getId());
+        log.debug("adminOrg.cadastrar usuario criado usuarioId={}", usuario.getId());
         admin = adminOrganizacaoRepository.save(admin);
-        log.info("Administrador cadastrado com sucesso. ID: {}", admin.getId());
+        log.info("adminOrg.cadastrar ok adminId={}", admin.getId());
 
         cacheEvictionService.evictPerfilEUsuariosAgrupados(usuario.getId(), organizacaoId);
 
@@ -167,7 +167,7 @@ public class AdminOrganizacaoService {
     public void atualizarMeusDadosAdminOrg(Long adminId, AtualizarAdminOrgCompletoRequest request) {
         Long orgId = tenantHelper.getCurrentTenantId();
         Long userId = tenantHelper.getCurrentUserId();
-        log.info("Admin Org atualizando seus proprios dados. AdminID: {}, OrgID: {}", adminId, orgId);
+        log.info("adminOrg.atualizarMeusDados inicio adminId={} organizacaoId={}", adminId, orgId);
 
         AdminOrganizacao admin = adminOrganizacaoRepository.findByIdWithOrgAndEndereco(adminId)
                 .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
@@ -178,7 +178,7 @@ public class AdminOrganizacaoService {
         }
         // "Meus dados": só o dono do cadastro. Outro gestor da clínica usa atualizarAdmByOrg.
         if (admin.getUsuario() == null || !admin.getUsuario().getId().equals(userId)) {
-            log.warn("Usuario {} tentou alterar os dados do admin {} pela rota de meus dados", userId, adminId);
+            log.warn("adminOrg.atualizarMeusDados negado motivo=OUTRO_ADMIN usuarioId={} adminId={}", userId, adminId);
             throw new TenantAccessDeniedException("Acesso negado: só é possível alterar os próprios dados");
         }
 
@@ -235,7 +235,7 @@ public class AdminOrganizacaoService {
             }
         }
 
-        log.info("Dados pessoais do Admin Org atualizados com sucesso. AdminID: {}", adminId);
+        log.info("adminOrg.atualizarMeusDados ok adminId={}", adminId);
     }
 
     /**
@@ -249,7 +249,7 @@ public class AdminOrganizacaoService {
      */
     @Transactional
     public AdminOrganizacao atualizarAdmByOrg(Long id, String nome, String email) {
-        log.info("Atualizando administrador ID: {}", id);
+        log.info("adminOrg.atualizar inicio adminId={}", id);
         Long orgId = tenantHelper.getCurrentTenantId();
 
         // Busca restrita ao tenant do token: trocar o e-mail de um gestor de outra clínica
@@ -272,7 +272,7 @@ public class AdminOrganizacaoService {
         }
 
         AdminOrganizacao  resultado = adminOrganizacaoRepository.save(antes);
-        log.info("Administrador atualizado com sucesso. ID: {}", resultado.getId());
+        log.info("adminOrg.atualizar ok adminId={}", resultado.getId());
 
         historicoDadosPessoaisService.registrarAlteracoesDeObjeto(
                 EntidadeTipo.ADMIN,
@@ -291,12 +291,12 @@ public class AdminOrganizacaoService {
     @Transactional
     public void deletarAdmByOrg(Long idAdmin) {
         Long orgId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
-        log.info("Deletando administrador ID: {} da organização: {}", idAdmin, orgId);
+        log.info("adminOrg.deletar inicio adminId={} organizacaoId={}", idAdmin, orgId);
 
         // 1. Buscar o administrador na tabela admin_organizacao
         AdminOrganizacao admin;
         if (orgId == null) {
-            log.debug("ROOT: deletando administrador por ID sem filtro de organizacao");
+            log.debug("adminOrg.deletar escopo=ROOT adminId={}", idAdmin);
             admin = adminOrganizacaoRepository.findById(idAdmin)
                     .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
         } else {
@@ -321,14 +321,14 @@ public class AdminOrganizacaoService {
 
             cacheEvictionService.evictPerfilEUsuariosAgrupados(usuarioId, orgIdAfetada);
 
-            log.info("Administrador e usuario deletados com sucesso. ID Admin: {}, ID Usuario: {}",
+            log.info("adminOrg.deletar ok adminId={} usuarioId={}",
                     idAdmin, usuario.getId());
                     
         } catch (Exception e) {
             // 4. Caso haja relacionamento que impeça o delete, cancelar e avisar
             // Mensagem do banco (tabela/constraint) fica só no log; a causa segue encadeada
             String errorMessage = "Não foi possivel deletar o administrador devido a relacionamentos existentes";
-            log.warn(errorMessage, e);
+            log.warn("adminOrg.deletar negado motivo=RELACIONAMENTOS_EXISTENTES adminId={}", idAdmin, e);
             throw new IllegalStateException(errorMessage, e);
         }
     }
@@ -343,7 +343,7 @@ public class AdminOrganizacaoService {
      */
     @Transactional(readOnly = true)
     public AdminOrgCompletoResponse buscarAdminOrgCompleto(Long id) {
-        log.debug("SUPER_ADMIN: buscando AdminOrg completo por ID: {}", id);
+        log.debug("adminOrg.buscar escopo=SUPER_ADMIN adminId={}", id);
         AdminOrganizacao admin = adminOrganizacaoRepository.findByIdWithOrgAndEndereco(id)
                 .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
         return AdminOrgCompletoResponse.fromEntity(admin);
@@ -359,7 +359,7 @@ public class AdminOrganizacaoService {
      */
     @Transactional
     public AdminOrgCompletoResponse atualizarAdminOrgCompleto(Long id, AtualizarAdminOrgCompletoRequest request) {
-        log.info("SUPER_ADMIN: atualizando AdminOrg completo ID: {}", id);
+        log.info("adminOrg.atualizar inicio escopo=SUPER_ADMIN adminId={}", id);
 
         AdminOrganizacao admin = adminOrganizacaoRepository.findByIdWithOrgAndEndereco(id)
                 .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
@@ -413,7 +413,7 @@ public class AdminOrganizacaoService {
         }
 
         AdminOrganizacao salvo = adminOrganizacaoRepository.save(admin);
-        log.info("SUPER_ADMIN: AdminOrg ID {} atualizado com sucesso", id);
+        log.info("adminOrg.atualizar ok escopo=SUPER_ADMIN adminId={}", id);
 
         Long orgIdAfetada = salvo.getOrganizacao() != null ? salvo.getOrganizacao().getId() : null;
         cacheEvictionService.evictPerfilEUsuariosAgrupados(salvo.getUsuario().getId(), orgIdAfetada);
@@ -448,7 +448,7 @@ public class AdminOrganizacaoService {
      */
     @Transactional
     public AdminOrganizacao cadastrarTenantPublico(CadastroSaasRequest request) {
-        log.info("Auto-cadastro público recebido. TipoPessoa: {}, Plano: {}",
+        log.info("adminOrg.autocadastro inicio tipoPessoa={} planoId={}",
                 request.tipoPessoa(), request.planoId());
         return criarTenantCompleto(request.toAdminOrgRequest(), false);
     }
@@ -463,7 +463,7 @@ public class AdminOrganizacaoService {
      */
     private AdminOrganizacao criarTenantCompleto(CadastrarAdminOrgCompletoRequest request, boolean cortesia) {
         String tipoPessoa = request.tipoPessoa();
-        log.info("Cadastrando Admin Org completo. TipoPessoa: {}, Nome: {}, Plano: {}", tipoPessoa, request.nome(), request.planoId());
+        log.info("adminOrg.cadastrar inicio tipoPessoa={} planoId={}", tipoPessoa, request.planoId());
 
         validarTipoPessoa(tipoPessoa);
         boolean isJuridica = TIPO_PESSOA_JURIDICA.equalsIgnoreCase(tipoPessoa);
@@ -487,8 +487,8 @@ public class AdminOrganizacaoService {
         AdminOrganizacao admin = criarAdminOrganizacao(request, organizacao, usuario);
 
         assinaturaTenantService.assinar(organizacao.getId(), request.planoId(), cortesia);
-        log.info("Plano {} associado à organização {} (cortesia={})",
-                request.planoId(), organizacao.getId(), cortesia);
+        log.info("adminOrg.cadastrar plano organizacaoId={} planoId={} cortesia={}",
+                organizacao.getId(), request.planoId(), cortesia);
 
         configuracaoGraficoDashboardService.inicializarParaNovoUsuario(usuario);
 
@@ -504,7 +504,7 @@ public class AdminOrganizacaoService {
                 admin.getId()
         );
 
-        log.info("Admin Org criado com sucesso. ID: {}, Org: {}, Login: {}", admin.getId(), organizacao.getId(), MascaraLog.cpf(login));
+        log.info("adminOrg.cadastrar ok adminId={} organizacaoId={} login={}", admin.getId(), organizacao.getId(), MascaraLog.cpf(login));
         return admin;
     }
 

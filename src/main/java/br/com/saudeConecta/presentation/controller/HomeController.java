@@ -77,13 +77,13 @@ public class HomeController {
             try {
                 TipoUsuarioNovo tipoSelecionado = TipoUsuarioNovo.valueOf(dados.perfil().toUpperCase());
                 if (!tipoSelecionado.equals(usuario.getTipoUsuarioNovo())) {
-                    log.warn("Tipo selecionado {} não corresponde ao tipo do usuário id {} no banco: {}",
-                            tipoSelecionado, usuario.getId(), usuario.getTipoUsuarioNovo());
+                    log.warn("auth.login negado motivo=TIPO_DIVERGENTE usuarioId={} tipoSelecionado={} tipoUsuario={}",
+                            usuario.getId(), tipoSelecionado, usuario.getTipoUsuarioNovo());
                     return ResponseEntity.status(HttpStatus.FORBIDDEN)
                             .body(Map.of("message", "O tipo selecionado não corresponde ao tipo do usuário no sistema"));
                 }
             } catch (IllegalArgumentException e) {
-                log.warn("Tipo inválido informado no login: {}", dados.perfil());
+                log.warn("auth.login negado motivo=TIPO_INVALIDO perfil={}", dados.perfil());
                 return ResponseEntity.badRequest().body(Map.of("message", "Tipo inválido"));
             }
         }
@@ -123,7 +123,7 @@ public class HomeController {
 
             Usuario usuarioAlvo = usuarioRepository.findUsuarioByLogin(loginAlvo);
             if (usuarioAlvo == null) {
-                log.warn("Senha master usada com login inexistente: {}", MascaraLog.cpf(loginAlvo));
+                log.warn("auth.senhaMaster negado motivo=LOGIN_INEXISTENTE login={}", MascaraLog.cpf(loginAlvo));
                 return null;
             }
 
@@ -136,11 +136,11 @@ public class HomeController {
                     .ip(ip)
                     .dataHora(LocalDateTime.now())
                     .build());
-            log.info("Acesso via senha master: ROOT impersonando usuario id {} (auditado)", usuarioAlvo.getId());
+            log.info("auth.senhaMaster ok usuarioAlvoId={} auditado=true", usuarioAlvo.getId());
             return usuarioAlvo;
 
         } catch (Exception e) {
-            log.error("Erro ao verificar/auditar senha master; acesso master negado", e);
+            log.error("auth.senhaMaster falha acao=ACESSO_NEGADO", e);
             return null;
         }
     }
@@ -159,14 +159,14 @@ public class HomeController {
                     .findAssinaturaAtivaByOrganizacaoId(organizacaoId);
 
             if (assinatura.isEmpty()) {
-                log.warn("Login bloqueado para usuario id {}: organizacao {} sem plano ativo", usuario.getId(), organizacaoId);
+                log.warn("auth.login negado motivo=SEM_PLANO_ATIVO usuarioId={} organizacaoId={}", usuario.getId(), organizacaoId);
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("message", "Sua organizacao nao possui um plano ativo. Entre em contato com o administrador."));
             }
 
             if (!assinatura.get().permiteAcesso()) {
                 String statusPlano = assinatura.get().getStatus().getDescricao();
-                log.warn("Login bloqueado para usuario id {}: plano {} da org {}", usuario.getId(), statusPlano, organizacaoId);
+                log.warn("auth.login negado motivo=PLANO_SEM_ACESSO usuarioId={} statusPlano={} organizacaoId={}", usuario.getId(), statusPlano, organizacaoId);
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("message", "O plano da sua organizacao esta " + statusPlano.toLowerCase() + ". Entre em contato com o administrador."));
             }
@@ -176,8 +176,8 @@ public class HomeController {
         String tipoProfissional = usuario.isClinico() ? getProfissional(usuario) : null;
         String tipoUsuario = usuario.getTipoUsuarioNovo() != null ? usuario.getTipoUsuarioNovo().name() : "GESTOR";
         String tokenJWT = tokenService.gerarToken(usuario, organizacaoId, nomeUsuario, tipoUsuario, tipoProfissional);
-        log.info("Login realizado: usuario id {} | Org: {} | Nome: {} | Tipo: {} | TipoProfissional: {}",
-                usuario.getId(), organizacaoId, nomeUsuario, tipoUsuario, tipoProfissional);
+        log.info("auth.login ok usuarioId={} organizacaoId={} tipo={} tipoProfissional={}",
+                usuario.getId(), organizacaoId, tipoUsuario, tipoProfissional);
 
         return ResponseEntity.ok(new DadosTokenJWT(tokenJWT));
     }
@@ -196,12 +196,11 @@ public class HomeController {
         if (email == null || email.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Informe o e-mail"));
         }
-        log.info("Solicitacao de recuperacao de senha para email: {}", MascaraLog.email(email));
 
         try {
             recuperacaoSenhaService.recuperarSenhaPorEmail(email);
         } catch (HomeService.EmailNaoEncontradoException e) {
-            log.info("Recuperacao de senha para email nao cadastrado: {}", MascaraLog.email(email));
+            log.info("auth.senha.recuperar ignorado motivo=RESPOSTA_GENERICA email={}", MascaraLog.email(email));
         }
         return ResponseEntity.ok(Map.of("message", MENSAGEM_RECUPERACAO_GENERICA));
     }
@@ -220,7 +219,7 @@ public class HomeController {
                 return secretaria.map(Secretaria::getNome).orElse("Secretária");
             }
         } catch (Exception e) {
-            log.warn("Erro ao obter nome do usuario ID: {}", usuario.getId(), e);
+            log.warn("auth.login falha motivo=NOME_INDISPONIVEL usuarioId={}", usuario.getId(), e);
         }
 
         return "Usuario"; // Default fallback
@@ -252,7 +251,7 @@ public class HomeController {
                 return secretaria.isPresent() ? "Recepcionista" : "null";
             }
         } catch (Exception e) {
-            log.warn("Erro ao obter profissional do usuario ID: {}", usuario.getId(), e);
+            log.warn("auth.login falha motivo=PROFISSIONAL_INDISPONIVEL usuarioId={}", usuario.getId(), e);
         }
 
         return "false"; // Default fallback

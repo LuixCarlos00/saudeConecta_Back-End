@@ -75,21 +75,21 @@ public class FiltroAcesso extends OncePerRequestFilter {
                 usuario = (Usuario) usuarioRepository.findByLogin(subject);
             } catch (JWTVerificationException e) {
                 // Sem o token no log: só o tipo da falha (expirado, assinatura, formato) e a rota
-                log.warn("JWT rejeitado ({}) em {} {} de {}", e.getClass().getSimpleName(),
+                log.warn("auth.acesso negado motivo=JWT_REJEITADO causa={} metodo={} rota={} ip={}", e.getClass().getSimpleName(),
                         request.getMethod(), request.getRequestURI(), request.getRemoteAddr());
                 responderErro(request, response, HttpServletResponse.SC_UNAUTHORIZED, "TOKEN_INVALIDO", "Token invalido ou expirado");
                 return;
             }
 
             if (usuario == null) {
-                log.warn("Token valido para usuario inexistente (login {}) em {} {}",
-                        MascaraLog.token(subject), request.getMethod(), request.getRequestURI());
+                log.warn("auth.acesso negado motivo=USUARIO_INEXISTENTE login={} metodo={} rota={}",
+                        MascaraLog.cpf(subject), request.getMethod(), request.getRequestURI());
                 responderErro(request, response, HttpServletResponse.SC_UNAUTHORIZED, "USUARIO_NAO_ENCONTRADO", "Usuario nao encontrado. Faca login novamente.");
                 return;
             }
 
             if (!usuario.isEnabled()) {
-                log.warn("Token de usuario bloqueado (id {}) em {} {}",
+                log.warn("auth.acesso negado motivo=USUARIO_BLOQUEADO usuarioId={} metodo={} rota={}",
                         usuario.getId(), request.getMethod(), request.getRequestURI());
                 responderErro(request, response, HttpServletResponse.SC_UNAUTHORIZED, "USUARIO_BLOQUEADO", "Usuario bloqueado ou inativo");
                 return;
@@ -101,7 +101,7 @@ public class FiltroAcesso extends OncePerRequestFilter {
             }
 
             if (assinaturaBloqueiaAcesso(usuario, request)) {
-                log.warn("Acesso negado ao usuario id {}: assinatura da organizacao {} sem acesso ({} {})",
+                log.warn("auth.acesso negado motivo=ASSINATURA_SEM_ACESSO usuarioId={} organizacaoId={} metodo={} rota={}",
                         usuario.getId(), usuario.getOrganizacaoId(), request.getMethod(), request.getRequestURI());
                 responderErro(request, response, HttpServletResponse.SC_FORBIDDEN, "PLANO_SEM_ACESSO",
                         "O plano da sua organizacao esta suspenso, cancelado ou inexistente. Regularize a assinatura para continuar.");

@@ -44,7 +44,7 @@ public class TenantFilter extends OncePerRequestFilter {
             String path = request.getRequestURI();
             
             if (isPublicPath(path)) {
-                log.debug("Path público, pulando filtro de tenant: {}", path);
+                log.debug("tenant.filtro ignorado motivo=PATH_PUBLICO path={}", path);
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -59,7 +59,7 @@ public class TenantFilter extends OncePerRequestFilter {
                     if (organizacaoId != null) {
                         TenantContext.setCurrentTenant(organizacaoId);
                         MDC.put(MdcChaves.TENANT_ID, String.valueOf(organizacaoId));
-                        log.debug("Tenant definido: {} para usuário: {}", organizacaoId, userId);
+                        log.debug("tenant.filtro definido organizacaoId={} usuarioId={}", organizacaoId, userId);
                     }
                     
                     if (userId != null) {
@@ -67,7 +67,7 @@ public class TenantFilter extends OncePerRequestFilter {
                         MDC.put(MdcChaves.USER_ID, String.valueOf(userId));
                     }
                 } catch (Exception e) {
-                    log.warn("Erro ao extrair tenant do token", e);
+                    log.warn("tenant.filtro falha motivo=ERRO_EXTRAIR_TENANT", e);
                 }
             }
             

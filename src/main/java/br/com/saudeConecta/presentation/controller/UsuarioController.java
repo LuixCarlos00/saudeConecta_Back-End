@@ -28,7 +28,6 @@ public class UsuarioController {
     @PreAuthorize("hasRole('ADMIN')")
     @Description("Bloqueia ou desbloqueia usuário por ID. Utilizado em: GerenciamentoUsuariosComponent")
     public ResponseEntity<Void> bloquearUsuariobyOrg(@RequestBody @Valid BloquearUsuarioRequest request) {
-        log.debug("Alterando status do usuário ID: {}", request.codigoUsuario());
         // LimitePlanoException (422) e erros inesperados (500) ficam com o GlobalExceptionHandler
         try {
             usuarioService.bloquearUsuariobyOrg( request );
@@ -44,7 +43,7 @@ public class UsuarioController {
         Long organizacaoId = TenantContext.getCurrentTenant();
 
         if (organizacaoId == null) {
-            log.info("SUPER_ADMIN sem organização — buscando todos os AdminOrgs do sistema");
+            log.debug("usuario.agrupados buscar escopo=SUPER_ADMIN");
             return ResponseEntity.ok(usuarioService.buscarTodosAdminOrgsSuperAdmin());
         }
 
@@ -54,7 +53,6 @@ public class UsuarioController {
     @PutMapping("/trocarSenharUsuariobyOrg/{id}")
     @Description("Troca a senha do usuário por ID. Utilizado em: TrocaSenhaUsuariosComponent")
     public ResponseEntity<Void> trocarSenharUsuariobyOrg(@PathVariable Long id, @RequestBody java.util.Map<String, String> body) {
-        log.debug("Trocando senha do usuário ID: {} organizacao: {}", id, TenantContext.getCurrentTenant());
         try {
             String novaSenha = body.get("senhaNova");
             if (novaSenha == null || novaSenha.isBlank()) {
@@ -71,7 +69,6 @@ public class UsuarioController {
     @GetMapping("/buscarPerfilCompleto/{id}")
     @Description( "Busca perfil completo do usuário por ID com dados específicos baseados no tipo (CLINICO, GESTOR, ASSISTENTE) incluindo endereço quando existir. Utilizado em: UserProfileComponent, UserService")
     public ResponseEntity<UsuarioPerfilCompletoResponse> buscarPerfilCompleto(@PathVariable Long id) {
-        log.debug("Buscando perfil completo do usuario por ID: {}", id);
         // Checado depois do service: o @Cacheable usa só o ID na chave e responderia do cache sem
         // olhar a organização. Usuário de outra clínica responde 404, como os demais IDOR.
         boolean superAdmin = tenantHelper.isSuperAdmin();

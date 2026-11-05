@@ -26,7 +26,6 @@ public class SecretariaController {
     @PreAuthorize("hasRole('ADMIN')")
     @Description("Cadastra nova secretária. Utilizado em: CadastroSecretariaComponent")
     public ResponseEntity<?> cadastrarSecretariaByOrg(@RequestBody @Valid CadastrarSecretariaRequest request) {
-        log.info("Cadastrando secretaria: {}", request.nome());
         Secretaria secretaria = secretariaService.cadastrarSecretariaByOrg(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(SecretariaResponse.fromEntity(secretaria));
@@ -49,7 +48,7 @@ public class SecretariaController {
             Secretaria atualizada = secretariaService.atualizarSecretariaIdByOrg(id, secretaria);
             return ResponseEntity.ok(SecretariaResponse.fromEntity(atualizada));
         } catch (IllegalArgumentException e) {
-            log.warn("Erro ao atualizar secretaria: {}", e.getMessage());
+            log.warn("secretaria.atualizar negado motivo=NAO_ENCONTRADA secretariaId={}", id);
             return ResponseEntity.notFound().build();
         }
     }
@@ -63,7 +62,7 @@ public class SecretariaController {
             secretariaService.deletarSecretariaIdByOrg(id);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
-            log.warn("Secretaria nao encontrada: {}", e.getMessage());
+            log.warn("secretaria.deletar negado motivo=NAO_ENCONTRADA secretariaId={}", id);
             return ResponseEntity.notFound().build();
         }
     }

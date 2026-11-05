@@ -100,7 +100,7 @@ public class TokenService {
             DecodedJWT jwt = decodeToken(token);
             return jwt.getClaim(CLAIM_ORGANIZACAO_ID).asLong();
         } catch (Exception e) {
-            log.warn("Erro ao extrair organizacaoId do token: {}", e.getMessage());
+            log.warn("auth.token negado motivo=CLAIM_INVALIDA claim=organizacaoId causa={}", e.getClass().getSimpleName());
             return null;
         }
     }
@@ -110,7 +110,7 @@ public class TokenService {
             DecodedJWT jwt = decodeToken(token);
             return jwt.getClaim(CLAIM_USER_ID).asLong();
         } catch (Exception e) {
-            log.warn("Erro ao extrair userId do token: {}", e.getMessage());
+            log.warn("auth.token negado motivo=CLAIM_INVALIDA claim=userId causa={}", e.getClass().getSimpleName());
             return null;
         }
     }
@@ -120,7 +120,7 @@ public class TokenService {
             DecodedJWT jwt = decodeToken(token);
             return jwt.getClaim(CLAIM_TIPO_USUARIO).asInt();
         } catch (Exception e) {
-            log.warn("Erro ao extrair tipoUsuario do token: {}", e.getMessage());
+            log.warn("auth.token negado motivo=CLAIM_INVALIDA claim=tipoUsuario causa={}", e.getClass().getSimpleName());
             return null;
         }
     }
@@ -136,7 +136,7 @@ public class TokenService {
             DecodedJWT jwt = decodeToken(token);
             return jwt.getClaim(CLAIM_TIPO_PROFISSIONAL).asString();
         } catch (Exception e) {
-            log.warn("Erro ao extrair tipoProfissional do token: {}", e.getMessage());
+            log.warn("auth.token negado motivo=CLAIM_INVALIDA claim=tipoProfissional causa={}", e.getClass().getSimpleName());
             return null;
         }
     }
@@ -146,7 +146,7 @@ public class TokenService {
             DecodedJWT jwt = decodeToken(token);
             return jwt.getClaim(CLAIM_NOME).asString();
         } catch (Exception e) {
-            log.warn("Erro ao extrair nome do token: {}", e.getMessage());
+            log.warn("auth.token negado motivo=CLAIM_INVALIDA claim=nome causa={}", e.getClass().getSimpleName());
             return null;
         }
     }

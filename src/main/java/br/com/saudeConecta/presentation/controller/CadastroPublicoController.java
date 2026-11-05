@@ -46,7 +46,7 @@ public class CadastroPublicoController {
 
         String ip = resolverIp(servlet);
         if (!rateLimiter.permitir(CHAVE_RATE_LIMIT + ip, LIMITE_POR_IP)) {
-            log.warn("Rate limit atingido no auto-cadastro para o IP {}", ip);
+            log.warn("cadastro.publico negado motivo=RATE_LIMIT ip={}", ip);
             throw new BusinessException(
                     "Muitas tentativas de cadastro. Tente novamente mais tarde.",
                     HttpStatus.TOO_MANY_REQUESTS);
