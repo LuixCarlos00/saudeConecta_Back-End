@@ -156,7 +156,7 @@ class ConsultaServiceTest {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(organizacaoRepository.findById(ORG_ID)).thenReturn(Optional.of(organizacao));
             when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.of(profissional));
-            when(pacienteRepository.findById(20L)).thenReturn(Optional.of(paciente));
+            when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(20L, ORG_ID)).thenReturn(Optional.of(paciente));
             when(consultaRepository.save(any(Consulta.class))).thenReturn(consultaAgendada);
             when(historicoRepository.save(any(ConsultaHistorico.class))).thenReturn(null);
 
@@ -179,7 +179,7 @@ class ConsultaServiceTest {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(organizacaoRepository.findById(ORG_ID)).thenReturn(Optional.of(organizacao));
             when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.of(profissional));
-            when(pacienteRepository.findById(20L)).thenReturn(Optional.of(paciente));
+            when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(20L, ORG_ID)).thenReturn(Optional.of(paciente));
             when(consultaRepository.save(any(Consulta.class))).thenAnswer(inv -> {
                 Consulta c = inv.getArgument(0);
                 assertThat(c.getDuracaoMinutos()).isEqualTo(30);
@@ -219,18 +219,34 @@ class ConsultaServiceTest {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(organizacaoRepository.findById(ORG_ID)).thenReturn(Optional.of(organizacao));
             when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.of(profissional));
-            when(pacienteRepository.findById(20L)).thenReturn(Optional.empty());
+            when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(20L, ORG_ID)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> consultaService.cadastrarConsultaByOrg(requestValido))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Paciente não encontrado");
         }
 
+        @Test
+        @DisplayName("Item 4 - paciente de outra clínica não pode ser agendado (busca filtrada pela org do token)")
+        void naoAgendaPacienteDeOutraClinica() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(organizacaoRepository.findById(ORG_ID)).thenReturn(Optional.of(organizacao));
+            when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.of(profissional));
+            // O paciente 20 existe, mas em outra clínica: a busca por (id, org do token) não o encontra
+            lenient().when(pacienteRepository.findById(20L)).thenReturn(Optional.of(paciente));
+            when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(20L, ORG_ID)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> consultaService.cadastrarConsultaByOrg(requestValido))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Paciente não encontrado");
+            verify(consultaRepository, never()).save(any());
+        }
+
         private void prepararCadastro() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(organizacaoRepository.findById(ORG_ID)).thenReturn(Optional.of(organizacao));
             when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.of(profissional));
-            when(pacienteRepository.findById(20L)).thenReturn(Optional.of(paciente));
+            when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(20L, ORG_ID)).thenReturn(Optional.of(paciente));
         }
 
         private Consulta existente(LocalDateTime inicio, Integer duracao, StatusConsulta status) {
@@ -351,7 +367,7 @@ class ConsultaServiceTest {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(organizacaoRepository.findById(ORG_ID)).thenReturn(Optional.of(organizacao));
             when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.of(profissional));
-            when(pacienteRepository.findById(20L)).thenReturn(Optional.of(paciente));
+            when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(20L, ORG_ID)).thenReturn(Optional.of(paciente));
             when(especialidadeRepository.findById(3L)).thenReturn(Optional.of(especialidade));
             when(consultaRepository.save(any())).thenReturn(consultaAgendada);
             when(historicoRepository.save(any())).thenReturn(null);
@@ -1134,7 +1150,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findByIdAndOrganizacao_Id(100L, ORG_ID))
                     .thenReturn(Optional.of(consultaAgendada));
             when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.of(profissional));
-            when(pacienteRepository.findById(20L)).thenReturn(Optional.of(paciente));
+            when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(20L, ORG_ID)).thenReturn(Optional.of(paciente));
             when(consultaRepository.save(any(Consulta.class))).thenReturn(consultaAgendada);
             when(historicoRepository.save(any())).thenReturn(null);
 
@@ -1142,6 +1158,38 @@ class ConsultaServiceTest {
 
             assertThat(resultado).isNotNull();
             verify(consultaRepository).save(consultaAgendada);
+        }
+
+        @Test
+        @DisplayName("Item 4 - trocar o paciente da consulta por um de outra clínica é recusado")
+        void naoTrocaParaPacienteDeOutraClinica() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(consultaRepository.findByIdAndOrganizacao_Id(100L, ORG_ID))
+                    .thenReturn(Optional.of(consultaAgendada));
+            when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.of(profissional));
+            lenient().when(pacienteRepository.findById(20L)).thenReturn(Optional.of(paciente));
+            when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(20L, ORG_ID)).thenReturn(Optional.empty());
+            Paciente pacienteOriginal = consultaAgendada.getPaciente();
+
+            assertThatThrownBy(() -> consultaService.atualizarConsultaByOrg(100L, requestAtualizar))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Paciente não encontrado");
+            assertThat(consultaAgendada.getPaciente()).isSameAs(pacienteOriginal);
+            verify(consultaRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Item 4 - trocar o profissional por um de outra clínica é recusado (busca filtrada pela org)")
+        void naoTrocaParaProfissionalDeOutraClinica() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(consultaRepository.findByIdAndOrganizacao_Id(100L, ORG_ID))
+                    .thenReturn(Optional.of(consultaAgendada));
+            when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> consultaService.atualizarConsultaByOrg(100L, requestAtualizar))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Profissional não encontrado");
+            verify(consultaRepository, never()).save(any());
         }
 
         @Test
@@ -1173,7 +1221,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findByIdAndOrganizacao_Id(100L, ORG_ID))
                     .thenReturn(Optional.of(consultaAgendada));
             when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.of(profissional));
-            when(pacienteRepository.findById(20L)).thenReturn(Optional.of(paciente));
+            when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(20L, ORG_ID)).thenReturn(Optional.of(paciente));
         }
 
         @Test
@@ -1300,7 +1348,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findByIdAndOrganizacao_Id(100L, ORG_ID))
                     .thenReturn(Optional.of(consultaAgendada));
             when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.of(profissional));
-            when(pacienteRepository.findById(20L)).thenReturn(Optional.of(paciente));
+            when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(20L, ORG_ID)).thenReturn(Optional.of(paciente));
             when(consultaRepository.save(any())).thenReturn(consultaAgendada);
             when(historicoRepository.save(any())).thenReturn(null);
 

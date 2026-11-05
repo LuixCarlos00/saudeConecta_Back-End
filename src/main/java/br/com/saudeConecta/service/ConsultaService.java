@@ -258,7 +258,8 @@ public class ConsultaService {
         Profissional profissional = profissionalRepository.buscarClinicoIdByOrg(request.profissionalId(), orgId)
             .orElseThrow(() -> new IllegalArgumentException("Profissional não encontrado"));
 
-        Paciente paciente = pacienteRepository.findById(request.pacienteId())
+        // Paciente de outra clínica responde como inexistente
+        Paciente paciente = pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(request.pacienteId(), orgId)
             .orElseThrow(() -> new IllegalArgumentException("Paciente não encontrado"));
 
         int duracaoMinutos = request.duracaoMinutos() != null
@@ -518,7 +519,8 @@ public class ConsultaService {
         Profissional profissional = profissionalRepository.buscarClinicoIdByOrg(request.profissionalId(), orgId)
             .orElseThrow(() -> new IllegalArgumentException("Profissional não encontrado"));
 
-        Paciente paciente = pacienteRepository.findById(request.pacienteId())
+        // Paciente de outra clínica responde como inexistente
+        Paciente paciente = pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(request.pacienteId(), orgId)
             .orElseThrow(() -> new IllegalArgumentException("Paciente não encontrado"));
 
         // Status pedido passa pela mesma regra de transição do PATCH /status; igual ao atual é no-op.
