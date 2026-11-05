@@ -518,36 +518,37 @@ class ProntuarioServiceTest {
         }
 
         @Test
-        @DisplayName("Item novo com pacienteId resolve o paciente na clínica do token")
-        void deveAtualizarComPlanejamentosComPaciente() {
+        @DisplayName("Item novo usa o paciente da consulta; pacienteId do payload é ignorado")
+        void itemNovoUsaPacienteDaConsulta() {
             Prontuario prontuario = prontuarioGravado();
+            Paciente pacienteDaConsulta = new Paciente();
+            pacienteDaConsulta.setPaciCodigo(5L);
+            prontuario.getConsulta().setPaciente(pacienteDaConsulta);
             CadastrarProntuarioRequest request = criarRequest();
-            request.setPlanejamentos(List.of(criarItemComPaciente(5L)));
-            Paciente paciente = new Paciente();
-            paciente.setPaciCodigo(5L);
-            when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(5L, ORG)).thenReturn(Optional.of(paciente));
+            request.setPlanejamentos(List.of(criarItemComPaciente(99L)));
 
             service.atualizarProntuarioMedico(1L, request);
 
             assertThat(prontuario.getPlanejamentos()).singleElement().satisfies(p -> {
                 assertThat(p.getProcedimentoRealizado()).isEqualTo("Consulta de rotina");
-                assertThat(p.getPaciente()).isSameAs(paciente);
+                assertThat(p.getPaciente()).isSameAs(pacienteDaConsulta);
                 assertThat(p.getStatusAssinatura()).isEqualTo("PENDENTE");
             });
+            verifyNoInteractions(pacienteRepository);
         }
 
         @Test
-        @DisplayName("Item novo sem pacienteId não consulta paciente")
-        void deveAtualizarComPlanejamentosSemPaciente() {
+        @DisplayName("Edição não muda a data de finalização do atendimento")
+        void naoMudaDataFinalizado() {
             Prontuario prontuario = prontuarioGravado();
+            java.sql.Date finalizado = java.sql.Date.valueOf("2026-10-02");
+            prontuario.setProntDataFinalizado(finalizado);
             CadastrarProntuarioRequest request = criarRequest();
-            request.setPlanejamentos(List.of(criarItemComPaciente(null)));
+            request.setDataFinalizado(null);
 
             service.atualizarProntuarioMedico(1L, request);
 
-            verify(pacienteRepository, never()).findByPaciCodigoAndOrganizacao_IdWithEndereco(any(), any());
-            assertThat(prontuario.getPlanejamentos()).singleElement()
-                    .satisfies(p -> assertThat(p.getPaciente()).isNull());
+            assertThat(prontuario.getProntDataFinalizado()).isEqualTo(finalizado);
         }
 
         @Test

@@ -218,9 +218,10 @@ public class ProntuarioService {
          prontuario.setProntTussTexto(request.getTussTexto());
         prontuario.setProntCidTexto(request.getCidTexto());
         prontuario.setProntSolicitacaoExameTexto(request.getSolicitacaoExameTexto());
-        prontuario.setProntDataFinalizado(request.getDataFinalizado());
+        // prontDataFinalizado não muda na edição: é a data em que o atendimento foi finalizado
 
-        // Planejamentos: atualiza por id e preserva os assinados (ver EdicaoPlanejamentos)
+        // Planejamentos: atualiza por id e preserva os assinados (ver EdicaoPlanejamentos). O paciente é
+        // sempre o da consulta: o pacienteId do payload não troca o paciente do planejamento.
         Organizacao organizacao = new Organizacao();
         organizacao.setId(orgId);
         Consulta consulta = prontuario.getConsulta();
@@ -229,13 +230,13 @@ public class ProntuarioService {
                 : request.getPlanejamentos().stream()
                         .map(i -> new EdicaoPlanejamentos.Item(i.getId(),
                                 parseDataToLocalDate(parseData(i.getDataProcedimento())),
-                                i.getProcedimentoRealizado(), i.getValor(), i.getPacienteId()))
+                                i.getProcedimentoRealizado(), i.getValor()))
                         .toList();
         EdicaoPlanejamentos.sincronizar(prontuario.getPlanejamentos(), itens,
                 item -> PlanejamentoTerapeutico.builder()
                         .prontuario(prontuario)
                         .consulta(consulta)
-                        .paciente(buscarPaciente(item.pacienteId(), orgId))
+                        .paciente(consulta.getPaciente())
                         .profissional(profissional)
                         .organizacao(organizacao)
                         .dataProcedimento(item.dataProcedimento())
@@ -247,20 +248,11 @@ public class ProntuarioService {
                     gravado.setDataProcedimento(item.dataProcedimento());
                     gravado.setProcedimentoRealizado(item.procedimentoRealizado());
                     gravado.setValor(item.valor());
-                    gravado.setPaciente(buscarPaciente(item.pacienteId(), orgId));
                 },
                 id);
 
         prontuarioRepository.save(prontuario);
         log.info("prontuario.medico.atualizar ok prontuarioId={}", id);
-    }
-
-    /** Paciente do planejamento, só da clínica do token (outra clínica ou id nulo = sem paciente). */
-    private Paciente buscarPaciente(Long pacienteId, Long orgId) {
-        if (pacienteId == null) {
-            return null;
-        }
-        return pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(pacienteId, orgId).orElse(null);
     }
 
     /**

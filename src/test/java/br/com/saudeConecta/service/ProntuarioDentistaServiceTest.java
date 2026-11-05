@@ -496,45 +496,23 @@ class ProntuarioDentistaServiceTest {
         }
 
         @Test
-        @DisplayName("Deve atualizar com planejamentos quando pacienteId informado")
-        void deveAtualizarComPlanejamentosComPaciente() {
+        @DisplayName("Item novo usa o paciente da consulta; pacienteId do payload é ignorado")
+        void itemNovoUsaPacienteDaConsulta() {
             ProntuarioDentista prontuario = criarProntuario(1L);
-            CadastrarProntuarioDentistaRequest request = criarRequest();
-            request.setPlanejamentos(List.of(criarItemPlanejamento(5L)));
-
             Paciente paciente = new Paciente();
             paciente.setPaciCodigo(5L);
-
-            when(prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(1L, ORG)).thenReturn(Optional.of(prontuario));
-            when(prontuarioDentistaRepository.saveAndFlush(any())).thenReturn(prontuario);
-            when(prontuarioDentistaRepository.save(any())).thenReturn(prontuario);
-            when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(5L, ORG)).thenReturn(Optional.of(paciente));
-
-            service.atualizarProntuario(1L, request);
-
-            verify(pacienteRepository).findByPaciCodigoAndOrganizacao_IdWithEndereco(5L, ORG);
-            assertThat(prontuario.getPlanejamentos()).hasSize(1);
-            assertThat(prontuario.getPlanejamentos().get(0).getProcedimentoRealizado())
-                    .isEqualTo("Exodontia");
-            assertThat(prontuario.getPlanejamentos().get(0).getPaciente()).isEqualTo(paciente);
-        }
-
-        @Test
-        @DisplayName("Deve atualizar com planejamentos quando pacienteId é nulo")
-        void deveAtualizarComPlanejamentosSemPaciente() {
-            ProntuarioDentista prontuario = criarProntuario(1L);
+            prontuario.getConsulta().setPaciente(paciente);
             CadastrarProntuarioDentistaRequest request = criarRequest();
-            request.setPlanejamentos(List.of(criarItemPlanejamento(null)));
-
+            request.setPlanejamentos(List.of(criarItemPlanejamento(99L)));
             when(prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(1L, ORG)).thenReturn(Optional.of(prontuario));
-            when(prontuarioDentistaRepository.saveAndFlush(any())).thenReturn(prontuario);
-            when(prontuarioDentistaRepository.save(any())).thenReturn(prontuario);
 
             service.atualizarProntuario(1L, request);
 
-            verify(pacienteRepository, never()).findByPaciCodigoAndOrganizacao_IdWithEndereco(any(), any());
-            assertThat(prontuario.getPlanejamentos()).hasSize(1);
-            assertThat(prontuario.getPlanejamentos().get(0).getPaciente()).isNull();
+            assertThat(prontuario.getPlanejamentos()).singleElement().satisfies(p -> {
+                assertThat(p.getProcedimentoRealizado()).isEqualTo("Exodontia");
+                assertThat(p.getPaciente()).isSameAs(paciente);
+            });
+            verifyNoInteractions(pacienteRepository);
         }
 
         @Test

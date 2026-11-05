@@ -41,9 +41,8 @@ final class EdicaoPlanejamentos {
      * @param dataProcedimento      data do procedimento
      * @param procedimentoRealizado descrição do procedimento
      * @param valor                 valor do procedimento
-     * @param pacienteId            paciente informado pelo front (resolvido na clínica do token)
      */
-    record Item(Long id, LocalDate dataProcedimento, String procedimentoRealizado, BigDecimal valor, Long pacienteId) {
+    record Item(Long id, LocalDate dataProcedimento, String procedimentoRealizado, BigDecimal valor) {
     }
 
     /**
@@ -52,7 +51,7 @@ final class EdicaoPlanejamentos {
      * @param gravados     coleção gerenciada do prontuário (alterada no lugar; orphanRemoval apaga os removidos)
      * @param itens        itens da edição; null = o front não mandou a lista, nada muda
      * @param criarNovo    monta um planejamento novo (com consulta, profissional e tenant do prontuário)
-     * @param atualizar    aplica data, procedimento, valor e paciente num planejamento não assinado
+     * @param atualizar    aplica data, procedimento e valor num planejamento não assinado
      * @param prontuarioId id do prontuário, para a mensagem de erro
      * @throws IllegalArgumentException item com id que não é deste prontuário (400)
      * @throws BusinessException        409 {@code PLANEJAMENTO_ASSINADO}
