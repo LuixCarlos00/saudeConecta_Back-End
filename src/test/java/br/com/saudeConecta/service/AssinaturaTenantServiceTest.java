@@ -129,14 +129,15 @@ class AssinaturaTenantServiceTest {
             AssinaturaTenant existente = criarAssinatura(1L, StatusAssinatura.ATIVA);
             when(assinaturaTenantRepository.findAssinaturaAtivaByOrganizacaoId(1L))
                     .thenReturn(Optional.of(existente));
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(existente));
             when(planoAssinaturaService.buscarEntidadePorId(20L))
                     .thenReturn(criarPlano(20L));
-            when(assinaturaTenantRepository.save(any())).thenReturn(existente);
+            when(assinaturaTenantRepository.saveAndFlush(any())).thenReturn(existente);
 
             service.assinar(1L, 20L);
 
             verify(planoAssinaturaService).buscarEntidadePorId(20L);
-            verify(assinaturaTenantRepository, times(1)).save(any());
+            verify(assinaturaTenantRepository, times(1)).saveAndFlush(any());
         }
 
         @Test
@@ -373,13 +374,58 @@ class AssinaturaTenantServiceTest {
 
             when(assinaturaTenantRepository.findAssinaturaAtivaByOrganizacaoId(1L))
                     .thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(assinatura));
             when(planoAssinaturaService.buscarEntidadePorId(20L)).thenReturn(novoPlano);
-            when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
+            when(assinaturaTenantRepository.saveAndFlush(any())).thenReturn(assinatura);
 
             AssinaturaTenantResponse response = service.trocarPlano(1L, 20L);
 
             assertThat(response).isNotNull();
             assertThat(assinatura.getPlanoAssinatura()).isEqualTo(novoPlano);
+        }
+
+        @Test
+        @DisplayName("C2 - Troca de plano mantém os limites personalizados e cobra os extras contra o plano novo")
+        void trocaDePlanoCobraExtrasContraPlanoNovo() {
+            AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.ATIVA);
+            assinatura.setLimiteProfissionalCustom(6);
+            PlanoAssinatura novoPlano = criarPlano(20L);
+            novoPlano.setValorMensal(BigDecimal.valueOf(199.90));
+            novoPlano.setLimiteProfissional(4);
+            novoPlano.setValorAdicionalProfissional(BigDecimal.valueOf(30));
+            when(assinaturaTenantRepository.findAssinaturaAtivaByOrganizacaoId(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(assinatura));
+            when(planoAssinaturaService.buscarEntidadePorId(20L)).thenReturn(novoPlano);
+            when(assinaturaTenantRepository.saveAndFlush(any())).thenReturn(assinatura);
+
+            service.trocarPlano(1L, 20L);
+
+            assertThat(assinatura.getLimiteProfissionalCustom()).isEqualTo(6);
+            assertThat(assinatura.getQtdProfissionalExtra()).isEqualTo(2);
+            assertThat(assinatura.getValorAdicionalPerfis()).isEqualByComparingTo("60");
+            assertThat(assinatura.getValorMensal()).isEqualByComparingTo("259.90");
+            verify(assinaturaMercadoPagoService).propagarNovoValor(assinatura, BigDecimal.valueOf(99.90));
+        }
+
+        @Test
+        @DisplayName("C2 - Grava e só depois leva o valor ao MP; falha do MP sobe e desfaz a troca")
+        void falhaDoMpAbortaTroca() {
+            AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.ATIVA);
+            when(assinaturaTenantRepository.findAssinaturaAtivaByOrganizacaoId(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(assinatura));
+            when(planoAssinaturaService.buscarEntidadePorId(20L)).thenReturn(criarPlano(20L));
+            when(assinaturaTenantRepository.saveAndFlush(any())).thenReturn(assinatura);
+            doThrow(new BusinessException("MP fora", HttpStatus.BAD_GATEWAY, "MP_VALOR_NAO_ATUALIZADO"))
+                    .when(assinaturaMercadoPagoService).propagarNovoValor(any(), any());
+
+            assertThatThrownBy(() -> service.trocarPlano(1L, 20L))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting("errorCode").isEqualTo("MP_VALOR_NAO_ATUALIZADO");
+
+            var ordem = inOrder(assinaturaTenantRepository, assinaturaMercadoPagoService);
+            ordem.verify(assinaturaTenantRepository).findByIdParaAtualizacao(1L);
+            ordem.verify(assinaturaTenantRepository).saveAndFlush(assinatura);
+            ordem.verify(assinaturaMercadoPagoService).propagarNovoValor(any(), any());
         }
 
         @Test
@@ -411,7 +457,8 @@ class AssinaturaTenantServiceTest {
 
             when(assinaturaTenantRepository.findAssinaturaAtivaByOrganizacaoId(1L))
                     .thenReturn(Optional.of(assinatura));
-            when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.saveAndFlush(any())).thenReturn(assinatura);
 
             CustomizarPlanoTenantRequest request = new CustomizarPlanoTenantRequest(3, 5, 4);
 
@@ -424,13 +471,29 @@ class AssinaturaTenantServiceTest {
         }
 
         @Test
+        @DisplayName("C2 - Plano personalizado leva o valor total novo ao MP")
+        void customizarPropagaValorAoMp() {
+            AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.ATIVA);
+            assinatura.getPlanoAssinatura().setValorAdicionalSecretaria(BigDecimal.valueOf(20));
+            when(assinaturaTenantRepository.findAssinaturaAtivaByOrganizacaoId(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.saveAndFlush(any())).thenReturn(assinatura);
+
+            service.customizarPlano(1L, new CustomizarPlanoTenantRequest(null, null, 3));
+
+            assertThat(assinatura.getValorMensal()).isEqualByComparingTo("119.90");
+            verify(assinaturaMercadoPagoService).propagarNovoValor(assinatura, BigDecimal.valueOf(99.90));
+        }
+
+        @Test
         @DisplayName("Deve retornar zero extras quando limite custom menor que do plano")
         void deveRetornarZeroExtrasQuandoLimiteMenor() {
             AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.ATIVA);
 
             when(assinaturaTenantRepository.findAssinaturaAtivaByOrganizacaoId(1L))
                     .thenReturn(Optional.of(assinatura));
-            when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.saveAndFlush(any())).thenReturn(assinatura);
 
             CustomizarPlanoTenantRequest request = new CustomizarPlanoTenantRequest(0, 1, 1);
 

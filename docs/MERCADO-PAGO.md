@@ -141,6 +141,19 @@ O lock segura a linha durante as chamadas HTTP ao MP; o tempo é limitado por
 única linha de `assinatura_tenant`, como a régua, então não há ordem de locks que
 possa formar deadlock entre elas.
 
+### Troca de plano e plano personalizado
+
+`valor_mensal` = preço do plano + extras × valor adicional de cada perfil. Na troca de
+plano os limites personalizados continuam e os extras são recalculados contra o plano novo.
+O valor novo vale **a partir do próximo ciclo**, sem cobrança proporcional. Com a linha
+travada, o banco é gravado e então o valor vai ao MP, conforme o preapproval:
+
+| Preapproval no MP | O que acontece |
+|---|---|
+| `authorized` ou `paused` | `PUT /preapproval/{id}` com o valor novo. Se o MP falhar, a troca é desfeita: `502` com `code = MP_VALOR_NAO_ATUALIZADO` |
+| `pending` | O link é abandonado (o checkout mostraria o valor antigo): desvinculado e cancelado depois do commit. O próximo "Pagar" gera outro com o valor novo |
+| nenhum ou `cancelled` | Só o banco |
+
 ### Dia âncora do ciclo (`dia_cobranca`)
 
 O dia âncora é fixado no primeiro pagamento aprovado e preserva o dia nos meses curtos.

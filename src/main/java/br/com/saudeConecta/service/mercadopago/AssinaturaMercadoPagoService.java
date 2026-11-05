@@ -22,6 +22,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.concurrent.atomic.AtomicReference;
@@ -38,6 +39,8 @@ public class AssinaturaMercadoPagoService {
     private static final String PREFIXO_EXTERNAL_REFERENCE = "ASSINATURA-";
     /** Código do erro 409 quando a recuperação de faturas mostra que o cliente já pagou. */
     public static final String CODIGO_PAGAMENTO_JA_RECEBIDO = "PAGAMENTO_JA_RECEBIDO";
+    /** Código do erro 502 quando o MP não confirma o valor novo (troca de plano desfeita). */
+    public static final String CODIGO_MP_VALOR_NAO_ATUALIZADO = "MP_VALOR_NAO_ATUALIZADO";
 
     private final AssinaturaTenantRepository assinaturaTenantRepository;
     private final AdminOrganizacaoRepository adminOrganizacaoRepository;
@@ -152,6 +155,65 @@ public class AssinaturaMercadoPagoService {
                     "O pagamento desta assinatura já foi recebido e a assinatura foi renovada. Atualize a página.",
                     HttpStatus.CONFLICT, CODIGO_PAGAMENTO_JA_RECEBIDO);
         }
+    }
+
+    /**
+     * Leva ao Mercado Pago o valor mensal novo (troca de plano, plano personalizado). O valor
+     * novo vale a partir do próximo ciclo, sem cobrança proporcional. Roda dentro da transação
+     * do chamador, que já travou a linha e gravou o valor: se o MP falhar, a exceção desfaz a
+     * troca inteira e nada muda no banco.
+     * <ul>
+     *   <li>preapproval {@code authorized} ou {@code paused}: atualiza o valor no MP;</li>
+     *   <li>{@code pending}: abandona o link (o checkout mostraria o valor antigo). O preapproval
+     *       é desvinculado e cancelado depois do commit; o próximo "Pagar" gera outro;</li>
+     *   <li>sem preapproval, ou já cancelado: só o banco.</li>
+     * </ul>
+     *
+     * @param assinatura    assinatura gerenciada, já com o valor novo
+     * @param valorAnterior valor mensal antes da troca
+     * @throws BusinessException 502 {@code MP_VALOR_NAO_ATUALIZADO} quando o MP não confirma
+     */
+    public void propagarNovoValor(AssinaturaTenant assinatura, BigDecimal valorAnterior) {
+        if (!assinatura.temPreapproval() || assinatura.getValorMensal().compareTo(valorAnterior) == 0) {
+            return;
+        }
+        String preapprovalId = assinatura.getMpPreapprovalId();
+        try {
+            PreapprovalResponse remoto = mercadoPagoClient.buscarPreapproval(preapprovalId);
+            String statusMp = remoto != null ? remoto.status() : null;
+            if (MercadoPagoClient.STATUS_AUTHORIZED.equals(statusMp) || MercadoPagoClient.STATUS_PAUSED.equals(statusMp)) {
+                mercadoPagoClient.atualizarValor(preapprovalId, assinatura.getValorMensal());
+                assinatura.setMpStatus(statusMp);
+                assinatura.setMpUltimaSincronizacao(LocalDateTime.now());
+                log.info("mp.preapproval.valor ok preapprovalId={} assinaturaId={} de={} para={}",
+                        preapprovalId, assinatura.getId(), valorAnterior, assinatura.getValorMensal());
+            } else if (MercadoPagoClient.STATUS_PENDING.equals(statusMp)) {
+                abandonarLinkPendente(assinatura);
+            }
+        } catch (BusinessException e) {
+            log.warn("mp.preapproval.valor negado motivo=MP_INDISPONIVEL preapprovalId={} assinaturaId={} acao=TROCA_DESFEITA",
+                    preapprovalId, assinatura.getId());
+            throw new BusinessException(
+                    "Não foi possível atualizar o valor da assinatura no Mercado Pago. Nada foi alterado; tente novamente.",
+                    HttpStatus.BAD_GATEWAY, CODIGO_MP_VALOR_NAO_ATUALIZADO);
+        }
+    }
+
+    /**
+     * Desvincula o preapproval pendente (o checkout dele cobraria o valor antigo) e agenda o
+     * cancelamento no MP para depois do commit.
+     */
+    private void abandonarLinkPendente(AssinaturaTenant assinatura) {
+        if (assinatura.temPreapprovalSubstituidoPendente()) {
+            // Só há uma coluna para o antigo: o substituído anterior precisa estar cancelado antes
+            cancelarNoMercadoPago(assinatura.getMpPreapprovalSubstituidoId());
+        }
+        String pendente = assinatura.getMpPreapprovalId();
+        assinatura.desvincularPreapproval();
+        Long assinaturaId = assinatura.getId();
+        executarAposCommit("mp.preapproval.valor", assinaturaId, () -> cancelarPreapprovalSubstituido(assinaturaId));
+        log.info("mp.preapproval.valor abandonado motivo=LINK_PENDENTE_COM_VALOR_ANTIGO preapprovalId={} assinaturaId={}",
+                pendente, assinaturaId);
     }
 
     /**

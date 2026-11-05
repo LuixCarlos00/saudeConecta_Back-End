@@ -570,4 +570,91 @@ class AssinaturaMercadoPagoServiceTest {
         verify(webhookService).recuperarFaturasAprovadas(PREAPPROVAL_ID);
         assertThat(assinatura.getMpPreapprovalId()).isEqualTo("pa-novo");
     }
+
+    private void comPreapprovalNoMp(String statusMp) {
+        assinatura.setStatus(StatusAssinatura.ATIVA);
+        assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
+        assinatura.setMpStatus(statusMp);
+        assinatura.setMpInitPoint(INIT_POINT);
+        assinatura.setValorMensal(BigDecimal.valueOf(399));
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(
+                new PreapprovalResponse(PREAPPROVAL_ID, statusMp, INIT_POINT, EMAIL_ADMIN, null, null, null));
+    }
+
+    @Test
+    @DisplayName("C2(b) - Preapproval authorized: atualiza o valor no MP e mantém o vínculo")
+    void valorNovoComPreapprovalAutorizado() {
+        comPreapprovalNoMp("authorized");
+
+        service.propagarNovoValor(assinatura, BigDecimal.valueOf(279));
+
+        verify(mercadoPagoClient).atualizarValor(PREAPPROVAL_ID, BigDecimal.valueOf(399));
+        assertThat(assinatura.getMpPreapprovalId()).isEqualTo(PREAPPROVAL_ID);
+        assertThat(assinatura.getMpInitPoint()).isEqualTo(INIT_POINT);
+    }
+
+    @Test
+    @DisplayName("C2(b) - Preapproval paused: também atualiza o valor no MP")
+    void valorNovoComPreapprovalPausado() {
+        comPreapprovalNoMp("paused");
+
+        service.propagarNovoValor(assinatura, BigDecimal.valueOf(279));
+
+        verify(mercadoPagoClient).atualizarValor(PREAPPROVAL_ID, BigDecimal.valueOf(399));
+    }
+
+    @Test
+    @DisplayName("C2(b) - MP falha ao atualizar: 502 MP_VALOR_NAO_ATUALIZADO (o chamador desfaz a troca)")
+    void falhaDoMpAoAtualizarValor() {
+        comPreapprovalNoMp("authorized");
+        when(mercadoPagoClient.atualizarValor(any(), any()))
+                .thenThrow(new BusinessException("MP fora", org.springframework.http.HttpStatus.BAD_GATEWAY));
+
+        assertThatThrownBy(() -> service.propagarNovoValor(assinatura, BigDecimal.valueOf(279)))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> {
+                    BusinessException be = (BusinessException) e;
+                    assertThat(be.getStatus()).isEqualTo(org.springframework.http.HttpStatus.BAD_GATEWAY);
+                    assertThat(be.getErrorCode()).isEqualTo("MP_VALOR_NAO_ATUALIZADO");
+                });
+    }
+
+    @Test
+    @DisplayName("C2(c) - Preapproval pending: abandona o link (desvincula e cancela depois); o próximo Pagar cria outro com o valor novo")
+    void valorNovoComLinkPendenteAbandonaOLink() {
+        comPreapprovalNoMp("pending");
+        assinatura.setStatus(StatusAssinatura.TRIAL);
+
+        service.propagarNovoValor(assinatura, BigDecimal.valueOf(279));
+
+        verify(mercadoPagoClient, never()).atualizarValor(any(), any());
+        assertThat(assinatura.getMpPreapprovalId()).isNull();
+        assertThat(assinatura.getMpInitPoint()).isNull();
+        // Sem transação no teste, o "após o commit" roda na hora: o pendente é cancelado e a coluna limpa
+        verify(mercadoPagoClient).cancelarPreapproval(PREAPPROVAL_ID);
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isNull();
+
+        when(mercadoPagoClient.criarPreapprovalPendente(any(), any(), any(), eq(BigDecimal.valueOf(399))))
+                .thenReturn(new PreapprovalResponse("pa-novo", "pending", "https://mp/checkout/novo",
+                        EMAIL_ADMIN, "ASSINATURA-42", null, null));
+        LinkPagamentoResponse link = service.gerarLinkPagamento(assinatura);
+        assertThat(link.initPoint()).isEqualTo("https://mp/checkout/novo");
+        assertThat(link.valorMensal()).isEqualByComparingTo("399");
+    }
+
+    @Test
+    @DisplayName("C2(d) - Sem preapproval, cancelado ou valor igual: nada é chamado no MP")
+    void valorNovoSemPreapprovalSoBanco() {
+        service.propagarNovoValor(assinatura, BigDecimal.valueOf(100));
+        verifyNoInteractions(mercadoPagoClient);
+
+        comPreapprovalNoMp("authorized");
+        service.propagarNovoValor(assinatura, BigDecimal.valueOf(399));
+        verify(mercadoPagoClient, never()).buscarPreapproval(any());
+
+        comPreapprovalNoMp("cancelled");
+        service.propagarNovoValor(assinatura, BigDecimal.valueOf(279));
+        verify(mercadoPagoClient, never()).atualizarValor(any(), any());
+        assertThat(assinatura.getMpPreapprovalId()).isEqualTo(PREAPPROVAL_ID);
+    }
 }

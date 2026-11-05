@@ -125,20 +125,9 @@ public class AssinaturaTenantService {
      * @return AssinaturaTenantResponse
      */
     private AssinaturaTenantResponse trocarPlanoSuperAdmin(Long organizacaoId, Long novoPlanoId) {
-        AssinaturaTenant assinatura = assinaturaTenantRepository
-                .findAssinaturaAtivaByOrganizacaoId(organizacaoId)
-                .orElseThrow(() -> new BusinessException(
-                        "Nenhuma assinatura ativa encontrada para a organização",
-                        HttpStatus.NOT_FOUND));
-
-        PlanoAssinatura novoPlano = planoAssinaturaService.buscarEntidadePorId(novoPlanoId);
-
-        assinatura.setPlanoAssinatura(novoPlano);
-        assinatura.setValorMensal(novoPlano.getValorMensal());
-
-        AssinaturaTenant salva = assinaturaTenantRepository.save(assinatura);
+        AssinaturaTenant salva = aplicarTrocaDePlano(organizacaoId, novoPlanoId);
         log.info("assinatura.trocarPlano ok origem=SUPER_ADMIN organizacaoId={} plano={} valorMensal={}",
-                organizacaoId, novoPlano.getNome(), novoPlano.getValorMensal());
+                organizacaoId, salva.getPlanoAssinatura().getNome(), salva.getValorMensal());
 
         return AssinaturaTenantResponse.fromEntity(salva);
     }
@@ -153,22 +142,55 @@ public class AssinaturaTenantService {
     @Transactional
     public AssinaturaTenantResponse trocarPlano(Long organizacaoId, Long novoPlanoId) {
         log.info("assinatura.trocarPlano inicio organizacaoId={} novoPlanoId={}", organizacaoId, novoPlanoId);
-        AssinaturaTenant assinatura = assinaturaTenantRepository
+        AssinaturaTenant salva = aplicarTrocaDePlano(organizacaoId, novoPlanoId);
+        log.info("assinatura.trocarPlano ok organizacaoId={} plano={} valorMensal={}",
+                organizacaoId, salva.getPlanoAssinatura().getNome(), salva.getValorMensal());
+
+        return AssinaturaTenantResponse.fromEntity(salva);
+    }
+
+    /**
+     * Troca o plano mantendo os limites personalizados: os extras são recalculados contra os
+     * limites do plano novo e cobrados (preço do plano + extras × valor adicional). O valor
+     * novo vale a partir do próximo ciclo e é levado ao Mercado Pago antes do commit; se o MP
+     * falhar, a exceção desfaz a troca.
+     */
+    private AssinaturaTenant aplicarTrocaDePlano(Long organizacaoId, Long novoPlanoId) {
+        AssinaturaTenant assinatura = buscarAtivaParaAtualizacao(organizacaoId);
+        PlanoAssinatura novoPlano = planoAssinaturaService.buscarEntidadePorId(novoPlanoId);
+        BigDecimal valorAnterior = assinatura.getValorMensal();
+
+        assinatura.setPlanoAssinatura(novoPlano);
+        aplicarLimitesEValor(assinatura, assinatura.getLimiteAdminOrgCustom(),
+                assinatura.getLimiteProfissionalCustom(), assinatura.getLimiteSecretariaCustom());
+
+        return salvarEPropagarValor(assinatura, valorAnterior);
+    }
+
+    /**
+     * Assinatura ativa da organização, relida com lock de escrita: serializa a troca de valor
+     * com a geração de link (que lê o valor para criar o preapproval) e com o webhook.
+     */
+    private AssinaturaTenant buscarAtivaParaAtualizacao(Long organizacaoId) {
+        Long assinaturaId = assinaturaTenantRepository
                 .findAssinaturaAtivaByOrganizacaoId(organizacaoId)
+                .map(AssinaturaTenant::getId)
                 .orElseThrow(() -> new BusinessException(
                         "Nenhuma assinatura ativa encontrada para a organização",
                         HttpStatus.NOT_FOUND));
+        return assinaturaTenantRepository.findByIdParaAtualizacao(assinaturaId)
+                .orElseThrow(() -> new BusinessException(
+                        "Assinatura não encontrada: " + assinaturaId, HttpStatus.NOT_FOUND));
+    }
 
-        PlanoAssinatura novoPlano = planoAssinaturaService.buscarEntidadePorId(novoPlanoId);
-
-        assinatura.setPlanoAssinatura(novoPlano);
-        assinatura.setValorMensal(novoPlano.getValorMensal());
-
-        AssinaturaTenant salva = assinaturaTenantRepository.save(assinatura);
-        log.info("assinatura.trocarPlano ok organizacaoId={} plano={} valorMensal={}",
-                organizacaoId, novoPlano.getNome(), novoPlano.getValorMensal());
-
-        return AssinaturaTenantResponse.fromEntity(salva);
+    /**
+     * Grava e só então chama o MP: um erro de banco aparece antes de mudar o valor lá fora.
+     * Se o MP falhar, a exceção desfaz a transação inteira.
+     */
+    private AssinaturaTenant salvarEPropagarValor(AssinaturaTenant assinatura, BigDecimal valorAnterior) {
+        AssinaturaTenant salva = assinaturaTenantRepository.saveAndFlush(assinatura);
+        assinaturaMercadoPagoService.propagarNovoValor(salva, valorAnterior);
+        return salva;
     }
 
     /**
@@ -319,20 +341,32 @@ public class AssinaturaTenantService {
         log.info("assinatura.customizar inicio organizacaoId={} limAdmin={} limProf={} limSec={}",
                 organizacaoId, request.limiteAdminOrgCustom(),
                 request.limiteProfissionalCustom(), request.limiteSecretariaCustom());
-        AssinaturaTenant assinatura = assinaturaTenantRepository
-                .findAssinaturaAtivaByOrganizacaoId(organizacaoId)
-                .orElseThrow(() -> new BusinessException(
-                        "Nenhuma assinatura ativa encontrada para a organização",
-                        HttpStatus.NOT_FOUND));
+        AssinaturaTenant assinatura = buscarAtivaParaAtualizacao(organizacaoId);
+        BigDecimal valorAnterior = assinatura.getValorMensal();
 
+        aplicarLimitesEValor(assinatura, request.limiteAdminOrgCustom(),
+                request.limiteProfissionalCustom(), request.limiteSecretariaCustom());
+
+        AssinaturaTenant salva = salvarEPropagarValor(assinatura, valorAnterior);
+        log.info("assinatura.customizar ok organizacaoId={} extraAdmin={} extraProf={} extraSec={} valorAdicional={} valorTotal={}",
+                organizacaoId, salva.getQtdAdminExtra(), salva.getQtdProfissionalExtra(), salva.getQtdSecretariaExtra(),
+                salva.getValorAdicionalPerfis(), salva.getValorMensal());
+
+        return AssinaturaTenantResponse.fromEntity(salva);
+    }
+
+    /**
+     * Grava os limites personalizados e recalcula extras e valor mensal contra o plano atual
+     * da assinatura: valor = preço do plano + extras × valor adicional de cada perfil.
+     */
+    private void aplicarLimitesEValor(AssinaturaTenant assinatura, Integer limiteAdmin,
+                                      Integer limiteProfissional, Integer limiteSecretaria) {
         PlanoAssinatura plano = assinatura.getPlanoAssinatura();
 
-        // Calcular extras para cada perfil
-        int extraAdmin = calcularExtras(request.limiteAdminOrgCustom(), plano.getLimiteAdminOrg());
-        int extraProf = calcularExtras(request.limiteProfissionalCustom(), plano.getLimiteProfissional());
-        int extraSec = calcularExtras(request.limiteSecretariaCustom(), plano.getLimiteSecretaria());
+        int extraAdmin = calcularExtras(limiteAdmin, plano.getLimiteAdminOrg());
+        int extraProf = calcularExtras(limiteProfissional, plano.getLimiteProfissional());
+        int extraSec = calcularExtras(limiteSecretaria, plano.getLimiteSecretaria());
 
-        // Calcular valor adicional
         BigDecimal valorAdicional = BigDecimal.ZERO;
         if (extraAdmin > 0 && plano.getValorAdicionalAdmin() != null) {
             valorAdicional = valorAdicional.add(plano.getValorAdicionalAdmin().multiply(BigDecimal.valueOf(extraAdmin)));
@@ -344,21 +378,14 @@ public class AssinaturaTenantService {
             valorAdicional = valorAdicional.add(plano.getValorAdicionalSecretaria().multiply(BigDecimal.valueOf(extraSec)));
         }
 
-        // Atualizar assinatura
-        assinatura.setLimiteAdminOrgCustom(request.limiteAdminOrgCustom());
-        assinatura.setLimiteProfissionalCustom(request.limiteProfissionalCustom());
-        assinatura.setLimiteSecretariaCustom(request.limiteSecretariaCustom());
+        assinatura.setLimiteAdminOrgCustom(limiteAdmin);
+        assinatura.setLimiteProfissionalCustom(limiteProfissional);
+        assinatura.setLimiteSecretariaCustom(limiteSecretaria);
         assinatura.setQtdAdminExtra(extraAdmin);
         assinatura.setQtdProfissionalExtra(extraProf);
         assinatura.setQtdSecretariaExtra(extraSec);
         assinatura.setValorAdicionalPerfis(valorAdicional);
         assinatura.setValorMensal(plano.getValorMensal().add(valorAdicional));
-
-        AssinaturaTenant salva = assinaturaTenantRepository.save(assinatura);
-        log.info("assinatura.customizar ok organizacaoId={} extraAdmin={} extraProf={} extraSec={} valorAdicional={} valorTotal={}",
-                organizacaoId, extraAdmin, extraProf, extraSec, valorAdicional, salva.getValorMensal());
-
-        return AssinaturaTenantResponse.fromEntity(salva);
     }
 
     /**

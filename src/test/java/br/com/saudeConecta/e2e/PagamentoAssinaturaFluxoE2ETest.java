@@ -368,6 +368,106 @@ class PagamentoAssinaturaFluxoE2ETest {
         verify(mercadoPagoClient, never()).cancelarPreapproval(anyString());
     }
 
+    private PlanoAssinatura salvarPlanoBusiness() {
+        PlanoAssinatura business = new PlanoAssinatura();
+        business.setNome("Business E2E Pagamento");
+        business.setTipo(TipoPlano.BUSINESS);
+        business.setValorMensal(BigDecimal.valueOf(499));
+        business.setLimiteProfissional(10);
+        business.setValorAdicionalProfissional(BigDecimal.valueOf(40));
+        business.setAtivo(true);
+        return planoAssinaturaRepository.save(business);
+    }
+
+    @Test
+    @DisplayName("C2 - Troca de plano com preapproval authorized: MP falha → 502 MP_VALOR_NAO_ATUALIZADO e nada muda; MP ok → valor novo no MP e no banco")
+    void trocaDePlanoAtualizaValorNoMp() throws Exception {
+        PlanoAssinatura business = salvarPlanoBusiness();
+        try {
+            AssinaturaTenant ativa = salvarAssinatura(StatusAssinatura.ATIVA, "pa-c2", "authorized",
+                    LocalDate.now().plusDays(10));
+            ativa.setLimiteProfissionalCustom(12);
+            ativa = assinaturaTenantRepository.save(ativa);
+            when(mercadoPagoClient.buscarPreapproval("pa-c2")).thenReturn(preapproval("pa-c2", "authorized", null));
+            when(mercadoPagoClient.atualizarValor(eq("pa-c2"), any()))
+                    .thenThrow(new BusinessException("MP fora do ar", HttpStatus.BAD_GATEWAY))
+                    .thenReturn(preapproval("pa-c2", "authorized", null));
+            String token = login();
+
+            mockMvc.perform(put("/assinaturas/trocar-plano/" + business.getId()).header("Authorization", token))
+                    .andExpect(status().isBadGateway())
+                    .andExpect(jsonPath("$.code").value("MP_VALOR_NAO_ATUALIZADO"));
+
+            AssinaturaTenant semMudanca = recarregar(ativa);
+            assertThat(semMudanca.getPlanoAssinatura().getId()).isEqualTo(plano.getId());
+            assertThat(semMudanca.getValorMensal()).isEqualByComparingTo("279");
+
+            mockMvc.perform(put("/assinaturas/trocar-plano/" + business.getId()).header("Authorization", token))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.valorMensal").value(579));
+
+            // 499 + (12 - 10) x 40: os limites personalizados continuam e são cobrados
+            verify(mercadoPagoClient, times(2)).atualizarValor("pa-c2", new BigDecimal("579.00"));
+            AssinaturaTenant trocada = recarregar(ativa);
+            assertThat(trocada.getValorMensal()).isEqualByComparingTo("579");
+            assertThat(trocada.getMpPreapprovalId()).isEqualTo("pa-c2");
+        } finally {
+            assinaturaTenantRepository.deleteAll(assinaturaTenantRepository.findByOrganizacaoId(organizacao.getId()));
+            planoAssinaturaRepository.delete(business);
+        }
+    }
+
+    @Test
+    @DisplayName("C2 - Troca de plano com link pendente: o link antigo é abandonado e cancelado após o commit; o próximo Pagar cobra o valor novo")
+    void trocaDePlanoComLinkPendenteAbandonaLink() throws Exception {
+        PlanoAssinatura business = salvarPlanoBusiness();
+        try {
+            AssinaturaTenant trial = salvarAssinatura(StatusAssinatura.TRIAL, "pa-c2-pend", "pending",
+                    LocalDate.now().plusDays(5));
+            trial.setMpInitPoint("https://mp/checkout/pa-c2-pend");
+            trial = assinaturaTenantRepository.save(trial);
+            String referencia = "ASSINATURA-" + trial.getId();
+            when(mercadoPagoClient.buscarPreapproval("pa-c2-pend"))
+                    .thenReturn(preapproval("pa-c2-pend", "pending", referencia));
+            AtomicReference<AssinaturaTenant> vistaNoCancelamento = new AtomicReference<>();
+            AssinaturaTenant trialFinal = trial;
+            when(mercadoPagoClient.cancelarPreapproval("pa-c2-pend")).thenAnswer(inv -> {
+                vistaNoCancelamento.set(recarregar(trialFinal));
+                return preapproval("pa-c2-pend", "cancelled", referencia);
+            });
+            when(mercadoPagoClient.criarPreapprovalPendente(anyString(), eq(referencia), eq(PAGADOR), any()))
+                    .thenReturn(preapproval("pa-c2-novo", "pending", referencia));
+            String token = login();
+
+            mockMvc.perform(put("/assinaturas/trocar-plano/" + business.getId()).header("Authorization", token))
+                    .andExpect(status().isOk());
+
+            assertThat(vistaNoCancelamento.get().getMpPreapprovalId()).isNull();
+            assertThat(vistaNoCancelamento.get().getValorMensal()).isEqualByComparingTo("499");
+            verify(mercadoPagoClient, never()).atualizarValor(anyString(), any());
+            AssinaturaTenant depois = recarregar(trial);
+            assertThat(depois.getMpPreapprovalId()).isNull();
+            assertThat(depois.getMpInitPoint()).isNull();
+            assertThat(depois.getMpPreapprovalSubstituidoId()).isNull();
+
+            // Webhook cancelled do link abandonado não cancela a assinatura
+            when(mercadoPagoClient.buscarPreapproval("pa-c2-pend"))
+                    .thenReturn(preapproval("pa-c2-pend", "cancelled", referencia));
+            webhookService.processar(MercadoPagoWebhookService.TOPICO_PREAPPROVAL, "pa-c2-pend", "{}");
+            assertThat(recarregar(trial).getStatus()).isEqualTo(StatusAssinatura.TRIAL);
+
+            mockMvc.perform(post("/assinaturas/minha-assinatura/gerar-link-pagamento").header("Authorization", token))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.initPoint").value("https://mp/checkout/pa-c2-novo"))
+                    .andExpect(jsonPath("$.valorMensal").value(499));
+            verify(mercadoPagoClient).criarPreapprovalPendente(anyString(), eq(referencia), eq(PAGADOR),
+                    eq(new BigDecimal("499.00")));
+        } finally {
+            assinaturaTenantRepository.deleteAll(assinaturaTenantRepository.findByOrganizacaoId(organizacao.getId()));
+            planoAssinaturaRepository.delete(business);
+        }
+    }
+
     private void gerarLink(AssinaturaTenant assinatura) {
         assinaturaMercadoPagoService.gerarLinkPagamento(organizacao.getId());
     }
