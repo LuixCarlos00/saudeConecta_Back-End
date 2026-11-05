@@ -49,7 +49,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * segurança real (JWT + FiltroAcesso) e transações reais. Só o transporte HTTP do
  * Mercado Pago (MercadoPagoClient) e o e-mail são simulados.
  */
-@SpringBootTest(properties = "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect")
+// Banco H2 próprio: o testdb compartilhado é recriado/derrubado (create-drop) por outros contextos da suíte
+@SpringBootTest(properties = {
+        "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
+        "spring.datasource.url=jdbc:h2:mem:pagamentoe2e;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL;NON_KEYWORDS=VALUE"
+})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DisplayName("E2E - Pagamento da assinatura: login, link e fatura")
