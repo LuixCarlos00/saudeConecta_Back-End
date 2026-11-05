@@ -51,13 +51,53 @@ class UsuarioControllerIntegrationTest {
     @DisplayName("GET /usuario/buscarPerfilCompleto/{id}")
     class BuscarPerfilCompleto {
 
+        private UsuarioPerfilCompletoResponse perfilDaOrg(Long organizacaoId) {
+            return new UsuarioPerfilCompletoResponse(
+                    1L, "user@email.com", "PROFISSIONAL", organizacaoId, null, null, null, null, null);
+        }
+
+        @AfterEach
+        void limparTenant() {
+            br.com.saudeConecta.infra.tenant.TenantContext.clear();
+        }
+
         @Test
-        @WithMockUser
-        @DisplayName("Deve retornar 200 quando perfil existe")
+        @WithMockUser(roles = "PROFISSIONAL")
+        @DisplayName("Deve retornar 200 quando o perfil é da mesma organização do token")
         void deveRetornar200QuandoExiste() throws Exception {
-            UsuarioPerfilCompletoResponse response = new UsuarioPerfilCompletoResponse(
-                    1L, "user@email.com", "PROFISSIONAL", 1L, null, null, null, null, null);
-            when(usuarioService.buscarPerfilCompleto(1L)).thenReturn(Optional.of(response));
+            br.com.saudeConecta.infra.tenant.TenantContext.setCurrentTenant(1L);
+            when(usuarioService.buscarPerfilCompleto(1L)).thenReturn(Optional.of(perfilDaOrg(1L)));
+
+            mockMvc.perform(get("/usuario/buscarPerfilCompleto/1"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("Item 3 - perfil de usuário de outra organização responde 404")
+        void deveRetornar404ParaOutraOrganizacao() throws Exception {
+            br.com.saudeConecta.infra.tenant.TenantContext.setCurrentTenant(1L);
+            when(usuarioService.buscarPerfilCompleto(1L)).thenReturn(Optional.of(perfilDaOrg(2L)));
+
+            mockMvc.perform(get("/usuario/buscarPerfilCompleto/1"))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @WithMockUser(roles = "PROFISSIONAL")
+        @DisplayName("Item 3 - sem organização no token (e sem ser ROOT) responde 404")
+        void deveRetornar404SemOrganizacaoNoToken() throws Exception {
+            when(usuarioService.buscarPerfilCompleto(1L)).thenReturn(Optional.of(perfilDaOrg(1L)));
+
+            mockMvc.perform(get("/usuario/buscarPerfilCompleto/1"))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @WithMockUser(roles = {"SUPER_ADMIN", "ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("Item 3 - ROOT vê o perfil de qualquer organização")
+        void rootVePerfilDeQualquerOrganizacao() throws Exception {
+            when(usuarioService.buscarPerfilCompleto(1L)).thenReturn(Optional.of(perfilDaOrg(2L)));
 
             mockMvc.perform(get("/usuario/buscarPerfilCompleto/1"))
                     .andExpect(status().isOk());

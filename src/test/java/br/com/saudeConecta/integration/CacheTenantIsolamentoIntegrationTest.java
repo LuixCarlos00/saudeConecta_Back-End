@@ -40,11 +40,14 @@ class CacheTenantIsolamentoIntegrationTest {
 
     @MockBean private ProntuarioRepository prontuarioRepository;
     @MockBean private TermoAutorizacaoRepository termoRepository;
+    @MockBean private br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository usuarioRepository;
+    @MockBean private br.com.saudeConecta.infrastructure.persistence.repository.SecretariaRepository secretariaRepository;
 
     @Autowired private ProntuarioService prontuarioService;
     @Autowired private TermoAutorizacaoService termoService;
     @Autowired private CacheEvictionService cacheEvictionService;
     @Autowired private CacheManager cacheManager;
+    @Autowired private br.com.saudeConecta.presentation.controller.UsuarioController usuarioController;
 
     @BeforeEach
     void limparCaches() {
@@ -124,5 +127,25 @@ class CacheTenantIsolamentoIntegrationTest {
         cacheEvictionService.evictQuestionarioSaude(1L, CONSULTA);
         termoService.buscarPorConsultaId(CONSULTA);
         verify(termoRepository, times(2)).findByConsultaIdAndOrganizacaoId(CONSULTA, 1L);
+    }
+
+    @Test
+    @DisplayName("perfil-usuario: perfil em cache pela clínica 1 não é devolvido para a clínica 2")
+    void perfilUsuarioEmCacheNaoVazaParaOutraClinica() {
+        br.com.saudeConecta.domain.organizacao.Organizacao org1 = new br.com.saudeConecta.domain.organizacao.Organizacao();
+        org1.setId(1L);
+        br.com.saudeConecta.domain.usuario.Usuario usuario = br.com.saudeConecta.domain.usuario.Usuario.builder()
+                .id(50L).login("12345678900").organizacao(org1)
+                .tipoUsuarioNovo(br.com.saudeConecta.domain.usuario.TipoUsuarioNovo.ASSISTENTE)
+                .build();
+        when(usuarioRepository.findByIdWithOrganizacao(50L)).thenReturn(Optional.of(usuario));
+
+        TenantContext.setCurrentTenant(1L);
+        assertThat(usuarioController.buscarPerfilCompleto(50L).getStatusCode().value()).isEqualTo(200);
+
+        // Segunda chamada é servida do cache (o repositório não é consultado de novo) e mesmo assim é negada
+        TenantContext.setCurrentTenant(2L);
+        assertThat(usuarioController.buscarPerfilCompleto(50L).getStatusCode().value()).isEqualTo(404);
+        verify(usuarioRepository, times(1)).findByIdWithOrganizacao(50L);
     }
 }

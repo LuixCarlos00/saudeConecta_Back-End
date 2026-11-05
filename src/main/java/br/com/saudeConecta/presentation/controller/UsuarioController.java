@@ -2,6 +2,7 @@ package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.service.UsuarioService;
 import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.presentation.dto.usuario.BloquearUsuarioRequest;
 import br.com.saudeConecta.presentation.dto.usuario.TodosUsuariosAgrupadosResponse;
 import br.com.saudeConecta.presentation.dto.usuario.UsuarioPerfilCompletoResponse;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 public class UsuarioController {
 
     private final UsuarioService usuarioService;
+    private final TenantHelper tenantHelper;
 
     @PutMapping("/bloquearUsuariobyOrg")
     @PreAuthorize("hasRole('ADMIN')")
@@ -70,7 +72,13 @@ public class UsuarioController {
     @Description( "Busca perfil completo do usuário por ID com dados específicos baseados no tipo (CLINICO, GESTOR, ASSISTENTE) incluindo endereço quando existir. Utilizado em: UserProfileComponent, UserService")
     public ResponseEntity<UsuarioPerfilCompletoResponse> buscarPerfilCompleto(@PathVariable Long id) {
         log.debug("Buscando perfil completo do usuario por ID: {}", id);
+        // Checado depois do service: o @Cacheable usa só o ID na chave e responderia do cache sem
+        // olhar a organização. Usuário de outra clínica responde 404, como os demais IDOR.
+        boolean superAdmin = tenantHelper.isSuperAdmin();
+        Long organizacaoId = tenantHelper.getCurrentTenantIdOrNull();
         return usuarioService.buscarPerfilCompleto(id)
+                .filter(perfil -> superAdmin
+                        || (organizacaoId != null && organizacaoId.equals(perfil.organizacaoId())))
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
