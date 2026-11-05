@@ -11,6 +11,7 @@ import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepo
 import br.com.saudeConecta.presentation.dto.planos.AssinaturaTenantResponse;
 import br.com.saudeConecta.presentation.dto.planos.CustomizarPlanoTenantRequest;
 import br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService;
+import br.com.saudeConecta.service.mercadopago.LinkPagamentoSolicitadoEvent;
 import org.springframework.http.HttpStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -41,13 +42,14 @@ class AssinaturaTenantServiceTest {
     @Mock private OrganizacaoRepository organizacaoRepository;
     @Mock private PlanoAssinaturaService planoAssinaturaService;
     @Mock private AssinaturaMercadoPagoService assinaturaMercadoPagoService;
+    @Mock private org.springframework.context.ApplicationEventPublisher eventos;
 
     private AssinaturaTenantService service;
 
     @BeforeEach
     void criarService() {
         service = new AssinaturaTenantService(assinaturaTenantRepository, organizacaoRepository,
-                planoAssinaturaService, assinaturaMercadoPagoService, Clock.system(FusoHorarioConfig.ZONA));
+                planoAssinaturaService, assinaturaMercadoPagoService, eventos, Clock.system(FusoHorarioConfig.ZONA));
         // Sem transação no teste unitário: a ação "após o commit" roda na hora e, como no serviço
         // real, a falha dela é só registrada
         lenient().doAnswer(inv -> {
@@ -346,7 +348,7 @@ class AssinaturaTenantServiceTest {
             // 2026-03-01T01:30Z = 2026-02-28 22:30 em São Paulo
             Clock relogio = Clock.fixed(Instant.parse("2026-03-01T01:30:00Z"), FusoHorarioConfig.ZONA);
             AssinaturaTenantService comRelogio = new AssinaturaTenantService(assinaturaTenantRepository,
-                    organizacaoRepository, planoAssinaturaService, assinaturaMercadoPagoService, relogio);
+                    organizacaoRepository, planoAssinaturaService, assinaturaMercadoPagoService, eventos, relogio);
             AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.INADIMPLENTE);
             assinatura.setDataVencimento(LocalDate.of(2026, 2, 20));
             assinatura.setDiaCobranca(null);
@@ -524,7 +526,7 @@ class AssinaturaTenantServiceTest {
             assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.TRIAL);
             assertThat(assinatura.getDataVencimento()).isEqualTo(LocalDate.now().plusDays(7));
             assertThat(assinatura.getDataProximaCobranca()).isEqualTo(LocalDate.now().plusDays(7));
-            verify(assinaturaMercadoPagoService).gerarLinkENotificar(1L);
+            verify(eventos).publishEvent(new LinkPagamentoSolicitadoEvent(1L));
         }
 
         @Test
@@ -534,8 +536,8 @@ class AssinaturaTenantServiceTest {
             assinatura.setCortesia(true);
             when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(assinatura));
             when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
-            when(assinaturaMercadoPagoService.gerarLinkENotificar(1L))
-                    .thenThrow(new BusinessException("MP fora", HttpStatus.BAD_GATEWAY));
+            doThrow(new BusinessException("MP fora", HttpStatus.BAD_GATEWAY))
+                    .when(eventos).publishEvent(new LinkPagamentoSolicitadoEvent(1L));
 
             assertThatCode(() -> service.definirCortesia(1L, false)).doesNotThrowAnyException();
             assertThat(assinatura.isCortesia()).isFalse();
@@ -559,7 +561,7 @@ class AssinaturaTenantServiceTest {
             assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
             assertThat(assinatura.getDataVencimento()).isEqualTo(proximaCobranca);
             assertThat(assinatura.getDataProximaCobranca()).isEqualTo(proximaCobranca);
-            verify(assinaturaMercadoPagoService, never()).gerarLinkENotificar(any());
+            verify(eventos, never()).publishEvent(any(Object.class));
         }
 
         @Test
@@ -578,7 +580,7 @@ class AssinaturaTenantServiceTest {
 
             assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
             assertThat(assinatura.getDataVencimento()).isEqualTo(LocalDate.now().plusDays(7));
-            verify(assinaturaMercadoPagoService, never()).gerarLinkENotificar(any());
+            verify(eventos, never()).publishEvent(any(Object.class));
         }
 
         @Test
@@ -596,7 +598,7 @@ class AssinaturaTenantServiceTest {
 
             assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.TRIAL);
             assertThat(assinatura.getDataVencimento()).isEqualTo(LocalDate.now().plusDays(7));
-            verify(assinaturaMercadoPagoService).gerarLinkENotificar(1L);
+            verify(eventos).publishEvent(new LinkPagamentoSolicitadoEvent(1L));
         }
 
         @Test
@@ -634,7 +636,7 @@ class AssinaturaTenantServiceTest {
                 verify(assinaturaMercadoPagoService).desvincularECancelarAposCommit(assinatura, "CORTESIA");
                 clearInvocations(assinaturaMercadoPagoService);
             }
-            verify(assinaturaMercadoPagoService, never()).gerarLinkENotificar(any());
+            verify(eventos, never()).publishEvent(any(Object.class));
         }
 
         @Test

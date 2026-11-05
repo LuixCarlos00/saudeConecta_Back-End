@@ -7,6 +7,7 @@ import br.com.saudeConecta.service.AssinaturaTenantService;
 import br.com.saudeConecta.service.CobrancaService;
 import br.com.saudeConecta.service.LimitePlanoService;
 import br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService;
+import br.com.saudeConecta.service.mercadopago.LinkPagamentoAssinaturaService;
 import br.com.saudeConecta.service.mercadopago.MercadoPagoWebhookService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class AssinaturaTenantController {
 
     private final AssinaturaTenantService assinaturaTenantService;
     private final AssinaturaMercadoPagoService assinaturaMercadoPagoService;
+    private final LinkPagamentoAssinaturaService linkPagamentoAssinaturaService;
     private final LimitePlanoService limitePlanoService;
     private final CobrancaService cobrancaService;
     private final MercadoPagoWebhookService mercadoPagoWebhookService;
@@ -70,7 +72,7 @@ public class AssinaturaTenantController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<LinkPagamentoResponse> gerarLinkPagamento() {
         Long organizacaoId = TenantContext.getCurrentTenant();
-        return ResponseEntity.ok(assinaturaMercadoPagoService.gerarLinkPagamento(organizacaoId));
+        return ResponseEntity.ok(linkPagamentoAssinaturaService.gerarLinkPagamento(organizacaoId));
     }
 
     /**

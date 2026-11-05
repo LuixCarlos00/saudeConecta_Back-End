@@ -7,6 +7,7 @@ import br.com.saudeConecta.domain.planos.StatusAssinatura;
 import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService;
+import br.com.saudeConecta.service.mercadopago.LinkPagamentoAssinaturaService;
 import br.com.saudeConecta.service.mercadopago.MercadoPagoWebhookService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -45,6 +46,7 @@ class CobrancaSchedulerTest {
 
     @Mock private AssinaturaTenantRepository assinaturaTenantRepository;
     @Mock private AssinaturaMercadoPagoService assinaturaMercadoPagoService;
+    @Mock private LinkPagamentoAssinaturaService linkPagamentoAssinaturaService;
     @Mock private ProcessadorReguaCobranca processador;
     @Mock private MercadoPagoWebhookService webhookService;
 
@@ -54,7 +56,8 @@ class CobrancaSchedulerTest {
 
     @BeforeEach
     void setUp() {
-        scheduler = new CobrancaScheduler(assinaturaTenantRepository, assinaturaMercadoPagoService, processador,
+        scheduler = new CobrancaScheduler(assinaturaTenantRepository, assinaturaMercadoPagoService,
+                linkPagamentoAssinaturaService, processador,
                 webhookService, Clock.system(FusoHorarioConfig.ZONA));
 
         Organizacao org = new Organizacao();
@@ -91,7 +94,7 @@ class CobrancaSchedulerTest {
 
         scheduler.gerarLinksDeAtivacaoDeTrial();
 
-        verify(assinaturaMercadoPagoService).gerarLinkENotificar(ASSINATURA_ID);
+        verify(linkPagamentoAssinaturaService).gerarLinkENotificar(ASSINATURA_ID);
     }
 
     @Test
@@ -106,12 +109,12 @@ class CobrancaSchedulerTest {
     @DisplayName("2.5 - Falha ao gerar link de uma assinatura não interrompe as demais")
     void falhaEmUmLinkNaoInterrompeAsDemais() {
         when(assinaturaTenantRepository.findTrialsSemLinkVencendoAte(any())).thenReturn(List.of(assinatura, outra));
-        when(assinaturaMercadoPagoService.gerarLinkENotificar(ASSINATURA_ID))
+        when(linkPagamentoAssinaturaService.gerarLinkENotificar(ASSINATURA_ID))
                 .thenThrow(new BusinessException("Mercado Pago fora do ar", HttpStatus.BAD_GATEWAY));
 
         scheduler.gerarLinksDeAtivacaoDeTrial();
 
-        verify(assinaturaMercadoPagoService).gerarLinkENotificar(OUTRA_ID);
+        verify(linkPagamentoAssinaturaService).gerarLinkENotificar(OUTRA_ID);
     }
 
     @Test
@@ -254,7 +257,8 @@ class CobrancaSchedulerTest {
                     .isFalse();
         }
 
-        List<String> porItem = List.of("marcarInadimplente", "suspender", "cancelar", "sincronizar");
+        List<String> porItem = List.of("marcarInadimplente", "suspender", "cancelar", "sincronizar",
+                "limparPreapprovalDeCortesia");
         Arrays.stream(ProcessadorReguaCobranca.class.getDeclaredMethods())
                 .filter(m -> porItem.contains(m.getName()))
                 .forEach(m -> assertThat(m.getAnnotation(Transactional.class).propagation())
@@ -262,7 +266,7 @@ class CobrancaSchedulerTest {
                         .isEqualTo(Propagation.REQUIRES_NEW));
         // M1: gerarLinkENotificar não abre transação; a troca do preapproval faz commit nas próprias
         // fases (REQUIRES_NEW) e o e-mail só sai depois desse commit
-        assertThat(AssinaturaMercadoPagoService.class.getMethod("gerarLinkENotificar", Long.class)
+        assertThat(LinkPagamentoAssinaturaService.class.getMethod("gerarLinkENotificar", Long.class)
                 .isAnnotationPresent(Transactional.class)).isFalse();
     }
 
@@ -271,7 +275,7 @@ class CobrancaSchedulerTest {
     void datasDaReguaUsamODiaDeBrasilia() {
         Clock relogio = Clock.fixed(Instant.parse("2026-03-01T01:30:00Z"), FusoHorarioConfig.ZONA);
         CobrancaScheduler comRelogio = new CobrancaScheduler(assinaturaTenantRepository, assinaturaMercadoPagoService,
-                processador, webhookService, relogio);
+                linkPagamentoAssinaturaService, processador, webhookService, relogio);
 
         comRelogio.gerarLinksDeAtivacaoDeTrial();
         comRelogio.aplicarReguaDeCarencia();

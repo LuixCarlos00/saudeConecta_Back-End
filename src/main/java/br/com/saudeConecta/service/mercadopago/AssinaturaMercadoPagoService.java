@@ -17,7 +17,6 @@ import br.com.saudeConecta.service.mercadopago.dto.AuthorizedPaymentResponse;
 import br.com.saudeConecta.service.mercadopago.dto.PreapprovalResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,8 +41,6 @@ public class AssinaturaMercadoPagoService {
 
     private static final Logger log = LoggerFactory.getLogger(AssinaturaMercadoPagoService.class);
     private static final String PREFIXO_EXTERNAL_REFERENCE = "ASSINATURA-";
-    /** Código do erro 409 quando a recuperação de faturas mostra que o cliente já pagou. */
-    public static final String CODIGO_PAGAMENTO_JA_RECEBIDO = "PAGAMENTO_JA_RECEBIDO";
     /** Código do erro 502 quando o MP não confirma o valor novo (troca de plano desfeita). */
     public static final String CODIGO_MP_VALOR_NAO_ATUALIZADO = "MP_VALOR_NAO_ATUALIZADO";
     /**
@@ -68,8 +65,6 @@ public class AssinaturaMercadoPagoService {
     private final TransactionTemplate transacaoNova;
     /** Suspende a transação corrente (usado no afterCommit). */
     private final TransactionTemplate semTransacao;
-    /** Recuperação de faturas aprovadas; @Lazy porque o webhook também depende deste serviço. */
-    private final MercadoPagoWebhookService webhookService;
 
     public AssinaturaMercadoPagoService(
             AssinaturaTenantRepository assinaturaTenantRepository,
@@ -79,40 +74,18 @@ public class AssinaturaMercadoPagoService {
             EmailNotificacaoService emailNotificacaoService,
             CobrancaTenantRepository cobrancaTenantRepository,
             MpWebhookEventoRepository eventoRepository,
-            PlatformTransactionManager transactionManager,
-            @Lazy MercadoPagoWebhookService webhookService) {
+            PlatformTransactionManager transactionManager) {
         this.cobrancaTenantRepository = cobrancaTenantRepository;
         this.eventoRepository = eventoRepository;
         this.transacaoNova = new TransactionTemplate(transactionManager);
         this.transacaoNova.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         this.semTransacao = new TransactionTemplate(transactionManager);
         this.semTransacao.setPropagationBehavior(TransactionDefinition.PROPAGATION_NOT_SUPPORTED);
-        this.webhookService = webhookService;
         this.assinaturaTenantRepository = assinaturaTenantRepository;
         this.adminOrganizacaoRepository = adminOrganizacaoRepository;
         this.mercadoPagoClient = mercadoPagoClient;
         this.properties = properties;
         this.emailNotificacaoService = emailNotificacaoService;
-    }
-
-    /**
-     * Gera (ou reaproveita) o link do checkout hospedado para a organização logada.
-     * Não abre transação: a troca de preapproval tem fases com commits próprios
-     * (ver {@link #gerarLinkPagamento(AssinaturaTenant)}).
-     *
-     * @param organizacaoId ID da organização
-     * @return dados do checkout, incluindo o init_point
-     */
-    public LinkPagamentoResponse gerarLinkPagamento(Long organizacaoId) {
-        log.info("mp.preapproval.criar inicio organizacaoId={}", organizacaoId);
-        // Vigente inclui a SUSPENSA: é justamente quem mais precisa do link para voltar a pagar
-        AssinaturaTenant assinatura = assinaturaTenantRepository
-                .findAssinaturaVigenteByOrganizacaoId(organizacaoId)
-                .orElseThrow(() -> new BusinessException(
-                        "Nenhuma assinatura vigente encontrada para a organização",
-                        HttpStatus.NOT_FOUND));
-
-        return gerarLinkPagamento(assinatura);
     }
 
     /**
@@ -133,10 +106,13 @@ public class AssinaturaMercadoPagoService {
      * Não deve ser chamado dentro de uma transação do chamador: a fase 1 usa transação
      * própria (REQUIRES_NEW) e a fase 2 roda depois dela.
      *
+     * Visível só no pacote: a entrada é o {@link LinkPagamentoAssinaturaService}, que antes
+     * recusa o link novo quando o cliente já pagou o preapproval atual.
+     *
      * @param assinatura assinatura do tenant
      * @return dados do checkout, incluindo o init_point
      */
-    public LinkPagamentoResponse gerarLinkPagamento(AssinaturaTenant assinatura) {
+    LinkPagamentoResponse gerarLinkPagamento(AssinaturaTenant assinatura) {
         validarParaLink(assinatura);
         if (linkPendenteReaproveitavel(assinatura)) {
             log.info("mp.preapproval.criar ignorado motivo=PENDENTE_REAPROVEITADO preapprovalId={} assinaturaId={}",
@@ -145,9 +121,6 @@ public class AssinaturaMercadoPagoService {
         }
 
         Long assinaturaId = assinatura.getId();
-        if (assinatura.temPreapproval()) {
-            recusarSeJaPagou(assinatura);
-        }
         AtomicReference<String> criadoNoMp = new AtomicReference<>();
         AtomicReference<String> statusDoSubstituido = new AtomicReference<>();
         LinkPagamentoResponse link;
@@ -159,24 +132,6 @@ public class AssinaturaMercadoPagoService {
         }
         cancelarPreapprovalSubstituido(assinaturaId, statusDoSubstituido.get());
         return link;
-    }
-
-    /**
-     * Antes de abandonar o preapproval atual, registra as faturas dele aprovadas no MP cujo
-     * webhook se perdeu. Se alguma renovou a assinatura, o cliente já pagou: gerar outro link
-     * abriria caminho para uma segunda cobrança do mesmo ciclo.
-     *
-     * @throws BusinessException 409 {@code PAGAMENTO_JA_RECEBIDO} quando houve pagamento recuperado
-     */
-    private void recusarSeJaPagou(AssinaturaTenant assinatura) {
-        int recuperadas = webhookService.recuperarFaturasAprovadas(assinatura.getMpPreapprovalId());
-        if (recuperadas > 0) {
-            log.warn("mp.preapproval.criar negado motivo=PAGAMENTO_JA_RECEBIDO assinaturaId={} preapprovalId={} recuperadas={}",
-                    assinatura.getId(), assinatura.getMpPreapprovalId(), recuperadas);
-            throw new BusinessException(
-                    "O pagamento desta assinatura já foi recebido e a assinatura foi renovada. Atualize a página.",
-                    HttpStatus.CONFLICT, CODIGO_PAGAMENTO_JA_RECEBIDO);
-        }
     }
 
     /**
@@ -431,7 +386,7 @@ public class AssinaturaMercadoPagoService {
         return montarResposta(assinatura);
     }
 
-    private static void validarParaLink(AssinaturaTenant assinatura) {
+    static void validarParaLink(AssinaturaTenant assinatura) {
         if (assinatura.isCortesia()) {
             throw new BusinessException(
                     "Assinaturas de cortesia não possuem cobrança no Mercado Pago",
@@ -442,7 +397,7 @@ public class AssinaturaMercadoPagoService {
         }
     }
 
-    private static boolean linkPendenteReaproveitavel(AssinaturaTenant assinatura) {
+    static boolean linkPendenteReaproveitavel(AssinaturaTenant assinatura) {
         return assinatura.temPreapproval() && assinatura.getMpInitPoint() != null
                 && MercadoPagoClient.STATUS_PENDING.equals(assinatura.getMpStatus());
     }
@@ -590,27 +545,6 @@ public class AssinaturaMercadoPagoService {
                     "Há um pagamento anterior desta assinatura em análise pelo suporte. Tente novamente mais tarde.",
                     HttpStatus.CONFLICT, CODIGO_PREAPPROVAL_SUBSTITUIDO_EM_ANALISE);
         }
-    }
-
-    /**
-     * Gera o link de pagamento de uma assinatura e o envia por e-mail ao administrador
-     * owner da organização. Chamado item a item pelo scheduler e após o commit da remoção
-     * de cortesia.
-     *
-     * Não abre transação de propósito: a troca do preapproval faz commit nas próprias fases
-     * e o e-mail só sai depois desse commit, para nunca levar um link que foi desfeito.
-     *
-     * @param assinaturaId ID da assinatura
-     * @return dados do checkout, incluindo o init_point
-     */
-    public LinkPagamentoResponse gerarLinkENotificar(Long assinaturaId) {
-        AssinaturaTenant assinatura = assinaturaTenantRepository.findById(assinaturaId)
-                .orElseThrow(() -> new BusinessException(
-                        "Assinatura não encontrada: " + assinaturaId, HttpStatus.NOT_FOUND));
-
-        LinkPagamentoResponse link = gerarLinkPagamento(assinatura);
-        notificarLinkDePagamento(assinaturaId, link);
-        return link;
     }
 
     /**
@@ -874,7 +808,14 @@ public class AssinaturaMercadoPagoService {
                 assinatura.getValorMensal());
     }
 
-    private void notificarLinkDePagamento(Long assinaturaId, LinkPagamentoResponse link) {
+    /**
+     * Envia ao administrador owner o e-mail com o link, relendo a assinatura (fora de transação)
+     * e só se o link ainda for o vinculado a ela.
+     *
+     * @param assinaturaId ID da assinatura
+     * @param link         link gerado
+     */
+    void notificarLinkDePagamento(Long assinaturaId, LinkPagamentoResponse link) {
         // Releitura com plano e organização carregados: a chamada vem de fora de transação
         AssinaturaTenant assinatura = assinaturaTenantRepository.findByMpPreapprovalId(link.preapprovalId())
                 .orElse(null);

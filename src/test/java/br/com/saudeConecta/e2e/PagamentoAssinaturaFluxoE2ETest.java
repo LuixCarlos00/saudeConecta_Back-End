@@ -78,6 +78,7 @@ class PagamentoAssinaturaFluxoE2ETest {
     @Autowired private CobrancaScheduler cobrancaScheduler;
     @Autowired private br.com.saudeConecta.service.AssinaturaTenantService assinaturaTenantService;
     @Autowired private br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService assinaturaMercadoPagoService;
+    @Autowired private br.com.saudeConecta.service.mercadopago.LinkPagamentoAssinaturaService linkPagamentoAssinaturaService;
 
     private Organizacao organizacao;
     private PlanoAssinatura plano;
@@ -351,9 +352,9 @@ class PagamentoAssinaturaFluxoE2ETest {
 
         java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(2);
         try {
-            var primeiro = pool.submit(() -> assinaturaMercadoPagoService.gerarLinkPagamento(organizacao.getId()));
+            var primeiro = pool.submit(() -> linkPagamentoAssinaturaService.gerarLinkPagamento(organizacao.getId()));
             primeiroNoMp.await(5, java.util.concurrent.TimeUnit.SECONDS);
-            var segundo = pool.submit(() -> assinaturaMercadoPagoService.gerarLinkPagamento(organizacao.getId()));
+            var segundo = pool.submit(() -> linkPagamentoAssinaturaService.gerarLinkPagamento(organizacao.getId()));
 
             assertThat(primeiro.get(10, java.util.concurrent.TimeUnit.SECONDS).initPoint())
                     .isEqualTo("https://mp/checkout/pa-m1");
@@ -570,6 +571,6 @@ class PagamentoAssinaturaFluxoE2ETest {
     }
 
     private void gerarLink(AssinaturaTenant assinatura) {
-        assinaturaMercadoPagoService.gerarLinkPagamento(organizacao.getId());
+        linkPagamentoAssinaturaService.gerarLinkPagamento(organizacao.getId());
     }
 }

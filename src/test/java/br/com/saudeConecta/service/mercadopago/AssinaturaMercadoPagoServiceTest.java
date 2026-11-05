@@ -61,6 +61,7 @@ class AssinaturaMercadoPagoServiceTest {
 
     private MercadoPagoProperties properties;
     private AssinaturaMercadoPagoService service;
+    private LinkPagamentoAssinaturaService linkService;
     private AssinaturaTenant assinatura;
 
     @BeforeEach
@@ -71,7 +72,9 @@ class AssinaturaMercadoPagoServiceTest {
 
         service = new AssinaturaMercadoPagoService(assinaturaTenantRepository,
                 adminOrganizacaoRepository, mercadoPagoClient, properties, emailNotificacaoService,
-                cobrancaTenantRepository, eventoRepository, transactionManager, webhookService);
+                cobrancaTenantRepository, eventoRepository, transactionManager);
+        // Entrada real do link: recusa por pagamento recuperado + troca/reaproveitamento deste serviço
+        linkService = new LinkPagamentoAssinaturaService(assinaturaTenantRepository, service, webhookService);
 
         Organizacao org = new Organizacao();
         org.setId(ORG_ID);
@@ -108,7 +111,7 @@ class AssinaturaMercadoPagoServiceTest {
                 .thenReturn(new PreapprovalResponse(PREAPPROVAL_ID, "pending", INIT_POINT,
                         EMAIL_ADMIN, "ASSINATURA-42", null, null));
 
-        LinkPagamentoResponse link = service.gerarLinkPagamento(ORG_ID);
+        LinkPagamentoResponse link = linkService.gerarLinkPagamento(ORG_ID);
 
         assertThat(link.initPoint()).isEqualTo(INIT_POINT);
         assertThat(link.payerEmail()).isEqualTo(EMAIL_ADMIN);
@@ -124,7 +127,7 @@ class AssinaturaMercadoPagoServiceTest {
         assinatura.setMpStatus("pending");
         assinatura.setMpInitPoint(INIT_POINT);
 
-        LinkPagamentoResponse link = service.gerarLinkPagamento(ORG_ID);
+        LinkPagamentoResponse link = linkService.gerarLinkPagamento(ORG_ID);
 
         assertThat(link.initPoint()).isEqualTo(INIT_POINT);
         verify(mercadoPagoClient, never()).criarPreapprovalPendente(any(), any(), any(), any());
@@ -135,7 +138,7 @@ class AssinaturaMercadoPagoServiceTest {
     void naoDeveGerarLinkParaCortesia() {
         assinatura.setCortesia(true);
 
-        assertThatThrownBy(() -> service.gerarLinkPagamento(ORG_ID))
+        assertThatThrownBy(() -> linkService.gerarLinkPagamento(ORG_ID))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("cortesia");
     }
@@ -146,7 +149,7 @@ class AssinaturaMercadoPagoServiceTest {
         assinatura.setStatus(StatusAssinatura.ATIVA);
         assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
 
-        assertThatThrownBy(() -> service.gerarLinkPagamento(ORG_ID))
+        assertThatThrownBy(() -> linkService.gerarLinkPagamento(ORG_ID))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("já está ativa");
     }
@@ -156,7 +159,7 @@ class AssinaturaMercadoPagoServiceTest {
     void deveFalharSemEmailDeAdministrador() {
         when(adminOrganizacaoRepository.findOwnerByOrganizacaoId(ORG_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.gerarLinkPagamento(ORG_ID))
+        assertThatThrownBy(() -> linkService.gerarLinkPagamento(ORG_ID))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("e-mail de administrador");
     }
@@ -266,7 +269,7 @@ class AssinaturaMercadoPagoServiceTest {
 
         when(assinaturaTenantRepository.findByMpPreapprovalId(PREAPPROVAL_ID)).thenReturn(Optional.of(assinatura));
 
-        LinkPagamentoResponse link = service.gerarLinkENotificar(ASSINATURA_ID);
+        LinkPagamentoResponse link = linkService.gerarLinkENotificar(ASSINATURA_ID);
 
         assertThat(link.initPoint()).isEqualTo(INIT_POINT);
         // M1: o e-mail só sai depois do commit da transação que vinculou o link
@@ -502,7 +505,7 @@ class AssinaturaMercadoPagoServiceTest {
                 .thenReturn(Optional.of(assinatura))
                 .thenReturn(Optional.of(AssinaturaTenant.builder().id(ASSINATURA_ID).build()));
 
-        assertThatThrownBy(() -> service.gerarLinkENotificar(ASSINATURA_ID)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> linkService.gerarLinkENotificar(ASSINATURA_ID)).isInstanceOf(IllegalStateException.class);
 
         verify(transactionManager).rollback(any());
         verify(mercadoPagoClient).cancelarPreapproval(PREAPPROVAL_ID);
@@ -582,7 +585,7 @@ class AssinaturaMercadoPagoServiceTest {
         assinatura.setMpStatus("paused");
         when(webhookService.recuperarFaturasAprovadas("pa-antigo")).thenReturn(1);
 
-        assertThatThrownBy(() -> service.gerarLinkPagamento(ORG_ID))
+        assertThatThrownBy(() -> linkService.gerarLinkPagamento(ORG_ID))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> {
                     BusinessException be = (BusinessException) e;
@@ -602,7 +605,7 @@ class AssinaturaMercadoPagoServiceTest {
                 .thenReturn(new PreapprovalResponse(PREAPPROVAL_ID, "pending", INIT_POINT,
                         EMAIL_ADMIN, "ASSINATURA-42", null, null));
 
-        service.gerarLinkPagamento(ORG_ID);
+        linkService.gerarLinkPagamento(ORG_ID);
         verify(webhookService, never()).recuperarFaturasAprovadas(any());
 
         assinatura.setStatus(StatusAssinatura.SUSPENSA);
@@ -612,7 +615,7 @@ class AssinaturaMercadoPagoServiceTest {
                 .thenReturn(new PreapprovalResponse("pa-novo", "pending", INIT_POINT,
                         EMAIL_ADMIN, "ASSINATURA-42", null, null));
 
-        service.gerarLinkPagamento(ORG_ID);
+        linkService.gerarLinkPagamento(ORG_ID);
 
         verify(webhookService).recuperarFaturasAprovadas(PREAPPROVAL_ID);
         assertThat(assinatura.getMpPreapprovalId()).isEqualTo("pa-novo");
@@ -956,5 +959,32 @@ class AssinaturaMercadoPagoServiceTest {
 
         assertThat(assinatura.getMpPreapprovalId()).isEqualTo(PREAPPROVAL_ID);
         verifyNoInteractions(mercadoPagoClient);
+    }
+
+    @Test
+    @DisplayName("R7 - Pedido de link por evento (remoção da cortesia): gera o link e envia o e-mail")
+    void eventoDeLinkGeraENotifica() {
+        when(mercadoPagoClient.criarPreapprovalPendente(any(), any(), any(), any()))
+                .thenReturn(new PreapprovalResponse(PREAPPROVAL_ID, "pending", INIT_POINT,
+                        EMAIL_ADMIN, "ASSINATURA-42", null, null));
+        when(assinaturaTenantRepository.findByMpPreapprovalId(PREAPPROVAL_ID)).thenReturn(Optional.of(assinatura));
+
+        linkService.aoSolicitarLink(new LinkPagamentoSolicitadoEvent(ASSINATURA_ID));
+
+        verify(emailNotificacaoService).enviarLinkAtivacaoAssinatura(eq(EMAIL_ADMIN), any(), any(), any(),
+                eq(INIT_POINT), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("R7 - Sem ciclo: o serviço do MP não depende do webhook e não usa @Lazy")
+    void semDependenciaDoWebhook() {
+        assertThat(java.util.Arrays.stream(AssinaturaMercadoPagoService.class.getDeclaredFields())
+                .map(java.lang.reflect.Field::getType))
+                .doesNotContain(MercadoPagoWebhookService.class);
+        assertThat(java.util.Arrays.stream(AssinaturaMercadoPagoService.class.getConstructors())
+                .flatMap(c -> java.util.Arrays.stream(c.getParameterAnnotations()))
+                .flatMap(java.util.Arrays::stream)
+                .map(java.lang.annotation.Annotation::annotationType))
+                .doesNotContain(org.springframework.context.annotation.Lazy.class);
     }
 }

@@ -10,9 +10,11 @@ import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepo
 import br.com.saudeConecta.presentation.dto.planos.AssinaturaTenantResponse;
 import br.com.saudeConecta.presentation.dto.planos.CustomizarPlanoTenantRequest;
 import br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService;
+import br.com.saudeConecta.service.mercadopago.LinkPagamentoSolicitadoEvent;
 import br.com.saudeConecta.service.mercadopago.MercadoPagoClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +37,11 @@ public class AssinaturaTenantService {
     private final OrganizacaoRepository organizacaoRepository;
     private final PlanoAssinaturaService planoAssinaturaService;
     private final AssinaturaMercadoPagoService assinaturaMercadoPagoService;
+    /**
+     * Pede o link de pagamento ao {@code LinkPagamentoAssinaturaService} por evento: depender
+     * dele direto formaria ciclo (ele depende do webhook, que depende deste serviço).
+     */
+    private final ApplicationEventPublisher eventos;
     /** Relógio em America/Sao_Paulo: "hoje", vencimentos e o dia âncora seguem o dia de Brasília. */
     private final Clock clock;
 
@@ -43,7 +50,9 @@ public class AssinaturaTenantService {
             OrganizacaoRepository organizacaoRepository,
             PlanoAssinaturaService planoAssinaturaService,
             AssinaturaMercadoPagoService assinaturaMercadoPagoService,
+            ApplicationEventPublisher eventos,
             Clock clock) {
+        this.eventos = eventos;
         this.clock = clock;
         this.assinaturaTenantRepository = assinaturaTenantRepository;
         this.organizacaoRepository = organizacaoRepository;
@@ -510,7 +519,7 @@ public class AssinaturaTenantService {
      */
     private void enviarLinkDePagamentoAposCommit(Long assinaturaId) {
         assinaturaMercadoPagoService.executarAposCommit("assinatura.cortesia.link", assinaturaId,
-                () -> assinaturaMercadoPagoService.gerarLinkENotificar(assinaturaId));
+                () -> eventos.publishEvent(new LinkPagamentoSolicitadoEvent(assinaturaId)));
     }
 
     /**

@@ -4,6 +4,7 @@ import br.com.saudeConecta.config.FusoHorarioConfig;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService;
+import br.com.saudeConecta.service.mercadopago.LinkPagamentoAssinaturaService;
 import br.com.saudeConecta.service.mercadopago.MercadoPagoWebhookService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +32,7 @@ import java.util.function.Predicate;
  *
  * Nenhuma rotina abre transação de lote: cada assinatura é processada em transação
  * própria (via {@link ProcessadorReguaCobranca} e
- * {@link AssinaturaMercadoPagoService#gerarLinkENotificar}), então a falha de uma
+ * {@link LinkPagamentoAssinaturaService#gerarLinkENotificar}), então a falha de uma
  * não desfaz nem interrompe as demais.
  */
 @Component
@@ -47,6 +48,7 @@ public class CobrancaScheduler {
 
     private final AssinaturaTenantRepository assinaturaTenantRepository;
     private final AssinaturaMercadoPagoService assinaturaMercadoPagoService;
+    private final LinkPagamentoAssinaturaService linkPagamentoAssinaturaService;
     private final ProcessadorReguaCobranca processador;
     private final MercadoPagoWebhookService webhookService;
     /** Relógio em America/Sao_Paulo: as datas-limite da régua usam o "hoje" de Brasília. */
@@ -55,12 +57,14 @@ public class CobrancaScheduler {
     public CobrancaScheduler(
             AssinaturaTenantRepository assinaturaTenantRepository,
             AssinaturaMercadoPagoService assinaturaMercadoPagoService,
+            LinkPagamentoAssinaturaService linkPagamentoAssinaturaService,
             ProcessadorReguaCobranca processador,
             MercadoPagoWebhookService webhookService,
             Clock clock) {
         this.clock = clock;
         this.assinaturaTenantRepository = assinaturaTenantRepository;
         this.assinaturaMercadoPagoService = assinaturaMercadoPagoService;
+        this.linkPagamentoAssinaturaService = linkPagamentoAssinaturaService;
         this.processador = processador;
         this.webhookService = webhookService;
     }
@@ -80,7 +84,7 @@ public class CobrancaScheduler {
         log.info("cobranca.links inicio trials={} vencimentoAte={}", trials.size(), dataAlvo);
 
         int gerados = processarCadaUm(trials, "cobranca.links", "gerar link de pagamento",
-                assinatura -> assinaturaMercadoPagoService.gerarLinkENotificar(assinatura.getId()) != null);
+                assinatura -> linkPagamentoAssinaturaService.gerarLinkENotificar(assinatura.getId()) != null);
         log.info("cobranca.links ok processados={} falhas={}", gerados, trials.size() - gerados);
     }
 

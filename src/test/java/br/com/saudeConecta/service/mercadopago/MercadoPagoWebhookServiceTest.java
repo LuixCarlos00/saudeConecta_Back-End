@@ -62,8 +62,7 @@ class MercadoPagoWebhookServiceTest {
         AssinaturaMercadoPagoService assinaturaMercadoPagoService = new AssinaturaMercadoPagoService(
                 assinaturaTenantRepository, adminOrganizacaoRepository, mercadoPagoClient,
                 new MercadoPagoProperties(), emailNotificacaoService, cobrancaTenantRepository, eventoRepository,
-                mock(org.springframework.transaction.PlatformTransactionManager.class),
-                mock(MercadoPagoWebhookService.class));
+                mock(org.springframework.transaction.PlatformTransactionManager.class));
         service = new MercadoPagoWebhookService(eventoRepository, assinaturaTenantRepository,
                 cobrancaTenantRepository, assinaturaTenantService, mercadoPagoClient,
                 assinaturaMercadoPagoService, transactionManager, RELOGIO);
