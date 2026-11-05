@@ -9,6 +9,7 @@ import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
 import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
 import br.com.saudeConecta.domain.prontuario.ProntuarioDentistaDente;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
+import br.com.saudeConecta.infrastructure.persistence.repository.AtendimentoRascunhoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
@@ -33,6 +34,7 @@ public class ProntuarioDentistaService {
     private final ProntuarioDentistaRepository prontuarioDentistaRepository;
     private final ProfissionalRepository profissionalRepository;
     private final ConsultaRepository consultaRepository;
+    private final AtendimentoRascunhoRepository atendimentoRascunhoRepository;
     private final PacienteRepository pacienteRepository;
     private final EntityManager entityManager;
     private final TenantHelper tenantHelper;
@@ -168,6 +170,10 @@ public class ProntuarioDentistaService {
         consulta.setStatus(StatusConsulta.REALIZADA);
         consultaRepository.save(consulta);
         log.info("prontuario.dentista.cadastrar consulta consultaId={} status=REALIZADA", consulta.getId());
+
+        // Prontuário oficial gravado: o rascunho sai na mesma transação (falhou acima = rascunho continua).
+        int rascunhos = atendimentoRascunhoRepository.apagarPorConsulta(consulta.getId());
+        log.info("prontuario.dentista.cadastrar rascunho consultaId={} removidos={}", consulta.getId(), rascunhos);
 
         return salvo;
     }

@@ -7,6 +7,7 @@ import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
 import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
+import br.com.saudeConecta.infrastructure.persistence.repository.AtendimentoRascunhoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
@@ -53,6 +54,7 @@ class ProntuarioDentistaServiceTest {
     @Mock private ProntuarioDentistaRepository prontuarioDentistaRepository;
     @Mock private ProfissionalRepository profissionalRepository;
     @Mock private ConsultaRepository consultaRepository;
+    @Mock private AtendimentoRascunhoRepository atendimentoRascunhoRepository;
     @Mock private PacienteRepository pacienteRepository;
     @Mock private EntityManager entityManager;
     @Spy private TenantHelper tenantHelper = new TenantHelper();
@@ -121,6 +123,36 @@ class ProntuarioDentistaServiceTest {
     @Nested
     @DisplayName("cadastrarProntuarioByOrg")
     class CadastrarProntuario {
+
+        @Test
+        @DisplayName("Finalizar apaga o rascunho da consulta depois de marcar REALIZADA")
+        void finalizarApagaRascunhoDaConsulta() {
+            Consulta consulta = criarConsulta(10L);
+            when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
+            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.of(consulta));
+            when(prontuarioDentistaRepository.save(any())).thenReturn(criarProntuario(100L));
+            when(atendimentoRascunhoRepository.apagarPorConsulta(10L)).thenReturn(1);
+
+            service.cadastrarProntuarioByOrg(criarRequest());
+
+            var ordem = inOrder(consultaRepository, atendimentoRascunhoRepository);
+            ordem.verify(consultaRepository).save(consulta);
+            ordem.verify(atendimentoRascunhoRepository).apagarPorConsulta(10L);
+            assertThat(consulta.getStatus()).isEqualTo(StatusConsulta.REALIZADA);
+        }
+
+        @Test
+        @DisplayName("Falha ao gravar o prontuário mantém o rascunho")
+        void falhaAoGravarProntuarioMantemRascunho() {
+            when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
+            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
+            when(prontuarioDentistaRepository.save(any())).thenThrow(new org.springframework.dao.DataIntegrityViolationException("falha"));
+
+            assertThatThrownBy(() -> service.cadastrarProntuarioByOrg(criarRequest()))
+                    .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+
+            verify(atendimentoRascunhoRepository, never()).apagarPorConsulta(any());
+        }
 
         @Test
         @DisplayName("Deve cadastrar prontuário odontológico com sucesso")
