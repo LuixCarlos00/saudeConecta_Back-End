@@ -89,7 +89,10 @@ public class BuscarHistoricoCompletoPacienteDentistaUseCase {
         if (consulta.getProfissional() != null) {
             builder.profissionalId(consulta.getProfissional().getId())
                    .profissionalNome(consulta.getProfissional().getNome())
-                   .profissionalCrm(consulta.getProfissional().getRegistroConselho());
+                   .profissionalCrm(consulta.getProfissional().getRegistroConselho())
+                   // Para o front saber se o logado é o dono (só o dono edita o prontuário)
+                   .profissionalUsuarioId(consulta.getProfissional().getUsuario() != null
+                           ? consulta.getProfissional().getUsuario().getId() : null);
 
             if (consulta.getEspecialidade() != null) {
                 builder.profissionalEspecialidade(consulta.getEspecialidade().getNome());

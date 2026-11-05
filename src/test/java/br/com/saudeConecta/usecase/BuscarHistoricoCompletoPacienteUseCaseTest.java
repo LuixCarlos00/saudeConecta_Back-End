@@ -95,6 +95,7 @@ class BuscarHistoricoCompletoPacienteUseCaseTest {
 
             assertThat(resultado).hasSize(1);
             assertThat(resultado.get(0).getProntuarioId()).isEqualTo(50L);
+            assertThat(resultado.get(0).getProfissionalUsuarioId()).isEqualTo(77L);
             verify(prontuarioDentistaRepository).findByConsultaId(100L);
         }
 
@@ -195,6 +196,7 @@ class BuscarHistoricoCompletoPacienteUseCaseTest {
 
             assertThat(resultado).hasSize(1);
             assertThat(resultado.get(0).getProntuarioId()).isEqualTo(99L);
+            assertThat(resultado.get(0).getProfissionalUsuarioId()).isEqualTo(77L);
         }
 
         @Test
@@ -259,6 +261,9 @@ class BuscarHistoricoCompletoPacienteUseCaseTest {
         profissional.setId(1L);
         profissional.setNome("Dr. Silva");
         profissional.setRegistroConselho("CRM-12345");
+        br.com.saudeConecta.domain.usuario.Usuario usuario = new br.com.saudeConecta.domain.usuario.Usuario();
+        usuario.setId(77L);
+        profissional.setUsuario(usuario);
         consulta.setProfissional(profissional);
 
         Especialidade especialidade = new Especialidade();

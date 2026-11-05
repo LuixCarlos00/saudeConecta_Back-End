@@ -43,6 +43,8 @@ public class HistoricoConsultaPacienteResponse {
 
     // ── Dados do Profissional ────────────────────────────────────────────────
     private Long profissionalId;
+    /** Id do usuário (login) do profissional da consulta: o front compara com o usuário logado. */
+    private Long profissionalUsuarioId;
     private String profissionalNome;
     private String profissionalEspecialidade;
     private String profissionalCrm;
