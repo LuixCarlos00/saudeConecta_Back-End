@@ -175,7 +175,15 @@ a cortesia de quem já tem cartão autorizado.
 | `0 0 9 * * *` | Régua de carência: +5d → INADIMPLENTE, +15d → SUSPENSA (pausa no MP), +30d → CANCELADA |
 | `0 0 */4 * * *` | Reconciliação com o Mercado Pago (rede de segurança para webhooks perdidos) e nova tentativa de cancelar preapprovals substituídos (`mp_preapproval_substituido_id` preenchido) |
 
-Assinaturas com `cortesia = true` são ignoradas por todas as rotinas.
+Assinaturas com `cortesia = true` são ignoradas por todas as rotinas (régua, links,
+reconciliação e recuperação de faturas).
+
+**Dar cortesia** leva a assinatura para `ATIVA` (inclusive vinda de `SUSPENSA` ou
+`INADIMPLENTE`) e para a cobrança: o preapproval é desvinculado e cancelado no MP depois
+do commit (mesmo mecanismo da troca de link). Uma fatura aprovada que ainda chegue para
+uma cortesia é registrada como `PAGO`, não renova a assinatura e aparece em
+`/assinaturas/pendencias-manuais` (`PAGAMENTO_EM_CORTESIA`). **Remover a cortesia** segue
+a decisão fechada: `TRIAL` + 7 dias e link novo.
 
 ## 9. Validação manual
 

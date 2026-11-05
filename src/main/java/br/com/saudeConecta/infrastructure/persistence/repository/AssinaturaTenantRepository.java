@@ -100,13 +100,15 @@ public interface AssinaturaTenantRepository extends JpaRepository<AssinaturaTena
     List<AssinaturaTenant> findTrialsSemLinkVencendoAte(@Param("dataAlvo") LocalDate dataAlvo);
 
     /**
-     * Busca assinaturas já vinculadas ao Mercado Pago para reconciliação de status.
+     * Busca assinaturas já vinculadas ao Mercado Pago para reconciliação de status e
+     * recuperação de faturas. Cortesias ficam de fora: não são cobradas nem renovadas.
      */
     @Query("SELECT a FROM AssinaturaTenant a " +
            "JOIN FETCH a.planoAssinatura " +
            "JOIN FETCH a.organizacao " +
            "WHERE a.mpPreapprovalId IS NOT NULL " +
-           "AND a.status <> 'CANCELADA'")
+           "AND a.status <> 'CANCELADA' " +
+           "AND a.cortesia = false")
     List<AssinaturaTenant> findComPreapprovalParaReconciliar();
 
     /**

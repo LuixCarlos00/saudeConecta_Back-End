@@ -429,12 +429,15 @@ public class AssinaturaTenantService {
     @Transactional
     public AssinaturaTenantResponse definirCortesia(Long assinaturaId, boolean cortesia) {
         log.info("assinatura.cortesia inicio assinaturaId={} cortesia={}", assinaturaId, cortesia);
-        AssinaturaTenant assinatura = buscarPorId(assinaturaId);
-        boolean removendoCortesia = !cortesia && assinatura.isCortesia()
-                && !StatusAssinatura.CANCELADA.equals(assinatura.getStatus());
+        // Lock: serializa com a geração de link, que relê a cortesia com a linha travada
+        AssinaturaTenant assinatura = assinaturaTenantRepository.findByIdParaAtualizacao(assinaturaId)
+                .orElseThrow(() -> new BusinessException(
+                        "Assinatura não encontrada: " + assinaturaId, HttpStatus.NOT_FOUND));
+        boolean cancelada = StatusAssinatura.CANCELADA.equals(assinatura.getStatus());
+        boolean removendoCortesia = !cortesia && assinatura.isCortesia() && !cancelada;
         assinatura.setCortesia(cortesia);
-        if (cortesia && StatusAssinatura.TRIAL.equals(assinatura.getStatus())) {
-            assinatura.setStatus(StatusAssinatura.ATIVA);
+        if (cortesia && !cancelada) {
+            liberarComoCortesia(assinatura);
         }
         boolean precisaDeLink = removendoCortesia && !aplicarVencimentoAposCortesia(assinatura);
 
@@ -447,6 +450,22 @@ public class AssinaturaTenantService {
         }
 
         return AssinaturaTenantResponse.fromEntity(salva);
+    }
+
+    /**
+     * Cortesia libera o acesso (ATIVA, inclusive vinda de SUSPENSA ou INADIMPLENTE) e para a
+     * cobrança: o preapproval é desvinculado e cancelado no MP depois do commit.
+     */
+    private void liberarComoCortesia(AssinaturaTenant assinatura) {
+        StatusAssinatura status = assinatura.getStatus();
+        if (StatusAssinatura.TRIAL.equals(status) || StatusAssinatura.SUSPENSA.equals(status)
+                || StatusAssinatura.INADIMPLENTE.equals(status)) {
+            assinatura.setStatus(StatusAssinatura.ATIVA);
+            assinatura.setDataSuspensao(null);
+        }
+        if (assinatura.temPreapproval()) {
+            assinaturaMercadoPagoService.desvincularECancelarAposCommit(assinatura, "CORTESIA");
+        }
     }
 
     /**

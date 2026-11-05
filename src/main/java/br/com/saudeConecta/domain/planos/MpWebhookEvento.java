@@ -31,6 +31,8 @@ public class MpWebhookEvento implements Serializable {
     public static final String MOTIVO_EVENTO_EXPIRADO = "EVENTO_EXPIRADO";
     /** Prefixo do motivo: fatura aprovada de um preapproval sem assinatura local vinculada (ex.: preapproval substituído). */
     public static final String MOTIVO_PAGAMENTO_SEM_ASSINATURA = "PAGAMENTO_SEM_ASSINATURA";
+    /** Prefixo do motivo: fatura aprovada de assinatura em cortesia (não renova; tratar manualmente). */
+    public static final String MOTIVO_PAGAMENTO_EM_CORTESIA = "PAGAMENTO_EM_CORTESIA";
     private static final int TAMANHO_MAXIMO_MOTIVO = 255;
 
     @Id

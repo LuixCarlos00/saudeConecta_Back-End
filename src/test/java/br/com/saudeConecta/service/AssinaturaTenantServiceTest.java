@@ -515,7 +515,7 @@ class AssinaturaTenantServiceTest {
             AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.ATIVA);
             assinatura.setCortesia(true);
             assinatura.setDataVencimento(LocalDate.now().minusDays(200));
-            when(assinaturaTenantRepository.findById(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(assinatura));
             when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
 
             service.definirCortesia(1L, false);
@@ -532,7 +532,7 @@ class AssinaturaTenantServiceTest {
         void falhaNoLinkNaoDesfazRemocao() {
             AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.ATIVA);
             assinatura.setCortesia(true);
-            when(assinaturaTenantRepository.findById(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(assinatura));
             when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
             when(assinaturaMercadoPagoService.gerarLinkENotificar(1L))
                     .thenThrow(new BusinessException("MP fora", HttpStatus.BAD_GATEWAY));
@@ -550,7 +550,7 @@ class AssinaturaTenantServiceTest {
             assinatura.setMpPreapprovalId("pa-1");
             assinatura.setMpStatus("authorized");
             LocalDate proximaCobranca = LocalDate.now().plusDays(12);
-            when(assinaturaTenantRepository.findById(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(assinatura));
             when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
             when(assinaturaMercadoPagoService.buscarProximaCobrancaAutorizada(assinatura)).thenReturn(proximaCobranca);
 
@@ -569,7 +569,7 @@ class AssinaturaTenantServiceTest {
             assinatura.setCortesia(true);
             assinatura.setMpPreapprovalId("pa-1");
             assinatura.setMpStatus("authorized");
-            when(assinaturaTenantRepository.findById(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(assinatura));
             when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
             when(assinaturaMercadoPagoService.buscarProximaCobrancaAutorizada(assinatura))
                     .thenThrow(new BusinessException("MP fora", HttpStatus.BAD_GATEWAY));
@@ -588,7 +588,7 @@ class AssinaturaTenantServiceTest {
             assinatura.setCortesia(true);
             assinatura.setMpPreapprovalId("pa-1");
             assinatura.setMpStatus("authorized");
-            when(assinaturaTenantRepository.findById(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(assinatura));
             when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
             when(assinaturaMercadoPagoService.buscarProximaCobrancaAutorizada(assinatura)).thenReturn(null);
 
@@ -605,7 +605,7 @@ class AssinaturaTenantServiceTest {
             AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.CANCELADA);
             assinatura.setCortesia(true);
             LocalDate vencimento = assinatura.getDataVencimento();
-            when(assinaturaTenantRepository.findById(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(assinatura));
             when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
 
             service.definirCortesia(1L, false);
@@ -616,11 +616,46 @@ class AssinaturaTenantServiceTest {
         }
 
         @Test
+        @DisplayName("A2 - Dar cortesia a SUSPENSA ou INADIMPLENTE: vira ATIVA e o preapproval é desvinculado para cancelar após o commit")
+        void darCortesiaLiberaEParaCobranca() {
+            for (StatusAssinatura status : List.of(StatusAssinatura.SUSPENSA, StatusAssinatura.INADIMPLENTE)) {
+                AssinaturaTenant assinatura = criarAssinatura(1L, status);
+                assinatura.setDataSuspensao(LocalDateTime.now().minusDays(3));
+                assinatura.setMpPreapprovalId("pa-1");
+                assinatura.setMpStatus("paused");
+                when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(assinatura));
+                when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
+
+                service.definirCortesia(1L, true);
+
+                assertThat(assinatura.isCortesia()).isTrue();
+                assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
+                assertThat(assinatura.getDataSuspensao()).isNull();
+                verify(assinaturaMercadoPagoService).desvincularECancelarAposCommit(assinatura, "CORTESIA");
+                clearInvocations(assinaturaMercadoPagoService);
+            }
+            verify(assinaturaMercadoPagoService, never()).gerarLinkENotificar(any());
+        }
+
+        @Test
+        @DisplayName("A2 - Cortesia em CANCELADA não reabre a assinatura nem mexe no MP")
+        void darCortesiaACanceladaNaoReabre() {
+            AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.CANCELADA);
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
+
+            service.definirCortesia(1L, true);
+
+            assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.CANCELADA);
+            verify(assinaturaMercadoPagoService, never()).desvincularECancelarAposCommit(any(), any());
+        }
+
+        @Test
         @DisplayName("Conceder cortesia não gera link nem mexe no vencimento")
         void concederCortesiaNaoGeraLink() {
             AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.TRIAL);
             LocalDate vencimento = assinatura.getDataVencimento();
-            when(assinaturaTenantRepository.findById(1L)).thenReturn(Optional.of(assinatura));
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(assinatura));
             when(assinaturaTenantRepository.save(any())).thenReturn(assinatura);
 
             service.definirCortesia(1L, true);

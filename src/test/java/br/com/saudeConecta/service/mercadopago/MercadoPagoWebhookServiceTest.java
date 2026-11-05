@@ -556,6 +556,24 @@ class MercadoPagoWebhookServiceTest {
     }
 
     @Test
+    @DisplayName("A2 - Fatura aprovada de assinatura em cortesia: registra PAGO, não renova nem reativa e pede atenção")
+    void pagamentoEmCortesiaNaoRenova() {
+        assinatura.setCortesia(true);
+        assinatura.setMpStatus("paused");
+        when(assinaturaTenantRepository.findByMpPreapprovalId(PREAPPROVAL_ID)).thenReturn(Optional.of(assinatura));
+        when(mercadoPagoClient.buscarAuthorizedPayment("fat-cortesia")).thenReturn(new AuthorizedPaymentResponse(
+                "fat-cortesia", PREAPPROVAL_ID, "processed", java.math.BigDecimal.TEN,
+                new AuthorizedPaymentResponse.Payment(1L, "approved", "accredited")));
+
+        service.processar(MercadoPagoWebhookService.TOPICO_AUTHORIZED_PAYMENT, "fat-cortesia", "{}");
+
+        verify(assinaturaTenantService, never()).renovarAposPagamento(any());
+        verify(mercadoPagoClient, never()).reativarPreapproval(any());
+        assertThat(ultimoEventoSalvo().getProcessado()).isTrue();
+        assertThat(ultimoEventoSalvo().getMotivoAtencao()).startsWith(MpWebhookEvento.MOTIVO_PAGAMENTO_EM_CORTESIA);
+    }
+
+    @Test
     @DisplayName("C3 - Webhook cancelled do preapproval substituído (ainda pendente de limpeza) é ignorado")
     void preapprovalSubstituidoCanceladoEhIgnorado() {
         String antigo = "preapproval-antigo";

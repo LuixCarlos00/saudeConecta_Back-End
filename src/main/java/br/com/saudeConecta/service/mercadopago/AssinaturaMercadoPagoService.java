@@ -188,7 +188,7 @@ public class AssinaturaMercadoPagoService {
                 log.info("mp.preapproval.valor ok preapprovalId={} assinaturaId={} de={} para={}",
                         preapprovalId, assinatura.getId(), valorAnterior, assinatura.getValorMensal());
             } else if (MercadoPagoClient.STATUS_PENDING.equals(statusMp)) {
-                abandonarLinkPendente(assinatura);
+                desvincularECancelarAposCommit(assinatura, "LINK_PENDENTE_COM_VALOR_ANTIGO");
             }
         } catch (BusinessException e) {
             log.warn("mp.preapproval.valor negado motivo=MP_INDISPONIVEL preapprovalId={} assinaturaId={} acao=TROCA_DESFEITA",
@@ -200,20 +200,28 @@ public class AssinaturaMercadoPagoService {
     }
 
     /**
-     * Desvincula o preapproval pendente (o checkout dele cobraria o valor antigo) e agenda o
-     * cancelamento no MP para depois do commit.
+     * Desvincula o preapproval atual e agenda o cancelamento dele no MP para depois do commit
+     * da transação do chamador (mesmo mecanismo da troca de link). Usado quando o preapproval
+     * não deve mais cobrar: link pendente com valor antigo, assinatura que virou cortesia.
+     *
+     * @param assinatura assinatura gerenciada pela transação do chamador
+     * @param motivo     código do motivo, para o log
+     * @throws BusinessException se um substituído anterior ainda pendente não puder ser cancelado
      */
-    private void abandonarLinkPendente(AssinaturaTenant assinatura) {
+    public void desvincularECancelarAposCommit(AssinaturaTenant assinatura, String motivo) {
+        if (!assinatura.temPreapproval()) {
+            return;
+        }
         if (assinatura.temPreapprovalSubstituidoPendente()) {
             // Só há uma coluna para o antigo: o substituído anterior precisa estar cancelado antes
             cancelarNoMercadoPago(assinatura.getMpPreapprovalSubstituidoId());
         }
-        String pendente = assinatura.getMpPreapprovalId();
+        String preapprovalId = assinatura.getMpPreapprovalId();
         assinatura.desvincularPreapproval();
         Long assinaturaId = assinatura.getId();
-        executarAposCommit("mp.preapproval.valor", assinaturaId, () -> cancelarPreapprovalSubstituido(assinaturaId));
-        log.info("mp.preapproval.valor abandonado motivo=LINK_PENDENTE_COM_VALOR_ANTIGO preapprovalId={} assinaturaId={}",
-                pendente, assinaturaId);
+        executarAposCommit("mp.preapproval.desvincular", assinaturaId, () -> cancelarPreapprovalSubstituido(assinaturaId));
+        log.info("mp.preapproval.desvincular ok motivo={} preapprovalId={} assinaturaId={}",
+                motivo, preapprovalId, assinaturaId);
     }
 
     /**
@@ -531,7 +539,8 @@ public class AssinaturaMercadoPagoService {
      */
     @Transactional
     public boolean sincronizar(AssinaturaTenant assinatura) {
-        if (!assinatura.temPreapproval()) {
+        // Cortesia não é cobrada: a reconciliação não pode reativar nem suspender por ela
+        if (!assinatura.temPreapproval() || assinatura.isCortesia()) {
             return false;
         }
 

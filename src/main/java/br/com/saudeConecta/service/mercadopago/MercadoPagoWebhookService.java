@@ -428,6 +428,16 @@ public class MercadoPagoWebhookService {
                 return true;
             }
 
+            // Cortesia não é renovada nem reativada pelo MP: o dinheiro fica registrado para análise
+            if (assinatura.isCortesia()) {
+                log.warn("mp.fatura aprovada negado motivo=ASSINATURA_CORTESIA acao=TRATAR_MANUALMENTE assinaturaId={} faturaId={}",
+                        assinatura.getId(), authorizedPaymentId);
+                evento.marcarParaAtencao(MpWebhookEvento.MOTIVO_PAGAMENTO_EM_CORTESIA,
+                        "assinatura " + assinatura.getId() + ", fatura " + authorizedPaymentId
+                                + " — cortesia não é cobrada: estornar ou tratar manualmente");
+                return true;
+            }
+
             assinaturaTenantService.renovarAposPagamento(assinatura.getId());
             // Assinatura suspensa teve o preapproval pausado: sem reativar, o MP não cobra o próximo mês
             assinaturaMercadoPagoService.reativarSePausado(assinatura);

@@ -657,4 +657,28 @@ class AssinaturaMercadoPagoServiceTest {
         verify(mercadoPagoClient, never()).atualizarValor(any(), any());
         assertThat(assinatura.getMpPreapprovalId()).isEqualTo(PREAPPROVAL_ID);
     }
+
+    @Test
+    @DisplayName("A2 - Cortesia: desvincula o preapproval, cancela no MP depois do commit e a reconciliação não toca nela")
+    void cortesiaDesvinculaECancela() {
+        assinatura.setStatus(StatusAssinatura.ATIVA);
+        assinatura.setCortesia(true);
+        assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
+        assinatura.setMpStatus("paused");
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(
+                new PreapprovalResponse(PREAPPROVAL_ID, "paused", null, EMAIL_ADMIN, null, null, null));
+
+        service.desvincularECancelarAposCommit(assinatura, "CORTESIA");
+
+        assertThat(assinatura.temPreapproval()).isFalse();
+        verify(mercadoPagoClient).cancelarPreapproval(PREAPPROVAL_ID);
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isNull();
+
+        // Mesmo com um preapproval pausado vinculado (dado antigo), a reconciliação não reativa cortesia
+        assinatura.setMpPreapprovalId("pa-legado");
+        assinatura.setMpStatus("paused");
+        assinatura.setDataVencimento(LocalDate.now().plusDays(10));
+        assertThat(service.sincronizar(assinatura)).isFalse();
+        verify(mercadoPagoClient, never()).reativarPreapproval(any());
+    }
 }

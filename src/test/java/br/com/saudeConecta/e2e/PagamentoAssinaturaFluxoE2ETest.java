@@ -72,6 +72,7 @@ class PagamentoAssinaturaFluxoE2ETest {
     @Autowired private PlanoAssinaturaRepository planoAssinaturaRepository;
     @Autowired private UsuarioRepository usuarioRepository;
     @Autowired private CobrancaScheduler cobrancaScheduler;
+    @Autowired private br.com.saudeConecta.service.AssinaturaTenantService assinaturaTenantService;
     @Autowired private br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService assinaturaMercadoPagoService;
 
     private Organizacao organizacao;
@@ -466,6 +467,53 @@ class PagamentoAssinaturaFluxoE2ETest {
             assinaturaTenantRepository.deleteAll(assinaturaTenantRepository.findByOrganizacaoId(organizacao.getId()));
             planoAssinaturaRepository.delete(business);
         }
+    }
+
+    @Test
+    @DisplayName("A2 - Dar cortesia a INADIMPLENTE: ATIVA, preapproval cancelado no MP só após o commit, webhook dele ignorado e reconciliação não reativa")
+    void cortesiaParaACobrancaNoMp() {
+        AssinaturaTenant inadimplente = salvarAssinatura(StatusAssinatura.INADIMPLENTE, "pa-a2", "paused",
+                LocalDate.now().minusDays(8));
+        String referencia = "ASSINATURA-" + inadimplente.getId();
+        when(mercadoPagoClient.buscarPreapproval("pa-a2")).thenReturn(preapproval("pa-a2", "paused", referencia));
+        AtomicReference<AssinaturaTenant> vistaNoCancelamento = new AtomicReference<>();
+        when(mercadoPagoClient.cancelarPreapproval("pa-a2")).thenAnswer(inv -> {
+            vistaNoCancelamento.set(recarregar(inadimplente));
+            return preapproval("pa-a2", "cancelled", referencia);
+        });
+
+        assinaturaTenantService.definirCortesia(inadimplente.getId(), true);
+
+        assertThat(vistaNoCancelamento.get().isCortesia()).isTrue();
+        assertThat(vistaNoCancelamento.get().getMpPreapprovalId()).isNull();
+        AssinaturaTenant cortesia = recarregar(inadimplente);
+        assertThat(cortesia.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
+        assertThat(cortesia.getMpPreapprovalSubstituidoId()).isNull();
+
+        when(mercadoPagoClient.buscarPreapproval("pa-a2")).thenReturn(preapproval("pa-a2", "cancelled", referencia));
+        webhookService.processar(MercadoPagoWebhookService.TOPICO_PREAPPROVAL, "pa-a2", "{}");
+        cobrancaScheduler.reconciliarComMercadoPago();
+
+        AssinaturaTenant depois = recarregar(inadimplente);
+        assertThat(depois.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
+        assertThat(depois.getCanceladoPor()).isNull();
+        verify(mercadoPagoClient, never()).reativarPreapproval(anyString());
+        verify(mercadoPagoClient, times(1)).cancelarPreapproval("pa-a2");
+    }
+
+    @Test
+    @DisplayName("A2 - Reconciliação ignora cortesia legada com preapproval pausado (não reativa no MP)")
+    void reconciliacaoIgnoraCortesia() {
+        AssinaturaTenant legada = salvarAssinatura(StatusAssinatura.ATIVA, "pa-a2-legado", "paused",
+                LocalDate.now().plusDays(20));
+        legada.setCortesia(true);
+        assinaturaTenantRepository.save(legada);
+
+        cobrancaScheduler.reconciliarComMercadoPago();
+
+        verify(mercadoPagoClient, never()).buscarPreapproval("pa-a2-legado");
+        verify(mercadoPagoClient, never()).buscarAuthorizedPaymentsDoPreapproval("pa-a2-legado");
+        verify(mercadoPagoClient, never()).reativarPreapproval(anyString());
     }
 
     private void gerarLink(AssinaturaTenant assinatura) {
