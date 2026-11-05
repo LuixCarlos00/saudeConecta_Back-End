@@ -110,7 +110,8 @@ public class BuscarHistoricoCompletoPacienteMedicoUseCase {
                    .frequenciaRespiratoria(prontuario.getProntFrequenciaRespiratoria())
                    .frequenciaArterialSistolica(prontuario.getProntFrequenciaArterialSistolica())
                    .frequenciaArterialDiastolica(prontuario.getProntFrequenciaArterialDiastolica())
-
+                   .pulso(prontuario.getProntPulso())
+                   .responsavel(prontuario.getProntResponsavel())
 
                    // Anamnese e Avaliação
                    .queixaPrincipal(prontuario.getProntQueixaPricipal())
@@ -120,6 +121,12 @@ public class BuscarHistoricoCompletoPacienteMedicoUseCase {
 
                    // Orientações e campos adicionais
                    .orientacoes(prontuario.getProntOrientacoes())
+
+                   // Codificação (CID/TUSS) e exames solicitados: estavam fora do histórico,
+                   // embora apareçam no registro individual (/prontuario/buscarProntuarioById)
+                   .cidTexto(prontuario.getProntCidTexto())
+                   .tussTexto(prontuario.getProntTussTexto())
+                   .solicitacaoExameTexto(prontuario.getProntSolicitacaoExameTexto())
 
                    // Prescrição Médica
                     .tituloPrescricao(prontuario.getProntTituloPrescricao())

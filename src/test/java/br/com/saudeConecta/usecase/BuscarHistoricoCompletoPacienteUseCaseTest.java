@@ -198,6 +198,32 @@ class BuscarHistoricoCompletoPacienteUseCaseTest {
         }
 
         @Test
+        @DisplayName("Deve levar ao histórico pulso, responsável, CID, TUSS e exames solicitados do prontuário")
+        void deveMapearCamposClinicosQueFaltavam() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(1L);
+
+            Consulta consulta = criarConsultaCompleta(200L);
+            Prontuario prontuario = criarProntuarioMedico(99L);
+            prontuario.setProntPulso("95");
+            prontuario.setProntResponsavel("Mãe");
+            prontuario.setProntCidTexto("Z01.4 - Exame ginecológico (geral) (de rotina)");
+            prontuario.setProntTussTexto("10101012 - Consulta em consultório");
+            prontuario.setProntSolicitacaoExameTexto("Colpocitologia oncótica; Mamografia.");
+
+            when(consultaRepository.findHistoricoCompletoPacienteMedico(eq(10L), eq(1L), isNull()))
+                    .thenReturn(List.of(consulta));
+            when(prontuarioRepository.findByConsulta_Id(200L)).thenReturn(prontuario);
+
+            HistoricoConsultaPacienteResponse item = useCase.executar(10L, null).get(0);
+
+            assertThat(item.getPulso()).isEqualTo("95");
+            assertThat(item.getResponsavel()).isEqualTo("Mãe");
+            assertThat(item.getCidTexto()).isEqualTo("Z01.4 - Exame ginecológico (geral) (de rotina)");
+            assertThat(item.getTussTexto()).isEqualTo("10101012 - Consulta em consultório");
+            assertThat(item.getSolicitacaoExameTexto()).isEqualTo("Colpocitologia oncótica; Mamografia.");
+        }
+
+        @Test
         @DisplayName("Deve filtrar por profissional quando informado")
         void deveFiltrarPorProfissional() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(1L);
