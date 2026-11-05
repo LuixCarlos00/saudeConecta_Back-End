@@ -497,6 +497,10 @@ class AssinaturaMercadoPagoServiceTest {
                 .thenReturn(new PreapprovalResponse(PREAPPROVAL_ID, "pending", INIT_POINT,
                         EMAIL_ADMIN, "ASSINATURA-42", null, null));
         when(assinaturaTenantRepository.save(any())).thenThrow(new IllegalStateException("banco caiu"));
+        // 1ª leitura: gerarLinkENotificar; 2ª: releitura da compensação, que vê o banco sem o vínculo
+        when(assinaturaTenantRepository.findById(ASSINATURA_ID))
+                .thenReturn(Optional.of(assinatura))
+                .thenReturn(Optional.of(AssinaturaTenant.builder().id(ASSINATURA_ID).build()));
 
         assertThatThrownBy(() -> service.gerarLinkENotificar(ASSINATURA_ID)).isInstanceOf(IllegalStateException.class);
 
@@ -527,11 +531,47 @@ class AssinaturaMercadoPagoServiceTest {
                 .thenReturn(new PreapprovalResponse(PREAPPROVAL_ID, "pending", INIT_POINT,
                         EMAIL_ADMIN, "ASSINATURA-42", null, null));
         when(assinaturaTenantRepository.save(any())).thenThrow(new IllegalStateException("banco caiu"));
+        when(assinaturaTenantRepository.findById(ASSINATURA_ID))
+                .thenReturn(Optional.of(AssinaturaTenant.builder().id(ASSINATURA_ID).build()));
         when(mercadoPagoClient.cancelarPreapproval(PREAPPROVAL_ID))
                 .thenThrow(new BusinessException("MP fora", org.springframework.http.HttpStatus.BAD_GATEWAY));
 
         assertThatThrownBy(() -> service.gerarLinkPagamento(assinatura))
                 .isInstanceOf(IllegalStateException.class).hasMessage("banco caiu");
+        verify(mercadoPagoClient).cancelarPreapproval(PREAPPROVAL_ID);
+    }
+
+    @Test
+    @DisplayName("R5 - Commit \"falhou\" mas o preapproval novo ficou gravado: a compensação relê e não cancela")
+    void compensacaoNaoCancelaPreapprovalJaGravado() {
+        when(mercadoPagoClient.criarPreapprovalPendente(any(), any(), any(), any()))
+                .thenReturn(new PreapprovalResponse(PREAPPROVAL_ID, "pending", INIT_POINT,
+                        EMAIL_ADMIN, "ASSINATURA-42", null, null));
+        // A confirmação do COMMIT se perdeu, mas o banco gravou: a releitura enxerga o vínculo
+        doThrow(new org.springframework.transaction.TransactionSystemException("conexão caiu no commit"))
+                .when(transactionManager).commit(any());
+
+        assertThatThrownBy(() -> service.gerarLinkPagamento(assinatura))
+                .isInstanceOf(org.springframework.transaction.TransactionSystemException.class);
+
+        verify(assinaturaTenantRepository).findById(ASSINATURA_ID);
+        verify(mercadoPagoClient, never()).cancelarPreapproval(any());
+        assertThat(assinatura.getMpPreapprovalId()).isEqualTo(PREAPPROVAL_ID);
+    }
+
+    @Test
+    @DisplayName("R5 - Releitura da compensação falhou: na dúvida não cancela")
+    void compensacaoSemReleituraNaoCancela() {
+        when(mercadoPagoClient.criarPreapprovalPendente(any(), any(), any(), any()))
+                .thenReturn(new PreapprovalResponse(PREAPPROVAL_ID, "pending", INIT_POINT,
+                        EMAIL_ADMIN, "ASSINATURA-42", null, null));
+        when(assinaturaTenantRepository.save(any())).thenThrow(new IllegalStateException("banco caiu"));
+        when(assinaturaTenantRepository.findById(ASSINATURA_ID)).thenThrow(new IllegalStateException("banco caiu"));
+
+        assertThatThrownBy(() -> service.gerarLinkPagamento(assinatura))
+                .isInstanceOf(IllegalStateException.class);
+
+        verify(mercadoPagoClient, never()).cancelarPreapproval(any());
     }
 
     @Test

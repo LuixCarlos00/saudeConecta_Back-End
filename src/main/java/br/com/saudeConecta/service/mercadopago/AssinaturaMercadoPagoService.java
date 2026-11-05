@@ -343,9 +343,29 @@ public class AssinaturaMercadoPagoService {
      * Compensação: o preapproval foi criado no MP mas a transação que o vincularia não
      * fez commit. Sem cancelar, ele ficaria vivo e sem dono, pronto para cobrar se o
      * cliente abrir o checkout.
+     *
+     * A exceção pode ter vindo depois do commit (ex.: falha de rede na confirmação do COMMIT):
+     * antes de cancelar, relê a assinatura em transação nova e só cancela se o preapproval
+     * criado não estiver vinculado. Na dúvida (releitura falhou) não cancela: cancelar um
+     * preapproval vinculado quebraria a cobrança, e um pendente sem dono não cobra sozinho.
      */
     private void compensarPreapprovalNaoVinculado(String preapprovalId, Long assinaturaId) {
         if (preapprovalId == null) {
+            return;
+        }
+        Boolean vinculado;
+        try {
+            vinculado = transacaoNova.execute(status -> assinaturaTenantRepository.findById(assinaturaId)
+                    .map(atual -> preapprovalId.equals(atual.getMpPreapprovalId()))
+                    .orElse(false));
+        } catch (RuntimeException e) {
+            log.error("mp.preapproval.compensar falha motivo=RELEITURA_FALHOU preapprovalId={} assinaturaId={} acao=CONFERIR_VINCULO_E_CANCELAR_MANUALMENTE",
+                    preapprovalId, assinaturaId, e);
+            return;
+        }
+        if (Boolean.TRUE.equals(vinculado)) {
+            log.warn("mp.preapproval.compensar ignorado motivo=PREAPPROVAL_VINCULADO preapprovalId={} assinaturaId={}",
+                    preapprovalId, assinaturaId);
             return;
         }
         try {

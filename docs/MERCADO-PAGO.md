@@ -128,6 +128,10 @@ Gerar um link novo quando já existe um preapproval (A) que não serve mais:
    novo (B) no MP, grava `mp_preapproval_id = B` e guarda A em
    `mp_preapproval_substituido_id`. Commit. Se o POST de B falhar, nada muda e A
    segue intacto.
+   Se der erro depois de B criado no MP, B é cancelado (compensação), mas só depois de reler
+   a assinatura numa transação nova e confirmar que B **não** ficou vinculado (o erro pode vir
+   da confirmação de um commit que gravou). Se nem a releitura funcionar, B não é cancelado e
+   o log ERROR pede conferência manual.
 2. Depois do commit, cancela A no MP e limpa `mp_preapproval_substituido_id`. Se o MP
    falhar, a coluna fica preenchida e a reconciliação (4 h) tenta de novo.
 
