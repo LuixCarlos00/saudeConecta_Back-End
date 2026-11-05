@@ -150,7 +150,7 @@ travada, o banco é gravado e então o valor vai ao MP, conforme o preapproval:
 
 | Preapproval no MP | O que acontece |
 |---|---|
-| `authorized` ou `paused` | `PUT /preapproval/{id}` com o valor novo. Se o MP falhar, a troca é desfeita: `502` com `code = MP_VALOR_NAO_ATUALIZADO` |
+| `authorized` ou `paused` | `PUT /preapproval/{id}` com o valor novo. Se o PUT falhar ou estourar o timeout, o preapproval é relido: se `auto_recurring.transaction_amount` já é o valor novo, a troca segue (o MP aplicou e a resposta se perdeu); se não, a troca é desfeita com `502` e `code = MP_VALOR_NAO_ATUALIZADO`. Se nem a releitura responder, também `502` (log `motivo=VALOR_INCERTO`) e a reconciliação acerta o MP pelo banco |
 | `pending` | O link é abandonado (o checkout mostraria o valor antigo): desvinculado e cancelado depois do commit. O próximo "Pagar" gera outro com o valor novo |
 | nenhum ou `cancelled` | Só o banco |
 
@@ -173,7 +173,7 @@ a cortesia de quem já tem cartão autorizado.
 |---|---|
 | `0 0 8 * * *` | Trials vencendo em 7 dias → cria preapproval pendente e envia o link por e-mail |
 | `0 0 9 * * *` | Régua de carência: +5d → INADIMPLENTE, +15d → SUSPENSA (pausa no MP), +30d → CANCELADA |
-| `0 0 */4 * * *` | Reconciliação com o Mercado Pago (rede de segurança para webhooks perdidos) e nova tentativa de cancelar preapprovals substituídos (`mp_preapproval_substituido_id` preenchido) |
+| `0 0 */4 * * *` | Reconciliação com o Mercado Pago (rede de segurança para webhooks perdidos), correção do valor do preapproval (`authorized`/`paused`) que diverge de `valor_mensal` (o banco vale; log WARN `motivo=VALOR_DIVERGENTE`) e nova tentativa de cancelar preapprovals substituídos (`mp_preapproval_substituido_id` preenchido) |
 
 Assinaturas com `cortesia = true` são ignoradas por todas as rotinas (régua, links,
 reconciliação e recuperação de faturas).

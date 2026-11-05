@@ -182,7 +182,7 @@ public class AssinaturaMercadoPagoService {
             PreapprovalResponse remoto = mercadoPagoClient.buscarPreapproval(preapprovalId);
             String statusMp = remoto != null ? remoto.status() : null;
             if (MercadoPagoClient.STATUS_AUTHORIZED.equals(statusMp) || MercadoPagoClient.STATUS_PAUSED.equals(statusMp)) {
-                mercadoPagoClient.atualizarValor(preapprovalId, assinatura.getValorMensal());
+                atualizarValorConfirmando(assinatura, preapprovalId);
                 assinatura.setMpStatus(statusMp);
                 assinatura.setMpUltimaSincronizacao(LocalDateTime.now());
                 log.info("mp.preapproval.valor ok preapprovalId={} assinaturaId={} de={} para={}",
@@ -197,6 +197,42 @@ public class AssinaturaMercadoPagoService {
                     "Não foi possível atualizar o valor da assinatura no Mercado Pago. Nada foi alterado; tente novamente.",
                     HttpStatus.BAD_GATEWAY, CODIGO_MP_VALOR_NAO_ATUALIZADO);
         }
+    }
+
+    /**
+     * PUT do valor novo. Se ele falhar ou estourar o timeout, o MP pode ter aplicado o valor
+     * sem a resposta voltar: desfazer a troca deixaria o banco com o valor antigo e o MP
+     * cobrando o novo. Por isso relê o preapproval e só desiste se o valor lá não for o novo.
+     *
+     * @throws BusinessException quando o valor novo não está confirmado no MP (o chamador
+     *                           responde 502 e desfaz a troca)
+     */
+    private void atualizarValorConfirmando(AssinaturaTenant assinatura, String preapprovalId) {
+        BigDecimal valorNovo = assinatura.getValorMensal();
+        try {
+            mercadoPagoClient.atualizarValor(preapprovalId, valorNovo);
+            return;
+        } catch (BusinessException falhaNoPut) {
+            PreapprovalResponse relido;
+            try {
+                relido = mercadoPagoClient.buscarPreapproval(preapprovalId);
+            } catch (BusinessException falhaNaReleitura) {
+                // Sem saber o valor no MP: a troca é desfeita e a reconciliação acerta o MP pelo banco
+                log.warn("mp.preapproval.valor falha motivo=VALOR_INCERTO preapprovalId={} assinaturaId={} valorNovo={} proximo=RECONCILIACAO",
+                        preapprovalId, assinatura.getId(), valorNovo);
+                throw falhaNoPut;
+            }
+            if (valorNoMp(relido) == null || valorNoMp(relido).compareTo(valorNovo) != 0) {
+                throw falhaNoPut;
+            }
+            log.warn("mp.preapproval.valor confirmado motivo=RESPOSTA_PERDIDA preapprovalId={} assinaturaId={} valorNovo={}",
+                    preapprovalId, assinatura.getId(), valorNovo);
+        }
+    }
+
+    private static BigDecimal valorNoMp(PreapprovalResponse preapproval) {
+        return preapproval != null && preapproval.autoRecurring() != null
+                ? preapproval.autoRecurring().transactionAmount() : null;
     }
 
     /**
@@ -561,6 +597,7 @@ public class AssinaturaMercadoPagoService {
         }
 
         assinaturaTenantRepository.save(assinatura);
+        mudou = corrigirValorDivergente(assinatura, remoto) || mudou;
 
         // Retry da reativação: se ela falhou após o pagamento, a assinatura está em dia mas o
         // MP segue pausado e não cobraria o próximo mês
@@ -571,6 +608,34 @@ public class AssinaturaMercadoPagoService {
             mudou = mudou || !MercadoPagoClient.STATUS_PAUSED.equals(assinatura.getMpStatus());
         }
         return mudou;
+    }
+
+    /**
+     * O banco é a fonte do valor mensal. Se o preapproval cobra outro valor (ex.: PUT da troca
+     * de plano aplicado no MP sem a resposta voltar, troca desfeita no banco), leva ao MP o
+     * valor do banco. Só para {@code authorized}/{@code paused}, como na troca de plano; falha
+     * do MP fica para a próxima reconciliação.
+     *
+     * @return true se o valor foi corrigido no MP
+     */
+    private boolean corrigirValorDivergente(AssinaturaTenant assinatura, PreapprovalResponse remoto) {
+        BigDecimal valorMp = valorNoMp(remoto);
+        if (valorMp == null || assinatura.getValorMensal() == null
+                || valorMp.compareTo(assinatura.getValorMensal()) == 0
+                || !(MercadoPagoClient.STATUS_AUTHORIZED.equals(remoto.status())
+                        || MercadoPagoClient.STATUS_PAUSED.equals(remoto.status()))) {
+            return false;
+        }
+        try {
+            mercadoPagoClient.atualizarValor(assinatura.getMpPreapprovalId(), assinatura.getValorMensal());
+            log.warn("mp.reconciliar valor motivo=VALOR_DIVERGENTE preapprovalId={} assinaturaId={} valorMp={} valorBanco={} acao=MP_CORRIGIDO",
+                    assinatura.getMpPreapprovalId(), assinatura.getId(), valorMp, assinatura.getValorMensal());
+            return true;
+        } catch (BusinessException e) {
+            log.warn("mp.reconciliar valor falha motivo=VALOR_DIVERGENTE preapprovalId={} assinaturaId={} valorMp={} valorBanco={} proximo=RECONCILIACAO",
+                    assinatura.getMpPreapprovalId(), assinatura.getId(), valorMp, assinatura.getValorMensal());
+            return false;
+        }
     }
 
     /**

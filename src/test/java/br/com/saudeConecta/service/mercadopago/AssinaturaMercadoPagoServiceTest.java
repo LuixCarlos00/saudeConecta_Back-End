@@ -619,6 +619,82 @@ class AssinaturaMercadoPagoServiceTest {
                 });
     }
 
+    private static PreapprovalResponse comValor(String id, String status, String valor) {
+        return new PreapprovalResponse(id, status, null, EMAIL_ADMIN, null,
+                new PreapprovalResponse.AutoRecurring(1, "months", new BigDecimal(valor), "BRL"), null);
+    }
+
+    @Test
+    @DisplayName("R1 - Timeout no PUT do valor, mas o MP aplicou: a releitura confirma e a troca segue")
+    void timeoutNoPutComValorJaAplicadoSegue() {
+        comPreapprovalNoMp("authorized");
+        when(mercadoPagoClient.atualizarValor(any(), any()))
+                .thenThrow(new BusinessException("timeout", org.springframework.http.HttpStatus.BAD_GATEWAY));
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID))
+                .thenReturn(comValor(PREAPPROVAL_ID, "authorized", "279.00"))
+                .thenReturn(comValor(PREAPPROVAL_ID, "authorized", "399.00"));
+
+        assertThatCode(() -> service.propagarNovoValor(assinatura, BigDecimal.valueOf(279)))
+                .doesNotThrowAnyException();
+
+        verify(mercadoPagoClient, times(2)).buscarPreapproval(PREAPPROVAL_ID);
+        assertThat(assinatura.getMpStatus()).isEqualTo("authorized");
+    }
+
+    @Test
+    @DisplayName("R1 - Timeout no PUT do valor e o MP não aplicou: 502 MP_VALOR_NAO_ATUALIZADO")
+    void timeoutNoPutSemAplicarDevolve502() {
+        comPreapprovalNoMp("authorized");
+        when(mercadoPagoClient.atualizarValor(any(), any()))
+                .thenThrow(new BusinessException("timeout", org.springframework.http.HttpStatus.BAD_GATEWAY));
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID))
+                .thenReturn(comValor(PREAPPROVAL_ID, "authorized", "279"));
+
+        assertThatThrownBy(() -> service.propagarNovoValor(assinatura, BigDecimal.valueOf(279)))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo("MP_VALOR_NAO_ATUALIZADO"));
+    }
+
+    @Test
+    @DisplayName("R1 - Timeout no PUT e a releitura também falha: 502 (valor incerto, a reconciliação acerta)")
+    void timeoutNoPutEReleituraFalhaDevolve502() {
+        comPreapprovalNoMp("authorized");
+        when(mercadoPagoClient.atualizarValor(any(), any()))
+                .thenThrow(new BusinessException("timeout", org.springframework.http.HttpStatus.BAD_GATEWAY));
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID))
+                .thenReturn(comValor(PREAPPROVAL_ID, "authorized", "279"))
+                .thenThrow(new BusinessException("timeout", org.springframework.http.HttpStatus.BAD_GATEWAY));
+
+        assertThatThrownBy(() -> service.propagarNovoValor(assinatura, BigDecimal.valueOf(279)))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo("MP_VALOR_NAO_ATUALIZADO"));
+    }
+
+    @Test
+    @DisplayName("R1 - Reconciliação: valor do preapproval diferente do banco é corrigido no MP")
+    void reconciliacaoCorrigeValorDivergente() {
+        assinatura.setStatus(StatusAssinatura.ATIVA);
+        assinatura.setDataVencimento(LocalDate.now().plusDays(10));
+        assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
+        assinatura.setMpStatus("authorized");
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID))
+                .thenReturn(comValor(PREAPPROVAL_ID, "authorized", "399"));
+
+        assertThat(service.sincronizar(assinatura)).isTrue();
+        verify(mercadoPagoClient).atualizarValor(PREAPPROVAL_ID, BigDecimal.valueOf(279));
+
+        // Valor igual (escala diferente) ou preapproval pendente: nada a corrigir
+        reset(mercadoPagoClient);
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID))
+                .thenReturn(comValor(PREAPPROVAL_ID, "authorized", "279.00"));
+        assertThat(service.sincronizar(assinatura)).isFalse();
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID))
+                .thenReturn(comValor(PREAPPROVAL_ID, "pending", "399"));
+        assinatura.setMpStatus("pending");
+        assertThat(service.sincronizar(assinatura)).isFalse();
+        verify(mercadoPagoClient, never()).atualizarValor(any(), any());
+    }
+
     @Test
     @DisplayName("C2(c) - Preapproval pending: abandona o link (desvincula e cancela depois); o próximo Pagar cria outro com o valor novo")
     void valorNovoComLinkPendenteAbandonaOLink() {
