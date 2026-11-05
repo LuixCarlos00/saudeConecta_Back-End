@@ -256,10 +256,15 @@ class AssinaturaMercadoPagoServiceTest {
                 .thenReturn(new PreapprovalResponse(PREAPPROVAL_ID, "pending", INIT_POINT,
                         EMAIL_ADMIN, "ASSINATURA-42", null, null));
 
+        when(assinaturaTenantRepository.findByMpPreapprovalId(PREAPPROVAL_ID)).thenReturn(Optional.of(assinatura));
+
         LinkPagamentoResponse link = service.gerarLinkENotificar(ASSINATURA_ID);
 
         assertThat(link.initPoint()).isEqualTo(INIT_POINT);
-        verify(emailNotificacaoService).enviarLinkAtivacaoAssinatura(
+        // M1: o e-mail só sai depois do commit da transação que vinculou o link
+        var ordem = inOrder(transactionManager, emailNotificacaoService);
+        ordem.verify(transactionManager).commit(any());
+        ordem.verify(emailNotificacaoService).enviarLinkAtivacaoAssinatura(
                 eq(EMAIL_ADMIN), eq("Fulano"), eq("Profissional"), any(), eq(INIT_POINT),
                 eq(EMAIL_ADMIN), any(), eq(ORG_ID), eq(3L));
     }
@@ -472,5 +477,49 @@ class AssinaturaMercadoPagoServiceTest {
         ordem.verify(mercadoPagoClient).cancelarPreapproval("pa-b");
         assertThat(assinatura.getMpPreapprovalId()).isEqualTo("pa-c");
         assertThat(assinatura.getMpPreapprovalSubstituidoId()).isNull();
+    }
+
+    @Test
+    @DisplayName("M1 - Erro depois de criar o preapproval e antes do commit: cancela o criado (compensação) e não envia e-mail")
+    void erroAntesDoCommitCompensaPreapprovalCriado() {
+        when(mercadoPagoClient.criarPreapprovalPendente(any(), any(), any(), any()))
+                .thenReturn(new PreapprovalResponse(PREAPPROVAL_ID, "pending", INIT_POINT,
+                        EMAIL_ADMIN, "ASSINATURA-42", null, null));
+        when(assinaturaTenantRepository.save(any())).thenThrow(new IllegalStateException("banco caiu"));
+
+        assertThatThrownBy(() -> service.gerarLinkENotificar(ASSINATURA_ID)).isInstanceOf(IllegalStateException.class);
+
+        verify(transactionManager).rollback(any());
+        verify(mercadoPagoClient).cancelarPreapproval(PREAPPROVAL_ID);
+        verifyNoInteractions(emailNotificacaoService);
+    }
+
+    @Test
+    @DisplayName("M1 - MP cria o preapproval sem init_point: 502 e o preapproval criado é cancelado")
+    void preapprovalSemInitPointEhCompensado() {
+        when(mercadoPagoClient.criarPreapprovalPendente(any(), any(), any(), any()))
+                .thenReturn(new PreapprovalResponse(PREAPPROVAL_ID, "pending", null,
+                        EMAIL_ADMIN, "ASSINATURA-42", null, null));
+
+        assertThatThrownBy(() -> service.gerarLinkPagamento(assinatura))
+                .isInstanceOf(BusinessException.class)
+                .extracting("status").isEqualTo(org.springframework.http.HttpStatus.BAD_GATEWAY);
+
+        verify(mercadoPagoClient).cancelarPreapproval(PREAPPROVAL_ID);
+        assertThat(assinatura.getMpPreapprovalId()).isNull();
+    }
+
+    @Test
+    @DisplayName("M1 - Falha na compensação não esconde o erro original")
+    void falhaNaCompensacaoNaoEscondeErroOriginal() {
+        when(mercadoPagoClient.criarPreapprovalPendente(any(), any(), any(), any()))
+                .thenReturn(new PreapprovalResponse(PREAPPROVAL_ID, "pending", INIT_POINT,
+                        EMAIL_ADMIN, "ASSINATURA-42", null, null));
+        when(assinaturaTenantRepository.save(any())).thenThrow(new IllegalStateException("banco caiu"));
+        when(mercadoPagoClient.cancelarPreapproval(PREAPPROVAL_ID))
+                .thenThrow(new BusinessException("MP fora", org.springframework.http.HttpStatus.BAD_GATEWAY));
+
+        assertThatThrownBy(() -> service.gerarLinkPagamento(assinatura))
+                .isInstanceOf(IllegalStateException.class).hasMessage("banco caiu");
     }
 }

@@ -260,8 +260,10 @@ class CobrancaSchedulerTest {
                 .forEach(m -> assertThat(m.getAnnotation(Transactional.class).propagation())
                         .as("ProcessadorReguaCobranca.%s", m.getName())
                         .isEqualTo(Propagation.REQUIRES_NEW));
+        // M1: gerarLinkENotificar não abre transação; a troca do preapproval faz commit nas próprias
+        // fases (REQUIRES_NEW) e o e-mail só sai depois desse commit
         assertThat(AssinaturaMercadoPagoService.class.getMethod("gerarLinkENotificar", Long.class)
-                .getAnnotation(Transactional.class).propagation()).isEqualTo(Propagation.REQUIRES_NEW);
+                .isAnnotationPresent(Transactional.class)).isFalse();
     }
 
     @Test

@@ -316,6 +316,36 @@ class PagamentoAssinaturaFluxoE2ETest {
         verify(mercadoPagoClient, times(2)).cancelarPreapproval("pa-c3-a");
     }
 
+    @Test
+    @DisplayName("M1 - Dois cliques simultâneos em Pagar: o FOR UPDATE serializa e só um preapproval é criado")
+    void cliquesSimultaneosCriamUmSoPreapproval() throws Exception {
+        AssinaturaTenant trial = salvarAssinatura(StatusAssinatura.TRIAL, null, null, LocalDate.now().plusDays(5));
+        String referencia = "ASSINATURA-" + trial.getId();
+        java.util.concurrent.CountDownLatch primeiroNoMp = new java.util.concurrent.CountDownLatch(1);
+        when(mercadoPagoClient.criarPreapprovalPendente(anyString(), eq(referencia), eq(PAGADOR), any()))
+                .thenAnswer(inv -> {
+                    primeiroNoMp.countDown();
+                    Thread.sleep(300);
+                    return preapproval("pa-m1", "pending", referencia);
+                });
+
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            var primeiro = pool.submit(() -> assinaturaMercadoPagoService.gerarLinkPagamento(organizacao.getId()));
+            primeiroNoMp.await(5, java.util.concurrent.TimeUnit.SECONDS);
+            var segundo = pool.submit(() -> assinaturaMercadoPagoService.gerarLinkPagamento(organizacao.getId()));
+
+            assertThat(primeiro.get(10, java.util.concurrent.TimeUnit.SECONDS).initPoint())
+                    .isEqualTo("https://mp/checkout/pa-m1");
+            assertThat(segundo.get(10, java.util.concurrent.TimeUnit.SECONDS).initPoint())
+                    .isEqualTo("https://mp/checkout/pa-m1");
+        } finally {
+            pool.shutdownNow();
+        }
+        verify(mercadoPagoClient, times(1)).criarPreapprovalPendente(anyString(), anyString(), anyString(), any());
+        assertThat(recarregar(trial).getMpPreapprovalId()).isEqualTo("pa-m1");
+    }
+
     private void gerarLink(AssinaturaTenant assinatura) {
         assinaturaMercadoPagoService.gerarLinkPagamento(organizacao.getId());
     }

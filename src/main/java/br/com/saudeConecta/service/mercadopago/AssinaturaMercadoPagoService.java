@@ -14,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -22,6 +21,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Regras de negócio da assinatura recorrente no Mercado Pago.
@@ -108,9 +108,35 @@ public class AssinaturaMercadoPagoService {
         }
 
         Long assinaturaId = assinatura.getId();
-        LinkPagamentoResponse link = transacaoNova.execute(status -> vincularNovoPreapproval(assinaturaId));
+        AtomicReference<String> criadoNoMp = new AtomicReference<>();
+        LinkPagamentoResponse link;
+        try {
+            link = transacaoNova.execute(status -> vincularNovoPreapproval(assinaturaId, criadoNoMp));
+        } catch (RuntimeException e) {
+            compensarPreapprovalNaoVinculado(criadoNoMp.get(), assinaturaId);
+            throw e;
+        }
         cancelarPreapprovalSubstituido(assinaturaId);
         return link;
+    }
+
+    /**
+     * Compensação: o preapproval foi criado no MP mas a transação que o vincularia não
+     * fez commit. Sem cancelar, ele ficaria vivo e sem dono, pronto para cobrar se o
+     * cliente abrir o checkout.
+     */
+    private void compensarPreapprovalNaoVinculado(String preapprovalId, Long assinaturaId) {
+        if (preapprovalId == null) {
+            return;
+        }
+        try {
+            mercadoPagoClient.cancelarPreapproval(preapprovalId);
+            log.warn("mp.preapproval.criar compensado motivo=FALHA_ANTES_DO_COMMIT preapprovalId={} assinaturaId={}",
+                    preapprovalId, assinaturaId);
+        } catch (BusinessException e) {
+            log.error("mp.preapproval.compensar falha preapprovalId={} assinaturaId={} acao=CANCELAR_MANUALMENTE_NO_MP",
+                    preapprovalId, assinaturaId, e);
+        }
     }
 
     /**
@@ -118,7 +144,7 @@ public class AssinaturaMercadoPagoService {
      * gerações simultâneas e a troca de plano: quem chega depois relê o estado e reaproveita
      * o link que o primeiro acabou de criar.
      */
-    private LinkPagamentoResponse vincularNovoPreapproval(Long assinaturaId) {
+    private LinkPagamentoResponse vincularNovoPreapproval(Long assinaturaId, AtomicReference<String> criadoNoMp) {
         AssinaturaTenant assinatura = assinaturaTenantRepository.findByIdParaAtualizacao(assinaturaId)
                 .orElseThrow(() -> new BusinessException(
                         "Assinatura não encontrada: " + assinaturaId, HttpStatus.NOT_FOUND));
@@ -143,6 +169,9 @@ public class AssinaturaMercadoPagoService {
                 PREFIXO_EXTERNAL_REFERENCE + assinaturaId,
                 payerEmail,
                 assinatura.getValorMensal());
+        if (preapproval != null) {
+            criadoNoMp.set(preapproval.id());
+        }
 
         if (preapproval == null || preapproval.initPoint() == null) {
             throw new BusinessException(
@@ -233,20 +262,22 @@ public class AssinaturaMercadoPagoService {
 
     /**
      * Gera o link de pagamento de uma assinatura e o envia por e-mail ao administrador
-     * owner da organização. Roda em transação própria para ser chamado item a item
-     * pelo scheduler e após o commit da remoção de cortesia.
+     * owner da organização. Chamado item a item pelo scheduler e após o commit da remoção
+     * de cortesia.
+     *
+     * Não abre transação de propósito: a troca do preapproval faz commit nas próprias fases
+     * e o e-mail só sai depois desse commit, para nunca levar um link que foi desfeito.
      *
      * @param assinaturaId ID da assinatura
      * @return dados do checkout, incluindo o init_point
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public LinkPagamentoResponse gerarLinkENotificar(Long assinaturaId) {
         AssinaturaTenant assinatura = assinaturaTenantRepository.findById(assinaturaId)
                 .orElseThrow(() -> new BusinessException(
                         "Assinatura não encontrada: " + assinaturaId, HttpStatus.NOT_FOUND));
 
         LinkPagamentoResponse link = gerarLinkPagamento(assinatura);
-        notificarLinkDePagamento(assinatura, link);
+        notificarLinkDePagamento(assinaturaId, link);
         return link;
     }
 
@@ -481,7 +512,15 @@ public class AssinaturaMercadoPagoService {
                 assinatura.getValorMensal());
     }
 
-    private void notificarLinkDePagamento(AssinaturaTenant assinatura, LinkPagamentoResponse link) {
+    private void notificarLinkDePagamento(Long assinaturaId, LinkPagamentoResponse link) {
+        // Releitura com plano e organização carregados: a chamada vem de fora de transação
+        AssinaturaTenant assinatura = assinaturaTenantRepository.findByMpPreapprovalId(link.preapprovalId())
+                .orElse(null);
+        if (assinatura == null || !assinaturaId.equals(assinatura.getId())) {
+            log.warn("mp.link.enviar negado motivo=LINK_NAO_VINCULADO assinaturaId={} preapprovalId={}",
+                    assinaturaId, link.preapprovalId());
+            return;
+        }
         AdminOrganizacao owner = adminOrganizacaoRepository
                 .findOwnerByOrganizacaoId(assinatura.getOrganizacao().getId())
                 .orElse(null);
