@@ -37,7 +37,6 @@ public class AssinaturaTenantController {
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<AssinaturaTenantResponse> assinar(
             @RequestBody @Valid AssinaturaTenantRequest request) {
-        log.info("Nova assinatura: org={}, plano={}", request.organizacaoId(), request.planoId());
         AssinaturaTenantResponse response = assinaturaTenantService.assinar(
                 request.organizacaoId(), request.planoId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -50,7 +49,6 @@ public class AssinaturaTenantController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AssinaturaTenantResponse> trocarPlano(@PathVariable Long novoPlanoId) {
         Long organizacaoId = TenantContext.getCurrentTenant();
-        log.info("Troca de plano: org={}, novoPlano={}", organizacaoId, novoPlanoId);
         return ResponseEntity.ok(assinaturaTenantService.trocarPlano(organizacaoId, novoPlanoId));
     }
 
@@ -72,7 +70,6 @@ public class AssinaturaTenantController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<LinkPagamentoResponse> gerarLinkPagamento() {
         Long organizacaoId = TenantContext.getCurrentTenant();
-        log.info("Gerando link de pagamento Mercado Pago para org={}", organizacaoId);
         return ResponseEntity.ok(assinaturaMercadoPagoService.gerarLinkPagamento(organizacaoId));
     }
 
@@ -83,7 +80,6 @@ public class AssinaturaTenantController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> cancelarMinhaAssinatura() {
         Long organizacaoId = TenantContext.getCurrentTenant();
-        log.warn("Cancelamento solicitado pelo cliente: org={}", organizacaoId);
         assinaturaMercadoPagoService.cancelarPeloCliente(organizacaoId);
         return ResponseEntity.noContent().build();
     }
@@ -146,9 +142,6 @@ public class AssinaturaTenantController {
     public ResponseEntity<AssinaturaTenantResponse> customizarPlano(
             @PathVariable Long organizacaoId,
             @RequestBody @Valid CustomizarPlanoTenantRequest request) {
-        log.info("SUPER_ADMIN customizando plano: org={}, limAdmin={}, limProf={}, limSec={}",
-                organizacaoId, request.limiteAdminOrgCustom(),
-                request.limiteProfissionalCustom(), request.limiteSecretariaCustom());
         return ResponseEntity.ok(assinaturaTenantService.customizarPlano(organizacaoId, request));
     }
 
@@ -160,7 +153,6 @@ public class AssinaturaTenantController {
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<AssinaturaTenantResponse> definirCortesia(
             @PathVariable Long id, @RequestParam boolean cortesia) {
-        log.warn("SUPER_ADMIN definindo cortesia={} para assinatura {}", cortesia, id);
         return ResponseEntity.ok(assinaturaTenantService.definirCortesia(id, cortesia));
     }
 
@@ -170,7 +162,6 @@ public class AssinaturaTenantController {
     @PatchMapping("/{id}/suspender")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Void> suspender(@PathVariable Long id) {
-        log.warn("Suspendendo assinatura ID: {}", id);
         assinaturaTenantService.suspender(id);
         assinaturaMercadoPagoService.pausar(assinaturaTenantService.buscarEntidadePorId(id));
         return ResponseEntity.noContent().build();
@@ -182,7 +173,6 @@ public class AssinaturaTenantController {
     @PatchMapping("/{id}/cancelar")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Void> cancelar(@PathVariable Long id) {
-        log.warn("Cancelando assinatura ID: {}", id);
         assinaturaMercadoPagoService.cancelar(
                 assinaturaTenantService.buscarEntidadePorId(id), OrigemCancelamento.SUPER_ADMIN);
         return ResponseEntity.noContent().build();

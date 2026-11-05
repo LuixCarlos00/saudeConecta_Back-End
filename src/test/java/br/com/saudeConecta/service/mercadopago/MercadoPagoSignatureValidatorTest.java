@@ -107,6 +107,6 @@ class MercadoPagoSignatureValidatorTest {
         String headerSemTs = "v1=hmac-secreto-que-nao-pode-vazar-0123456789abcdef";
 
         assertThat(validator.isValida(headerSemTs, REQUEST_ID, DATA_ID)).isFalse();
-        assertThat(output.getAll()).contains("x-signature malformado").doesNotContain("hmac-secreto-que-nao-pode-vazar");
+        assertThat(output.getAll()).contains("motivo=HEADER_MALFORMADO").doesNotContain("hmac-secreto-que-nao-pode-vazar");
     }
 }

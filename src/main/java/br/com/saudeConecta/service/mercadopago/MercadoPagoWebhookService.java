@@ -100,7 +100,7 @@ public class MercadoPagoWebhookService {
         try {
             processar(tipo, dataId, payload);
         } catch (Exception e) {
-            log.error("Erro ao processar webhook {} data.id={}: {}", tipo, dataId, e.getMessage(), e);
+            log.error("mp.webhook falha tipo={} dataId={} etapa=ASSINCRONO", tipo, dataId, e);
         }
     }
 
@@ -118,14 +118,14 @@ public class MercadoPagoWebhookService {
     public void processar(String tipo, String dataId, String payload) {
         MpWebhookEvento evento = transactionTemplate.execute(status -> registrarEvento(tipo, dataId, payload));
         if (evento == null) {
-            log.info("Webhook {} data.id={} já encerrado, ignorando", tipo, dataId);
+            log.info("mp.webhook ignorado motivo=JA_ENCERRADO tipo={} dataId={}", tipo, dataId);
             return;
         }
 
         try {
             processarComReaplicacao(evento, tipo, dataId);
         } catch (Exception e) {
-            log.error("Falha ao processar webhook {} data.id={}: {}", tipo, dataId, e.getMessage(), e);
+            log.error("mp.webhook falha tipo={} dataId={}", tipo, dataId, e);
             registrarFalha(evento, e);
         }
     }
@@ -148,7 +148,7 @@ public class MercadoPagoWebhookService {
                     || faturaRegistradaComoPaga(fatura.id())) {
                 continue;
             }
-            log.warn("Fatura aprovada {} do preapproval {} sem registro local (webhook perdido) — recuperando",
+            log.warn("mp.fatura recuperar motivo=WEBHOOK_PERDIDO faturaId={} preapprovalId={}",
                     fatura.id(), preapprovalId);
             processar(TOPICO_AUTHORIZED_PAYMENT, fatura.id(), PAYLOAD_RECUPERACAO);
             if (faturaRegistradaComoPaga(fatura.id())) {
@@ -171,21 +171,21 @@ public class MercadoPagoWebhookService {
 
         Integer expirados = transactionTemplate.execute(status -> eventoRepository.expirarComErroAntesDe(limite, agora));
         if (expirados != null && expirados > 0) {
-            log.warn("{} evento(s) do Mercado Pago com erro expirado(s) após {} dias sem sucesso — tratar manualmente",
+            log.warn("mp.webhook.reprocessar expirado eventos={} prazoDias={} acao=TRATAR_MANUALMENTE",
                     expirados, PRAZO_REPROCESSAMENTO_DIAS);
         }
 
         List<MpWebhookEvento> elegiveis = eventoRepository.findComErroParaReprocessar(limite, agora);
         int reprocessados = 0;
         for (MpWebhookEvento evento : elegiveis) {
-            log.info("Reprocessando webhook {} data.id={} (tentativas anteriores: {}, último erro: {})",
+            log.info("mp.webhook.reprocessar inicio tipo={} dataId={} tentativasAnteriores={} ultimoErro={}",
                     evento.getTipo(), evento.getDataId(), evento.getTentativas(), evento.getErro());
             // Falha fora do tratamento do processar (ex.: banco ao registrar o evento) não derruba o lote
             try {
                 processar(evento.getTipo(), evento.getDataId(), evento.getPayload());
                 reprocessados++;
             } catch (Exception e) {
-                log.error("Falha ao reprocessar webhook {} data.id={} — segue para o próximo",
+                log.error("mp.webhook.reprocessar falha tipo={} dataId={} acao=SEGUE_PARA_O_PROXIMO",
                         evento.getTipo(), evento.getDataId(), e);
             }
         }
@@ -227,7 +227,7 @@ public class MercadoPagoWebhookService {
                 if (tentativa >= MAX_TENTATIVAS_CONFLITO_VERSAO) {
                     throw e;
                 }
-                log.warn("Webhook {} data.id={}: assinatura alterada concorrentemente (tentativa {}/{}), reaplicando",
+                log.warn("mp.webhook conflito.versao tipo={} dataId={} tentativa={}/{} acao=REAPLICAR",
                         tipo, dataId, tentativa, MAX_TENTATIVAS_CONFLITO_VERSAO);
             }
         }
@@ -248,7 +248,7 @@ public class MercadoPagoWebhookService {
             transactionTemplate.executeWithoutResult(status ->
                     eventoRepository.registrarFalha(evento.getId(), erroGravado, proximaTentativa));
         } catch (Exception e) {
-            log.error("Não foi possível registrar a falha do evento {}: {}", evento.getId(), e.getMessage(), e);
+            log.error("mp.webhook.falha registrar falha eventoId={}", evento.getId(), e);
         }
     }
 
@@ -272,7 +272,7 @@ public class MercadoPagoWebhookService {
             case TOPICO_PREAPPROVAL -> processarPreapproval(dataId);
             case TOPICO_AUTHORIZED_PAYMENT -> processarPagamentoAutorizado(dataId, evento);
             default -> {
-                log.info("Tópico não tratado pelo Saúde Conecta: {}", tipo);
+                log.info("mp.webhook ignorado motivo=TOPICO_NAO_TRATADO tipo={}", tipo);
                 yield true;
             }
         };
@@ -302,7 +302,7 @@ public class MercadoPagoWebhookService {
 
         } catch (DataIntegrityViolationException e) {
             // Corrida entre duas entregas simultâneas da mesma notificação
-            log.info("Evento {} data.id={} já registrado concorrentemente", tipo, dataId);
+            log.info("mp.webhook ignorado motivo=JA_REGISTRADO_CONCORRENTEMENTE tipo={} dataId={}", tipo, dataId);
             return null;
         }
     }
@@ -319,7 +319,7 @@ public class MercadoPagoWebhookService {
     private boolean processarPreapproval(String preapprovalId) {
         PreapprovalResponse remoto = mercadoPagoClient.buscarPreapproval(preapprovalId);
         if (remoto == null) {
-            log.warn("Preapproval {} não encontrado no Mercado Pago", preapprovalId);
+            log.warn("mp.webhook ignorado motivo=PREAPPROVAL_NAO_ENCONTRADO preapprovalId={}", preapprovalId);
             return false;
         }
         if (!recursoConfere(TOPICO_PREAPPROVAL, preapprovalId, remoto.id())) {
@@ -333,7 +333,7 @@ public class MercadoPagoWebhookService {
         // Achada pela external_reference, mas já vinculada a outro preapproval: é o antigo, cancelado
         // ao gerar um link novo. Aplicar o status dele cancelaria a assinatura e trocaria o vínculo.
         if (assinatura.getMpPreapprovalId() != null && !assinatura.getMpPreapprovalId().equals(remoto.id())) {
-            log.info("Preapproval {} (status {}) ignorado: a assinatura {} está vinculada ao preapproval {}",
+            log.info("mp.preapproval ignorado motivo=OUTRO_PREAPPROVAL_VINCULADO preapprovalId={} statusMp={} assinaturaId={} preapprovalVinculado={}",
                     remoto.id(), remoto.status(), assinatura.getId(), assinatura.getMpPreapprovalId());
             // Só o cancelado é estado final. Um preapproval ainda vivo pode ser o NOVO, cujo vínculo
             // ainda não foi commitado por gerarLinkPagamento: encerrar o evento descartaria as
@@ -347,7 +347,7 @@ public class MercadoPagoWebhookService {
         assinaturaMercadoPagoService.aplicarStatusRemoto(assinatura, remoto.status());
 
         assinaturaTenantRepository.save(assinatura);
-        log.info("Assinatura {} sincronizada via webhook: status local {} (MP: {})",
+        log.info("mp.preapproval sincronizado assinaturaId={} statusLocal={} statusMp={}",
                 assinatura.getId(), assinatura.getStatus(), remoto.status());
 
         return MercadoPagoClient.STATUS_CANCELLED.equals(remoto.status());
@@ -362,7 +362,7 @@ public class MercadoPagoWebhookService {
     private boolean processarPagamentoAutorizado(String authorizedPaymentId, MpWebhookEvento evento) {
         AuthorizedPaymentResponse fatura = mercadoPagoClient.buscarAuthorizedPayment(authorizedPaymentId);
         if (fatura == null) {
-            log.warn("Authorized payment {} não encontrado no Mercado Pago", authorizedPaymentId);
+            log.warn("mp.webhook ignorado motivo=FATURA_NAO_ENCONTRADA faturaId={}", authorizedPaymentId);
             return false;
         }
         if (!recursoConfere(TOPICO_AUTHORIZED_PAYMENT, authorizedPaymentId, fatura.id())) {
@@ -383,7 +383,8 @@ public class MercadoPagoWebhookService {
 
         String statusPagamento = fatura.statusPagamento();
         if (statusPagamento == null) {
-            log.info("Fatura {} ainda sem pagamento processado (status={})", authorizedPaymentId, fatura.status());
+            log.info("mp.fatura ignorada motivo=SEM_PAGAMENTO_PROCESSADO faturaId={} status={}",
+                    authorizedPaymentId, fatura.status());
             return false;
         }
 
@@ -392,7 +393,7 @@ public class MercadoPagoWebhookService {
                 .orElseGet(() -> novaCobranca(assinatura, fatura, authorizedPaymentId));
 
         if (cobranca.isPago()) {
-            log.info("Fatura {} já registrada como paga, ignorando", authorizedPaymentId);
+            log.info("mp.fatura ignorada motivo=JA_REGISTRADA_COMO_PAGA faturaId={}", authorizedPaymentId);
             return true;
         }
 
@@ -405,8 +406,8 @@ public class MercadoPagoWebhookService {
             // CANCELADA é terminal: o dinheiro fica registrado, mas a reativação/estorno é manual
             if (StatusAssinatura.CANCELADA.equals(assinatura.getStatus())) {
                 Long organizacaoId = assinatura.getOrganizacao() != null ? assinatura.getOrganizacao().getId() : null;
-                log.warn("Pagamento recebido em assinatura cancelada — tratar manualmente (estorno ou reativação). "
-                        + "Assinatura {} (org {}), fatura {}", assinatura.getId(), organizacaoId, authorizedPaymentId);
+                log.warn("mp.fatura aprovada negado motivo=ASSINATURA_CANCELADA acao=TRATAR_MANUALMENTE assinaturaId={} organizacaoId={} faturaId={}",
+                        assinatura.getId(), organizacaoId, authorizedPaymentId);
                 evento.marcarParaAtencao(MpWebhookEvento.MOTIVO_PAGAMENTO_EM_CANCELADA,
                         "assinatura " + assinatura.getId() + " (org " + organizacaoId + "), fatura "
                                 + authorizedPaymentId + " — estornar ou reativar manualmente");
@@ -416,7 +417,7 @@ public class MercadoPagoWebhookService {
             assinaturaTenantService.renovarAposPagamento(assinatura.getId());
             // Assinatura suspensa teve o preapproval pausado: sem reativar, o MP não cobra o próximo mês
             assinaturaMercadoPagoService.reativarSePausado(assinatura);
-            log.info("Pagamento aprovado da assinatura {} (fatura {})", assinatura.getId(), authorizedPaymentId);
+            log.info("mp.fatura aprovada assinaturaId={} faturaId={}", assinatura.getId(), authorizedPaymentId);
             return true;
         }
 
@@ -429,13 +430,13 @@ public class MercadoPagoWebhookService {
             if (assinatura.getStatus() != null && assinatura.getStatus().isAtiva()) {
                 assinaturaTenantService.marcarInadimplente(assinatura.getId());
             }
-            log.warn("Pagamento recusado da assinatura {} (fatura {}, motivo {})",
+            log.warn("mp.fatura recusada assinaturaId={} faturaId={} motivo={}",
                     assinatura.getId(), authorizedPaymentId, fatura.motivoRecusa());
             return false;
         }
 
         cobrancaTenantRepository.save(cobranca);
-        log.info("Fatura {} em status intermediário: {}", authorizedPaymentId, statusPagamento);
+        log.info("mp.fatura status intermediario faturaId={} status={}", authorizedPaymentId, statusPagamento);
         return false;
     }
 
@@ -448,7 +449,7 @@ public class MercadoPagoWebhookService {
         if (dataId.equals(idConsultado)) {
             return true;
         }
-        log.warn("Webhook {} data.id={} ignorado: o recurso consultado no Mercado Pago tem id {}",
+        log.warn("mp.webhook ignorado motivo=RECURSO_DIVERGENTE tipo={} dataId={} idConsultado={}",
                 tipo, dataId, idConsultado);
         return false;
     }
@@ -492,7 +493,7 @@ public class MercadoPagoWebhookService {
             }
         }
 
-        log.warn("Nenhuma assinatura local encontrada para preapproval={} externalReference={}",
+        log.warn("mp.webhook ignorado motivo=ASSINATURA_NAO_ENCONTRADA preapprovalId={} externalReference={}",
                 preapprovalId, externalReference);
         return null;
     }
@@ -504,7 +505,7 @@ public class MercadoPagoWebhookService {
         try {
             return Long.valueOf(externalReference.substring("ASSINATURA-".length()));
         } catch (NumberFormatException e) {
-            log.warn("external_reference inválida recebida do Mercado Pago: {}", externalReference);
+            log.warn("mp.webhook ignorado motivo=EXTERNAL_REFERENCE_INVALIDA externalReference={}", externalReference);
             return null;
         }
     }

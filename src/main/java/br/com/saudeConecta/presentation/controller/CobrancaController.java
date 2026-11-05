@@ -27,7 +27,6 @@ public class CobrancaController {
     @PatchMapping("/{cobrancaId}/confirmar-pagamento")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<CobrancaTenantResponse> confirmarPagamento(@PathVariable Long cobrancaId) {
-        log.info("Confirmacao manual de pagamento: cobrancaId={}", cobrancaId);
         return ResponseEntity.ok(cobrancaService.confirmarPagamentoManual(cobrancaId));
     }
 

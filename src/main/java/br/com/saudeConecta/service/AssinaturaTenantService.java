@@ -77,12 +77,14 @@ public class AssinaturaTenantService {
      */
     @Transactional
     public AssinaturaTenantResponse assinar(Long organizacaoId, Long planoId, boolean cortesia) {
+        log.info("assinatura.criar inicio organizacaoId={} planoId={} cortesia={}", organizacaoId, planoId, cortesia);
         // Verifica se já existe assinatura ativa
         var assinaturaExistente = assinaturaTenantRepository.findAssinaturaAtivaByOrganizacaoId(organizacaoId);
         
         if (assinaturaExistente.isPresent()) {
             // Se já existe, troca o plano em vez de criar nova assinatura
-            log.info("Organização {} já possui assinatura. Trocando plano para {}", organizacaoId, planoId);
+            log.info("assinatura.criar ignorado motivo=JA_POSSUI_ASSINATURA organizacaoId={} planoId={} acao=TROCAR_PLANO",
+                    organizacaoId, planoId);
             return trocarPlanoSuperAdmin(organizacaoId, planoId);
         }
 
@@ -110,8 +112,8 @@ public class AssinaturaTenantService {
                 .build();
 
         AssinaturaTenant salva = assinaturaTenantRepository.save(assinatura);
-        log.info("Assinatura {} criada para org {} no plano {} (vence em {})",
-                salva.getStatus(), organizacaoId, plano.getNome(), salva.getDataVencimento());
+        log.info("assinatura.criar ok assinaturaId={} organizacaoId={} plano={} status={} vencimento={}",
+                salva.getId(), organizacaoId, plano.getNome(), salva.getStatus(), salva.getDataVencimento());
 
         return AssinaturaTenantResponse.fromEntity(salva);
     }
@@ -137,7 +139,7 @@ public class AssinaturaTenantService {
         assinatura.setValorMensal(novoPlano.getValorMensal());
 
         AssinaturaTenant salva = assinaturaTenantRepository.save(assinatura);
-        log.info("SUPER_ADMIN alterou plano da org {} para {} (R$ {})",
+        log.info("assinatura.trocarPlano ok origem=SUPER_ADMIN organizacaoId={} plano={} valorMensal={}",
                 organizacaoId, novoPlano.getNome(), novoPlano.getValorMensal());
 
         return AssinaturaTenantResponse.fromEntity(salva);
@@ -152,6 +154,7 @@ public class AssinaturaTenantService {
      */
     @Transactional
     public AssinaturaTenantResponse trocarPlano(Long organizacaoId, Long novoPlanoId) {
+        log.info("assinatura.trocarPlano inicio organizacaoId={} novoPlanoId={}", organizacaoId, novoPlanoId);
         AssinaturaTenant assinatura = assinaturaTenantRepository
                 .findAssinaturaAtivaByOrganizacaoId(organizacaoId)
                 .orElseThrow(() -> new BusinessException(
@@ -164,7 +167,7 @@ public class AssinaturaTenantService {
         assinatura.setValorMensal(novoPlano.getValorMensal());
 
         AssinaturaTenant salva = assinaturaTenantRepository.save(assinatura);
-        log.info("Plano da org {} alterado para {} (R$ {})",
+        log.info("assinatura.trocarPlano ok organizacaoId={} plano={} valorMensal={}",
                 organizacaoId, novoPlano.getNome(), novoPlano.getValorMensal());
 
         return AssinaturaTenantResponse.fromEntity(salva);
@@ -178,6 +181,7 @@ public class AssinaturaTenantService {
      */
     @Transactional
     public AssinaturaTenantResponse ativar(Long organizacaoId) {
+        log.info("assinatura.ativar inicio organizacaoId={}", organizacaoId);
         AssinaturaTenant assinatura = assinaturaTenantRepository
                 .findAssinaturaAtivaByOrganizacaoId(organizacaoId)
                 .orElseThrow(() -> new BusinessException(
@@ -189,7 +193,7 @@ public class AssinaturaTenantService {
         assinatura.setDataProximaCobranca(LocalDate.now(clock).plusMonths(1));
 
         AssinaturaTenant salva = assinaturaTenantRepository.save(assinatura);
-        log.info("Assinatura da org {} ativada. Proximo vencimento: {}",
+        log.info("assinatura.ativar ok organizacaoId={} vencimento={}",
                 organizacaoId, salva.getDataVencimento());
 
         return AssinaturaTenantResponse.fromEntity(salva);
@@ -205,7 +209,7 @@ public class AssinaturaTenantService {
         AssinaturaTenant assinatura = buscarPorId(assinaturaId);
         assinatura.setStatus(StatusAssinatura.INADIMPLENTE);
         assinaturaTenantRepository.save(assinatura);
-        log.warn("Assinatura {} marcada como INADIMPLENTE (org: {})",
+        log.info("assinatura.inadimplente ok assinaturaId={} organizacaoId={} status=INADIMPLENTE",
                 assinaturaId, assinatura.getOrganizacao().getId());
     }
 
@@ -217,11 +221,12 @@ public class AssinaturaTenantService {
      */
     @Transactional
     public void suspender(Long assinaturaId) {
+        log.info("assinatura.suspender inicio assinaturaId={}", assinaturaId);
         AssinaturaTenant assinatura = buscarPorId(assinaturaId);
         assinatura.setStatus(StatusAssinatura.SUSPENSA);
         assinatura.setDataSuspensao(LocalDateTime.now(clock));
         assinaturaTenantRepository.save(assinatura);
-        log.warn("Assinatura {} SUSPENSA (org: {})",
+        log.info("assinatura.suspender ok assinaturaId={} organizacaoId={} status=SUSPENSA",
                 assinaturaId, assinatura.getOrganizacao().getId());
     }
 
@@ -232,10 +237,11 @@ public class AssinaturaTenantService {
      */
     @Transactional
     public void cancelar(Long assinaturaId) {
+        log.info("assinatura.cancelar inicio assinaturaId={}", assinaturaId);
         AssinaturaTenant assinatura = buscarPorId(assinaturaId);
         assinatura.setStatus(StatusAssinatura.CANCELADA);
         assinaturaTenantRepository.save(assinatura);
-        log.warn("Assinatura {} CANCELADA (org: {})",
+        log.info("assinatura.cancelar ok assinaturaId={} organizacaoId={} status=CANCELADA",
                 assinaturaId, assinatura.getOrganizacao().getId());
     }
 
@@ -297,7 +303,7 @@ public class AssinaturaTenantService {
         // debit_date/date_created, então não há data "oficial" melhor para ancorar.
         assinatura.renovarCiclo(LocalDate.now(clock));
         assinaturaTenantRepository.save(assinatura);
-        log.info("Assinatura {} renovada. Proximo vencimento: {}",
+        log.info("assinatura.renovar ok assinaturaId={} vencimento={}",
                 assinaturaId, assinatura.getDataVencimento());
     }
 
@@ -311,6 +317,9 @@ public class AssinaturaTenantService {
      */
     @Transactional
     public AssinaturaTenantResponse customizarPlano(Long organizacaoId, CustomizarPlanoTenantRequest request) {
+        log.info("assinatura.customizar inicio organizacaoId={} limAdmin={} limProf={} limSec={}",
+                organizacaoId, request.limiteAdminOrgCustom(),
+                request.limiteProfissionalCustom(), request.limiteSecretariaCustom());
         AssinaturaTenant assinatura = assinaturaTenantRepository
                 .findAssinaturaAtivaByOrganizacaoId(organizacaoId)
                 .orElseThrow(() -> new BusinessException(
@@ -347,7 +356,7 @@ public class AssinaturaTenantService {
         assinatura.setValorMensal(plano.getValorMensal().add(valorAdicional));
 
         AssinaturaTenant salva = assinaturaTenantRepository.save(assinatura);
-        log.info("Plano customizado para org {}: +{} admin, +{} prof, +{} sec | Adicional: R${} | Total: R${}",
+        log.info("assinatura.customizar ok organizacaoId={} extraAdmin={} extraProf={} extraSec={} valorAdicional={} valorTotal={}",
                 organizacaoId, extraAdmin, extraProf, extraSec, valorAdicional, salva.getValorMensal());
 
         return AssinaturaTenantResponse.fromEntity(salva);
@@ -393,6 +402,7 @@ public class AssinaturaTenantService {
      */
     @Transactional
     public AssinaturaTenantResponse definirCortesia(Long assinaturaId, boolean cortesia) {
+        log.info("assinatura.cortesia inicio assinaturaId={} cortesia={}", assinaturaId, cortesia);
         AssinaturaTenant assinatura = buscarPorId(assinaturaId);
         boolean removendoCortesia = !cortesia && assinatura.isCortesia()
                 && !StatusAssinatura.CANCELADA.equals(assinatura.getStatus());
@@ -403,7 +413,7 @@ public class AssinaturaTenantService {
         boolean precisaDeLink = removendoCortesia && !aplicarVencimentoAposCortesia(assinatura);
 
         AssinaturaTenant salva = assinaturaTenantRepository.save(assinatura);
-        log.warn("Assinatura {} definida como cortesia={} (org {}, status {}, vencimento {})",
+        log.info("assinatura.cortesia ok assinaturaId={} cortesia={} organizacaoId={} status={} vencimento={}",
                 assinaturaId, cortesia, salva.getOrganizacao().getId(), salva.getStatus(), salva.getDataVencimento());
 
         if (precisaDeLink) {
@@ -430,8 +440,8 @@ public class AssinaturaTenantService {
                 }
                 // MP respondeu que o preapproval não está mais autorizado: segue como sem cartão
             } catch (BusinessException e) {
-                log.warn("Assinatura {}: MP indisponível ao consultar a próxima cobrança ({}); "
-                        + "mantendo status com vencimento em {}", assinatura.getId(), e.getMessage(), prazoParaPagar);
+                log.warn("assinatura.cortesia negado motivo=MP_INDISPONIVEL assinaturaId={} causa={} vencimento={}",
+                        assinatura.getId(), e.getClass().getSimpleName(), prazoParaPagar);
                 definirVencimento(assinatura, prazoParaPagar);
                 return true;
             }
@@ -458,8 +468,7 @@ public class AssinaturaTenantService {
             try {
                 assinaturaMercadoPagoService.gerarLinkENotificar(assinaturaId);
             } catch (Exception e) {
-                log.error("Falha ao gerar o link de pagamento após remover a cortesia da assinatura {}",
-                        assinaturaId, e);
+                log.error("assinatura.cortesia.link falha assinaturaId={}", assinaturaId, e);
             }
         };
 

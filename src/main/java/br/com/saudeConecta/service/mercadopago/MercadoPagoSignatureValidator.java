@@ -41,11 +41,11 @@ public class MercadoPagoSignatureValidator {
     public boolean isValida(String xSignature, String xRequestId, String dataId) {
         String secret = properties.getWebhookSecret();
         if (secret == null || secret.isBlank()) {
-            log.error("MP_WEBHOOK_SECRET não configurado — webhook rejeitado por segurança");
+            log.error("mp.webhook.assinatura negado motivo=SECRET_NAO_CONFIGURADO");
             return false;
         }
         if (xSignature == null || xSignature.isBlank() || dataId == null || dataId.isBlank()) {
-            log.warn("Webhook Mercado Pago sem x-signature ou sem data.id");
+            log.warn("mp.webhook.assinatura negado motivo=SEM_ASSINATURA_OU_DATA_ID");
             return false;
         }
 
@@ -53,7 +53,7 @@ public class MercadoPagoSignatureValidator {
         String v1 = extrairParte(xSignature, "v1");
         if (ts == null || v1 == null) {
             // Só o tamanho: o header carrega o HMAC (v1), que não deve ir para o log
-            log.warn("Header x-signature malformado (tamanho {}, ts presente: {}, v1 presente: {})",
+            log.warn("mp.webhook.assinatura negado motivo=HEADER_MALFORMADO tamanho={} tsPresente={} v1Presente={}",
                     xSignature.length(), ts != null, v1 != null);
             return false;
         }
@@ -68,7 +68,7 @@ public class MercadoPagoSignatureValidator {
                 esperado.getBytes(StandardCharsets.UTF_8), v1.getBytes(StandardCharsets.UTF_8));
 
         if (!valida) {
-            log.warn("Assinatura inválida no webhook do Mercado Pago para data.id={}", dataId);
+            log.warn("mp.webhook.assinatura negado motivo=ASSINATURA_INVALIDA dataId={}", dataId);
         }
         return valida;
     }
@@ -80,12 +80,12 @@ public class MercadoPagoSignatureValidator {
         try {
             long diferenca = Math.abs(Instant.now().getEpochSecond() - Long.parseLong(ts));
             if (diferenca > JANELA_TOLERANCIA_SEGUNDOS) {
-                log.warn("Webhook Mercado Pago fora da janela de tolerância ({}s de diferença)", diferenca);
+                log.warn("mp.webhook.assinatura negado motivo=FORA_DA_JANELA diferencaSeg={}", diferenca);
                 return false;
             }
             return true;
         } catch (NumberFormatException e) {
-            log.warn("Timestamp inválido no header x-signature: {}", ts);
+            log.warn("mp.webhook.assinatura negado motivo=TIMESTAMP_INVALIDO ts={}", ts);
             return false;
         }
     }
@@ -113,7 +113,7 @@ public class MercadoPagoSignatureValidator {
             return hex.toString();
 
         } catch (Exception e) {
-            log.error("Erro ao calcular HMAC do webhook", e);
+            log.error("mp.webhook.assinatura falha motivo=ERRO_HMAC", e);
             return null;
         }
     }

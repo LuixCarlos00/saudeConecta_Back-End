@@ -76,11 +76,11 @@ public class CobrancaScheduler {
         if (trials.isEmpty()) {
             return;
         }
-        log.info("[SCHEDULER] {} trial(s) vencendo até {} — gerando links de pagamento", trials.size(), dataAlvo);
+        log.info("cobranca.links inicio trials={} vencimentoAte={}", trials.size(), dataAlvo);
 
         int gerados = processarCadaUm(trials, "gerar link de pagamento",
                 assinatura -> assinaturaMercadoPagoService.gerarLinkENotificar(assinatura.getId()) != null);
-        log.info("[SCHEDULER] Links de pagamento gerados: {}/{}", gerados, trials.size());
+        log.info("cobranca.links ok processados={} falhas={}", gerados, trials.size() - gerados);
     }
 
     /**
@@ -108,7 +108,7 @@ public class CobrancaScheduler {
                         && processador.cancelar(assinatura.getId(), limiteCancelamento));
 
         if (marcadas + suspensas + canceladas > 0) {
-            log.warn("[SCHEDULER] Régua de carência: {} INADIMPLENTE(s), {} SUSPENSA(s), {} CANCELADA(s)",
+            log.info("cobranca.regua ok inadimplentes={} suspensas={} canceladas={}",
                     marcadas, suspensas, canceladas);
         }
     }
@@ -130,8 +130,8 @@ public class CobrancaScheduler {
             recuperarFaturasAprovadas(assinatura);
             return processador.sincronizar(assinatura.getId());
         });
-        log.info("[SCHEDULER] Reconciliação Mercado Pago: {} divergência(s) corrigida(s) em {} assinatura(s)",
-                divergentes, assinaturas.size());
+        log.info("cobranca.reconciliar ok processadas={} divergentes={}",
+                assinaturas.size(), divergentes);
     }
 
     /**
@@ -143,7 +143,7 @@ public class CobrancaScheduler {
     public void reprocessarWebhooksComErro() {
         int reprocessados = webhookService.reprocessarEventosComErro();
         if (reprocessados > 0) {
-            log.info("[SCHEDULER] {} evento(s) do Mercado Pago com erro reprocessado(s)", reprocessados);
+            log.info("mp.webhook.reprocessar ok reprocessados={}", reprocessados);
         }
     }
 
@@ -164,15 +164,15 @@ public class CobrancaScheduler {
         try {
             int recuperadas = webhookService.recuperarFaturasAprovadas(assinatura.getMpPreapprovalId());
             if (recuperadas > 0) {
-                log.warn("[SCHEDULER] Assinatura {}: {} fatura(s) aprovada(s) no MP sem registro local — "
-                        + "registrada(s) e régua não aplicada", assinatura.getId(), recuperadas);
+                log.warn("cobranca.regua ignorado motivo=FATURA_APROVADA_SEM_REGISTRO assinaturaId={} recuperadas={}",
+                        assinatura.getId(), recuperadas);
                 return true;
             }
             return false;
         } catch (Exception e) {
-            log.warn("[SCHEDULER] Não foi possível consultar as faturas da assinatura {} no MP: {} — {}",
-                    assinatura.getId(), e.getMessage(),
-                    prosseguirSeMpFalhar ? "seguindo com a régua" : "adiado para o próximo ciclo", e);
+            log.warn("cobranca.regua falha motivo=MP_INDISPONIVEL assinaturaId={} causa={} proximo={}",
+                    assinatura.getId(), e.getClass().getSimpleName(),
+                    prosseguirSeMpFalhar ? "SEGUE_COM_REGUA" : "ADIADO_PROXIMO_CICLO");
             return !prosseguirSeMpFalhar;
         }
     }
@@ -182,8 +182,8 @@ public class CobrancaScheduler {
         try {
             webhookService.recuperarFaturasAprovadas(assinatura.getMpPreapprovalId());
         } catch (Exception e) {
-            log.warn("[SCHEDULER] Reconciliação: falha ao consultar faturas da assinatura {} no MP: {}",
-                    assinatura.getId(), e.getMessage(), e);
+            log.warn("cobranca.reconciliar falha motivo=MP_INDISPONIVEL assinaturaId={} causa={}",
+                    assinatura.getId(), e.getClass().getSimpleName());
         }
     }
 
@@ -203,10 +203,10 @@ public class CobrancaScheduler {
                 }
             } catch (OptimisticLockingFailureException e) {
                 // Outra transação (webhook/admin) alterou a assinatura; o item volta no próximo ciclo
-                log.warn("[SCHEDULER] Assinatura {} alterada concorrentemente ao {}; será retomada no próximo ciclo",
-                        assinatura.getId(), acao);
+                log.warn("cobranca.job conflito.versao acao={} assinaturaId={} proximo=RETOMAR_NO_PROXIMO_CICLO",
+                        acao, assinatura.getId());
             } catch (Exception e) {
-                log.error("[SCHEDULER] Erro ao {} a assinatura {}", acao, assinatura.getId(), e);
+                log.error("cobranca.job falha acao={} assinaturaId={}", acao, assinatura.getId(), e);
             }
         }
         return sucesso;

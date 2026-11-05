@@ -56,7 +56,6 @@ public class PlanoAssinaturaController {
     public ResponseEntity<PlanoAssinaturaResponse> atualizarPlano(
             @PathVariable Long id,
             @RequestBody @Valid PlanoAssinaturaRequest request) {
-        log.info("Atualizando plano ID: {}", id);
         return ResponseEntity.ok(planoAssinaturaService.atualizarPlano(id, request));
     }
 
@@ -66,7 +65,6 @@ public class PlanoAssinaturaController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Void> desativarPlano(@PathVariable Long id) {
-        log.info("Desativando plano ID: {}", id);
         planoAssinaturaService.desativarPlano(id);
         return ResponseEntity.noContent().build();
     }

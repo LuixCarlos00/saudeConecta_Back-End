@@ -53,7 +53,7 @@ public class CobrancaService {
                         HttpStatus.NOT_FOUND));
 
         if (cobranca.isPago()) {
-            log.info("Cobranca ja paga, ignorando: id={}", cobrancaId);
+            log.info("cobranca.pagar ignorado motivo=JA_PAGA cobrancaId={}", cobrancaId);
             return CobrancaTenantResponse.fromEntity(cobranca);
         }
 
@@ -64,7 +64,7 @@ public class CobrancaService {
 
         assinaturaTenantService.renovarAposPagamento(cobranca.getAssinaturaTenant().getId());
 
-        log.info("Pagamento confirmado manualmente: cobrancaId={}, org={}, valor=R${}",
+        log.info("cobranca.pagar ok cobrancaId={} organizacaoId={} valor={}",
                 cobrancaId, cobranca.getOrganizacao().getId(), cobranca.getValorTotal());
 
         return CobrancaTenantResponse.fromEntity(cobranca);

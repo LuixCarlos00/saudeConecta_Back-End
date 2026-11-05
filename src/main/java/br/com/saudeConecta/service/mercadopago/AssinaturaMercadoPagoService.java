@@ -58,6 +58,7 @@ public class AssinaturaMercadoPagoService {
      */
     @Transactional
     public LinkPagamentoResponse gerarLinkPagamento(Long organizacaoId) {
+        log.info("mp.preapproval.criar inicio organizacaoId={}", organizacaoId);
         AssinaturaTenant assinatura = assinaturaTenantRepository
                 .findAssinaturaAtivaByOrganizacaoId(organizacaoId)
                 .orElseThrow(() -> new BusinessException(
@@ -91,7 +92,7 @@ public class AssinaturaMercadoPagoService {
 
         if (assinatura.temPreapproval() && assinatura.getMpInitPoint() != null
                 && MercadoPagoClient.STATUS_PENDING.equals(assinatura.getMpStatus())) {
-            log.info("Reaproveitando preapproval pendente {} da assinatura {}",
+            log.info("mp.preapproval.criar ignorado motivo=PENDENTE_REAPROVEITADO preapprovalId={} assinaturaId={}",
                     assinatura.getMpPreapprovalId(), assinatura.getId());
             return montarResposta(assinatura);
         }
@@ -123,7 +124,7 @@ public class AssinaturaMercadoPagoService {
         assinatura.setMpUltimaSincronizacao(LocalDateTime.now());
         assinaturaTenantRepository.save(assinatura);
 
-        log.info("Preapproval {} criado para assinatura {} (org {})",
+        log.info("mp.preapproval.criar ok preapprovalId={} assinaturaId={} organizacaoId={}",
                 preapproval.id(), assinatura.getId(), assinatura.getOrganizacao().getId());
 
         return montarResposta(assinatura);
@@ -146,7 +147,7 @@ public class AssinaturaMercadoPagoService {
         PreapprovalResponse cancelado = mercadoPagoClient.cancelarPreapproval(anterior);
         assinatura.setMpStatus(cancelado != null && cancelado.status() != null
                 ? cancelado.status() : MercadoPagoClient.STATUS_CANCELLED);
-        log.warn("Preapproval {} (status {}) da assinatura {} cancelado no MP para ser substituído por um novo link",
+        log.warn("mp.preapproval.abandonar anterior preapprovalId={} statusMp={} assinaturaId={} motivo=SUBSTITUIDO_POR_NOVO_LINK",
                 anterior, remoto.status(), assinatura.getId());
     }
 
@@ -177,6 +178,7 @@ public class AssinaturaMercadoPagoService {
      */
     @Transactional
     public void cancelarPeloCliente(Long organizacaoId) {
+        log.info("assinatura.cancelar inicio origem=CLIENTE organizacaoId={}", organizacaoId);
         AssinaturaTenant assinatura = assinaturaTenantRepository
                 .findAssinaturaAtivaByOrganizacaoId(organizacaoId)
                 .orElseThrow(() -> new BusinessException(
@@ -195,7 +197,7 @@ public class AssinaturaMercadoPagoService {
     @Transactional
     public void cancelar(AssinaturaTenant assinatura, OrigemCancelamento origem) {
         if (StatusAssinatura.CANCELADA.equals(assinatura.getStatus())) {
-            log.info("Assinatura {} já cancelada, ignorando", assinatura.getId());
+            log.info("assinatura.cancelar ignorado motivo=JA_CANCELADA assinaturaId={}", assinatura.getId());
             return;
         }
 
@@ -210,8 +212,8 @@ public class AssinaturaMercadoPagoService {
         assinatura.setMpUltimaSincronizacao(LocalDateTime.now());
         assinaturaTenantRepository.save(assinatura);
 
-        log.warn("Assinatura {} CANCELADA por {} (org {})",
-                assinatura.getId(), origem, assinatura.getOrganizacao().getId());
+        log.info("assinatura.cancelar ok assinaturaId={} origem={} organizacaoId={} status={}",
+                assinatura.getId(), origem, assinatura.getOrganizacao().getId(), assinatura.getStatus());
     }
 
     /**
@@ -231,8 +233,8 @@ public class AssinaturaMercadoPagoService {
             assinatura.setMpUltimaSincronizacao(LocalDateTime.now());
             assinaturaTenantRepository.save(assinatura);
         } catch (BusinessException e) {
-            log.error("Não foi possível pausar o preapproval {}: {}",
-                    assinatura.getMpPreapprovalId(), e.getMessage(), e);
+            log.error("mp.preapproval.pausar falha preapprovalId={} assinaturaId={}",
+                    assinatura.getMpPreapprovalId(), assinatura.getId(), e);
         }
     }
 
@@ -253,12 +255,11 @@ public class AssinaturaMercadoPagoService {
                     ? resposta.status() : MercadoPagoClient.STATUS_AUTHORIZED);
             assinatura.setMpUltimaSincronizacao(LocalDateTime.now());
             assinaturaTenantRepository.save(assinatura);
-            log.info("Preapproval {} reativado após pagamento da assinatura {}",
+            log.info("mp.preapproval.reativar ok preapprovalId={} assinaturaId={}",
                     assinatura.getMpPreapprovalId(), assinatura.getId());
         } catch (BusinessException e) {
-            log.error("Não foi possível reativar o preapproval {} da assinatura {} após o pagamento: {} — "
-                    + "reativar manualmente no Mercado Pago", assinatura.getMpPreapprovalId(),
-                    assinatura.getId(), e.getMessage(), e);
+            log.error("mp.preapproval.reativar falha preapprovalId={} assinaturaId={} acao=REATIVAR_MANUALMENTE_NO_MP",
+                    assinatura.getMpPreapprovalId(), assinatura.getId(), e);
         }
     }
 
@@ -307,7 +308,7 @@ public class AssinaturaMercadoPagoService {
 
         StatusAssinatura statusAnterior = assinatura.getStatus();
         if (aplicarStatusRemoto(assinatura, remoto.status())) {
-            log.warn("Reconciliação: assinatura {} passou de {} para {} (MP: {})",
+            log.info("mp.reconciliar status assinaturaId={} de={} para={} statusMp={}",
                     assinatura.getId(), statusAnterior, assinatura.getStatus(), remoto.status());
             mudou = true;
         }
@@ -317,7 +318,7 @@ public class AssinaturaMercadoPagoService {
         // Retry da reativação: se ela falhou após o pagamento, a assinatura está em dia mas o
         // MP segue pausado e não cobraria o próximo mês
         if (MercadoPagoClient.STATUS_PAUSED.equals(remoto.status()) && ativaEmDia(assinatura)) {
-            log.warn("Reconciliação: assinatura {} ATIVA em dia com preapproval pausado no MP — reativando",
+            log.info("mp.reconciliar reativar motivo=ATIVA_COM_PREAPPROVAL_PAUSADO assinaturaId={}",
                     assinatura.getId());
             reativarSePausado(assinatura);
             mudou = mudou || !MercadoPagoClient.STATUS_PAUSED.equals(assinatura.getMpStatus());
@@ -406,7 +407,7 @@ public class AssinaturaMercadoPagoService {
                 .orElse(null);
 
         if (owner == null || owner.getEmail() == null || owner.getEmail().isBlank()) {
-            log.warn("Assinatura {} sem administrador com e-mail — link não enviado", assinatura.getId());
+            log.warn("mp.link.enviar negado motivo=SEM_ADMIN_COM_EMAIL assinaturaId={}", assinatura.getId());
             return;
         }
 

@@ -184,7 +184,7 @@ public class MercadoPagoClient {
 
             AuthorizedPaymentSearchResponse.Paging paging = resposta.paging();
             if (paging == null || paging.total() == null) {
-                log.warn("Busca de faturas do preapproval {} sem paging: considerando só a 1ª página ({} fatura(s))",
+                log.warn("mp.faturas.buscar parcial motivo=SEM_PAGING preapprovalId={} lidas={}",
                         preapprovalId, paginaAtual.size());
                 break;
             }
@@ -194,7 +194,7 @@ public class MercadoPagoClient {
                 break;
             }
             if (pagina == MAXIMO_PAGINAS_FATURAS) {
-                log.warn("Busca de faturas do preapproval {} parou no teto de {} páginas ({} de {} faturas lidas)",
+                log.warn("mp.faturas.buscar parcial motivo=TETO_PAGINAS preapprovalId={} paginas={} lidas={} total={}",
                         preapprovalId, MAXIMO_PAGINAS_FATURAS, offset, paging.total());
             }
         }
@@ -224,7 +224,7 @@ public class MercadoPagoClient {
             return resposta.getBody();
 
         } catch (RestClientException e) {
-            log.error("Falha ao {} no Mercado Pago: {}", operacao, e.getMessage(), e);
+            log.error("mp.api falha operacao={}", operacao, e);
             throw new BusinessException(
                     "Não foi possível comunicar com o Mercado Pago. Tente novamente em instantes.",
                     HttpStatus.BAD_GATEWAY, e);

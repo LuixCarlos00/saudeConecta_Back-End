@@ -65,7 +65,7 @@ public class LimitePlanoService {
 
         Long usado = adminOrganizacaoRepository.countAtivosByOrganizacaoId(organizacaoId);
         if (usado >= limite) {
-            log.info("Limite de GESTOR atingido para org {}: {}/{}", organizacaoId, usado, limite);
+            log.warn("assinatura.limite negado motivo=LIMITE_GESTOR organizacaoId={} usado={} limite={}", organizacaoId, usado, limite);
             throw new LimitePlanoException("GESTOR", limite, usado);
         }
     }
@@ -95,7 +95,7 @@ public class LimitePlanoService {
 
         Long usado = profissionalRepository.countAtivosByOrganizacaoId(organizacaoId);
         if (usado >= limite) {
-            log.info("Limite de PROFISSIONAL atingido para org {}: {}/{}", organizacaoId, usado, limite);
+            log.warn("assinatura.limite negado motivo=LIMITE_PROFISSIONAL organizacaoId={} usado={} limite={}", organizacaoId, usado, limite);
             throw new LimitePlanoException("PROFISSIONAL", limite, usado);
         }
     }
@@ -125,7 +125,7 @@ public class LimitePlanoService {
 
         Long usado = secretariaRepository.countAtivasByOrganizacaoId(organizacaoId);
         if (usado >= limite) {
-            log.info("Limite de SECRETARIA atingido para org {}: {}/{}", organizacaoId, usado, limite);
+            log.warn("assinatura.limite negado motivo=LIMITE_SECRETARIA organizacaoId={} usado={} limite={}", organizacaoId, usado, limite);
             throw new LimitePlanoException("SECRETARIA", limite, usado);
         }
     }
@@ -175,10 +175,10 @@ public class LimitePlanoService {
      */
     private void negarSemAssinaturaExcetoRoot(Long organizacaoId) {
         if (tenantHelper.isSuperAdmin()) {
-            log.warn("Organização {} sem assinatura ativa. Criacao permitida por SUPER_ADMIN.", organizacaoId);
+            log.warn("assinatura.limite liberado motivo=SUPER_ADMIN_SEM_ASSINATURA organizacaoId={}", organizacaoId);
             return;
         }
-        log.warn("Criacao negada: organização {} sem assinatura com acesso.", organizacaoId);
+        log.warn("assinatura.limite negado motivo=SEM_ASSINATURA_COM_ACESSO organizacaoId={}", organizacaoId);
         throw new LimitePlanoException(
                 "Sua organizacao nao possui uma assinatura ativa. Regularize o plano para cadastrar novos usuarios.");
     }

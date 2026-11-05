@@ -128,7 +128,7 @@ public class ProcessadorReguaCobranca {
                         "Assinatura não encontrada: " + assinaturaId, HttpStatus.NOT_FOUND));
 
         if (atual.isCortesia() || !condicao.test(atual)) {
-            log.debug("Régua: ignorando {} da assinatura {} — estado mudou desde a leitura do lote (status {})",
+            log.debug("cobranca.regua ignorado motivo=ESTADO_MUDOU acao={} assinaturaId={} status={}",
                     acao, assinaturaId, atual.getStatus());
             return false;
         }

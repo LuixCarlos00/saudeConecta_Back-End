@@ -48,16 +48,16 @@ public class MercadoPagoWebhookController {
         String dataId = primeiroNaoVazio(idQuery, dataId(corpo), texto(corpo, "id"));
 
         if (!signatureValidator.isValida(xSignature, xRequestId, dataId)) {
-            log.warn("Webhook do Mercado Pago rejeitado por assinatura inválida (tipo={})", tipo);
+            log.warn("mp.webhook negado motivo=ASSINATURA_INVALIDA tipo={}", tipo);
             return ResponseEntity.status(401).build();
         }
 
         if (tipo == null || dataId == null) {
-            log.warn("Webhook do Mercado Pago sem tipo ou data.id — ignorado");
+            log.warn("mp.webhook ignorado motivo=SEM_TIPO_OU_DATA_ID");
             return ResponseEntity.ok().build();
         }
 
-        log.info("Webhook Mercado Pago recebido: tipo={}, data.id={}", tipo, dataId);
+        log.info("mp.webhook aceito tipo={} dataId={}", tipo, dataId);
         webhookService.processarAssincrono(tipo, dataId, corpo != null ? corpo.toString() : null);
 
         return ResponseEntity.ok().build();
