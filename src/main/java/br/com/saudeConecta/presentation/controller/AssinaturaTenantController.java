@@ -1,17 +1,21 @@
 package br.com.saudeConecta.presentation.controller;
 
-import br.com.saudeConecta.domain.planos.OrigemCancelamento;
+import br.com.saudeConecta.domain.planos.StatusAssinatura;
+import br.com.saudeConecta.domain.planos.TipoPlano;
 import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.presentation.dto.planos.*;
 import br.com.saudeConecta.service.AssinaturaTenantService;
 import br.com.saudeConecta.service.CobrancaService;
 import br.com.saudeConecta.service.LimitePlanoService;
+import br.com.saudeConecta.service.PendenciaManualService;
 import br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService;
 import br.com.saudeConecta.service.mercadopago.LinkPagamentoAssinaturaService;
-import br.com.saudeConecta.service.mercadopago.MercadoPagoWebhookService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -30,7 +34,7 @@ public class AssinaturaTenantController {
     private final LinkPagamentoAssinaturaService linkPagamentoAssinaturaService;
     private final LimitePlanoService limitePlanoService;
     private final CobrancaService cobrancaService;
-    private final MercadoPagoWebhookService mercadoPagoWebhookService;
+    private final PendenciaManualService pendenciaManualService;
 
     /**
      * Cria nova assinatura (TRIAL) para a organização (SUPER_ADMIN).
@@ -107,22 +111,38 @@ public class AssinaturaTenantController {
     }
 
     /**
-     * Lista todas as assinaturas (SUPER_ADMIN).
+     * Tela de assinaturas do SUPER_ADMIN: assinatura vigente de cada clínica, paginada, sem dado pessoal.
+     * Ordenação: organizacaoNome (padrão), status, plano, valorMensal, dataVencimento, criadoEm.
      */
     @GetMapping
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ResponseEntity<List<AssinaturaTenantResponse>> listarTodas() {
-        return ResponseEntity.ok(assinaturaTenantService.listarTodas());
+    public ResponseEntity<Page<AssinaturaPlataformaResponse>> listar(
+            @RequestParam(required = false) StatusAssinatura status,
+            @RequestParam(required = false) TipoPlano plano,
+            @RequestParam(required = false) Boolean cortesia,
+            @RequestParam(required = false) String busca,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(assinaturaTenantService.listarParaPlataforma(status, plano, cortesia, busca, pageable));
     }
 
     /**
-     * Lista os eventos do Mercado Pago que precisam de tratamento manual (SUPER_ADMIN):
-     * pagamento aprovado em assinatura cancelada e eventos com erro que expiraram.
+     * Pendências manuais do Mercado Pago (SUPER_ADMIN): abertas por padrão, ou as já resolvidas.
      */
     @GetMapping("/pendencias-manuais")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ResponseEntity<List<PendenciaManualResponse>> listarPendenciasManuais() {
-        return ResponseEntity.ok(mercadoPagoWebhookService.listarPendenciasManuais());
+    public ResponseEntity<List<PendenciaManualResponse>> listarPendenciasManuais(
+            @RequestParam(defaultValue = "false") boolean resolvidas) {
+        return ResponseEntity.ok(pendenciaManualService.listar(resolvidas));
+    }
+
+    /**
+     * Marca a pendência manual como resolvida (SUPER_ADMIN). Não altera nada no Mercado Pago.
+     */
+    @PatchMapping("/pendencias-manuais/{id}/resolver")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<PendenciaManualResponse> resolverPendenciaManual(
+            @PathVariable Long id, @RequestBody @Valid ResolverPendenciaRequest request) {
+        return ResponseEntity.ok(pendenciaManualService.resolver(id, TenantContext.getCurrentUser(), request.observacao()));
     }
 
     /**
@@ -164,8 +184,7 @@ public class AssinaturaTenantController {
     @PatchMapping("/{id}/suspender")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Void> suspender(@PathVariable Long id) {
-        assinaturaTenantService.suspender(id);
-        assinaturaMercadoPagoService.pausar(assinaturaTenantService.buscarEntidadePorId(id));
+        assinaturaTenantService.suspenderPeloSuperAdmin(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -175,8 +194,7 @@ public class AssinaturaTenantController {
     @PatchMapping("/{id}/cancelar")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Void> cancelar(@PathVariable Long id) {
-        assinaturaMercadoPagoService.cancelar(
-                assinaturaTenantService.buscarEntidadePorId(id), OrigemCancelamento.SUPER_ADMIN);
+        assinaturaTenantService.cancelarPeloSuperAdmin(id);
         return ResponseEntity.noContent().build();
     }
 }

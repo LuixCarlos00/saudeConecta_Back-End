@@ -1,0 +1,52 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ================================================================ -->
+    <!-- PENDENCIA MANUAL RESOLVIDA (tela do SUPER_ADMIN)                 -->
+    <!-- O SUPER_ADMIN marca a pendencia como resolvida: requer_atencao   -->
+    <!-- volta a 0 e ficam guardados quem resolveu, quando e a            -->
+    <!-- observacao. organizacao_id liga a pendencia a clinica quando a   -->
+    <!-- assinatura e conhecida no momento em que ela e registrada.       -->
+    <!-- Retrocompativel: colunas novas e nullable; a versao anterior da  -->
+    <!-- aplicacao as ignora. Pendencias antigas ficam com organizacao    -->
+    <!-- NULL (o motivo_atencao ja traz a assinatura no texto).           -->
+    <!-- ================================================================ -->
+    <changeSet id="068-001-mp-webhook-evento-pendencia-resolvida" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="mp_webhook_evento"/>
+            <not><columnExists tableName="mp_webhook_evento" columnName="resolvido_em"/></not>
+        </preConditions>
+        <comment>Quem resolveu a pendencia manual, quando, com qual observacao, e a clinica da pendencia</comment>
+
+        <addColumn tableName="mp_webhook_evento">
+            <column name="organizacao_id" type="BIGINT" afterColumn="motivo_atencao">
+                <constraints nullable="true"/>
+            </column>
+            <column name="resolvido_em" type="DATETIME" afterColumn="organizacao_id">
+                <constraints nullable="true"/>
+            </column>
+            <column name="resolvido_por_usuario_id" type="BIGINT" afterColumn="resolvido_em">
+                <constraints nullable="true"/>
+            </column>
+            <column name="observacao_resolucao" type="VARCHAR(500)" afterColumn="resolvido_por_usuario_id">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Listagem ?resolvidas=true, da resolucao mais recente -->
+        <createIndex tableName="mp_webhook_evento" indexName="idx_mp_webhook_resolvido_em">
+            <column name="resolvido_em"/>
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="mp_webhook_evento" indexName="idx_mp_webhook_resolvido_em"/>
+            <dropColumn tableName="mp_webhook_evento" columnName="observacao_resolucao"/>
+            <dropColumn tableName="mp_webhook_evento" columnName="resolvido_por_usuario_id"/>
+            <dropColumn tableName="mp_webhook_evento" columnName="resolvido_em"/>
+            <dropColumn tableName="mp_webhook_evento" columnName="organizacao_id"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

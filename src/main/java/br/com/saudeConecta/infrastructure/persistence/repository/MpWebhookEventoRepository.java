@@ -83,7 +83,20 @@ public interface MpWebhookEventoRepository extends JpaRepository<MpWebhookEvento
      */
     List<MpWebhookEvento> findByRequerAtencaoTrueOrderByRecebidoEmDesc();
 
-    /** Quantidade de eventos que exigem tratamento manual. */
+    /** Pendências já resolvidas pelo SUPER_ADMIN, da resolução mais recente. */
+    List<MpWebhookEvento> findByResolvidoEmIsNotNullOrderByResolvidoEmDesc();
+
+    /**
+     * Relê o evento com lock de escrita: dois cliques em "resolver" não gravam duas resoluções.
+     *
+     * @param id ID do evento
+     * @return o evento travado até o fim da transação
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT e FROM MpWebhookEvento e WHERE e.id = :id")
+    Optional<MpWebhookEvento> findByIdParaAtualizacao(@Param("id") Long id);
+
+    /** Quantidade de eventos que exigem tratamento manual (as resolvidas ficam de fora: requer_atencao = 0). */
     long countByRequerAtencaoTrue();
 
     /** Eventos que exigem tratamento manual, do mais recente, sem carregar o payload. */

@@ -169,4 +169,7 @@
 
     <!-- Pagamento da assinatura: preapproval antigo cancelado no MP so depois do commit da troca -->
     <include file="db/changelog/08-2026/067-assinatura-preapproval-substituido.xml"/>
+
+    <!-- Telas do SUPER_ADMIN: pendencia manual resolvida (quem, quando, observacao) e clinica da pendencia -->
+    <include file="db/changelog/08-2026/068-mp-webhook-evento-pendencia-resolvida.xml"/>
 </databaseChangeLog>

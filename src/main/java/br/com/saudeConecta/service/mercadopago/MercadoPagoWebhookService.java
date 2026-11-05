@@ -4,7 +4,6 @@ import br.com.saudeConecta.domain.planos.*;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.CobrancaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.MpWebhookEventoRepository;
-import br.com.saudeConecta.presentation.dto.planos.PendenciaManualResponse;
 import br.com.saudeConecta.service.AssinaturaTenantService;
 import br.com.saudeConecta.service.mercadopago.dto.AuthorizedPaymentResponse;
 import br.com.saudeConecta.service.mercadopago.dto.PreapprovalResponse;
@@ -190,18 +189,6 @@ public class MercadoPagoWebhookService {
             }
         }
         return reprocessados;
-    }
-
-    /**
-     * Eventos marcados para tratamento manual (pagamento em CANCELADA, evento expirado),
-     * do mais recente para o mais antigo.
-     *
-     * @return eventos que requerem atenção
-     */
-    public List<PendenciaManualResponse> listarPendenciasManuais() {
-        return eventoRepository.findByRequerAtencaoTrueOrderByRecebidoEmDesc().stream()
-                .map(PendenciaManualResponse::fromEntity)
-                .toList();
     }
 
     /**
@@ -391,6 +378,12 @@ public class MercadoPagoWebhookService {
                 evento.marcarParaAtencao(MpWebhookEvento.MOTIVO_PAGAMENTO_SEM_ASSINATURA,
                         "fatura " + authorizedPaymentId + " do preapproval " + fatura.preapprovalId()
                                 + " — conferir a assinatura e registrar manualmente");
+                // Preapproval ainda na coluna de substituído: a clínica é conhecida
+                if (evento.getOrganizacaoId() == null && fatura.preapprovalId() != null) {
+                    assinaturaTenantRepository.findFirstByMpPreapprovalSubstituidoId(fatura.preapprovalId())
+                            .map(a -> a.getOrganizacao().getId())
+                            .ifPresent(evento::setOrganizacaoId);
+                }
             }
             return false;
         }
@@ -425,6 +418,7 @@ public class MercadoPagoWebhookService {
                 evento.marcarParaAtencao(MpWebhookEvento.MOTIVO_PAGAMENTO_EM_CANCELADA,
                         "assinatura " + assinatura.getId() + " (org " + organizacaoId + "), fatura "
                                 + authorizedPaymentId + " — estornar ou reativar manualmente");
+                evento.setOrganizacaoId(organizacaoId);
                 return true;
             }
 
@@ -435,6 +429,7 @@ public class MercadoPagoWebhookService {
                 evento.marcarParaAtencao(MpWebhookEvento.MOTIVO_PAGAMENTO_EM_CORTESIA,
                         "assinatura " + assinatura.getId() + ", fatura " + authorizedPaymentId
                                 + " — cortesia não é cobrada: estornar ou tratar manualmente");
+                evento.setOrganizacaoId(assinatura.getOrganizacao() != null ? assinatura.getOrganizacao().getId() : null);
                 return true;
             }
 

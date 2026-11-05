@@ -606,6 +606,7 @@ class PagamentoAssinaturaFluxoE2ETest {
         assertThat(pendencias).hasSize(1);
         assertThat(pendencias.get(0).getDataId()).isEqualTo("pa-r3-auth");
         assertThat(pendencias.get(0).getMotivoAtencao()).startsWith(MpWebhookEvento.MOTIVO_PREAPPROVAL_SUBSTITUIDO_AUTORIZADO);
+        assertThat(pendencias.get(0).getOrganizacaoId()).isEqualTo(legada.getOrganizacao().getId());
 
         // O webhook do preapproval que saiu continua ignorado: não religa nem mexe na cortesia
         webhookService.processar(MercadoPagoWebhookService.TOPICO_PREAPPROVAL, "pa-r3-auth", "{}");

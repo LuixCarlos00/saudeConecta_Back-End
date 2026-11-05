@@ -1,9 +1,11 @@
 package br.com.saudeConecta.infrastructure.persistence.repository;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import br.com.saudeConecta.infrastructure.persistence.projection.PlataformaProjecoes;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
 import br.com.saudeConecta.domain.planos.StatusAssinatura;
+import br.com.saudeConecta.domain.planos.TipoPlano;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -115,6 +117,12 @@ public interface AssinaturaTenantRepository extends JpaRepository<AssinaturaTena
      * IDs das assinaturas com preapproval trocado cujo cancelamento no Mercado Pago ainda
      * não foi confirmado (falhou depois do commit da troca). A reconciliação tenta de novo.
      */
+    /**
+     * Assinatura que ainda guarda o preapproval na coluna de substituído (cancelamento pendente).
+     * Usada para ligar à clínica a pendência de fatura aprovada desse preapproval.
+     */
+    Optional<AssinaturaTenant> findFirstByMpPreapprovalSubstituidoId(String preapprovalId);
+
     @Query("SELECT a.id FROM AssinaturaTenant a WHERE a.mpPreapprovalSubstituidoId IS NOT NULL")
     List<Long> findIdsComPreapprovalSubstituidoPendente();
 
@@ -159,21 +167,41 @@ public interface AssinaturaTenantRepository extends JpaRepository<AssinaturaTena
     List<AssinaturaTenant> findSuspensasParaCancelar(@Param("dataLimite") LocalDateTime dataLimite);
 
     /**
-     * Busca todas as assinaturas com dados do plano e organização (para listagem SUPER_ADMIN).
-     */
-    @Query("SELECT a FROM AssinaturaTenant a " +
-           "JOIN FETCH a.planoAssinatura " +
-           "JOIN FETCH a.organizacao " +
-           "ORDER BY a.criadoEm DESC")
-    List<AssinaturaTenant> findAllWithRelations();
-
-    /**
      * Relê a assinatura com lock de escrita, para a régua decidir sobre o estado atual
      * da linha (e não sobre a foto lida no início do lote).
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT a FROM AssinaturaTenant a WHERE a.id = :id")
     Optional<AssinaturaTenant> findByIdParaAtualizacao(@Param("id") Long id);
+
+    /**
+     * Assinatura vigente (a mais recente) de cada clínica, com filtros opcionais, para a tela de
+     * assinaturas do SUPER_ADMIN. Visão global, sem filtro de tenant. A ordenação vem do Pageable
+     * (o service só aceita campos da lista branca).
+     *
+     * @param status   status da assinatura (null = todos)
+     * @param plano    tipo do plano base (null = todos)
+     * @param cortesia true/false (null = todas)
+     * @param busca    trecho do nome da clínica já em minúsculas, com % e _ escapados e envolto em %
+     *                 (null = sem filtro)
+     * @param pageable página, tamanho e ordenação
+     * @return página de assinaturas com organização e plano carregados
+     */
+    @Query(value = "SELECT a FROM AssinaturaTenant a JOIN FETCH a.organizacao o JOIN FETCH a.planoAssinatura p " +
+           "WHERE " + VIGENTE_LISTAGEM + FILTROS_LISTAGEM,
+           countQuery = "SELECT COUNT(a) FROM AssinaturaTenant a JOIN a.organizacao o JOIN a.planoAssinatura p " +
+           "WHERE " + VIGENTE_LISTAGEM + FILTROS_LISTAGEM)
+    Page<AssinaturaTenant> listarVigentesParaPlataforma(@Param("status") StatusAssinatura status,
+                                                       @Param("plano") TipoPlano plano,
+                                                       @Param("cortesia") Boolean cortesia,
+                                                       @Param("busca") String busca,
+                                                       Pageable pageable);
+
+    String VIGENTE_LISTAGEM = "a.id = (SELECT MAX(v.id) FROM AssinaturaTenant v WHERE v.organizacao.id = o.id)";
+    String FILTROS_LISTAGEM = " AND (:status IS NULL OR a.status = :status)" +
+            " AND (:plano IS NULL OR p.tipo = :plano)" +
+            " AND (:cortesia IS NULL OR a.cortesia = :cortesia)" +
+            " AND (:busca IS NULL OR LOWER(o.nome) LIKE :busca ESCAPE '!')";
 
     // ===== Dashboard da plataforma (SUPER_ADMIN): visão global, sem filtro de tenant =====
 

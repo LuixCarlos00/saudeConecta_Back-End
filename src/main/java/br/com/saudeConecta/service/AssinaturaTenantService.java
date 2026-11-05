@@ -2,11 +2,14 @@ package br.com.saudeConecta.service;
 
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
+import br.com.saudeConecta.domain.planos.OrigemCancelamento;
 import br.com.saudeConecta.domain.planos.PlanoAssinatura;
 import br.com.saudeConecta.domain.planos.StatusAssinatura;
+import br.com.saudeConecta.domain.planos.TipoPlano;
 import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
+import br.com.saudeConecta.presentation.dto.planos.AssinaturaPlataformaResponse;
 import br.com.saudeConecta.presentation.dto.planos.AssinaturaTenantResponse;
 import br.com.saudeConecta.presentation.dto.planos.CustomizarPlanoTenantRequest;
 import br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService;
@@ -15,6 +18,10 @@ import br.com.saudeConecta.service.mercadopago.MercadoPagoClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,11 +31,17 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 @Service
 public class AssinaturaTenantService {
 
     private static final Logger log = LoggerFactory.getLogger(AssinaturaTenantService.class);
+    /** Código do 409 ao associar plano a uma clínica com assinatura SUSPENSA vigente. */
+    public static final String CODE_ASSINATURA_SUSPENSA = "ASSINATURA_SUSPENSA";
+    /** Código do 409 ao suspender uma assinatura CANCELADA. */
+    public static final String CODE_ASSINATURA_CANCELADA = "ASSINATURA_CANCELADA";
     private static final int DIAS_TRIAL = 30;
     /** Prazo até o novo vencimento ao remover a cortesia: o mesmo aviso que o trial recebe. */
     private static final int DIAS_PARA_PAGAR_APOS_CORTESIA = 7;
@@ -93,6 +106,18 @@ public class AssinaturaTenantService {
             log.info("assinatura.criar ignorado motivo=JA_POSSUI_ASSINATURA organizacaoId={} planoId={} acao=TROCAR_PLANO",
                     organizacaoId, planoId);
             return trocarPlanoSuperAdmin(organizacaoId, planoId);
+        }
+
+        // SUSPENSA vigente: uma TRIAL nova daria 30 dias grátis por cima da dívida e deixaria duas
+        // assinaturas vivas. Para liberar, o SUPER_ADMIN dá cortesia ou cancela antes.
+        boolean suspensa = assinaturaTenantRepository.findAssinaturaVigenteByOrganizacaoId(organizacaoId)
+                .filter(a -> StatusAssinatura.SUSPENSA.equals(a.getStatus()))
+                .isPresent();
+        if (suspensa) {
+            log.warn("assinatura.criar negado motivo=ASSINATURA_SUSPENSA organizacaoId={} planoId={}", organizacaoId, planoId);
+            throw new BusinessException(
+                    "A clínica tem uma assinatura suspensa. Dê cortesia ou cancele antes de associar um plano.",
+                    HttpStatus.CONFLICT, CODE_ASSINATURA_SUSPENSA);
         }
 
         Organizacao organizacao = organizacaoRepository.findById(organizacaoId)
@@ -260,6 +285,53 @@ public class AssinaturaTenantService {
     }
 
     /**
+     * Suspensão pelo SUPER_ADMIN: com a linha travada (como a régua), grava SUSPENSA e pausa o
+     * preapproval no Mercado Pago na mesma transação. Falha do MP não desfaz a suspensão local
+     * (log ERROR; a reconciliação mantém o espelho). Já SUSPENSA: só tenta pausar de novo.
+     *
+     * @param assinaturaId ID da assinatura
+     * @throws BusinessException 404 inexistente; 409 {@code ASSINATURA_CANCELADA}
+     */
+    @Transactional
+    public void suspenderPeloSuperAdmin(Long assinaturaId) {
+        log.info("assinatura.suspender inicio origem=SUPER_ADMIN assinaturaId={}", assinaturaId);
+        AssinaturaTenant assinatura = buscarParaAtualizacao(assinaturaId);
+        if (StatusAssinatura.CANCELADA.equals(assinatura.getStatus())) {
+            log.warn("assinatura.suspender negado motivo=ASSINATURA_CANCELADA assinaturaId={}", assinaturaId);
+            throw new BusinessException("Assinatura cancelada não pode ser suspensa.",
+                    HttpStatus.CONFLICT, CODE_ASSINATURA_CANCELADA);
+        }
+        if (!StatusAssinatura.SUSPENSA.equals(assinatura.getStatus())) {
+            assinatura.setStatus(StatusAssinatura.SUSPENSA);
+            assinatura.setDataSuspensao(LocalDateTime.now(clock));
+            assinaturaTenantRepository.save(assinatura);
+        }
+        assinaturaMercadoPagoService.pausar(assinatura);
+        log.info("assinatura.suspender ok origem=SUPER_ADMIN assinaturaId={} organizacaoId={} status=SUSPENSA mpStatus={}",
+                assinaturaId, assinatura.getOrganizacao().getId(), assinatura.getMpStatus());
+    }
+
+    /**
+     * Cancelamento pelo SUPER_ADMIN: com a linha travada, cancela o preapproval no Mercado Pago e
+     * então a assinatura (CANCELADA, canceladoPor = SUPER_ADMIN). Se o MP falhar, nada muda (502).
+     * Já CANCELADA: não faz nada.
+     *
+     * @param assinaturaId ID da assinatura
+     * @throws BusinessException 404 inexistente; 502/503 Mercado Pago indisponível
+     */
+    @Transactional
+    public void cancelarPeloSuperAdmin(Long assinaturaId) {
+        log.info("assinatura.cancelar inicio origem=SUPER_ADMIN assinaturaId={}", assinaturaId);
+        assinaturaMercadoPagoService.cancelar(buscarParaAtualizacao(assinaturaId), OrigemCancelamento.SUPER_ADMIN);
+    }
+
+    private AssinaturaTenant buscarParaAtualizacao(Long assinaturaId) {
+        return assinaturaTenantRepository.findByIdParaAtualizacao(assinaturaId)
+                .orElseThrow(() -> new BusinessException(
+                        "Assinatura não encontrada: " + assinaturaId, HttpStatus.NOT_FOUND));
+    }
+
+    /**
      * Cancela a assinatura definitivamente.
      *
      * @param assinaturaId ID da assinatura
@@ -292,16 +364,61 @@ public class AssinaturaTenantService {
     }
 
     /**
-     * Lista todas as assinaturas (para SUPER_ADMIN).
+     * Tela de assinaturas do SUPER_ADMIN: a assinatura vigente (mais recente) de cada clínica,
+     * paginada e com filtros opcionais. Clínica sem nenhuma assinatura não aparece.
      *
-     * @return lista de AssinaturaTenantResponse
+     * @param status   status (null = todos)
+     * @param plano    tipo do plano base (null = todos)
+     * @param cortesia true/false (null = todas)
+     * @param busca    trecho do nome da clínica, sem diferenciar maiúsculas (null ou vazio = sem filtro)
+     * @param pageable página (0-based), tamanho (máx. {@value #TAMANHO_MAXIMO_PAGINA}) e ordenação pelos
+     *                 campos de {@link #ORDENACAO_PERMITIDA}; sem ordenação = nome da clínica
+     * @return página de linhas sem dado pessoal
+     * @throws IllegalArgumentException campo de ordenação fora da lista (400)
      */
     @Transactional(readOnly = true)
-    public List<AssinaturaTenantResponse> listarTodas() {
-        return assinaturaTenantRepository.findAllWithRelations()
-                .stream()
-                .map(AssinaturaTenantResponse::fromEntity)
-                .toList();
+    public Page<AssinaturaPlataformaResponse> listarParaPlataforma(StatusAssinatura status, TipoPlano plano,
+                                                                  Boolean cortesia, String busca, Pageable pageable) {
+        Sort ordem = Sort.unsorted();
+        for (Sort.Order o : pageable.getSort()) {
+            String campo = ORDENACAO_PERMITIDA.get(o.getProperty());
+            if (campo == null) {
+                throw new IllegalArgumentException("Ordenação não permitida: " + o.getProperty()
+                        + ". Use um de " + ORDENACAO_PERMITIDA.keySet());
+            }
+            ordem = ordem.and(Sort.by(o.getDirection(), campo));
+        }
+        if (ordem.isUnsorted()) {
+            ordem = Sort.by("organizacao.nome");
+        }
+        // Desempate estável entre páginas
+        ordem = ordem.and(Sort.by("id"));
+        Pageable pagina = PageRequest.of(pageable.getPageNumber(),
+                Math.min(Math.max(pageable.getPageSize(), 1), TAMANHO_MAXIMO_PAGINA), ordem);
+
+        return assinaturaTenantRepository
+                .listarVigentesParaPlataforma(status, plano, cortesia, padraoDeBusca(busca), pagina)
+                .map(AssinaturaPlataformaResponse::fromEntity);
+    }
+
+    /** Nome do campo na API -> caminho na entidade (lista branca: campo livre viraria 500 do Hibernate). */
+    private static final Map<String, String> ORDENACAO_PERMITIDA = Map.of(
+            "organizacaoNome", "organizacao.nome",
+            "status", "status",
+            "plano", "planoAssinatura.tipo",
+            "valorMensal", "valorMensal",
+            "dataVencimento", "dataVencimento",
+            "criadoEm", "criadoEm");
+    private static final int TAMANHO_MAXIMO_PAGINA = 100;
+
+    /** LIKE em minúsculas com % e _ do usuário escapados por '!' (o mesmo ESCAPE da query). */
+    private static String padraoDeBusca(String busca) {
+        if (busca == null || busca.isBlank()) {
+            return null;
+        }
+        String escapada = busca.trim().toLowerCase(Locale.ROOT)
+                .replace("!", "!!").replace("%", "!%").replace("_", "!_");
+        return "%" + escapada + "%";
     }
 
     /**

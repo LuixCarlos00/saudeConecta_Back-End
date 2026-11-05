@@ -45,6 +45,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import org.springframework.http.MediaType;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -511,9 +514,39 @@ class CobrancaMercadoPagoFluxoE2ETest {
                 .andExpect(jsonPath("$[0].dataId").value(FATURA_ID))
                 .andExpect(jsonPath("$[0].motivo").value(org.hamcrest.Matchers.startsWith(
                         MpWebhookEvento.MOTIVO_PAGAMENTO_EM_CANCELADA)))
-                .andExpect(jsonPath("$[0].payload").doesNotExist());
+                .andExpect(jsonPath("$[0].payload").doesNotExist())
+                .andExpect(jsonPath("$[0].motivoCodigo").value(MpWebhookEvento.MOTIVO_PAGAMENTO_EM_CANCELADA))
+                .andExpect(jsonPath("$[0].organizacaoId").value(organizacao.getId()))
+                .andExpect(jsonPath("$[0].organizacaoNome").value(organizacao.getNome()))
+                .andExpect(jsonPath("$[0].resolvida").value(false));
         mockMvc.perform(get("/assinaturas/pendencias-manuais").with(user("admin").roles("ADMIN")))
                 .andExpect(status().isForbidden());
+
+        // Resolver: sai das abertas e da contagem do dashboard, entra nas resolvidas
+        mockMvc.perform(patch("/assinaturas/pendencias-manuais/" + evento.getId() + "/resolver")
+                        .with(user("admin").roles("ADMIN")).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"observacao\":\"Estornado\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(patch("/assinaturas/pendencias-manuais/" + evento.getId() + "/resolver")
+                        .with(user("root").roles("SUPER_ADMIN")).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"observacao\":\"Estornado no painel\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resolvida").value(true))
+                .andExpect(jsonPath("$.observacaoResolucao").value("Estornado no painel"));
+        assertThat(eventoRepository.countByRequerAtencaoTrue()).isZero();
+        mockMvc.perform(get("/assinaturas/pendencias-manuais").with(user("root").roles("SUPER_ADMIN")))
+                .andExpect(jsonPath("$").isEmpty());
+        mockMvc.perform(get("/assinaturas/pendencias-manuais?resolvidas=true").with(user("root").roles("SUPER_ADMIN")))
+                .andExpect(jsonPath("$[0].eventoId").value(evento.getId()));
+        mockMvc.perform(patch("/assinaturas/pendencias-manuais/" + evento.getId() + "/resolver")
+                        .with(user("root").roles("SUPER_ADMIN")).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"observacao\":\"de novo\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PENDENCIA_JA_RESOLVIDA"));
+
+        // A reentrega da mesma notificação não reabre
+        webhookService.processar(MercadoPagoWebhookService.TOPICO_AUTHORIZED_PAYMENT, FATURA_ID, "{}");
+        assertThat(eventoRepository.countByRequerAtencaoTrue()).isZero();
     }
 
     @Test

@@ -521,6 +521,9 @@ public class AssinaturaMercadoPagoService {
                     "preapproval " + preapprovalId + " saiu da assinatura " + assinaturaId + " e está " + statusMp
                             + " (faturas aprovadas sem registro: " + faturasSemRegistro
                             + ") — estornar e cancelar no MP, ou religar manualmente");
+            assinaturaTenantRepository.findById(assinaturaId)
+                    .map(a -> a.getOrganizacao() != null ? a.getOrganizacao().getId() : null)
+                    .ifPresent(pendencia::setOrganizacaoId);
             eventoRepository.save(pendencia);
             return true;
         });

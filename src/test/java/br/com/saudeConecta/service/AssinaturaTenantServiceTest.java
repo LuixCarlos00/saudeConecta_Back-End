@@ -1,5 +1,11 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.presentation.dto.planos.AssinaturaPlataformaResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
 import br.com.saudeConecta.domain.planos.PlanoAssinatura;
@@ -286,15 +292,51 @@ class AssinaturaTenantServiceTest {
     class Listar {
 
         @Test
-        @DisplayName("Deve listar todas as assinaturas")
-        void deveListarTodas() {
-            AssinaturaTenant a1 = criarAssinatura(1L, StatusAssinatura.ATIVA);
-            AssinaturaTenant a2 = criarAssinatura(2L, StatusAssinatura.TRIAL);
-            when(assinaturaTenantRepository.findAllWithRelations()).thenReturn(List.of(a1, a2));
+        @DisplayName("Listagem da plataforma: filtros chegam à query, busca escapada e sem dado pessoal")
+        void listarParaPlataforma() {
+            AssinaturaTenant a = criarAssinatura(1L, StatusAssinatura.ATIVA);
+            a.setMpPreapprovalId("pre-1");
+            a.setMpPayerEmail("dono@clinica.com");
+            when(assinaturaTenantRepository.listarVigentesParaPlataforma(eq(StatusAssinatura.ATIVA), eq(TipoPlano.STARTER),
+                    eq(Boolean.TRUE), eq("%50!% off!_x%"), any())).thenReturn(new PageImpl<>(List.of(a)));
 
-            List<AssinaturaTenantResponse> resultado = service.listarTodas();
+            var pagina = service.listarParaPlataforma(StatusAssinatura.ATIVA, TipoPlano.STARTER, true, " 50% OFF_x ",
+                    PageRequest.of(2, 500, Sort.by(Sort.Direction.DESC, "dataVencimento")));
 
-            assertThat(resultado).hasSize(2);
+            assertThat(pagina.getContent()).singleElement().satisfies(l -> {
+                assertThat(l.assinaturaId()).isEqualTo(1L);
+                assertThat(l.temPreapproval()).isTrue();
+            });
+            assertThat(AssinaturaPlataformaResponse.class.getRecordComponents())
+                    .extracting(java.lang.reflect.RecordComponent::getName)
+                    .doesNotContain("mpPayerEmail", "mpInitPoint", "mpPreapprovalId");
+            var pageable = org.mockito.ArgumentCaptor.forClass(Pageable.class);
+            verify(assinaturaTenantRepository).listarVigentesParaPlataforma(any(), any(), any(), any(), pageable.capture());
+            assertThat(pageable.getValue().getPageNumber()).isEqualTo(2);
+            assertThat(pageable.getValue().getPageSize()).isEqualTo(100);
+            assertThat(pageable.getValue().getSort().getOrderFor("dataVencimento").isDescending()).isTrue();
+            assertThat(pageable.getValue().getSort().getOrderFor("id")).isNotNull();
+        }
+
+        @Test
+        @DisplayName("Listagem da plataforma: sem ordenação ordena pelo nome da clínica; busca vazia vira null")
+        void listarParaPlataformaPadrao() {
+            when(assinaturaTenantRepository.listarVigentesParaPlataforma(isNull(), isNull(), isNull(), isNull(), any()))
+                    .thenReturn(Page.empty());
+
+            service.listarParaPlataforma(null, null, null, "  ", PageRequest.of(0, 20));
+
+            var pageable = org.mockito.ArgumentCaptor.forClass(Pageable.class);
+            verify(assinaturaTenantRepository).listarVigentesParaPlataforma(any(), any(), any(), any(), pageable.capture());
+            assertThat(pageable.getValue().getSort().getOrderFor("organizacao.nome")).isNotNull();
+        }
+
+        @Test
+        @DisplayName("Listagem da plataforma: ordenação fora da lista branca responde 400")
+        void listarParaPlataformaOrdenacaoInvalida() {
+            assertThatThrownBy(() -> service.listarParaPlataforma(null, null, null, null,
+                    PageRequest.of(0, 20, Sort.by("mpPayerEmail"))))
+                    .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
@@ -665,6 +707,111 @@ class AssinaturaTenantServiceTest {
             assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
             assertThat(assinatura.getDataVencimento()).isEqualTo(vencimento);
             verifyNoInteractions(assinaturaMercadoPagoService);
+        }
+    }
+
+    // ========== operações do SUPER_ADMIN ==========
+
+    @Nested
+    @DisplayName("SUPER_ADMIN: associar, suspender e cancelar")
+    class OperacoesSuperAdmin {
+
+        @Test
+        @DisplayName("Associar plano a clínica com assinatura SUSPENSA vigente: 409 ASSINATURA_SUSPENSA, nada criado")
+        void assinarComSuspensaRecusa() {
+            when(assinaturaTenantRepository.findAssinaturaAtivaByOrganizacaoId(1L)).thenReturn(Optional.empty());
+            when(assinaturaTenantRepository.findAssinaturaVigenteByOrganizacaoId(1L))
+                    .thenReturn(Optional.of(criarAssinatura(5L, StatusAssinatura.SUSPENSA)));
+
+            assertThatThrownBy(() -> service.assinar(1L, 10L))
+                    .isInstanceOfSatisfying(BusinessException.class, e -> {
+                        assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+                        assertThat(e.getErrorCode()).isEqualTo("ASSINATURA_SUSPENSA");
+                    });
+            verify(assinaturaTenantRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Suspender: trava a linha, grava SUSPENSA com data e pausa no MP na mesma transação")
+        void suspenderPausaNoMp() {
+            AssinaturaTenant a = criarAssinatura(1L, StatusAssinatura.INADIMPLENTE);
+            a.setMpPreapprovalId("pa-1");
+            a.setMpStatus("authorized");
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(a));
+
+            service.suspenderPeloSuperAdmin(1L);
+
+            assertThat(a.getStatus()).isEqualTo(StatusAssinatura.SUSPENSA);
+            assertThat(a.getDataSuspensao()).isNotNull();
+            var ordem = inOrder(assinaturaTenantRepository, assinaturaMercadoPagoService);
+            ordem.verify(assinaturaTenantRepository).findByIdParaAtualizacao(1L);
+            ordem.verify(assinaturaTenantRepository).save(a);
+            ordem.verify(assinaturaMercadoPagoService).pausar(a);
+            verify(assinaturaTenantRepository, never()).findById(any());
+        }
+
+        @Test
+        @DisplayName("Suspender já SUSPENSA: mantém a data da suspensão e só tenta pausar de novo")
+        void suspenderJaSuspensa() {
+            AssinaturaTenant a = criarAssinatura(1L, StatusAssinatura.SUSPENSA);
+            LocalDateTime suspensaEm = LocalDateTime.of(2026, 10, 1, 9, 0);
+            a.setDataSuspensao(suspensaEm);
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(a));
+
+            service.suspenderPeloSuperAdmin(1L);
+
+            assertThat(a.getDataSuspensao()).isEqualTo(suspensaEm);
+            verify(assinaturaTenantRepository, never()).save(any());
+            verify(assinaturaMercadoPagoService).pausar(a);
+        }
+
+        @Test
+        @DisplayName("Suspender CANCELADA: 409 ASSINATURA_CANCELADA, não reabre nem chama o MP")
+        void suspenderCanceladaRecusa() {
+            AssinaturaTenant a = criarAssinatura(1L, StatusAssinatura.CANCELADA);
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(a));
+
+            assertThatThrownBy(() -> service.suspenderPeloSuperAdmin(1L))
+                    .isInstanceOfSatisfying(BusinessException.class,
+                            e -> assertThat(e.getErrorCode()).isEqualTo("ASSINATURA_CANCELADA"));
+            assertThat(a.getStatus()).isEqualTo(StatusAssinatura.CANCELADA);
+            verifyNoInteractions(assinaturaMercadoPagoService);
+        }
+
+        @Test
+        @DisplayName("Suspender inexistente: 404")
+        void suspenderInexistente() {
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(9L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.suspenderPeloSuperAdmin(9L))
+                    .isInstanceOfSatisfying(BusinessException.class,
+                            e -> assertThat(e.getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+        }
+
+        @Test
+        @DisplayName("Cancelar: relê com lock e cancela no MP com origem SUPER_ADMIN")
+        void cancelarComLock() {
+            AssinaturaTenant a = criarAssinatura(1L, StatusAssinatura.ATIVA);
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(a));
+
+            service.cancelarPeloSuperAdmin(1L);
+
+            verify(assinaturaMercadoPagoService).cancelar(a,
+                    br.com.saudeConecta.domain.planos.OrigemCancelamento.SUPER_ADMIN);
+        }
+
+        @Test
+        @DisplayName("Cancelar: falha do MP sobe (nada muda localmente)")
+        void cancelarFalhaNoMp() {
+            AssinaturaTenant a = criarAssinatura(1L, StatusAssinatura.ATIVA);
+            when(assinaturaTenantRepository.findByIdParaAtualizacao(1L)).thenReturn(Optional.of(a));
+            doThrow(new BusinessException("MP fora", HttpStatus.BAD_GATEWAY))
+                    .when(assinaturaMercadoPagoService).cancelar(any(), any());
+
+            assertThatThrownBy(() -> service.cancelarPeloSuperAdmin(1L))
+                    .isInstanceOfSatisfying(BusinessException.class,
+                            e -> assertThat(e.getStatus()).isEqualTo(HttpStatus.BAD_GATEWAY));
+            assertThat(a.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
         }
     }
 }

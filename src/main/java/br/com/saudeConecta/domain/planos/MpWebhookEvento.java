@@ -91,6 +91,22 @@ public class MpWebhookEvento implements Serializable {
     @Column(name = "motivo_atencao", length = 255)
     private String motivoAtencao;
 
+    /** Clínica da pendência, quando a assinatura é conhecida ao registrá-la (null nas antigas e nas sem assinatura). */
+    @Column(name = "organizacao_id")
+    private Long organizacaoId;
+
+    /** Quando o SUPER_ADMIN marcou a pendência como resolvida (null = não resolvida). */
+    @Column(name = "resolvido_em")
+    private LocalDateTime resolvidoEm;
+
+    /** Usuário (SUPER_ADMIN) que resolveu a pendência. */
+    @Column(name = "resolvido_por_usuario_id")
+    private Long resolvidoPorUsuarioId;
+
+    /** O que foi feito para resolver (estorno, religação...), escrito pelo SUPER_ADMIN. */
+    @Column(name = "observacao_resolucao", length = 500)
+    private String observacaoResolucao;
+
     @PrePersist
     protected void onCreate() {
         if (recebidoEm == null) {
@@ -117,8 +133,35 @@ public class MpWebhookEvento implements Serializable {
      * @param detalhe contexto para quem for tratar (assinatura, organização, fatura)
      */
     public void marcarParaAtencao(String motivo, String detalhe) {
+        if (resolvidoEm != null) {
+            // Já resolvida pelo SUPER_ADMIN: a reentrega da mesma notificação não reabre a pendência
+            return;
+        }
         String texto = detalhe != null ? motivo + ": " + detalhe : motivo;
         this.requerAtencao = true;
         this.motivoAtencao = texto.substring(0, Math.min(texto.length(), TAMANHO_MAXIMO_MOTIVO));
+    }
+
+    /**
+     * Marca a pendência como resolvida pelo SUPER_ADMIN. Não muda nada no Mercado Pago.
+     *
+     * @param usuarioId  quem resolveu
+     * @param observacao o que foi feito
+     * @param agora      data da resolução
+     */
+    public void resolver(Long usuarioId, String observacao, LocalDateTime agora) {
+        this.requerAtencao = false;
+        this.resolvidoEm = agora;
+        this.resolvidoPorUsuarioId = usuarioId;
+        this.observacaoResolucao = observacao;
+    }
+
+    /** @return o código do motivo (prefixo MOTIVO_*, antes do ":"), ou null sem motivo */
+    public String getMotivoCodigo() {
+        if (motivoAtencao == null) {
+            return null;
+        }
+        int separador = motivoAtencao.indexOf(':');
+        return separador < 0 ? motivoAtencao : motivoAtencao.substring(0, separador);
     }
 }
