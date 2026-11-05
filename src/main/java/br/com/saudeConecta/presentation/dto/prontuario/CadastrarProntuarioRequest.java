@@ -136,6 +136,10 @@ public class CadastrarProntuarioRequest {
     @NoArgsConstructor
     public static class PlanejamentoItem {
 
+        /** Id do planejamento já gravado (só na edição); null = item novo. */
+        @JsonProperty("id")
+        private Long id;
+
         @JsonProperty("dataProcedimento")
         private String dataProcedimento;
 

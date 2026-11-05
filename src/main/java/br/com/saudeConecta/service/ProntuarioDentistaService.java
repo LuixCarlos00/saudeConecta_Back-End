@@ -2,6 +2,7 @@ package br.com.saudeConecta.service;
 
 import org.springframework.http.HttpStatus;
 import br.com.saudeConecta.infra.exceptions.BusinessException;
+import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
@@ -209,9 +210,14 @@ public class ProntuarioDentistaService {
         log.info("prontuario.dentista.atualizar inicio prontuarioId={}", id);
         Long orgId = tenantHelper.getCurrentTenantId();
 
+        // Dado clínico é do profissional que atendeu: nem o gestor edita. Outro usuário da clínica recebe
+        // o mesmo 404 de prontuário inexistente (padrão IDOR do rascunho: não revela que ele existe).
         ProntuarioDentista prontuario = prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(id, orgId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Prontuario odontologico nao encontrado: " + id));
+                .filter(p -> ehDonoDaConsulta(p.getConsulta()))
+                .orElseThrow(() -> {
+                    log.warn("prontuario.dentista.atualizar negado motivo=NAO_ENCONTRADO prontuarioId={}", id);
+                    return new ResourceNotFoundException("Prontuario odontologico nao encontrado: " + id);
+                });
 
         // ── Anamnese ──
         prontuario.setQueixaPrincipal(request.getQueixaPrincipal());
@@ -288,44 +294,57 @@ public class ProntuarioDentistaService {
             }
         }
 
-        // ── Atualiza planejamentos terapêuticos (limpa e recria) ──
-        prontuario.getPlanejamentos().clear();
-        prontuarioDentistaRepository.saveAndFlush(prontuario);
-
-        if (!CollectionUtils.isEmpty(request.getPlanejamentos())) {
-            Organizacao organizacao = new Organizacao();
-            organizacao.setId(orgId);
-
-            // Busca consulta e profissional apenas uma vez
-            Consulta consulta = prontuario.getConsulta();
-            Profissional profissional = prontuario.getProfissional();
-
-            for (CadastrarProntuarioDentistaRequest.PlanejamentoItem item : request.getPlanejamentos()) {
-                Paciente paciente = null;
-                if (item.getPacienteId() != null) {
-                    paciente = pacienteRepository
-                            .findByPaciCodigoAndOrganizacao_IdWithEndereco(item.getPacienteId(), orgId)
-                            .orElse(null);
-                }
-
-                PlanejamentoTerapeutico planejamento = PlanejamentoTerapeutico.builder()
+        // ── Planejamentos: atualiza por id e preserva os assinados (ver EdicaoPlanejamentos) ──
+        Organizacao organizacao = new Organizacao();
+        organizacao.setId(orgId);
+        Consulta consulta = prontuario.getConsulta();
+        Profissional profissional = prontuario.getProfissional();
+        List<EdicaoPlanejamentos.Item> itens = request.getPlanejamentos() == null ? null
+                : request.getPlanejamentos().stream()
+                        .map(i -> new EdicaoPlanejamentos.Item(i.getId(), parseData(i.getDataProcedimento()),
+                                i.getProcedimentoRealizado(), i.getValor(), i.getPacienteId()))
+                        .toList();
+        EdicaoPlanejamentos.sincronizar(prontuario.getPlanejamentos(), itens,
+                item -> PlanejamentoTerapeutico.builder()
                         .prontuarioDentista(prontuario)
                         .consulta(consulta)
-                        .paciente(paciente)
+                        .paciente(buscarPaciente(item.pacienteId(), orgId))
                         .profissional(profissional)
                         .organizacao(organizacao)
-                        .dataProcedimento(parseData(item.getDataProcedimento()))
-                        .procedimentoRealizado(item.getProcedimentoRealizado())
-                        .valor(item.getValor())
+                        .dataProcedimento(item.dataProcedimento())
+                        .procedimentoRealizado(item.procedimentoRealizado())
+                        .valor(item.valor())
                         .statusAssinatura("PENDENTE")
-                        .build();
-                prontuario.addPlanejamento(planejamento);
-            }
-            log.debug("prontuario.dentista.atualizar planejamentos total={}", request.getPlanejamentos().size());
-        }
+                        .build(),
+                (gravado, item) -> {
+                    gravado.setDataProcedimento(item.dataProcedimento());
+                    gravado.setProcedimentoRealizado(item.procedimentoRealizado());
+                    gravado.setValor(item.valor());
+                    gravado.setPaciente(buscarPaciente(item.pacienteId(), orgId));
+                },
+                id);
 
         prontuarioDentistaRepository.save(prontuario);
         log.info("prontuario.dentista.atualizar ok prontuarioId={}", id);
+    }
+
+    /** Paciente do planejamento, só da clínica do token (outra clínica ou id nulo = sem paciente). */
+    private Paciente buscarPaciente(Long pacienteId, Long orgId) {
+        if (pacienteId == null) {
+            return null;
+        }
+        return pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(pacienteId, orgId).orElse(null);
+    }
+
+    /**
+     * Indica se o usuário do token é o profissional da consulta ({@code consulta.profissional.usuario}).
+     * Consulta, profissional e tenant do prontuário nunca vêm do payload da edição.
+     */
+    private boolean ehDonoDaConsulta(Consulta consulta) {
+        Long usuarioId = tenantHelper.getCurrentUserId();
+        return usuarioId != null && consulta != null && consulta.getProfissional() != null
+                && consulta.getProfissional().getUsuario() != null
+                && usuarioId.equals(consulta.getProfissional().getUsuario().getId());
     }
 
     // =========================================================================

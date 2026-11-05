@@ -4,7 +4,11 @@ import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
 import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
 import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
+import br.com.saudeConecta.infra.exceptions.BusinessException;
+import br.com.saudeConecta.domain.usuario.Usuario;
+import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
 import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.AtendimentoRascunhoRepository;
@@ -26,6 +30,7 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -40,10 +45,13 @@ import static org.mockito.Mockito.*;
 class ProntuarioDentistaServiceTest {
 
     private static final Long ORG = 1L;
+    /** Usuário (login) do profissional da consulta: o dono do prontuário. */
+    private static final Long USUARIO_DONO = 500L;
 
     @BeforeEach
     void definirTenant() {
         TenantContext.setCurrentTenant(ORG);
+        TenantContext.setCurrentUser(USUARIO_DONO);
     }
 
     @AfterEach
@@ -76,6 +84,11 @@ class ProntuarioDentistaServiceTest {
         c.setId(id);
         c.setDataHora(LocalDateTime.now());
         c.setStatus(StatusConsulta.AGENDADA);
+        Profissional dono = criarProfissional(1L);
+        Usuario usuario = new Usuario();
+        usuario.setId(USUARIO_DONO);
+        dono.setUsuario(usuario);
+        c.setProfissional(dono);
         return c;
     }
 
@@ -440,7 +453,7 @@ class ProntuarioDentistaServiceTest {
             when(prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(99L, ORG)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.atualizarProntuario(99L, criarRequest()))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Prontuario odontologico nao encontrado");
         }
 
@@ -456,7 +469,7 @@ class ProntuarioDentistaServiceTest {
 
             service.atualizarProntuario(1L, request);
 
-            verify(prontuarioDentistaRepository, times(2)).saveAndFlush(prontuario);
+            verify(prontuarioDentistaRepository).saveAndFlush(prontuario);
             verify(prontuarioDentistaRepository).save(prontuario);
             assertThat(prontuario.getQueixaPrincipal()).isEqualTo("Dor de dente");
             assertThat(prontuario.getDiagnostico()).isEqualTo("Cárie");
@@ -538,6 +551,69 @@ class ProntuarioDentistaServiceTest {
             assertThat(prontuario.getPlanejamentos()).isEmpty();
             assertThat(prontuario.getDentes()).isEmpty();
         }
+
+        private PlanejamentoTerapeutico assinado() {
+            PlanejamentoTerapeutico p = PlanejamentoTerapeutico.builder()
+                    .id(10L).procedimentoRealizado("Exodontia").valor(new BigDecimal("180.00"))
+                    .dataProcedimento(LocalDate.of(2026, 11, 1)).statusAssinatura("ASSINADO").build();
+            p.setAssinaturaBase64("data:image/png;base64,AAAA");
+            p.setDataAssinatura(LocalDateTime.of(2026, 11, 2, 10, 0));
+            p.setIpOrigem("10.0.0.1");
+            return p;
+        }
+
+        @Test
+        @DisplayName("Outro profissional, secretária ou gestor da mesma clínica recebem 404 e nada é gravado")
+        void naoDonoRecebe404() {
+            ProntuarioDentista prontuario = criarProntuario(1L);
+            when(prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(1L, ORG)).thenReturn(Optional.of(prontuario));
+            for (Long outroUsuario : List.of(501L, 502L, 503L)) {
+                TenantContext.setCurrentUser(outroUsuario);
+                assertThatThrownBy(() -> service.atualizarProntuario(1L, criarRequest()))
+                        .isInstanceOf(ResourceNotFoundException.class);
+            }
+            verify(prontuarioDentistaRepository, never()).saveAndFlush(any());
+            verify(prontuarioDentistaRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Reenviar o item assinado preserva assinatura, data, IP e status")
+        void preservaAssinado() {
+            ProntuarioDentista prontuario = criarProntuario(1L);
+            PlanejamentoTerapeutico assinado = assinado();
+            prontuario.getPlanejamentos().add(assinado);
+            when(prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(1L, ORG)).thenReturn(Optional.of(prontuario));
+            CadastrarProntuarioDentistaRequest request = criarRequest();
+            CadastrarProntuarioDentistaRequest.PlanejamentoItem mesmo = criarItemPlanejamento(null);
+            mesmo.setId(10L);
+            request.setPlanejamentos(List.of(mesmo, criarItemPlanejamento(null)));
+
+            service.atualizarProntuario(1L, request);
+
+            assertThat(prontuario.getPlanejamentos()).hasSize(2).contains(assinado);
+            assertThat(assinado.getStatusAssinatura()).isEqualTo("ASSINADO");
+            assertThat(assinado.getAssinaturaBase64()).isEqualTo("data:image/png;base64,AAAA");
+            assertThat(assinado.getDataAssinatura()).isEqualTo(LocalDateTime.of(2026, 11, 2, 10, 0));
+            assertThat(assinado.getIpOrigem()).isEqualTo("10.0.0.1");
+        }
+
+        @Test
+        @DisplayName("Mudar o valor do item assinado responde 409 PLANEJAMENTO_ASSINADO")
+        void alterarAssinadoRecusado() {
+            ProntuarioDentista prontuario = criarProntuario(1L);
+            prontuario.getPlanejamentos().add(assinado());
+            when(prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(1L, ORG)).thenReturn(Optional.of(prontuario));
+            CadastrarProntuarioDentistaRequest request = criarRequest();
+            CadastrarProntuarioDentistaRequest.PlanejamentoItem alterado = criarItemPlanejamento(null);
+            alterado.setId(10L);
+            alterado.setValor(new BigDecimal("1.00"));
+            request.setPlanejamentos(List.of(alterado));
+
+            assertThatThrownBy(() -> service.atualizarProntuario(1L, request))
+                    .isInstanceOfSatisfying(BusinessException.class,
+                            e -> assertThat(e.getErrorCode()).isEqualTo("PLANEJAMENTO_ASSINADO"));
+            verify(prontuarioDentistaRepository, never()).save(any());
+        }
     }
 
     // ========== Isolamento multi-tenant ==========
@@ -598,7 +674,7 @@ class ProntuarioDentistaServiceTest {
             lenient().when(prontuarioDentistaRepository.findById(1L)).thenReturn(Optional.of(criarProntuario(1L)));
 
             assertThatThrownBy(() -> service.atualizarProntuario(1L, criarRequest()))
-                    .isInstanceOf(IllegalArgumentException.class);
+                    .isInstanceOf(ResourceNotFoundException.class);
             verify(prontuarioDentistaRepository, never()).saveAndFlush(any());
             verify(prontuarioDentistaRepository, never()).save(any());
         }

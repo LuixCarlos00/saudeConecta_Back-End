@@ -5,7 +5,11 @@ import br.com.saudeConecta.domain.consulta.StatusConsulta;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
 import br.com.saudeConecta.domain.prontuario.Prontuario;
+import br.com.saudeConecta.infra.exceptions.BusinessException;
+import br.com.saudeConecta.domain.usuario.Usuario;
+import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
 import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.AtendimentoRascunhoRepository;
@@ -27,6 +31,7 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -41,11 +46,14 @@ import static org.mockito.Mockito.*;
 class ProntuarioServiceTest {
 
     private static final Long ORG = 1L;
+    /** Usuário (login) do profissional da consulta: o dono do prontuário. */
+    private static final Long USUARIO_DONO = 500L;
     private static final Long OUTRA_ORG = 2L;
 
     @BeforeEach
     void definirTenant() {
         TenantContext.setCurrentTenant(ORG);
+        TenantContext.setCurrentUser(USUARIO_DONO);
     }
 
     @AfterEach
@@ -79,6 +87,11 @@ class ProntuarioServiceTest {
         c.setId(id);
         c.setDataHora(LocalDateTime.now());
         c.setStatus(StatusConsulta.AGENDADA);
+        Profissional dono = criarProfissional(1L);
+        Usuario usuario = new Usuario();
+        usuario.setId(USUARIO_DONO);
+        dono.setUsuario(usuario);
+        c.setProfissional(dono);
         return c;
     }
 
@@ -404,90 +417,220 @@ class ProntuarioServiceTest {
     @DisplayName("atualizarProntuarioMedico")
     class AtualizarProntuario {
 
+        private PlanejamentoTerapeutico planejamento(Long id, String procedimento, String valor, String status) {
+            PlanejamentoTerapeutico p = PlanejamentoTerapeutico.builder()
+                    .id(id).procedimentoRealizado(procedimento).valor(new BigDecimal(valor))
+                    .dataProcedimento(LocalDate.of(2026, 11, 1)).statusAssinatura(status).build();
+            if ("ASSINADO".equals(status)) {
+                p.setAssinaturaBase64("data:image/png;base64,AAAA");
+                p.setDataAssinatura(LocalDateTime.of(2026, 11, 2, 10, 0));
+                p.setIpOrigem("10.0.0.1");
+                p.setTokenAssinatura("tok-assinado");
+            }
+            return p;
+        }
+
+        private CadastrarProntuarioRequest.PlanejamentoItem item(Long id, String procedimento, String valor) {
+            CadastrarProntuarioRequest.PlanejamentoItem i = criarItemComPaciente(null);
+            i.setId(id);
+            i.setProcedimentoRealizado(procedimento);
+            i.setValor(new BigDecimal(valor));
+            return i;
+        }
+
+        private Prontuario prontuarioGravado(PlanejamentoTerapeutico... planejamentos) {
+            Prontuario prontuario = criarProntuario(1L);
+            prontuario.getPlanejamentos().addAll(List.of(planejamentos));
+            when(prontuarioRepository.findByProntCodigoProntuarioAndConsulta_Organizacao_Id(1L, ORG))
+                    .thenReturn(Optional.of(prontuario));
+            return prontuario;
+        }
+
         @Test
-        @DisplayName("Deve lançar exceção quando prontuário não encontrado ao atualizar")
+        @DisplayName("Prontuário inexistente responde 404")
         void deveLancarExcecaoQuandoNaoEncontrado() {
             when(prontuarioRepository.findByProntCodigoProntuarioAndConsulta_Organizacao_Id(99L, ORG)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.atualizarProntuarioMedico(99L, criarRequest()))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Prontuário não encontrado");
         }
 
         @Test
-        @DisplayName("Deve atualizar prontuário sem planejamentos — apenas campos clínicos")
+        @DisplayName("Dono atualiza os campos clínicos")
         void deveAtualizarSemPlanejamentos() {
-            Prontuario prontuario = criarProntuario(1L);
-            CadastrarProntuarioRequest request = criarRequest();
+            Prontuario prontuario = prontuarioGravado();
 
-            when(prontuarioRepository.findByProntCodigoProntuarioAndConsulta_Organizacao_Id(1L, ORG)).thenReturn(Optional.of(prontuario));
-            when(prontuarioRepository.saveAndFlush(any())).thenReturn(prontuario);
-            when(prontuarioRepository.save(any())).thenReturn(prontuario);
+            service.atualizarProntuarioMedico(1L, criarRequest());
 
-            service.atualizarProntuarioMedico(1L, request);
-
-            verify(prontuarioRepository).saveAndFlush(prontuario);
             verify(prontuarioRepository).save(prontuario);
             assertThat(prontuario.getProntAnamnese()).isEqualTo("Paciente relata...");
             assertThat(prontuario.getProntDiagnostico()).isEqualTo("Enxaqueca");
         }
 
         @Test
-        @DisplayName("Deve atualizar prontuário com planejamentos quando pacienteId informado")
+        @DisplayName("Outro profissional, secretária ou gestor da mesma clínica recebem 404 e nada é gravado")
+        void naoDonoRecebe404() {
+            Prontuario prontuario = prontuarioGravado();
+            String anamneseOriginal = prontuario.getProntAnamnese();
+            for (Long outroUsuario : List.of(501L, 502L, 503L)) { // outro médico, secretária, gestor
+                TenantContext.setCurrentUser(outroUsuario);
+
+                assertThatThrownBy(() -> service.atualizarProntuarioMedico(1L, criarRequest()))
+                        .isInstanceOf(ResourceNotFoundException.class);
+            }
+            verify(prontuarioRepository, never()).save(any());
+            verify(cacheEvictionService, never()).evictProntuarioRecente(any(), any());
+            assertThat(prontuario.getProntAnamnese()).isEqualTo(anamneseOriginal);
+        }
+
+        @Test
+        @DisplayName("Sem usuário no token responde 404")
+        void semUsuarioRecebe404() {
+            prontuarioGravado();
+            TenantContext.setCurrentUser(null);
+
+            assertThatThrownBy(() -> service.atualizarProntuarioMedico(1L, criarRequest()))
+                    .isInstanceOf(ResourceNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("Payload com outra consulta e outro profissional é ignorado: vínculos continuam os do prontuário")
+        void payloadNaoTrocaConsultaNemProfissional() {
+            Prontuario prontuario = prontuarioGravado();
+            Consulta consultaOriginal = prontuario.getConsulta();
+            Profissional profissionalOriginal = prontuario.getProfissional();
+            CadastrarProntuarioRequest request = criarRequest();
+            request.setConsulta(999L);
+            request.setCodigoMedico(888L);
+            request.setPlanejamentos(List.of(item(null, "Retorno", "100")));
+
+            service.atualizarProntuarioMedico(1L, request);
+
+            assertThat(prontuario.getConsulta()).isSameAs(consultaOriginal);
+            assertThat(prontuario.getProfissional()).isSameAs(profissionalOriginal);
+            assertThat(prontuario.getPlanejamentos()).singleElement().satisfies(p -> {
+                assertThat(p.getConsulta()).isSameAs(consultaOriginal);
+                assertThat(p.getProfissional()).isSameAs(profissionalOriginal);
+                assertThat(p.getOrganizacao().getId()).isEqualTo(ORG);
+            });
+            verifyNoInteractions(consultaRepository, profissionalRepository);
+        }
+
+        @Test
+        @DisplayName("Item novo com pacienteId resolve o paciente na clínica do token")
         void deveAtualizarComPlanejamentosComPaciente() {
-            Prontuario prontuario = criarProntuario(1L);
+            Prontuario prontuario = prontuarioGravado();
             CadastrarProntuarioRequest request = criarRequest();
             request.setPlanejamentos(List.of(criarItemComPaciente(5L)));
-
             Paciente paciente = new Paciente();
             paciente.setPaciCodigo(5L);
-
-            when(prontuarioRepository.findByProntCodigoProntuarioAndConsulta_Organizacao_Id(1L, ORG)).thenReturn(Optional.of(prontuario));
-            when(prontuarioRepository.saveAndFlush(any())).thenReturn(prontuario);
-            when(prontuarioRepository.save(any())).thenReturn(prontuario);
             when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(5L, ORG)).thenReturn(Optional.of(paciente));
 
             service.atualizarProntuarioMedico(1L, request);
 
-            verify(pacienteRepository).findByPaciCodigoAndOrganizacao_IdWithEndereco(5L, ORG);
-            verify(prontuarioRepository).save(prontuario);
-            assertThat(prontuario.getPlanejamentos()).hasSize(1);
-            assertThat(prontuario.getPlanejamentos().get(0).getProcedimentoRealizado())
-                    .isEqualTo("Consulta de rotina");
+            assertThat(prontuario.getPlanejamentos()).singleElement().satisfies(p -> {
+                assertThat(p.getProcedimentoRealizado()).isEqualTo("Consulta de rotina");
+                assertThat(p.getPaciente()).isSameAs(paciente);
+                assertThat(p.getStatusAssinatura()).isEqualTo("PENDENTE");
+            });
         }
 
         @Test
-        @DisplayName("Deve atualizar prontuário com planejamentos quando pacienteId é nulo")
+        @DisplayName("Item novo sem pacienteId não consulta paciente")
         void deveAtualizarComPlanejamentosSemPaciente() {
-            Prontuario prontuario = criarProntuario(1L);
+            Prontuario prontuario = prontuarioGravado();
             CadastrarProntuarioRequest request = criarRequest();
             request.setPlanejamentos(List.of(criarItemComPaciente(null)));
-
-            when(prontuarioRepository.findByProntCodigoProntuarioAndConsulta_Organizacao_Id(1L, ORG)).thenReturn(Optional.of(prontuario));
-            when(prontuarioRepository.saveAndFlush(any())).thenReturn(prontuario);
-            when(prontuarioRepository.save(any())).thenReturn(prontuario);
 
             service.atualizarProntuarioMedico(1L, request);
 
             verify(pacienteRepository, never()).findByPaciCodigoAndOrganizacao_IdWithEndereco(any(), any());
-            assertThat(prontuario.getPlanejamentos()).hasSize(1);
-            assertThat(prontuario.getPlanejamentos().get(0).getPaciente()).isNull();
+            assertThat(prontuario.getPlanejamentos()).singleElement()
+                    .satisfies(p -> assertThat(p.getPaciente()).isNull());
         }
 
         @Test
-        @DisplayName("Deve limpar planejamentos antigos antes de recriar")
-        void deveLimparPlanejamentosAntesDeRecriar() {
-            Prontuario prontuario = criarProntuario(1L);
-            CadastrarProntuarioRequest requestSemPlanejamento = criarRequest();
+        @DisplayName("Mantém o assinado intacto, atualiza o pendente por id, cria o novo e remove o pendente omitido")
+        void preservaAssinadoEAtualizaPorId() {
+            PlanejamentoTerapeutico assinado = planejamento(10L, "Limpeza", "150.00", "ASSINADO");
+            PlanejamentoTerapeutico pendente = planejamento(11L, "Raio-X", "80.00", "PENDENTE");
+            PlanejamentoTerapeutico omitido = planejamento(12L, "Clareamento", "300.00", "PENDENTE");
+            Prontuario prontuario = prontuarioGravado(assinado, pendente, omitido);
+            CadastrarProntuarioRequest request = criarRequest();
+            request.setPlanejamentos(List.of(
+                    item(10L, "Limpeza", "150"),          // assinado reenviado igual (150 == 150.00)
+                    item(11L, "Raio-X panorâmico", "95"), // pendente alterado
+                    item(null, "Retorno", "0")));         // novo
 
-            when(prontuarioRepository.findByProntCodigoProntuarioAndConsulta_Organizacao_Id(1L, ORG)).thenReturn(Optional.of(prontuario));
-            when(prontuarioRepository.saveAndFlush(any())).thenReturn(prontuario);
-            when(prontuarioRepository.save(any())).thenReturn(prontuario);
+            service.atualizarProntuarioMedico(1L, request);
 
-            service.atualizarProntuarioMedico(1L, requestSemPlanejamento);
+            assertThat(prontuario.getPlanejamentos()).extracting(PlanejamentoTerapeutico::getProcedimentoRealizado)
+                    .containsExactlyInAnyOrder("Limpeza", "Raio-X panorâmico", "Retorno");
+            assertThat(prontuario.getPlanejamentos()).contains(assinado, pendente).doesNotContain(omitido);
+            assertThat(assinado.getStatusAssinatura()).isEqualTo("ASSINADO");
+            assertThat(assinado.getAssinaturaBase64()).isEqualTo("data:image/png;base64,AAAA");
+            assertThat(assinado.getDataAssinatura()).isEqualTo(LocalDateTime.of(2026, 11, 2, 10, 0));
+            assertThat(assinado.getIpOrigem()).isEqualTo("10.0.0.1");
+            assertThat(assinado.getTokenAssinatura()).isEqualTo("tok-assinado");
+            assertThat(assinado.getValor()).isEqualByComparingTo("150.00");
+            assertThat(pendente.getValor()).isEqualByComparingTo("95");
+        }
 
-            assertThat(prontuario.getPlanejamentos()).isEmpty();
-            verify(prontuarioRepository).saveAndFlush(prontuario);
+        @Test
+        @DisplayName("Assinado omitido do payload não é removido")
+        void assinadoOmitidoNaoERemovido() {
+            PlanejamentoTerapeutico assinado = planejamento(10L, "Limpeza", "150.00", "ASSINADO");
+            Prontuario prontuario = prontuarioGravado(assinado, planejamento(11L, "Raio-X", "80.00", "PENDENTE"));
+            CadastrarProntuarioRequest request = criarRequest(); // lista vazia
+
+            service.atualizarProntuarioMedico(1L, request);
+
+            assertThat(prontuario.getPlanejamentos()).containsExactly(assinado);
+        }
+
+        @Test
+        @DisplayName("Mudar procedimento ou valor de item assinado responde 409 PLANEJAMENTO_ASSINADO e não grava")
+        void alterarAssinadoRecusado() {
+            for (CadastrarProntuarioRequest.PlanejamentoItem alterado : List.of(
+                    item(10L, "Limpeza profunda", "150.00"), item(10L, "Limpeza", "151.00"))) {
+                PlanejamentoTerapeutico assinado = planejamento(10L, "Limpeza", "150.00", "ASSINADO");
+                prontuarioGravado(assinado);
+                CadastrarProntuarioRequest request = criarRequest();
+                request.setPlanejamentos(List.of(alterado));
+
+                assertThatThrownBy(() -> service.atualizarProntuarioMedico(1L, request))
+                        .isInstanceOfSatisfying(BusinessException.class,
+                                e -> assertThat(e.getErrorCode()).isEqualTo("PLANEJAMENTO_ASSINADO"));
+                assertThat(assinado.getProcedimentoRealizado()).isEqualTo("Limpeza");
+                assertThat(assinado.getValor()).isEqualByComparingTo("150.00");
+            }
+            verify(prontuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Item com id de outro prontuário responde 400")
+        void idDeOutroProntuarioRecusado() {
+            prontuarioGravado(planejamento(11L, "Raio-X", "80.00", "PENDENTE"));
+            CadastrarProntuarioRequest request = criarRequest();
+            request.setPlanejamentos(List.of(item(77L, "Invasor", "1")));
+
+            assertThatThrownBy(() -> service.atualizarProntuarioMedico(1L, request))
+                    .isInstanceOf(IllegalArgumentException.class);
+            verify(prontuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Lista de planejamentos ausente (null) mantém todos os planejamentos")
+        void listaNullMantemPlanejamentos() {
+            PlanejamentoTerapeutico pendente = planejamento(11L, "Raio-X", "80.00", "PENDENTE");
+            Prontuario prontuario = prontuarioGravado(pendente);
+            CadastrarProntuarioRequest request = criarRequest();
+            request.setPlanejamentos(null);
+
+            service.atualizarProntuarioMedico(1L, request);
+
+            assertThat(prontuario.getPlanejamentos()).containsExactly(pendente);
         }
     }
 
@@ -573,7 +716,7 @@ class ProntuarioServiceTest {
             lenient().when(prontuarioRepository.findById(1L)).thenReturn(Optional.of(prontuarioDeOutraClinica()));
 
             assertThatThrownBy(() -> service.atualizarProntuarioMedico(1L, criarRequest()))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Prontuário não encontrado");
             verify(prontuarioRepository, never()).saveAndFlush(any());
             verify(prontuarioRepository, never()).save(any());
