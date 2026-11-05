@@ -96,6 +96,8 @@ exceções para montar resposta própria.
   `userId` no MDC. `@Scheduled` ganha `requestId` próprio (`ScheduledMdcAspect`) e
   tarefas assíncronas copiam o MDC (`MdcTaskDecorator`).
 - Dados sensíveis são mascarados com `MascaraLog` (CPF, e-mail, token). Nunca logar senha.
+- Toda requisição termina com `http fim <método> <rota> status= duracaoMs=` (`CorrelationIdFilter`).
+- Mensagens seguem `<evento> <etapa> chave=valor`, com regra por nível: **[docs/LOGGING.md](docs/LOGGING.md)**.
 
 ## Fuso horário
 
