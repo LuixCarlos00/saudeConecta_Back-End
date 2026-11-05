@@ -246,15 +246,16 @@ public class AssinaturaTenantService {
     }
 
     /**
-     * Busca a assinatura ativa da organização.
+     * Busca a assinatura vigente da organização (inclui a SUSPENSA, que precisa ver a
+     * própria assinatura para regularizar o pagamento).
      *
      * @param organizacaoId ID da organização
      * @return AssinaturaTenantResponse
      */
     @Transactional(readOnly = true)
-    public AssinaturaTenantResponse buscarAssinaturaAtiva(Long organizacaoId) {
+    public AssinaturaTenantResponse buscarAssinaturaVigente(Long organizacaoId) {
         AssinaturaTenant assinatura = assinaturaTenantRepository
-                .findAssinaturaAtivaByOrganizacaoId(organizacaoId)
+                .findAssinaturaVigenteByOrganizacaoId(organizacaoId)
                 .orElseThrow(() -> new BusinessException(
                         "Nenhuma assinatura ativa encontrada para a organização",
                         HttpStatus.NOT_FOUND));

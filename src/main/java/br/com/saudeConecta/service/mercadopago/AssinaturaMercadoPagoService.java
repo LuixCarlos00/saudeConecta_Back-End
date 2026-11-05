@@ -59,10 +59,11 @@ public class AssinaturaMercadoPagoService {
     @Transactional
     public LinkPagamentoResponse gerarLinkPagamento(Long organizacaoId) {
         log.info("mp.preapproval.criar inicio organizacaoId={}", organizacaoId);
+        // Vigente inclui a SUSPENSA: é justamente quem mais precisa do link para voltar a pagar
         AssinaturaTenant assinatura = assinaturaTenantRepository
-                .findAssinaturaAtivaByOrganizacaoId(organizacaoId)
+                .findAssinaturaVigenteByOrganizacaoId(organizacaoId)
                 .orElseThrow(() -> new BusinessException(
-                        "Nenhuma assinatura ativa encontrada para a organização",
+                        "Nenhuma assinatura vigente encontrada para a organização",
                         HttpStatus.NOT_FOUND));
 
         return gerarLinkPagamento(assinatura);

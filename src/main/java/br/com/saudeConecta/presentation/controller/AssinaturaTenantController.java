@@ -53,13 +53,13 @@ public class AssinaturaTenantController {
     }
 
     /**
-     * Busca a assinatura ativa da organização do usuário logado.
+     * Busca a assinatura vigente (inclusive SUSPENSA) da organização do usuário logado.
      */
     @GetMapping("/minha-assinatura")
     @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
     public ResponseEntity<AssinaturaTenantResponse> minhaAssinatura() {
         Long organizacaoId = TenantContext.getCurrentTenant();
-        return ResponseEntity.ok(assinaturaTenantService.buscarAssinaturaAtiva(organizacaoId));
+        return ResponseEntity.ok(assinaturaTenantService.buscarAssinaturaVigente(organizacaoId));
     }
 
     /**

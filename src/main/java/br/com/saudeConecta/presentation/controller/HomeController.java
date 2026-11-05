@@ -5,6 +5,7 @@ import br.com.saudeConecta.util.MascaraLog;
 import br.com.saudeConecta.service.HomeService;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
+import br.com.saudeConecta.domain.planos.StatusAssinatura;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.domain.usuario.AuditoriaAcessoMaster;
@@ -156,7 +157,7 @@ public class HomeController {
 
         if (!usuario.isRoot() && organizacaoId != null) {
             Optional<AssinaturaTenant> assinatura = assinaturaTenantRepository
-                    .findAssinaturaAtivaByOrganizacaoId(organizacaoId);
+                    .findAssinaturaVigenteByOrganizacaoId(organizacaoId);
 
             if (assinatura.isEmpty()) {
                 log.warn("auth.login negado motivo=SEM_PLANO_ATIVO usuarioId={} organizacaoId={}", usuario.getId(), organizacaoId);
@@ -164,7 +165,12 @@ public class HomeController {
                         .body(Map.of("message", "Sua organizacao nao possui um plano ativo. Entre em contato com o administrador."));
             }
 
-            if (!assinatura.get().permiteAcesso()) {
+            // SUSPENSA recebe o token para conseguir pagar: o FiltroAcesso limita esse token às
+            // rotas de assinatura/pagamento e devolve 403 PLANO_SEM_ACESSO no resto.
+            if (StatusAssinatura.SUSPENSA.equals(assinatura.get().getStatus())) {
+                log.info("auth.login restrito motivo=PLANO_SUSPENSO usuarioId={} organizacaoId={} acesso=SO_PAGAMENTO",
+                        usuario.getId(), organizacaoId);
+            } else if (!assinatura.get().permiteAcesso()) {
                 String statusPlano = assinatura.get().getStatus().getDescricao();
                 log.warn("auth.login negado motivo=PLANO_SEM_ACESSO usuarioId={} statusPlano={} organizacaoId={}", usuario.getId(), statusPlano, organizacaoId);
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)

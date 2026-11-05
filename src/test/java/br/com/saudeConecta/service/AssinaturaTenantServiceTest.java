@@ -225,31 +225,43 @@ class AssinaturaTenantServiceTest {
         }
     }
 
-    // ========== buscarAssinaturaAtiva ==========
+    // ========== buscarAssinaturaVigente ==========
 
     @Nested
-    @DisplayName("buscarAssinaturaAtiva")
-    class BuscarAssinaturaAtiva {
+    @DisplayName("buscarAssinaturaVigente")
+    class BuscarAssinaturaVigente {
 
         @Test
         @DisplayName("Deve retornar assinatura ativa da organização")
         void deveRetornarAssinaturaAtiva() {
             AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.ATIVA);
-            when(assinaturaTenantRepository.findAssinaturaAtivaByOrganizacaoId(1L))
+            when(assinaturaTenantRepository.findAssinaturaVigenteByOrganizacaoId(1L))
                     .thenReturn(Optional.of(assinatura));
 
-            AssinaturaTenantResponse response = service.buscarAssinaturaAtiva(1L);
+            AssinaturaTenantResponse response = service.buscarAssinaturaVigente(1L);
 
             assertThat(response).isNotNull();
         }
 
         @Test
+        @DisplayName("C1 - Deve retornar a assinatura SUSPENSA (a clínica precisa vê-la para pagar)")
+        void deveRetornarAssinaturaSuspensa() {
+            AssinaturaTenant assinatura = criarAssinatura(1L, StatusAssinatura.SUSPENSA);
+            when(assinaturaTenantRepository.findAssinaturaVigenteByOrganizacaoId(1L))
+                    .thenReturn(Optional.of(assinatura));
+
+            AssinaturaTenantResponse response = service.buscarAssinaturaVigente(1L);
+
+            assertThat(response.status()).isEqualTo("SUSPENSA");
+        }
+
+        @Test
         @DisplayName("Deve lançar exceção quando não há assinatura ativa")
         void deveLancarExcecaoQuandoSemAssinaturaAtiva() {
-            when(assinaturaTenantRepository.findAssinaturaAtivaByOrganizacaoId(99L))
+            when(assinaturaTenantRepository.findAssinaturaVigenteByOrganizacaoId(99L))
                     .thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> service.buscarAssinaturaAtiva(99L))
+            assertThatThrownBy(() -> service.buscarAssinaturaVigente(99L))
                     .isInstanceOf(BusinessException.class);
         }
     }

@@ -83,6 +83,7 @@ class AssinaturaMercadoPagoServiceTest {
         admin.setNome("Fulano");
 
         when(adminOrganizacaoRepository.findOwnerByOrganizacaoId(ORG_ID)).thenReturn(Optional.of(admin));
+        when(assinaturaTenantRepository.findAssinaturaVigenteByOrganizacaoId(ORG_ID)).thenReturn(Optional.of(assinatura));
         when(assinaturaTenantRepository.findAssinaturaAtivaByOrganizacaoId(ORG_ID)).thenReturn(Optional.of(assinatura));
         when(assinaturaTenantRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
