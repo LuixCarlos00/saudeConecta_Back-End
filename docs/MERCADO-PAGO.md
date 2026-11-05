@@ -156,10 +156,34 @@ vinculada a B (`OUTRO_PREAPPROVAL_VINCULADO`), ou A está na coluna de substitu�
 (`PREAPPROVAL_SUBSTITUIDO`), ou não há preapproval vinculado e A está cancelado
 (`CANCELADO_SEM_VINCULO`).
 
-O lock segura a linha durante as chamadas HTTP ao MP; o tempo é limitado por
-`HTTP_CONNECT_TIMEOUT` (5 s) e `HTTP_READ_TIMEOUT` (15 s). Cada transação trava uma
-única linha de `assinatura_tenant`, como a régua, então não há ordem de locks que
-possa formar deadlock entre elas.
+### `FOR UPDATE` segurado durante chamadas HTTP
+
+Algumas operações seguram o lock da linha de `assinatura_tenant` (`SELECT ... FOR UPDATE`)
+enquanto chamam o MP, de propósito: é o que serializa a troca de link, a troca de plano, a
+cortesia, a régua e a reconciliação sobre a mesma assinatura.
+
+| Operação | Chamadas ao MP com a linha travada |
+|---|---|
+| Link novo (fase 1) | `GET` + `PUT` do substituído anterior (só se ainda pendente), `POST /preapproval` |
+| Troca de plano / plano personalizado | `GET /preapproval/{id}` e `PUT` do valor; na falha, mais um `GET` de releitura |
+| Cortesia | `GET` do `next_payment_date` (ao remover); `GET` + `PUT` do substituído anterior (só se pendente) |
+| Régua (suspender/cancelar) e reconciliação | `PUT` de pausa/cancelamento; `GET /preapproval/{id}` e, se o valor divergir, `PUT` do valor |
+
+Cada chamada é limitada por `HTTP_CONNECT_TIMEOUT` (5 s) e `HTTP_READ_TIMEOUT` (15 s); no pior
+caso a linha fica travada por algumas dezenas de segundos. Enquanto isso, quem precisa da
+mesma linha (webhook da mesma assinatura, outra troca) espera até o
+`innodb_lock_wait_timeout` do MySQL (50 s por padrão) e, se estourar, falha: o webhook é
+reprocessado com backoff e as telas recebem erro e podem tentar de novo. Outras assinaturas
+não são afetadas. Cada transação trava uma única linha de `assinatura_tenant`, como a régua,
+então não há ordem de locks que possa formar deadlock entre elas.
+
+**Timeout menor só nessas chamadas: avaliado e não feito.** Os timeouts vêm do
+`SimpleClientHttpRequestFactory` do único `RestTemplate` da aplicação (`RestTemplateConfig`),
+compartilhado com o webhook, o CEP e o restante do `MercadoPagoClient`. O Spring 6.0 não tem
+timeout por requisição no `RestTemplate`; baixar para ~8 s só em criar/buscar preapproval e
+atualizar valor exigiria um segundo `RestTemplate` dentro do `MercadoPagoClient`, e o
+`buscarPreapproval` também é usado fora do lock (webhook). Se o tempo de lock virar problema,
+o caminho é esse segundo cliente, ou baixar `HTTP_READ_TIMEOUT` para toda a aplicação.
 
 ### Troca de plano e plano personalizado
 
