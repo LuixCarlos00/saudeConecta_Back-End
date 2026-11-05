@@ -11,6 +11,7 @@ import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.email.EmailNotificacaoService;
+import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
@@ -174,6 +175,11 @@ public class AdminOrganizacaoService {
         // Validação de tenant
         if (!admin.getOrganizacao().getId().equals(orgId)) {
             throw new IllegalArgumentException("Acesso negado: administrador não pertence à organização");
+        }
+        // "Meus dados": só o dono do cadastro. Outro gestor da clínica usa atualizarAdmByOrg.
+        if (admin.getUsuario() == null || !admin.getUsuario().getId().equals(userId)) {
+            log.warn("Usuario {} tentou alterar os dados do admin {} pela rota de meus dados", userId, adminId);
+            throw new TenantAccessDeniedException("Acesso negado: só é possível alterar os próprios dados");
         }
 
         emailUnicoService.validarEmailLivreParaAtualizacao(request.email(), admin.getEmail(),

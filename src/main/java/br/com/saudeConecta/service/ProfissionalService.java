@@ -235,6 +235,9 @@ public class ProfissionalService {
         Profissional antes = profissionalRepository.buscarClinicoIdByOrg(id, orgId)
                 .orElseThrow(() -> new IllegalArgumentException("Profissional nao encontrado"));
 
+        // Trocar o e-mail de outro usuário permite tomar a conta pelo "esqueci minha senha"
+        tenantHelper.validarGestorOuDono(antes.getUsuario() != null ? antes.getUsuario().getId() : null);
+
         // E-mail duplicado desvia o "esqueci minha senha" (que busca por e-mail) para a conta errada
         emailUnicoService.validarEmailLivreParaAtualizacao(dadosAtualizados.email(), antes.getEmail(),
                 antes.getUsuario() != null ? antes.getUsuario().getId() : null);

@@ -10,6 +10,7 @@ import jdk.jfr.Description;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,6 +23,7 @@ public class UsuarioController {
     private final UsuarioService usuarioService;
 
     @PutMapping("/bloquearUsuariobyOrg")
+    @PreAuthorize("hasRole('ADMIN')")
     @Description("Bloqueia ou desbloqueia usuário por ID. Utilizado em: GerenciamentoUsuariosComponent")
     public ResponseEntity<Void> bloquearUsuariobyOrg(@RequestBody @Valid BloquearUsuarioRequest request) {
         log.debug("Alterando status do usuário ID: {}", request.codigoUsuario());

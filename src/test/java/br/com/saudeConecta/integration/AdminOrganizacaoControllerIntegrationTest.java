@@ -352,4 +352,62 @@ class AdminOrganizacaoControllerIntegrationTest {
                     .andExpect(status().isConflict());
         }
     }
+
+    // ========== Item 2 - cadastro de gestor e "meus dados" ==========
+
+    @Nested
+    @DisplayName("POST /administrador/cadastrarAdminByOrg e PUT atualizarMeusDados - papel e dono")
+    class CadastroGestorEMeusDados {
+
+        private static final String CORPO_CADASTRO =
+                "{\"nome\":\"Novo Gestor\",\"cpf\":\"12345678900\",\"email\":\"gestor@clinica.com\"}";
+
+        @Test
+        @WithMockUser(roles = "RECEPCIONISTA")
+        @DisplayName("ASSISTENTE não cadastra gestor (403)")
+        void assistenteNaoCadastraGestor() throws Exception {
+            mockMvc.perform(post("/administrador/cadastrarAdminByOrg").with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content(CORPO_CADASTRO))
+                    .andExpect(status().isForbidden());
+            verify(adminOrganizacaoService, never()).cadastrarAdminByOrg(any(), anyLong());
+        }
+
+        @Test
+        @WithMockUser(roles = "PROFISSIONAL")
+        @DisplayName("CLINICO não cadastra gestor (403)")
+        void clinicoNaoCadastraGestor() throws Exception {
+            mockMvc.perform(post("/administrador/cadastrarAdminByOrg").with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content(CORPO_CADASTRO))
+                    .andExpect(status().isForbidden());
+            verify(adminOrganizacaoService, never()).cadastrarAdminByOrg(any(), anyLong());
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("GESTOR cadastra gestor da própria clínica (201)")
+        void gestorCadastraGestor() throws Exception {
+            br.com.saudeConecta.infra.tenant.TenantContext.setCurrentTenant(1L);
+            try {
+                when(adminOrganizacaoService.cadastrarAdminByOrg(any(), eq(1L))).thenReturn(new AdminOrganizacao());
+
+                mockMvc.perform(post("/administrador/cadastrarAdminByOrg").with(csrf())
+                                .contentType(MediaType.APPLICATION_JSON).content(CORPO_CADASTRO))
+                        .andExpect(status().isCreated());
+            } finally {
+                br.com.saudeConecta.infra.tenant.TenantContext.clear();
+            }
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("Meus Dados de outro admin responde 403")
+        void meusDadosDeOutroAdminResponde403() throws Exception {
+            doThrow(new br.com.saudeConecta.infra.tenant.TenantAccessDeniedException("negado"))
+                    .when(adminOrganizacaoService).atualizarMeusDadosAdminOrg(eq(2L), any());
+
+            mockMvc.perform(put("/administrador/atualizarMeusDados/2").with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"nome\":\"X\"}"))
+                    .andExpect(status().isForbidden());
+        }
+    }
 }

@@ -684,6 +684,21 @@ class AdminOrganizacaoServiceTest {
         }
 
         @Test
+        @DisplayName("Meus Dados: outro usuário da mesma clínica não altera os dados deste admin")
+        void outroUsuarioDaMesmaOrgEhNegado() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentUserId()).thenReturn(USUARIO_ID + 1);
+            when(adminOrganizacaoRepository.findByIdWithOrgAndEndereco(ADMIN_ID))
+                    .thenReturn(Optional.of(adminOrganizacao));
+
+            assertThatThrownBy(() -> adminOrganizacaoService.atualizarMeusDadosAdminOrg(ADMIN_ID, request))
+                    .isInstanceOf(br.com.saudeConecta.infra.tenant.TenantAccessDeniedException.class);
+            verify(adminOrganizacaoRepository, never()).save(any());
+            verify(organizacaoRepository, never()).save(any());
+            verify(enderecoRepository, never()).save(any());
+        }
+
+        @Test
         @DisplayName("Deve lançar exceção quando admin pertence a outra organização")
         void deveLancarExcecaoQuandoAdminDeOutraOrg() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(99L);

@@ -114,6 +114,22 @@ class SecretariaServiceTest {
     class AtualizarSecretariaIdByOrg {
 
         @Test
+        @DisplayName("Sem ser gestor nem a dona, a atualização é negada antes de qualquer alteração")
+        void naoGestorNemDonaEhNegado() {
+            Secretaria dadosAtualizados = Secretaria.builder().email("invasor@email.com").build();
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(secretariaRepository.findByIdAndOrganizacao_Id(SEC_ID, ORG_ID))
+                    .thenReturn(Optional.of(secretaria));
+            doThrow(new br.com.saudeConecta.infra.tenant.TenantAccessDeniedException("negado"))
+                    .when(tenantHelper).validarGestorOuDono(USUARIO_ID);
+
+            assertThatThrownBy(() -> secretariaService.atualizarSecretariaIdByOrg(SEC_ID, dadosAtualizados))
+                    .isInstanceOf(br.com.saudeConecta.infra.tenant.TenantAccessDeniedException.class);
+            assertThat(secretaria.getEmail()).isNotEqualTo("invasor@email.com");
+            verify(secretariaRepository, never()).save(any());
+        }
+
+        @Test
         @DisplayName("Deve atualizar nome, email e telefone com sucesso")
         void deveAtualizarDadosComSucesso() {
             Secretaria dadosAtualizados = Secretaria.builder()

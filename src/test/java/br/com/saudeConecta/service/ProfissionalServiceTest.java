@@ -304,6 +304,35 @@ class ProfissionalServiceTest {
         }
 
         @Test
+        @DisplayName("Sem ser gestor nem o dono, a atualização é negada antes de qualquer alteração")
+        void naoGestorNemDonoEhNegado() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(profissionalRepository.buscarClinicoIdByOrg(PROF_ID, ORG_ID))
+                    .thenReturn(Optional.of(profissional));
+            doThrow(new br.com.saudeConecta.infra.tenant.TenantAccessDeniedException("negado"))
+                    .when(tenantHelper).validarGestorOuDono(USUARIO_ID);
+
+            assertThatThrownBy(() -> profissionalService.atualizarClinicoIdByOrg(PROF_ID, request))
+                    .isInstanceOf(br.com.saudeConecta.infra.tenant.TenantAccessDeniedException.class);
+            assertThat(profissional.getEmail()).isNotEqualTo("dr.atualizado@teste.com");
+            verify(profissionalRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("A permissão é checada contra o usuário dono do cadastro")
+        void checaPermissaoContraODono() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentUserId()).thenReturn(USUARIO_ID);
+            when(profissionalRepository.buscarClinicoIdByOrg(PROF_ID, ORG_ID))
+                    .thenReturn(Optional.of(profissional));
+            when(profissionalRepository.save(any())).thenReturn(profissional);
+
+            profissionalService.atualizarClinicoIdByOrg(PROF_ID, request);
+
+            verify(tenantHelper).validarGestorOuDono(USUARIO_ID);
+        }
+
+        @Test
         @DisplayName("Deve atualizar profissional com sucesso")
         void deveAtualizarProfissionalComSucesso() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);

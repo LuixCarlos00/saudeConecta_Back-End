@@ -110,7 +110,7 @@ class UsuarioControllerIntegrationTest {
     class BloquearUsuario {
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
         @DisplayName("Deve retornar 200 ao bloquear com sucesso")
         void deveRetornar200AoBloquear() throws Exception {
             doNothing().when(usuarioService).bloquearUsuariobyOrg(any());
@@ -125,7 +125,7 @@ class UsuarioControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
         @DisplayName("4.4 - Reativar acima do limite do plano responde 422 com a mensagem (antes: 500 sem corpo)")
         void deveRetornar422QuandoLimiteDoPlanoAtingido() throws Exception {
             doThrow(new br.com.saudeConecta.infra.exceptions.LimitePlanoException("PROFISSIONAL", 3, 3L))
@@ -141,7 +141,7 @@ class UsuarioControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
         @DisplayName("Deve retornar 404 quando usuário não encontrado")
         void deveRetornar404QuandoNaoEncontrado() throws Exception {
             doThrow(new IllegalArgumentException("não encontrado"))
@@ -154,6 +154,28 @@ class UsuarioControllerIntegrationTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @WithMockUser(roles = "RECEPCIONISTA")
+        @DisplayName("ASSISTENTE não bloqueia usuário (403)")
+        void assistenteNaoBloqueia() throws Exception {
+            mockMvc.perform(put("/usuario/bloquearUsuariobyOrg").with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new BloquearUsuarioRequest(20L, 10L, 0))))
+                    .andExpect(status().isForbidden());
+            verify(usuarioService, never()).bloquearUsuariobyOrg(any());
+        }
+
+        @Test
+        @WithMockUser(roles = "PROFISSIONAL")
+        @DisplayName("CLINICO não bloqueia usuário (403)")
+        void clinicoNaoBloqueia() throws Exception {
+            mockMvc.perform(put("/usuario/bloquearUsuariobyOrg").with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new BloquearUsuarioRequest(20L, 10L, 0))))
+                    .andExpect(status().isForbidden());
+            verify(usuarioService, never()).bloquearUsuariobyOrg(any());
         }
     }
 

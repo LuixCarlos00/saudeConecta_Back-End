@@ -72,4 +72,61 @@ class TenantHelperTest {
         assertThatThrownBy(() -> tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin())
                 .isInstanceOf(TenantNotDefinedException.class);
     }
+
+    @Test
+    @DisplayName("isAdmin é true para GESTOR e ROOT (ambos têm ROLE_ADMIN) e false para CLINICO/ASSISTENTE")
+    void isAdminPorPapel() {
+        autenticarCom("ROLE_ADMIN", "ROLE_PROFISSIONAL", "ROLE_RECEPCIONISTA");
+        assertThat(tenantHelper.isAdmin()).isTrue();
+
+        autenticarCom("ROLE_SUPER_ADMIN", "ROLE_ADMIN");
+        assertThat(tenantHelper.isAdmin()).isTrue();
+
+        autenticarCom("ROLE_PROFISSIONAL");
+        assertThat(tenantHelper.isAdmin()).isFalse();
+
+        autenticarCom("ROLE_RECEPCIONISTA");
+        assertThat(tenantHelper.isAdmin()).isFalse();
+    }
+
+    @Test
+    @DisplayName("validarGestorOuDono: gestor passa mesmo não sendo o dono")
+    void gestorPassaSemSerDono() {
+        autenticarCom("ROLE_ADMIN", "ROLE_PROFISSIONAL", "ROLE_RECEPCIONISTA");
+        TenantContext.setCurrentUser(1L);
+
+        tenantHelper.validarGestorOuDono(2L);
+    }
+
+    @Test
+    @DisplayName("validarGestorOuDono: o dono do cadastro passa sem ser gestor")
+    void donoPassaSemSerGestor() {
+        autenticarCom("ROLE_PROFISSIONAL");
+        TenantContext.setCurrentUser(7L);
+
+        tenantHelper.validarGestorOuDono(7L);
+    }
+
+    @Test
+    @DisplayName("validarGestorOuDono: CLINICO/ASSISTENTE editando cadastro de outro usuário é negado")
+    void naoGestorEditandoOutroEhNegado() {
+        autenticarCom("ROLE_RECEPCIONISTA");
+        TenantContext.setCurrentUser(7L);
+
+        assertThatThrownBy(() -> tenantHelper.validarGestorOuDono(8L))
+                .isInstanceOf(TenantAccessDeniedException.class);
+    }
+
+    @Test
+    @DisplayName("validarGestorOuDono: cadastro sem login ou requisição sem usuário é negado para quem não é gestor")
+    void semDonoOuSemUsuarioLogadoEhNegado() {
+        autenticarCom("ROLE_PROFISSIONAL");
+
+        assertThatThrownBy(() -> tenantHelper.validarGestorOuDono(7L))
+                .isInstanceOf(TenantAccessDeniedException.class);
+
+        TenantContext.setCurrentUser(7L);
+        assertThatThrownBy(() -> tenantHelper.validarGestorOuDono(null))
+                .isInstanceOf(TenantAccessDeniedException.class);
+    }
 }

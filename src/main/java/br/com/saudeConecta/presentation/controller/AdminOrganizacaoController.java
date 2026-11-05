@@ -38,6 +38,7 @@ public class AdminOrganizacaoController {
     }
 
     @PostMapping("/cadastrarAdminByOrg")
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     @Description("Cadastra novo administrador de uma organização . Utilizado em: CadastroAdmComponent")
     public ResponseEntity<?> cadastrarAdminByOrg(@RequestBody @Valid CadastrarAdminRequest request) {

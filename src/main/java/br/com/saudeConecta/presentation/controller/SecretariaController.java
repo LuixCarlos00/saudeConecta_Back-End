@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,6 +23,7 @@ public class SecretariaController {
 
 
     @PostMapping("/cadastrarSecretariaByOrg")
+    @PreAuthorize("hasRole('ADMIN')")
     @Description("Cadastra nova secretária. Utilizado em: CadastroSecretariaComponent")
     public ResponseEntity<?> cadastrarSecretariaByOrg(@RequestBody @Valid CadastrarSecretariaRequest request) {
         log.info("Cadastrando secretaria: {}", request.nome());
@@ -41,7 +43,7 @@ public class SecretariaController {
 
 
     @PutMapping("/atualizarSecretariaIdByOrg/{id}")
-    @Description("Atualiza secretária por ID")
+    @Description("Atualiza secretária por ID. Gestor ou a própria secretária (regra no service)")
     public ResponseEntity<?> atualizarSecretariaIdByOrg(@PathVariable Long id, @RequestBody Secretaria secretaria) {
         try {
             Secretaria atualizada = secretariaService.atualizarSecretariaIdByOrg(id, secretaria);
@@ -54,6 +56,7 @@ public class SecretariaController {
 
 
     @DeleteMapping("/deletarSecretariaIdByOrg/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Description("Deleta secretária por ID")
     public ResponseEntity<?> deletarSecretariaIdByOrg(@PathVariable Long id) {
         try {

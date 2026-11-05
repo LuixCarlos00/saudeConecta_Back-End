@@ -28,7 +28,7 @@ public class ProfissionalController {
     private final TenantHelper tenantHelper;
 
     @PutMapping("/atualizarClinicoIdByOrg/{id}")
-    @Description("Atualiza médico/clínico por ID dentro da organização")
+    @Description("Atualiza médico/clínico por ID dentro da organização. Gestor ou o próprio clínico (regra no service)")
     public ResponseEntity<?> atualizarClinicoIdByOrg(@PathVariable Long id,
                                                      @Valid @RequestBody AtualizarClinicoRequest request) {
         try {
@@ -42,6 +42,7 @@ public class ProfissionalController {
     }
 
     @PostMapping("/cadastraClinicoByOrg")
+    @PreAuthorize("hasRole('ADMIN')")
     @Description("Cadastra médico/clínico com CPF como login e envia credenciais por email. Utilizado em: CadastroMedicoComponent")
     public ResponseEntity<?> cadastraClinicoByOrg(@Valid @RequestBody CadastrarClinicoRequest request) {
         log.info("Cadastrando clinico: {}", request.nome());
@@ -60,7 +61,8 @@ public class ProfissionalController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-@DeleteMapping("/deletarClinicoIdByOrg/{id}")
+    @DeleteMapping("/deletarClinicoIdByOrg/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Description("Deleta médico/clínico por ID")
     public ResponseEntity<?> deletarClinicoIdByOrg(@PathVariable Long id) {
         log.info("Deletando clinico ID: {}", id);
