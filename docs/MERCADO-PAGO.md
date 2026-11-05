@@ -23,6 +23,22 @@ Cadastro público (landing)  →  Org + Admin + AssinaturaTenant(TRIAL, 30 dias)
 Cancelamento: `PUT /preapproval/{id} {"status":"cancelled"}`, disparado pelo próprio
 cliente em **Minha Assinatura** ou pelo SUPER_ADMIN.
 
+Telas do SUPER_ADMIN (rotas, permissão e erros em `CONTRATO-ADMIN-ASSINATURAS.md`, na pasta acima
+do repositório):
+
+- **Suspender** (`PATCH /assinaturas/{id}/suspender`): com a linha travada, grava `SUSPENSA` e pausa o
+  preapproval no MP na mesma transação (como a régua). Falha do MP não desfaz a suspensão local.
+  Assinatura `CANCELADA` não é suspensa (`409 ASSINATURA_CANCELADA`).
+- **Cancelar** (`PATCH /assinaturas/{id}/cancelar`): com a linha travada, cancela no MP e depois local
+  (`canceladoPor = SUPER_ADMIN`). Se o MP falhar, nada muda (502).
+- **Associar plano** (`POST /assinaturas`): sem assinatura ativa cria `TRIAL`; com assinatura ativa troca
+  o plano (propaga o valor ao MP, `502 MP_VALOR_NAO_ATUALIZADO`). Clínica com assinatura `SUSPENSA`
+  vigente recebe `409 ASSINATURA_SUSPENSA`: para liberar, cortesia ou cancelar antes.
+- **Resolver pendência** (`PATCH /assinaturas/pendencias-manuais/{id}/resolver`): só registra quem,
+  quando e a observação (changeset 068) e tira a pendência da lista e da contagem do dashboard. **Não
+  altera nada no MP**: o estorno ou cancelamento é feito no painel do MP. A reentrega da mesma
+  notificação não reabre a pendência resolvida.
+
 ## 2. Criação da aplicação (ação manual)
 
 1. Criar conta vendedor em <https://www.mercadopago.com.br>.
