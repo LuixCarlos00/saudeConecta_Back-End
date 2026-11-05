@@ -87,3 +87,4 @@ README-MCP.md
 mysql-mcp-server.py
 requirements-mcp.txt
 .omc/
+**/.omc/
