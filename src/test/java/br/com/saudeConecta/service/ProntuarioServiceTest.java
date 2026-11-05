@@ -121,7 +121,7 @@ class ProntuarioServiceTest {
         void finalizarApagaRascunhoDaConsulta() {
             Consulta consulta = criarConsulta(10L);
             when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
-            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.of(consulta));
+            when(consultaRepository.buscarComLock(10L, ORG)).thenReturn(Optional.of(consulta));
             when(prontuarioRepository.save(any())).thenReturn(criarProntuario(100L));
             when(atendimentoRascunhoRepository.apagarPorConsulta(10L)).thenReturn(1);
 
@@ -137,7 +137,7 @@ class ProntuarioServiceTest {
         @DisplayName("Falha ao gravar o prontuário mantém o rascunho")
         void falhaAoGravarProntuarioMantemRascunho() {
             when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
-            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
+            when(consultaRepository.buscarComLock(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
             when(prontuarioRepository.save(any())).thenThrow(new org.springframework.dao.DataIntegrityViolationException("falha"));
 
             assertThatThrownBy(() -> service.cadastrarProntuarioMedico(criarRequest()))
@@ -155,7 +155,7 @@ class ProntuarioServiceTest {
             Prontuario prontuario = criarProntuario(100L);
 
             when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(profissional));
-            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.of(consulta));
+            when(consultaRepository.buscarComLock(10L, ORG)).thenReturn(Optional.of(consulta));
             when(prontuarioRepository.save(any())).thenReturn(prontuario);
             when(consultaRepository.save(any())).thenReturn(consulta);
 
@@ -182,7 +182,7 @@ class ProntuarioServiceTest {
         void deveLancarExcecaoQuandoConsultaNaoEncontrada() {
             CadastrarProntuarioRequest request = criarRequest();
             when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
-            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.empty());
+            when(consultaRepository.buscarComLock(10L, ORG)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.cadastrarProntuarioMedico(request))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -197,7 +197,7 @@ class ProntuarioServiceTest {
             Prontuario prontuario = criarProntuario(100L);
 
             when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
-            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.of(consulta));
+            when(consultaRepository.buscarComLock(10L, ORG)).thenReturn(Optional.of(consulta));
             when(prontuarioRepository.save(any())).thenReturn(prontuario);
             when(consultaRepository.save(any())).thenReturn(consulta);
 
@@ -219,7 +219,7 @@ class ProntuarioServiceTest {
             paciente.setPaciCodigo(5L);
 
             when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(profissional));
-            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.of(consulta));
+            when(consultaRepository.buscarComLock(10L, ORG)).thenReturn(Optional.of(consulta));
             when(prontuarioRepository.save(any())).thenReturn(prontuarioSalvo);
             when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(5L, ORG)).thenReturn(Optional.of(paciente));
             when(consultaRepository.save(any())).thenReturn(consulta);
@@ -242,7 +242,7 @@ class ProntuarioServiceTest {
             Prontuario prontuarioSalvo = criarProntuario(100L);
 
             when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(profissional));
-            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.of(consulta));
+            when(consultaRepository.buscarComLock(10L, ORG)).thenReturn(Optional.of(consulta));
             when(prontuarioRepository.save(any())).thenReturn(prontuarioSalvo);
             when(consultaRepository.save(any())).thenReturn(consulta);
 

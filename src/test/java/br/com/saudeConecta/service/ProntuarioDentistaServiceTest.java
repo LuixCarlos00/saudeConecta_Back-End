@@ -129,7 +129,7 @@ class ProntuarioDentistaServiceTest {
         void finalizarApagaRascunhoDaConsulta() {
             Consulta consulta = criarConsulta(10L);
             when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
-            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.of(consulta));
+            when(consultaRepository.buscarComLock(10L, ORG)).thenReturn(Optional.of(consulta));
             when(prontuarioDentistaRepository.save(any())).thenReturn(criarProntuario(100L));
             when(atendimentoRascunhoRepository.apagarPorConsulta(10L)).thenReturn(1);
 
@@ -145,7 +145,7 @@ class ProntuarioDentistaServiceTest {
         @DisplayName("Falha ao gravar o prontuário mantém o rascunho")
         void falhaAoGravarProntuarioMantemRascunho() {
             when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
-            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
+            when(consultaRepository.buscarComLock(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
             when(prontuarioDentistaRepository.save(any())).thenThrow(new org.springframework.dao.DataIntegrityViolationException("falha"));
 
             assertThatThrownBy(() -> service.cadastrarProntuarioByOrg(criarRequest()))
@@ -161,7 +161,7 @@ class ProntuarioDentistaServiceTest {
             ProntuarioDentista prontuario = criarProntuario(100L);
 
             when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
-            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
+            when(consultaRepository.buscarComLock(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
             when(prontuarioDentistaRepository.save(any())).thenReturn(prontuario);
             when(consultaRepository.save(any())).thenReturn(criarConsulta(10L));
 
@@ -188,7 +188,7 @@ class ProntuarioDentistaServiceTest {
         void deveLancarExcecaoQuandoConsultaNaoEncontrada() {
             CadastrarProntuarioDentistaRequest request = criarRequest();
             when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
-            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.empty());
+            when(consultaRepository.buscarComLock(10L, ORG)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.cadastrarProntuarioByOrg(request))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -203,7 +203,7 @@ class ProntuarioDentistaServiceTest {
             ProntuarioDentista prontuario = criarProntuario(100L);
 
             when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
-            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.of(consulta));
+            when(consultaRepository.buscarComLock(10L, ORG)).thenReturn(Optional.of(consulta));
             when(prontuarioDentistaRepository.save(any())).thenReturn(prontuario);
             when(consultaRepository.save(any())).thenReturn(consulta);
 
@@ -223,7 +223,7 @@ class ProntuarioDentistaServiceTest {
             ProntuarioDentista prontuario = criarProntuario(100L);
 
             when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
-            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
+            when(consultaRepository.buscarComLock(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
             when(prontuarioDentistaRepository.save(any())).thenReturn(prontuario);
             when(consultaRepository.save(any())).thenReturn(criarConsulta(10L));
 
@@ -244,7 +244,7 @@ class ProntuarioDentistaServiceTest {
             paciente.setPaciCodigo(5L);
 
             when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
-            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
+            when(consultaRepository.buscarComLock(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
             when(prontuarioDentistaRepository.save(any())).thenReturn(prontuario);
             when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(5L, ORG)).thenReturn(Optional.of(paciente));
             when(consultaRepository.save(any())).thenReturn(criarConsulta(10L));
@@ -265,7 +265,7 @@ class ProntuarioDentistaServiceTest {
             ProntuarioDentista prontuario = criarProntuario(100L);
 
             when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
-            when(consultaRepository.findByIdAndOrganizacao_Id(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
+            when(consultaRepository.buscarComLock(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
             when(prontuarioDentistaRepository.save(any())).thenReturn(prontuario);
             when(consultaRepository.save(any())).thenReturn(criarConsulta(10L));
 

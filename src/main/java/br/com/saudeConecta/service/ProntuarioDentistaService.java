@@ -54,8 +54,10 @@ public class ProntuarioDentistaService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Profissional nao encontrado: " + request.getCodigoMedico()));
 
+        // Lock da consulta antes de qualquer INSERT: mesma ordem de locks do PUT do rascunho (sem deadlock
+        // pela FK do prontuario) e duplo clique em "Finalizar" fica serializado. Tenant continua no filtro.
         Consulta consulta = consultaRepository
-                .findByIdAndOrganizacao_Id(request.getConsulta(), orgId)
+                .buscarComLock(request.getConsulta(), orgId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Consulta nao encontrada: " + request.getConsulta()));
 
