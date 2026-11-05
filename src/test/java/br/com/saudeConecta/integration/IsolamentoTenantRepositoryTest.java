@@ -10,6 +10,8 @@ import br.com.saudeConecta.domain.prontuario.TermoAutorizacao;
 import br.com.saudeConecta.infrastructure.persistence.repository.PlanejamentoTerapeuticoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProntuarioRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.TermoAutorizacaoRepository;
+import br.com.saudeConecta.presentation.dto.prontuario.ProntuarioCompletoResponse;
+import org.hibernate.Hibernate;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -22,6 +24,7 @@ import java.math.BigDecimal;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -96,12 +99,42 @@ class IsolamentoTenantRepositoryTest {
                 prontB.getProntCodigoProntuario(), ORG_A)).isEmpty();
         assertThat(prontuarioRepository.findIdMaisRecentePorConsulta(consultaB.getId(), ORG_A)).isEmpty();
         assertThat(prontuarioRepository.findByConsultaIdAndOrganizacaoIdWithFetch(consultaB.getId(), ORG_A)).isNull();
-        assertThat(prontuarioRepository.findByConsulta_Paciente_PaciCodigoAndConsulta_Organizacao_Id(1L, ORG_A)).isEmpty();
-        assertThat(prontuarioRepository.findByProfissional_IdAndConsulta_Organizacao_Id(1L, ORG_A)).isEmpty();
+        assertThat(prontuarioRepository.findByPacienteEOrganizacaoComFetch(1L, ORG_A)).isEmpty();
+        assertThat(prontuarioRepository.findByProfissionalEOrganizacaoComFetch(1L, ORG_A)).isEmpty();
 
         // Controle: a própria clínica continua enxergando.
         assertThat(prontuarioRepository.findIdMaisRecentePorConsulta(consultaB.getId(), ORG_B))
                 .contains(prontB.getProntCodigoProntuario());
+    }
+
+    @Test
+    @DisplayName("Histórico por paciente/profissional vem com as relações carregadas e monta o DTO fora da transação")
+    void historicoMontaDtoSemLazyInitialization() {
+        Consulta consultaA = consultaDa(ORG_A);
+        Prontuario prontA = Prontuario.builder()
+                .consulta(consultaA)
+                .profissional(em.getReference(Profissional.class, 1L))
+                .prontDataFinalizado(Date.valueOf(LocalDate.now()))
+                .build();
+        em.persist(prontA);
+        em.flush();
+        em.clear();
+
+        List<Prontuario> porPaciente = prontuarioRepository.findByPacienteEOrganizacaoComFetch(1L, ORG_A);
+        List<Prontuario> porProfissional = prontuarioRepository.findByProfissionalEOrganizacaoComFetch(1L, ORG_A);
+        // Simula o controller: open-in-view desligado, o DTO é montado com as entidades já desanexadas
+        em.clear();
+
+        assertThat(porPaciente).extracting(Prontuario::getProntCodigoProntuario)
+                .containsExactly(prontA.getProntCodigoProntuario());
+        assertThat(porProfissional).extracting(Prontuario::getProntCodigoProntuario)
+                .containsExactly(prontA.getProntCodigoProntuario());
+        for (Prontuario p : List.of(porPaciente.get(0), porProfissional.get(0))) {
+            assertThat(Hibernate.isInitialized(p.getConsulta())).isTrue();
+            assertThat(Hibernate.isInitialized(p.getPlanejamentos())).isTrue();
+            ProntuarioCompletoResponse dto = ProntuarioCompletoResponse.fromEntity(p);
+            assertThat(dto.getConsulta().getId()).isEqualTo(consultaA.getId());
+        }
     }
 
     @Test

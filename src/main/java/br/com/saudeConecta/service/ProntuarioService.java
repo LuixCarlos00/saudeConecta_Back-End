@@ -293,7 +293,7 @@ public class ProntuarioService {
     public List<Prontuario> buscarPorPaciente(Long pacienteId) {
         log.debug("Buscando prontuarios do paciente ID: {}", pacienteId);
         Long orgId = tenantHelper.getCurrentTenantId();
-        return prontuarioRepository.findByConsulta_Paciente_PaciCodigoAndConsulta_Organizacao_Id(pacienteId, orgId);
+        return prontuarioRepository.findByPacienteEOrganizacaoComFetch(pacienteId, orgId);
     }
 
     /**
@@ -305,7 +305,7 @@ public class ProntuarioService {
     public List<Prontuario> buscarPorProfissional(Long profissionalId) {
         log.debug("Buscando prontuarios do profissional ID: {}", profissionalId);
         Long orgId = tenantHelper.getCurrentTenantId();
-        return prontuarioRepository.findByProfissional_IdAndConsulta_Organizacao_Id(profissionalId, orgId);
+        return prontuarioRepository.findByProfissionalEOrganizacaoComFetch(profissionalId, orgId);
     }
 
     private Date parseData(Date data) {

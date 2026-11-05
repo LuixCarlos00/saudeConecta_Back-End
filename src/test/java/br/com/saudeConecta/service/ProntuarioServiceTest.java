@@ -287,7 +287,7 @@ class ProntuarioServiceTest {
         @Test
         @DisplayName("Deve retornar prontuários do paciente")
         void deveRetornarPorPaciente() {
-            when(prontuarioRepository.findByConsulta_Paciente_PaciCodigoAndConsulta_Organizacao_Id(1L, ORG))
+            when(prontuarioRepository.findByPacienteEOrganizacaoComFetch(1L, ORG))
                     .thenReturn(List.of(criarProntuario(1L), criarProntuario(2L)));
 
             List<Prontuario> resultado = service.buscarPorPaciente(1L);
@@ -298,7 +298,7 @@ class ProntuarioServiceTest {
         @Test
         @DisplayName("Deve retornar lista vazia quando paciente sem prontuários")
         void deveRetornarListaVaziaParaPacienteSemProntuario() {
-            when(prontuarioRepository.findByConsulta_Paciente_PaciCodigoAndConsulta_Organizacao_Id(99L, ORG))
+            when(prontuarioRepository.findByPacienteEOrganizacaoComFetch(99L, ORG))
                     .thenReturn(Collections.emptyList());
 
             List<Prontuario> resultado = service.buscarPorPaciente(99L);
@@ -309,7 +309,7 @@ class ProntuarioServiceTest {
         @Test
         @DisplayName("Deve retornar prontuários do profissional")
         void deveRetornarPorProfissional() {
-            when(prontuarioRepository.findByProfissional_IdAndConsulta_Organizacao_Id(1L, ORG))
+            when(prontuarioRepository.findByProfissionalEOrganizacaoComFetch(1L, ORG))
                     .thenReturn(List.of(criarProntuario(1L)));
 
             List<Prontuario> resultado = service.buscarPorProfissional(1L);
@@ -488,8 +488,8 @@ class ProntuarioServiceTest {
             service.buscarPorPaciente(7L);
             service.buscarPorProfissional(8L);
 
-            verify(prontuarioRepository).findByConsulta_Paciente_PaciCodigoAndConsulta_Organizacao_Id(7L, ORG);
-            verify(prontuarioRepository).findByProfissional_IdAndConsulta_Organizacao_Id(8L, ORG);
+            verify(prontuarioRepository).findByPacienteEOrganizacaoComFetch(7L, ORG);
+            verify(prontuarioRepository).findByProfissionalEOrganizacaoComFetch(8L, ORG);
         }
 
         @Test

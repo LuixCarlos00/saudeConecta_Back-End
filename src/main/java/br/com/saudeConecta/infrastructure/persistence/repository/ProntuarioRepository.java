@@ -24,9 +24,45 @@ public interface ProntuarioRepository extends JpaRepository<Prontuario, Long> {
      */
     Optional<Prontuario> findByProntCodigoProntuarioAndConsulta_Organizacao_Id(Long id, Long orgId);
 
-    List<Prontuario> findByConsulta_Paciente_PaciCodigoAndConsulta_Organizacao_Id(Long paciCodigo, Long orgId);
+    /**
+     * Prontuários de um paciente na organização, já com as relações que o
+     * ProntuarioCompletoResponse lê. O fetch é obrigatório: com open-in-view desligado,
+     * o DTO é montado no controller, fora da transação, e um proxy lazy ali estoura
+     * LazyInitializationException (500 no histórico do médico).
+     *
+     * @param paciCodigo ID do paciente
+     * @param orgId      ID da organização do token
+     * @return prontuários do paciente, do mais recente para o mais antigo
+     */
+    @Query("SELECT DISTINCT p FROM Prontuario p " +
+           "LEFT JOIN FETCH p.profissional " +
+           "JOIN FETCH p.consulta c " +
+           "LEFT JOIN FETCH c.paciente " +
+           "LEFT JOIN FETCH c.formaPagamento " +
+           "LEFT JOIN FETCH p.planejamentos " +
+           "WHERE c.paciente.paciCodigo = :paciCodigo AND c.organizacao.id = :orgId " +
+           "ORDER BY p.prontDataFinalizado DESC")
+    List<Prontuario> findByPacienteEOrganizacaoComFetch(@Param("paciCodigo") Long paciCodigo,
+                                                        @Param("orgId") Long orgId);
 
-    List<Prontuario> findByProfissional_IdAndConsulta_Organizacao_Id(Long profissionalId, Long orgId);
+    /**
+     * Prontuários de um profissional na organização, com o mesmo fetch de
+     * {@link #findByPacienteEOrganizacaoComFetch} (mesmo DTO, mesmo risco de lazy).
+     *
+     * @param profissionalId ID do profissional
+     * @param orgId          ID da organização do token
+     * @return prontuários do profissional, do mais recente para o mais antigo
+     */
+    @Query("SELECT DISTINCT p FROM Prontuario p " +
+           "LEFT JOIN FETCH p.profissional " +
+           "JOIN FETCH p.consulta c " +
+           "LEFT JOIN FETCH c.paciente " +
+           "LEFT JOIN FETCH c.formaPagamento " +
+           "LEFT JOIN FETCH p.planejamentos " +
+           "WHERE p.profissional.id = :profissionalId AND c.organizacao.id = :orgId " +
+           "ORDER BY p.prontDataFinalizado DESC")
+    List<Prontuario> findByProfissionalEOrganizacaoComFetch(@Param("profissionalId") Long profissionalId,
+                                                            @Param("orgId") Long orgId);
 
     @Query("SELECT p FROM Prontuario p " +
            "LEFT JOIN FETCH p.profissional " +
