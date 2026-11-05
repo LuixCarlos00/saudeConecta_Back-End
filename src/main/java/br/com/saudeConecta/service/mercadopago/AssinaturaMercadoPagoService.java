@@ -16,6 +16,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -36,13 +39,18 @@ public class AssinaturaMercadoPagoService {
     private final MercadoPagoClient mercadoPagoClient;
     private final MercadoPagoProperties properties;
     private final EmailNotificacaoService emailNotificacaoService;
+    /** Transação própria das fases da troca de preapproval (commit independente do chamador). */
+    private final TransactionTemplate transacaoNova;
 
     public AssinaturaMercadoPagoService(
             AssinaturaTenantRepository assinaturaTenantRepository,
             AdminOrganizacaoRepository adminOrganizacaoRepository,
             MercadoPagoClient mercadoPagoClient,
             MercadoPagoProperties properties,
-            EmailNotificacaoService emailNotificacaoService) {
+            EmailNotificacaoService emailNotificacaoService,
+            PlatformTransactionManager transactionManager) {
+        this.transacaoNova = new TransactionTemplate(transactionManager);
+        this.transacaoNova.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         this.assinaturaTenantRepository = assinaturaTenantRepository;
         this.adminOrganizacaoRepository = adminOrganizacaoRepository;
         this.mercadoPagoClient = mercadoPagoClient;
@@ -52,11 +60,12 @@ public class AssinaturaMercadoPagoService {
 
     /**
      * Gera (ou reaproveita) o link do checkout hospedado para a organização logada.
+     * Não abre transação: a troca de preapproval tem fases com commits próprios
+     * (ver {@link #gerarLinkPagamento(AssinaturaTenant)}).
      *
      * @param organizacaoId ID da organização
      * @return dados do checkout, incluindo o init_point
      */
-    @Transactional
     public LinkPagamentoResponse gerarLinkPagamento(Long organizacaoId) {
         log.info("mp.preapproval.criar inicio organizacaoId={}", organizacaoId);
         // Vigente inclui a SUSPENSA: é justamente quem mais precisa do link para voltar a pagar
@@ -71,35 +80,58 @@ public class AssinaturaMercadoPagoService {
 
     /**
      * Gera (ou reaproveita) o link do checkout hospedado para uma assinatura.
+     *
      * Reutiliza o preapproval existente enquanto ele ainda estiver pendente (o init_point
-     * continua servindo), evitando criar assinaturas duplicadas no Mercado Pago.
-     * Qualquer outro preapproval anterior (pausado, autorizado com cartão recusado etc.)
-     * é cancelado no MP antes de criar o novo: sem isso ele fica órfão e pode voltar a
-     * cobrar em paralelo ao novo.
+     * continua servindo). Fora isso, troca o preapproval em duas fases:
+     * <ol>
+     *   <li>com a linha travada (FOR UPDATE), cria o preapproval novo (B) no MP, vincula B e
+     *       guarda o antigo (A) em {@code mpPreapprovalSubstituidoId}; commit. Se o MP falhar
+     *       ao criar B, nada muda e A segue intacto;</li>
+     *   <li>depois do commit, cancela A no MP e limpa a coluna. Se falhar, a reconciliação
+     *       tenta de novo enquanto a coluna estiver preenchida.</li>
+     * </ol>
+     * Como A só é cancelado com B já gravado, o webhook "cancelled" de A sempre encontra a
+     * assinatura vinculada a B e é ignorado (OUTRO_PREAPPROVAL_VINCULADO).
+     *
+     * Não deve ser chamado dentro de uma transação do chamador: a fase 1 usa transação
+     * própria (REQUIRES_NEW) e a fase 2 roda depois dela.
      *
      * @param assinatura assinatura do tenant
      * @return dados do checkout, incluindo o init_point
      */
-    @Transactional
     public LinkPagamentoResponse gerarLinkPagamento(AssinaturaTenant assinatura) {
-        if (assinatura.isCortesia()) {
-            throw new BusinessException(
-                    "Assinaturas de cortesia não possuem cobrança no Mercado Pago",
-                    HttpStatus.CONFLICT);
-        }
-        if (StatusAssinatura.ATIVA.equals(assinatura.getStatus()) && assinatura.temPreapproval()) {
-            throw new BusinessException("Esta assinatura já está ativa", HttpStatus.CONFLICT);
-        }
-
-        if (assinatura.temPreapproval() && assinatura.getMpInitPoint() != null
-                && MercadoPagoClient.STATUS_PENDING.equals(assinatura.getMpStatus())) {
+        validarParaLink(assinatura);
+        if (linkPendenteReaproveitavel(assinatura)) {
             log.info("mp.preapproval.criar ignorado motivo=PENDENTE_REAPROVEITADO preapprovalId={} assinaturaId={}",
                     assinatura.getMpPreapprovalId(), assinatura.getId());
             return montarResposta(assinatura);
         }
 
-        if (assinatura.temPreapproval()) {
-            abandonarPreapprovalAnterior(assinatura);
+        Long assinaturaId = assinatura.getId();
+        LinkPagamentoResponse link = transacaoNova.execute(status -> vincularNovoPreapproval(assinaturaId));
+        cancelarPreapprovalSubstituido(assinaturaId);
+        return link;
+    }
+
+    /**
+     * Fase 1 da troca de preapproval, dentro da transação nova. O FOR UPDATE serializa
+     * gerações simultâneas e a troca de plano: quem chega depois relê o estado e reaproveita
+     * o link que o primeiro acabou de criar.
+     */
+    private LinkPagamentoResponse vincularNovoPreapproval(Long assinaturaId) {
+        AssinaturaTenant assinatura = assinaturaTenantRepository.findByIdParaAtualizacao(assinaturaId)
+                .orElseThrow(() -> new BusinessException(
+                        "Assinatura não encontrada: " + assinaturaId, HttpStatus.NOT_FOUND));
+        validarParaLink(assinatura);
+        if (linkPendenteReaproveitavel(assinatura)) {
+            log.info("mp.preapproval.criar ignorado motivo=PENDENTE_REAPROVEITADO preapprovalId={} assinaturaId={}",
+                    assinatura.getMpPreapprovalId(), assinaturaId);
+            return montarResposta(assinatura);
+        }
+        if (assinatura.temPreapproval() && assinatura.temPreapprovalSubstituidoPendente()) {
+            // Só há uma coluna para o antigo: o substituído anterior precisa estar cancelado antes
+            cancelarNoMercadoPago(assinatura.getMpPreapprovalSubstituidoId());
+            assinatura.setMpPreapprovalSubstituidoId(null);
         }
 
         String payerEmail = resolverPayerEmail(assinatura);
@@ -108,7 +140,7 @@ public class AssinaturaMercadoPagoService {
 
         PreapprovalResponse preapproval = mercadoPagoClient.criarPreapprovalPendente(
                 reason,
-                PREFIXO_EXTERNAL_REFERENCE + assinatura.getId(),
+                PREFIXO_EXTERNAL_REFERENCE + assinaturaId,
                 payerEmail,
                 assinatura.getValorMensal());
 
@@ -118,38 +150,85 @@ public class AssinaturaMercadoPagoService {
                     HttpStatus.BAD_GATEWAY);
         }
 
-        assinatura.setMpPreapprovalId(preapproval.id());
-        assinatura.setMpStatus(preapproval.status());
-        assinatura.setMpInitPoint(preapproval.initPoint());
-        assinatura.setMpPayerEmail(payerEmail);
+        String anterior = assinatura.getMpPreapprovalId();
+        assinatura.vincularNovoPreapproval(preapproval.id(), preapproval.status(), preapproval.initPoint(), payerEmail);
         assinatura.setMpUltimaSincronizacao(LocalDateTime.now());
         assinaturaTenantRepository.save(assinatura);
 
-        log.info("mp.preapproval.criar ok preapprovalId={} assinaturaId={} organizacaoId={}",
-                preapproval.id(), assinatura.getId(), assinatura.getOrganizacao().getId());
+        log.info("mp.preapproval.criar ok preapprovalId={} substituidoId={} assinaturaId={} organizacaoId={}",
+                preapproval.id(), anterior, assinaturaId, assinatura.getOrganizacao().getId());
 
         return montarResposta(assinatura);
     }
 
+    private static void validarParaLink(AssinaturaTenant assinatura) {
+        if (assinatura.isCortesia()) {
+            throw new BusinessException(
+                    "Assinaturas de cortesia não possuem cobrança no Mercado Pago",
+                    HttpStatus.CONFLICT);
+        }
+        if (StatusAssinatura.ATIVA.equals(assinatura.getStatus()) && assinatura.temPreapproval()) {
+            throw new BusinessException("Esta assinatura já está ativa", HttpStatus.CONFLICT);
+        }
+    }
+
+    private static boolean linkPendenteReaproveitavel(AssinaturaTenant assinatura) {
+        return assinatura.temPreapproval() && assinatura.getMpInitPoint() != null
+                && MercadoPagoClient.STATUS_PENDING.equals(assinatura.getMpStatus());
+    }
+
     /**
-     * Cancela no MP o preapproval que será substituído. Consulta o status remoto antes
-     * para que a nova tentativa (rotina diária de links) não tente cancelar de novo um
-     * preapproval que a tentativa anterior já cancelou antes de falhar ao criar o novo.
-     * Falha no cancelamento propaga: melhor não gerar o link agora do que deixar dois
-     * preapprovals vivos.
+     * Fase 2 da troca: cancela no MP o preapproval substituído e limpa a coluna. Também é
+     * a nova tentativa da reconciliação. Não lança exceção: se o MP falhar, a coluna fica
+     * preenchida e a reconciliação tenta de novo.
+     *
+     * Deve rodar fora de transação (ou depois do commit da troca): a chamada HTTP não segura
+     * a linha e a limpeza da coluna usa transação própria.
+     *
+     * @param assinaturaId ID da assinatura
+     * @return true se o substituído foi confirmado como cancelado e a coluna foi limpa
      */
-    private void abandonarPreapprovalAnterior(AssinaturaTenant assinatura) {
-        String anterior = assinatura.getMpPreapprovalId();
-        PreapprovalResponse remoto = mercadoPagoClient.buscarPreapproval(anterior);
+    public boolean cancelarPreapprovalSubstituido(Long assinaturaId) {
+        // Leitura em transação nova: o chamador pode ter um contexto de persistência com a foto
+        // anterior ao commit da troca
+        String substituido = transacaoNova.execute(status -> assinaturaTenantRepository.findById(assinaturaId)
+                .filter(AssinaturaTenant::temPreapprovalSubstituidoPendente)
+                .map(AssinaturaTenant::getMpPreapprovalSubstituidoId)
+                .orElse(null));
+        if (substituido == null) {
+            return false;
+        }
+        try {
+            cancelarNoMercadoPago(substituido);
+        } catch (BusinessException e) {
+            log.warn("mp.preapproval.substituido falha motivo=MP_INDISPONIVEL preapprovalId={} assinaturaId={} proximo=RECONCILIACAO",
+                    substituido, assinaturaId);
+            return false;
+        }
+
+        transacaoNova.executeWithoutResult(status -> assinaturaTenantRepository.findByIdParaAtualizacao(assinaturaId)
+                .filter(atual -> substituido.equals(atual.getMpPreapprovalSubstituidoId()))
+                .ifPresent(atual -> {
+                    atual.setMpPreapprovalSubstituidoId(null);
+                    assinaturaTenantRepository.save(atual);
+                }));
+        log.info("mp.preapproval.substituido ok preapprovalId={} assinaturaId={} statusMp=cancelled",
+                substituido, assinaturaId);
+        return true;
+    }
+
+    /**
+     * Cancela o preapproval no MP se ele ainda não estiver cancelado. Consultar antes evita
+     * repetir o PUT na nova tentativa.
+     *
+     * @throws BusinessException quando o Mercado Pago não responde
+     */
+    private void cancelarNoMercadoPago(String preapprovalId) {
+        PreapprovalResponse remoto = mercadoPagoClient.buscarPreapproval(preapprovalId);
         if (remoto == null || MercadoPagoClient.STATUS_CANCELLED.equals(remoto.status())) {
-            assinatura.setMpStatus(MercadoPagoClient.STATUS_CANCELLED);
             return;
         }
-        PreapprovalResponse cancelado = mercadoPagoClient.cancelarPreapproval(anterior);
-        assinatura.setMpStatus(cancelado != null && cancelado.status() != null
-                ? cancelado.status() : MercadoPagoClient.STATUS_CANCELLED);
-        log.info("mp.preapproval.abandonar anterior preapprovalId={} statusMp={} assinaturaId={} motivo=SUBSTITUIDO_POR_NOVO_LINK",
-                anterior, remoto.status(), assinatura.getId());
+        mercadoPagoClient.cancelarPreapproval(preapprovalId);
     }
 
     /**

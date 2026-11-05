@@ -535,7 +535,7 @@ class CobrancaMercadoPagoFluxoE2ETest {
     }
 
     @Test
-    @DisplayName("N8 - Remover cortesia com preapproval pausado: cancela o antigo, e se o MP falhar a rotina diária tenta de novo sem duplicar")
+    @DisplayName("N8 - Remover cortesia com preapproval pausado: o antigo só é cancelado após vincular o novo; se o MP falhar a rotina diária tenta de novo sem duplicar")
     void removerCortesiaComPreapprovalPausadoNaoDeixaOrfaoETemRetry() {
         AssinaturaTenant cortesia = salvarAssinatura(StatusAssinatura.ATIVA, "pa-e2e-antigo", "paused",
                 LocalDate.now().minusDays(100));
@@ -559,7 +559,8 @@ class CobrancaMercadoPagoFluxoE2ETest {
         AssinaturaTenant aposFalha = recarregar(cortesia);
         assertThat(aposFalha.getStatus()).isEqualTo(StatusAssinatura.TRIAL);
         assertThat(aposFalha.getMpPreapprovalId()).isEqualTo("pa-e2e-antigo");
-        verify(mercadoPagoClient, times(1)).cancelarPreapproval("pa-e2e-antigo");
+        // C3: o antigo só é cancelado depois que o novo foi vinculado; com a criação falhando, fica intacto
+        verify(mercadoPagoClient, never()).cancelarPreapproval("pa-e2e-antigo");
 
         // Rotina diária pega o TRIAL com preapproval não autorizado e gera o link
         cobrancaScheduler.gerarLinksDeAtivacaoDeTrial();

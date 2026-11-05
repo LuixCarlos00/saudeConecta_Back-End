@@ -119,6 +119,8 @@ public class CobrancaScheduler {
      */
     @Scheduled(cron = "0 0 */4 * * *", zone = FusoHorarioConfig.FUSO)
     public void reconciliarComMercadoPago() {
+        cancelarPreapprovalsSubstituidos();
+
         List<AssinaturaTenant> assinaturas = assinaturaTenantRepository.findComPreapprovalParaReconciliar();
         if (assinaturas.isEmpty()) {
             return;
@@ -132,6 +134,30 @@ public class CobrancaScheduler {
         });
         log.info("cobranca.reconciliar ok processadas={} divergentes={}",
                 assinaturas.size(), divergentes);
+    }
+
+    /**
+     * Nova tentativa de cancelar no MP os preapprovals trocados cujo cancelamento falhou
+     * depois do commit da troca (link novo, cortesia, troca de plano com link pendente).
+     * Sem isso o antigo poderia continuar cobrando em paralelo ao novo.
+     */
+    private void cancelarPreapprovalsSubstituidos() {
+        List<Long> pendentes = assinaturaTenantRepository.findIdsComPreapprovalSubstituidoPendente();
+        if (pendentes.isEmpty()) {
+            return;
+        }
+        int cancelados = 0;
+        for (Long assinaturaId : pendentes) {
+            try {
+                if (assinaturaMercadoPagoService.cancelarPreapprovalSubstituido(assinaturaId)) {
+                    cancelados++;
+                }
+            } catch (Exception e) {
+                log.error("cobranca.reconciliar falha acao=cancelar preapproval substituido assinaturaId={}",
+                        assinaturaId, e);
+            }
+        }
+        log.info("cobranca.reconciliar substituidos pendentes={} cancelados={}", pendentes.size(), cancelados);
     }
 
     /**

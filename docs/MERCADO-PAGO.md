@@ -120,13 +120,34 @@ exige resposta em até 22 segundos.
 | `subscription_authorized_payment` → `approved` | `CobrancaTenant` PAGO + `renovarAposPagamento` |
 | `subscription_authorized_payment` → `rejected` | `CobrancaTenant` RECUSADO + `status = INADIMPLENTE` |
 
+### Troca de preapproval (link novo) em duas fases
+
+Gerar um link novo quando já existe um preapproval (A) que não serve mais:
+
+1. Com a linha da assinatura travada (`SELECT ... FOR UPDATE`), cria o preapproval
+   novo (B) no MP, grava `mp_preapproval_id = B` e guarda A em
+   `mp_preapproval_substituido_id`. Commit. Se o POST de B falhar, nada muda e A
+   segue intacto.
+2. Depois do commit, cancela A no MP e limpa `mp_preapproval_substituido_id`. Se o MP
+   falhar, a coluna fica preenchida e a reconciliação (4 h) tenta de novo.
+
+O webhook de A (inclusive `cancelled`) é sempre ignorado: ou a assinatura está
+vinculada a B (`OUTRO_PREAPPROVAL_VINCULADO`), ou A está na coluna de substituído
+(`PREAPPROVAL_SUBSTITUIDO`), ou não há preapproval vinculado e A está cancelado
+(`CANCELADO_SEM_VINCULO`).
+
+O lock segura a linha durante as chamadas HTTP ao MP; o tempo é limitado por
+`HTTP_CONNECT_TIMEOUT` (5 s) e `HTTP_READ_TIMEOUT` (15 s). Cada transação trava uma
+única linha de `assinatura_tenant`, como a régua, então não há ordem de locks que
+possa formar deadlock entre elas.
+
 ## 8. Rotinas automáticas (`CobrancaScheduler`)
 
 | Cron | Ação |
 |---|---|
 | `0 0 8 * * *` | Trials vencendo em 7 dias → cria preapproval pendente e envia o link por e-mail |
 | `0 0 9 * * *` | Régua de carência: +5d → INADIMPLENTE, +15d → SUSPENSA (pausa no MP), +30d → CANCELADA |
-| `0 0 */4 * * *` | Reconciliação com o Mercado Pago (rede de segurança para webhooks perdidos) |
+| `0 0 */4 * * *` | Reconciliação com o Mercado Pago (rede de segurança para webhooks perdidos) e nova tentativa de cancelar preapprovals substituídos (`mp_preapproval_substituido_id` preenchido) |
 
 Assinaturas com `cortesia = true` são ignoradas por todas as rotinas.
 

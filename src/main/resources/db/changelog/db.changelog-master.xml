@@ -166,4 +166,7 @@
 
     <!-- Rascunho do atendimento: um por consulta, apagado ao finalizar o prontuario -->
     <include file="db/changelog/08-2026/066-atendimento-rascunho.xml"/>
+
+    <!-- Pagamento da assinatura: preapproval antigo cancelado no MP so depois do commit da troca -->
+    <include file="db/changelog/08-2026/067-assinatura-preapproval-substituido.xml"/>
 </databaseChangeLog>

@@ -196,6 +196,20 @@ class CobrancaSchedulerTest {
     }
 
     @Test
+    @DisplayName("C3 - Reconciliação tenta de novo cancelar os preapprovals substituídos pendentes, item a item")
+    void reconciliacaoCancelaSubstituidosPendentes() {
+        when(assinaturaTenantRepository.findIdsComPreapprovalSubstituidoPendente())
+                .thenReturn(List.of(ASSINATURA_ID, OUTRA_ID));
+        when(assinaturaMercadoPagoService.cancelarPreapprovalSubstituido(ASSINATURA_ID))
+                .thenThrow(new RuntimeException("timeout"));
+
+        scheduler.reconciliarComMercadoPago();
+
+        verify(assinaturaMercadoPagoService).cancelarPreapprovalSubstituido(ASSINATURA_ID);
+        verify(assinaturaMercadoPagoService).cancelarPreapprovalSubstituido(OUTRA_ID);
+    }
+
+    @Test
     @DisplayName("Reconciliação sincroniza item a item e segue após falha")
     void reconciliacaoSincronizaItemAItem() {
         when(assinaturaTenantRepository.findComPreapprovalParaReconciliar()).thenReturn(List.of(assinatura, outra));

@@ -21,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -48,6 +49,7 @@ class AssinaturaMercadoPagoServiceTest {
     @Mock private AdminOrganizacaoRepository adminOrganizacaoRepository;
     @Mock private MercadoPagoClient mercadoPagoClient;
     @Mock private EmailNotificacaoService emailNotificacaoService;
+    @Mock private PlatformTransactionManager transactionManager;
 
     private MercadoPagoProperties properties;
     private AssinaturaMercadoPagoService service;
@@ -60,7 +62,8 @@ class AssinaturaMercadoPagoServiceTest {
         properties.setBackUrl("https://app.saudeconecta.com.br/assinatura/sucesso");
 
         service = new AssinaturaMercadoPagoService(assinaturaTenantRepository,
-                adminOrganizacaoRepository, mercadoPagoClient, properties, emailNotificacaoService);
+                adminOrganizacaoRepository, mercadoPagoClient, properties, emailNotificacaoService,
+                transactionManager);
 
         Organizacao org = new Organizacao();
         org.setId(ORG_ID);
@@ -86,6 +89,8 @@ class AssinaturaMercadoPagoServiceTest {
         when(assinaturaTenantRepository.findAssinaturaVigenteByOrganizacaoId(ORG_ID)).thenReturn(Optional.of(assinatura));
         when(assinaturaTenantRepository.findAssinaturaAtivaByOrganizacaoId(ORG_ID)).thenReturn(Optional.of(assinatura));
         when(assinaturaTenantRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(assinaturaTenantRepository.findById(ASSINATURA_ID)).thenReturn(Optional.of(assinatura));
+        when(assinaturaTenantRepository.findByIdParaAtualizacao(ASSINATURA_ID)).thenReturn(Optional.of(assinatura));
     }
 
     @Test
@@ -360,8 +365,8 @@ class AssinaturaMercadoPagoServiceTest {
     }
 
     @Test
-    @DisplayName("N8 - Gerar link com preapproval antigo não pendente: cancela o antigo no MP antes de criar o novo")
-    void gerarLinkCancelaPreapprovalAntigoAntesDeCriar() {
+    @DisplayName("C3 - Link novo: cria e vincula o novo primeiro; o antigo só é cancelado depois, e a coluna é limpa")
+    void gerarLinkCriaNovoAntesDeCancelarAntigo() {
         assinatura.setMpPreapprovalId("pa-antigo");
         assinatura.setMpStatus("paused");
         when(mercadoPagoClient.buscarPreapproval("pa-antigo")).thenReturn(
@@ -374,15 +379,19 @@ class AssinaturaMercadoPagoServiceTest {
 
         LinkPagamentoResponse link = service.gerarLinkPagamento(assinatura);
 
-        var ordem = inOrder(mercadoPagoClient);
-        ordem.verify(mercadoPagoClient).cancelarPreapproval("pa-antigo");
+        var ordem = inOrder(mercadoPagoClient, assinaturaTenantRepository, transactionManager);
+        ordem.verify(assinaturaTenantRepository).findByIdParaAtualizacao(ASSINATURA_ID);
         ordem.verify(mercadoPagoClient).criarPreapprovalPendente(any(), any(), any(), any());
+        ordem.verify(assinaturaTenantRepository).save(assinatura);
+        ordem.verify(transactionManager).commit(any());
+        ordem.verify(mercadoPagoClient).cancelarPreapproval("pa-antigo");
         assertThat(link.initPoint()).isEqualTo(INIT_POINT);
         assertThat(assinatura.getMpPreapprovalId()).isEqualTo(PREAPPROVAL_ID);
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isNull();
     }
 
     @Test
-    @DisplayName("N8 - Preapproval antigo já cancelado no MP: não cancela de novo (retry idempotente)")
+    @DisplayName("C3 - Preapproval antigo já cancelado no MP: não cancela de novo (retry idempotente)")
     void gerarLinkNaoCancelaDeNovoQuemJaEstaCancelado() {
         assinatura.setMpPreapprovalId("pa-antigo");
         assinatura.setMpStatus("paused");
@@ -395,22 +404,73 @@ class AssinaturaMercadoPagoServiceTest {
         service.gerarLinkPagamento(assinatura);
 
         verify(mercadoPagoClient, never()).cancelarPreapproval(any());
-        verify(mercadoPagoClient).criarPreapprovalPendente(any(), any(), any(), any());
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isNull();
     }
 
     @Test
-    @DisplayName("N8 - Falha ao cancelar o preapproval antigo: não cria o novo (evita dois preapprovals vivos)")
-    void falhaAoCancelarAntigoNaoCriaNovo() {
+    @DisplayName("C3 - Falha no POST do novo: o antigo segue vinculado e intacto no MP")
+    void falhaAoCriarNovoNaoMexeNoAntigo() {
+        assinatura.setMpPreapprovalId("pa-antigo");
+        assinatura.setMpStatus("paused");
+        when(mercadoPagoClient.criarPreapprovalPendente(any(), any(), any(), any()))
+                .thenThrow(new BusinessException("MP fora", org.springframework.http.HttpStatus.BAD_GATEWAY));
+
+        assertThatThrownBy(() -> service.gerarLinkPagamento(assinatura)).isInstanceOf(BusinessException.class);
+
+        verify(mercadoPagoClient, never()).cancelarPreapproval(any());
+        verify(transactionManager).rollback(any());
+        assertThat(assinatura.getMpPreapprovalId()).isEqualTo("pa-antigo");
+        assertThat(assinatura.getMpStatus()).isEqualTo("paused");
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isNull();
+    }
+
+    @Test
+    @DisplayName("C3 - Falha ao cancelar o antigo depois do commit: link novo vale e o antigo fica pendente para a reconciliação")
+    void falhaAoCancelarAntigoDeixaPendente() {
         assinatura.setMpPreapprovalId("pa-antigo");
         assinatura.setMpStatus("paused");
         when(mercadoPagoClient.buscarPreapproval("pa-antigo")).thenReturn(
                 new PreapprovalResponse("pa-antigo", "paused", null, EMAIL_ADMIN, null, null, null));
         when(mercadoPagoClient.cancelarPreapproval("pa-antigo"))
                 .thenThrow(new BusinessException("MP fora", org.springframework.http.HttpStatus.BAD_GATEWAY));
+        when(mercadoPagoClient.criarPreapprovalPendente(any(), any(), any(), any()))
+                .thenReturn(new PreapprovalResponse(PREAPPROVAL_ID, "pending", INIT_POINT,
+                        EMAIL_ADMIN, "ASSINATURA-42", null, null));
 
-        assertThatThrownBy(() -> service.gerarLinkPagamento(assinatura)).isInstanceOf(BusinessException.class);
+        LinkPagamentoResponse link = service.gerarLinkPagamento(assinatura);
 
-        verify(mercadoPagoClient, never()).criarPreapprovalPendente(any(), any(), any(), any());
-        assertThat(assinatura.getMpPreapprovalId()).isEqualTo("pa-antigo");
+        assertThat(link.initPoint()).isEqualTo(INIT_POINT);
+        assertThat(assinatura.getMpPreapprovalId()).isEqualTo(PREAPPROVAL_ID);
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isEqualTo("pa-antigo");
+
+        // Reconciliação: o MP voltou, o antigo é cancelado e a coluna é limpa
+        reset(mercadoPagoClient);
+        when(mercadoPagoClient.buscarPreapproval("pa-antigo")).thenReturn(
+                new PreapprovalResponse("pa-antigo", "paused", null, EMAIL_ADMIN, null, null, null));
+        assertThat(service.cancelarPreapprovalSubstituido(ASSINATURA_ID)).isTrue();
+        verify(mercadoPagoClient).cancelarPreapproval("pa-antigo");
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isNull();
+    }
+
+    @Test
+    @DisplayName("C3 - Substituído anterior ainda pendente é cancelado antes de trocar de novo (uma coluna só)")
+    void substituidoAnteriorPendenteEhCanceladoAntes() {
+        assinatura.setMpPreapprovalId("pa-b");
+        assinatura.setMpStatus("paused");
+        assinatura.setMpPreapprovalSubstituidoId("pa-a");
+        when(mercadoPagoClient.buscarPreapproval(any())).thenAnswer(inv -> new PreapprovalResponse(
+                inv.getArgument(0), "paused", null, EMAIL_ADMIN, null, null, null));
+        when(mercadoPagoClient.criarPreapprovalPendente(any(), any(), any(), any()))
+                .thenReturn(new PreapprovalResponse("pa-c", "pending", INIT_POINT,
+                        EMAIL_ADMIN, "ASSINATURA-42", null, null));
+
+        service.gerarLinkPagamento(assinatura);
+
+        var ordem = inOrder(mercadoPagoClient);
+        ordem.verify(mercadoPagoClient).cancelarPreapproval("pa-a");
+        ordem.verify(mercadoPagoClient).criarPreapprovalPendente(any(), any(), any(), any());
+        ordem.verify(mercadoPagoClient).cancelarPreapproval("pa-b");
+        assertThat(assinatura.getMpPreapprovalId()).isEqualTo("pa-c");
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isNull();
     }
 }

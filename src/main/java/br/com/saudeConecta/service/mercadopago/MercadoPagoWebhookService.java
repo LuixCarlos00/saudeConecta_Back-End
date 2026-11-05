@@ -330,6 +330,20 @@ public class MercadoPagoWebhookService {
         if (assinatura == null) {
             return false;
         }
+        // Preapproval trocado (link novo, cortesia, link pendente com valor antigo) e aguardando o
+        // cancelamento: o status dele nunca vale para a assinatura, mesmo sem outro vinculado.
+        if (remoto.id().equals(assinatura.getMpPreapprovalSubstituidoId())) {
+            log.info("mp.preapproval ignorado motivo=PREAPPROVAL_SUBSTITUIDO preapprovalId={} statusMp={} assinaturaId={}",
+                    remoto.id(), remoto.status(), assinatura.getId());
+            return MercadoPagoClient.STATUS_CANCELLED.equals(remoto.status());
+        }
+        // Sem preapproval vinculado, um cancelado achado pela external_reference é um antigo já
+        // desvinculado (o substituído já limpo): vinculá-lo cancelaria a assinatura.
+        if (!assinatura.temPreapproval() && MercadoPagoClient.STATUS_CANCELLED.equals(remoto.status())) {
+            log.info("mp.preapproval ignorado motivo=CANCELADO_SEM_VINCULO preapprovalId={} assinaturaId={}",
+                    remoto.id(), assinatura.getId());
+            return true;
+        }
         // Achada pela external_reference, mas já vinculada a outro preapproval: é o antigo, cancelado
         // ao gerar um link novo. Aplicar o status dele cancelaria a assinatura e trocaria o vínculo.
         if (assinatura.getMpPreapprovalId() != null && !assinatura.getMpPreapprovalId().equals(remoto.id())) {

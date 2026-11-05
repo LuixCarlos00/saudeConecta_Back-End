@@ -89,6 +89,14 @@ public class AssinaturaTenant implements Serializable {
     @Column(name = "mp_ultima_sincronizacao")
     private LocalDateTime mpUltimaSincronizacao;
 
+    /**
+     * Preapproval anterior que foi trocado por um novo e ainda precisa ser cancelado no
+     * Mercado Pago. O cancelamento roda depois do commit da troca; enquanto esta coluna
+     * estiver preenchida a reconciliação tenta de novo.
+     */
+    @Column(name = "mp_preapproval_substituido_id", length = 50)
+    private String mpPreapprovalSubstituidoId;
+
     @Builder.Default
     @Column(name = "cortesia", nullable = false)
     private Boolean cortesia = false;
@@ -170,6 +178,49 @@ public class AssinaturaTenant implements Serializable {
      */
     public boolean temPreapproval() {
         return mpPreapprovalId != null && !mpPreapprovalId.isBlank();
+    }
+
+    /**
+     * Vincula um preapproval novo no lugar do atual. O atual (se houver) fica em
+     * {@code mpPreapprovalSubstituidoId}, para ser cancelado no MP depois do commit.
+     *
+     * @param preapprovalId id do preapproval novo
+     * @param mpStatus      status do preapproval novo no MP
+     * @param initPoint     URL do checkout do preapproval novo
+     * @param payerEmail    e-mail do pagador usado na criação
+     */
+    public void vincularNovoPreapproval(String preapprovalId, String mpStatus, String initPoint, String payerEmail) {
+        if (temPreapproval()) {
+            mpPreapprovalSubstituidoId = mpPreapprovalId;
+        }
+        mpPreapprovalId = preapprovalId;
+        this.mpStatus = mpStatus;
+        mpInitPoint = initPoint;
+        mpPayerEmail = payerEmail;
+    }
+
+    /**
+     * Desvincula o preapproval atual sem pôr outro no lugar (link pendente com valor
+     * antigo, cortesia). Ele fica em {@code mpPreapprovalSubstituidoId} para ser cancelado
+     * no MP depois do commit; o próximo "Pagar" cria um preapproval novo.
+     */
+    public void desvincularPreapproval() {
+        if (!temPreapproval()) {
+            return;
+        }
+        mpPreapprovalSubstituidoId = mpPreapprovalId;
+        mpPreapprovalId = null;
+        mpStatus = null;
+        mpInitPoint = null;
+    }
+
+    /**
+     * Indica se há um preapproval trocado que ainda não foi confirmado como cancelado no MP.
+     *
+     * @return true se a coluna de substituído está preenchida
+     */
+    public boolean temPreapprovalSubstituidoPendente() {
+        return mpPreapprovalSubstituidoId != null && !mpPreapprovalSubstituidoId.isBlank();
     }
 
     /**

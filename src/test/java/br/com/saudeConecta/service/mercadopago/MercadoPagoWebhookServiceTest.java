@@ -61,7 +61,8 @@ class MercadoPagoWebhookServiceTest {
         // Serviço real: a regra "authorized não promove status" vive nele e precisa ser exercitada aqui
         AssinaturaMercadoPagoService assinaturaMercadoPagoService = new AssinaturaMercadoPagoService(
                 assinaturaTenantRepository, adminOrganizacaoRepository, mercadoPagoClient,
-                new MercadoPagoProperties(), emailNotificacaoService);
+                new MercadoPagoProperties(), emailNotificacaoService,
+                mock(org.springframework.transaction.PlatformTransactionManager.class));
         service = new MercadoPagoWebhookService(eventoRepository, assinaturaTenantRepository,
                 cobrancaTenantRepository, assinaturaTenantService, mercadoPagoClient,
                 assinaturaMercadoPagoService, transactionManager, RELOGIO);
@@ -551,6 +552,45 @@ class MercadoPagoWebhookServiceTest {
         // Encerrado: não há nada a reaplicar para um preapproval que não é mais o vinculado
         assertThat(ultimoEventoSalvo().getProcessado()).isTrue();
         assertThat(ultimoEventoSalvo().getErro()).isNull();
+    }
+
+    @Test
+    @DisplayName("C3 - Webhook cancelled do preapproval substituído (ainda pendente de limpeza) é ignorado")
+    void preapprovalSubstituidoCanceladoEhIgnorado() {
+        String antigo = "preapproval-antigo";
+        assinatura.setStatus(StatusAssinatura.SUSPENSA);
+        assinatura.setMpPreapprovalId(null);
+        assinatura.setMpStatus(null);
+        assinatura.setMpPreapprovalSubstituidoId(antigo);
+        when(assinaturaTenantRepository.findByMpPreapprovalId(antigo)).thenReturn(Optional.empty());
+        when(assinaturaTenantRepository.findById(ASSINATURA_ID)).thenReturn(Optional.of(assinatura));
+        when(mercadoPagoClient.buscarPreapproval(antigo)).thenReturn(
+                new PreapprovalResponse(antigo, "cancelled", null, null, "ASSINATURA-42", null, null));
+
+        service.processar(MercadoPagoWebhookService.TOPICO_PREAPPROVAL, antigo, "{}");
+
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.SUSPENSA);
+        assertThat(assinatura.getMpPreapprovalId()).isNull();
+        verify(assinaturaTenantRepository, never()).save(any());
+        assertThat(ultimoEventoSalvo().getProcessado()).isTrue();
+    }
+
+    @Test
+    @DisplayName("C3 - Cancelado achado pela external_reference sem preapproval vinculado não cancela a assinatura")
+    void canceladoSemVinculoNaoCancelaAssinatura() {
+        String antigo = "preapproval-antigo";
+        assinatura.setStatus(StatusAssinatura.TRIAL);
+        assinatura.setMpPreapprovalId(null);
+        when(assinaturaTenantRepository.findByMpPreapprovalId(antigo)).thenReturn(Optional.empty());
+        when(assinaturaTenantRepository.findById(ASSINATURA_ID)).thenReturn(Optional.of(assinatura));
+        when(mercadoPagoClient.buscarPreapproval(antigo)).thenReturn(
+                new PreapprovalResponse(antigo, "cancelled", null, null, "ASSINATURA-42", null, null));
+
+        service.processar(MercadoPagoWebhookService.TOPICO_PREAPPROVAL, antigo, "{}");
+
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.TRIAL);
+        assertThat(assinatura.getMpPreapprovalId()).isNull();
+        verify(assinaturaTenantRepository, never()).save(any());
     }
 
     @Test

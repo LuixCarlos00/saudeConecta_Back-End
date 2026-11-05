@@ -8,6 +8,8 @@ import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
+import br.com.saudeConecta.infra.exceptions.BusinessException;
+import br.com.saudeConecta.service.CobrancaScheduler;
 import br.com.saudeConecta.service.mercadopago.MercadoPagoClient;
 import br.com.saudeConecta.service.mercadopago.MercadoPagoWebhookService;
 import br.com.saudeConecta.service.mercadopago.dto.AuthorizedPaymentResponse;
@@ -22,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
@@ -30,10 +33,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -67,6 +71,8 @@ class PagamentoAssinaturaFluxoE2ETest {
     @Autowired private OrganizacaoRepository organizacaoRepository;
     @Autowired private PlanoAssinaturaRepository planoAssinaturaRepository;
     @Autowired private UsuarioRepository usuarioRepository;
+    @Autowired private CobrancaScheduler cobrancaScheduler;
+    @Autowired private br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService assinaturaMercadoPagoService;
 
     private Organizacao organizacao;
     private PlanoAssinatura plano;
@@ -215,5 +221,102 @@ class PagamentoAssinaturaFluxoE2ETest {
         assertThat(assinaturaTenantRepository.findAssinaturaVigenteByOrganizacaoId(organizacao.getId()))
                 .get().extracting(AssinaturaTenant::getId).isEqualTo(atual.getId());
         assertThat(antiga.getId()).isLessThan(atual.getId());
+    }
+
+    private static PreapprovalResponse preapproval(String id, String status, String referencia) {
+        return new PreapprovalResponse(id, status, "pending".equals(status) ? "https://mp/checkout/" + id : null,
+                PAGADOR, referencia, null, null);
+    }
+
+    @Test
+    @DisplayName("C3 - Link novo: o antigo só é cancelado depois do commit do novo; o webhook cancelled do antigo é ignorado")
+    void antigoCanceladoSoDepoisDoCommit() {
+        AssinaturaTenant suspensa = salvarAssinatura(StatusAssinatura.SUSPENSA, "pa-c3-a", "paused",
+                LocalDate.now().minusDays(20));
+        String referencia = "ASSINATURA-" + suspensa.getId();
+        when(mercadoPagoClient.criarPreapprovalPendente(anyString(), eq(referencia), eq(PAGADOR), any()))
+                .thenReturn(preapproval("pa-c3-b", "pending", referencia));
+        when(mercadoPagoClient.buscarPreapproval("pa-c3-a")).thenReturn(preapproval("pa-c3-a", "paused", referencia));
+        AtomicReference<AssinaturaTenant> vistaNoCancelamento = new AtomicReference<>();
+        when(mercadoPagoClient.cancelarPreapproval("pa-c3-a")).thenAnswer(inv -> {
+            // Lido fora da transação da troca: só enxerga o que já foi commitado
+            vistaNoCancelamento.set(recarregar(suspensa));
+            return preapproval("pa-c3-a", "cancelled", referencia);
+        });
+
+        gerarLink(suspensa);
+
+        assertThat(vistaNoCancelamento.get()).isNotNull();
+        assertThat(vistaNoCancelamento.get().getMpPreapprovalId()).isEqualTo("pa-c3-b");
+        assertThat(vistaNoCancelamento.get().getMpPreapprovalSubstituidoId()).isEqualTo("pa-c3-a");
+        AssinaturaTenant depois = recarregar(suspensa);
+        assertThat(depois.getMpPreapprovalId()).isEqualTo("pa-c3-b");
+        assertThat(depois.getMpPreapprovalSubstituidoId()).isNull();
+
+        // Webhook do antigo cancelado chega depois do commit: não mexe na assinatura
+        when(mercadoPagoClient.buscarPreapproval("pa-c3-a")).thenReturn(preapproval("pa-c3-a", "cancelled", referencia));
+        webhookService.processar(MercadoPagoWebhookService.TOPICO_PREAPPROVAL, "pa-c3-a", "{}");
+
+        AssinaturaTenant aposWebhook = recarregar(suspensa);
+        assertThat(aposWebhook.getStatus()).isEqualTo(StatusAssinatura.SUSPENSA);
+        assertThat(aposWebhook.getMpPreapprovalId()).isEqualTo("pa-c3-b");
+        assertThat(aposWebhook.getCanceladoPor()).isNull();
+    }
+
+    @Test
+    @DisplayName("C3 - Falha no POST do novo: o antigo segue vinculado, não é cancelado e a assinatura não muda")
+    void falhaAoCriarNovoMantemAntigo() {
+        AssinaturaTenant suspensa = salvarAssinatura(StatusAssinatura.SUSPENSA, "pa-c3-a", "paused",
+                LocalDate.now().minusDays(20));
+        Long versao = suspensa.getVersao();
+        when(mercadoPagoClient.criarPreapprovalPendente(anyString(), anyString(), anyString(), any()))
+                .thenThrow(new BusinessException("MP fora do ar", HttpStatus.BAD_GATEWAY));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> gerarLink(suspensa))
+                .isInstanceOf(BusinessException.class);
+
+        AssinaturaTenant depois = recarregar(suspensa);
+        assertThat(depois.getMpPreapprovalId()).isEqualTo("pa-c3-a");
+        assertThat(depois.getMpStatus()).isEqualTo("paused");
+        assertThat(depois.getMpPreapprovalSubstituidoId()).isNull();
+        assertThat(depois.getStatus()).isEqualTo(StatusAssinatura.SUSPENSA);
+        assertThat(depois.getVersao()).isEqualTo(versao);
+        verify(mercadoPagoClient, never()).cancelarPreapproval(anyString());
+    }
+
+    @Test
+    @DisplayName("C3 - Falha ao cancelar o antigo: fica pendente, o webhook dele é ignorado e a reconciliação cancela depois")
+    void falhaAoCancelarAntigoReconciliacaoTentaDeNovo() {
+        AssinaturaTenant suspensa = salvarAssinatura(StatusAssinatura.SUSPENSA, "pa-c3-a", "paused",
+                LocalDate.now().minusDays(20));
+        String referencia = "ASSINATURA-" + suspensa.getId();
+        when(mercadoPagoClient.criarPreapprovalPendente(anyString(), eq(referencia), eq(PAGADOR), any()))
+                .thenReturn(preapproval("pa-c3-b", "pending", referencia));
+        when(mercadoPagoClient.buscarPreapproval("pa-c3-a")).thenReturn(preapproval("pa-c3-a", "paused", referencia));
+        when(mercadoPagoClient.cancelarPreapproval("pa-c3-a"))
+                .thenThrow(new BusinessException("MP fora do ar", HttpStatus.BAD_GATEWAY))
+                .thenReturn(preapproval("pa-c3-a", "cancelled", referencia));
+
+        gerarLink(suspensa);
+
+        AssinaturaTenant pendente = recarregar(suspensa);
+        assertThat(pendente.getMpPreapprovalId()).isEqualTo("pa-c3-b");
+        assertThat(pendente.getMpPreapprovalSubstituidoId()).isEqualTo("pa-c3-a");
+
+        // Um webhook "paused" do antigo nesse meio tempo não mexe na assinatura
+        webhookService.processar(MercadoPagoWebhookService.TOPICO_PREAPPROVAL, "pa-c3-a", "{}");
+        assertThat(recarregar(suspensa).getMpPreapprovalId()).isEqualTo("pa-c3-b");
+
+        cobrancaScheduler.reconciliarComMercadoPago();
+
+        AssinaturaTenant reconciliada = recarregar(suspensa);
+        assertThat(reconciliada.getMpPreapprovalSubstituidoId()).isNull();
+        assertThat(reconciliada.getMpPreapprovalId()).isEqualTo("pa-c3-b");
+        assertThat(reconciliada.getStatus()).isEqualTo(StatusAssinatura.SUSPENSA);
+        verify(mercadoPagoClient, times(2)).cancelarPreapproval("pa-c3-a");
+    }
+
+    private void gerarLink(AssinaturaTenant assinatura) {
+        assinaturaMercadoPagoService.gerarLinkPagamento(organizacao.getId());
     }
 }
