@@ -36,7 +36,7 @@ public class BuscarHistoricoCompletoPacienteAdminUseCase {
     @RequiresTenant
     @Transactional(readOnly = true)
     public List<HistoricoConsultaPacienteResponse> executar(Long pacienteId) {
-        log.info("Buscando histórico completo (admin) do paciente ID: {}", pacienteId);
+        log.debug("historico.paciente buscar perfil=ADMIN pacienteId={}", pacienteId);
 
         List<HistoricoConsultaPacienteResponse> historicoMedico =
                 buscarHistoricoCompletoPacienteMedicoUseCase.executar(pacienteId, null);
@@ -52,7 +52,7 @@ public class BuscarHistoricoCompletoPacienteAdminUseCase {
                         Comparator.nullsLast(Comparator.reverseOrder()))
         );
 
-        log.debug("Histórico completo (admin) combinado: {} registros", historicoCompleto.size());
+        log.debug("historico.paciente combinado perfil=ADMIN registros={}", historicoCompleto.size());
         return historicoCompleto;
     }
 }

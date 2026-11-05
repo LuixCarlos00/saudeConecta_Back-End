@@ -39,10 +39,10 @@ public class BuscarHistoricoCompletoPacienteMedicoUseCase {
     @Transactional(readOnly = true)
     public List<HistoricoConsultaPacienteResponse> executar(Long pacienteId, Long profissionalId) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Buscando histórico médico do paciente ID: {} profissionalId: {} na organização ID: {}", pacienteId, profissionalId, orgId);
+        log.debug("historico.paciente buscar perfil=MEDICO pacienteId={} profissionalId={}", pacienteId, profissionalId);
 
         List<Consulta> consultas = consultaRepository.findHistoricoCompletoPacienteMedico(pacienteId, orgId, profissionalId);
-        log.debug("Encontradas {} consultas médicas para o paciente", consultas.size());
+        log.debug("historico.paciente consultas perfil=MEDICO quantidade={}", consultas.size());
 
         return consultas.stream()
             .map(consulta -> {

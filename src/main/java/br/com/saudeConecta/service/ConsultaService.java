@@ -225,7 +225,7 @@ public class ConsultaService {
         
         Long orgId = tenantHelper.getCurrentTenantId();
         
-        log.info("Buscando consultas com filtros dinamicos - orgId: {}, profissionalId: {}, especialidade: {}, periodo: {} a {}, status: {}",
+        log.debug("consulta.buscar filtros orgId={} profissionalId={} especialidade={} dataInicio={} dataFim={} status={}",
                 orgId, profissionalId, especialidade, dataInicio, dataFim, statusList);
         
         return consultaRepository.findAll(
@@ -247,7 +247,8 @@ public class ConsultaService {
     @Transactional
     public Consulta cadastrarConsultaByOrg(AgendarConsultaRequest request) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Cadastrando consulta na organizacao: {}", orgId);
+        log.info("consulta.agendar inicio profissionalId={} pacienteId={} dataHora={} duracaoMin={}",
+                request.profissionalId(), request.pacienteId(), request.dataHora(), request.duracaoMinutos());
 
         Organizacao organizacao = organizacaoRepository.findById(orgId)
             .orElseThrow(() -> new IllegalStateException("Organização não encontrada"));
@@ -307,7 +308,7 @@ public class ConsultaService {
             : "Consulta cadastrada";
         registrarHistorico(salva, null, statusInicial, mensagemHistorico, criadoPor);
         
-        log.info("Consulta cadastrada com sucesso. ID: {}", salva.getId());
+        log.info("consulta.agendar ok consultaId={} status={}", salva.getId(), salva.getStatus());
         return salva;
     }
 
@@ -317,6 +318,7 @@ public class ConsultaService {
                           "horarios-ocupados-org", "disponibilidade-consulta"}, allEntries = true)
     @Transactional
     public Consulta concluirConsultabyOrg(Long id) {
+        log.info("consulta.concluir inicio consultaId={}", id);
 
         Consulta consulta = buscarPorId(id)
             .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada"));
@@ -331,6 +333,7 @@ public class ConsultaService {
         Consulta salva = consultaRepository.save(consulta);
 
         registrarHistorico(salva, statusAnterior, StatusConsulta.REALIZADA, "Consulta concluída", getUsuarioAtual());
+log.info("consulta.concluir ok consultaId={} status=REALIZADA", salva.getId());
 
         Long orgId = tenantHelper.getCurrentTenantId();
         return consultaRepository.findByIdAndOrganizacao_IdWithRelations(salva.getId(), orgId)
@@ -359,6 +362,7 @@ public class ConsultaService {
                           "horarios-ocupados-org", "disponibilidade-consulta"}, allEntries = true)
     @Transactional
     public Consulta atualizarStatus(Long id, StatusConsulta novoStatus, String motivo) {
+        log.info("consulta.status inicio consultaId={} novoStatus={}", id, novoStatus);
         Consulta consulta = buscarPorId(id)
             .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada com ID: " + id));
 
@@ -382,6 +386,7 @@ public class ConsultaService {
         String descricao = gerarDescricaoHistorico(novoStatus, motivo);
         registrarHistorico(salva, statusAtual, novoStatus, descricao, getUsuarioAtual());
 
+        log.info("consulta.status ok consultaId={} de={} para={}", salva.getId(), statusAtual, novoStatus);
         Long orgId = tenantHelper.getCurrentTenantId();
         return consultaRepository.findByIdAndOrganizacao_IdWithRelations(salva.getId(), orgId)
             .orElse(salva);
@@ -416,6 +421,7 @@ public class ConsultaService {
     private void validarSemConflitoDeHorario(Long orgId, Long profissionalId, LocalDateTime inicio,
                                              int duracaoMinutos, Long ignorarId) {
         if (existeConflitoDeHorario(orgId, profissionalId, inicio, duracaoMinutos, ignorarId)) {
+            log.warn("consulta.agendar negado motivo=HORARIO_OCUPADO profissionalId={} dataHora={}", profissionalId, inicio);
             throw new IllegalStateException("Já existe consulta agendada para este horário");
         }
     }
@@ -502,6 +508,8 @@ public class ConsultaService {
                           "horarios-ocupados-org", "disponibilidade-consulta"}, allEntries = true)
     @Transactional
     public Consulta atualizarConsultaByOrg(Long id, AtualizarConsultaRequest request) {
+        log.info("consulta.atualizar inicio consultaId={} profissionalId={} pacienteId={} dataHora={} status={}",
+                id, request.profissionalId(), request.pacienteId(), request.dataHora(), request.status());
         Consulta consulta = buscarPorId(id)
             .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada"));
 
@@ -573,6 +581,7 @@ public class ConsultaService {
         Usuario usuarioAtual = getUsuarioAtual();
         registrarHistorico(salva, statusAnterior, salva.getStatus(), "Consulta atualizada", usuarioAtual);
 
+        log.info("consulta.atualizar ok consultaId={} status={}", salva.getId(), salva.getStatus());
         return salva;
     }
     
@@ -662,8 +671,8 @@ public class ConsultaService {
         LocalDateTime inicioDiaLdt = hoje.atStartOfDay();
         LocalDateTime fimDiaLdt = hoje.atTime(23, 59, 59);
 
-        log.debug("Buscando estatisticas dashboard AdminOrg - OrgId: {}, Semana: {} a {}, Hoje: {}",
-                  organizacaoId, inicioSemana, fimSemana, hoje);
+        log.debug("consulta.dashboard buscar perfil=ADMIN_ORG semanaInicio={} semanaFim={} hoje={}",
+                inicioSemana, fimSemana, hoje);
 
         List<Object[]> rows = consultaRepository.findEstatisticasDashboardByOrganizacao(
             organizacaoId, inicioSemanaLdt, fimSemanaLdt, inicioDiaLdt, fimDiaLdt
@@ -737,8 +746,8 @@ public class ConsultaService {
         LocalDateTime inicioDiaLdt    = hoje.atStartOfDay();
         LocalDateTime fimDiaLdt       = hoje.atTime(23, 59, 59);
 
-        log.debug("Buscando estatisticas dashboard Profissional - UsuarioId: {}, Semana: {} a {}, Hoje: {}",
-                  usuarioId, inicioSemana, fimSemana, hoje);
+        log.debug("consulta.dashboard buscar perfil=PROFISSIONAL usuarioId={} semanaInicio={} semanaFim={} hoje={}",
+                usuarioId, inicioSemana, fimSemana, hoje);
 
         List<Object[]> rows = consultaRepository.findEstatisticasDashboardByProfissional(
             usuarioId, inicioSemanaLdt, fimSemanaLdt, inicioDiaLdt, fimDiaLdt
@@ -807,8 +816,8 @@ public class ConsultaService {
         LocalDateTime inicioDiaLdt    = hoje.atStartOfDay();
         LocalDateTime fimDiaLdt       = hoje.atTime(23, 59, 59);
 
-        log.debug("Buscando estatisticas dashboard SuperAdmin - Semana: {} a {}, Hoje: {}",
-                  inicioSemana, fimSemana, hoje);
+        log.debug("consulta.dashboard buscar perfil=SUPER_ADMIN semanaInicio={} semanaFim={} hoje={}",
+                inicioSemana, fimSemana, hoje);
 
         List<Object[]> rows = consultaRepository.findEstatisticasDashboardGlobal(
             inicioSemanaLdt, fimSemanaLdt, inicioDiaLdt, fimDiaLdt
@@ -900,8 +909,8 @@ public class ConsultaService {
         LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
         LocalDate fimSemana = inicioSemana.plusDays(6);
 
-        log.debug("Contando consultas da semana por organizacao - OrgId: {}, Inicio: {}, Fim: {}",
-                organizacaoId, inicioSemana, fimSemana);
+        log.debug("consulta.semana contar escopo=ORGANIZACAO inicio={} fim={}",
+                inicioSemana, fimSemana);
 
         return consultaRepository.countConsultasSemanaByOrganizacao(
                 organizacaoId,
@@ -931,8 +940,8 @@ public class ConsultaService {
             LocalDate dataInicio, 
             LocalDate dataFim) {
         
-        log.debug("Buscando estatisticas - OrgId: {}, UsuarioId: {}, Inicio: {}, Fim: {}", 
-                  organizacaoId, usuarioId, dataInicio, dataFim);
+        log.debug("consulta.estatisticas buscar usuarioId={} inicio={} fim={}",
+                usuarioId, dataInicio, dataFim);
         
         return consultaRepository.findEstatisticasPorMedicoEIntervalo(
             organizacaoId,
@@ -956,8 +965,8 @@ public class ConsultaService {
         LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
         LocalDate fimSemana = inicioSemana.plusDays(6);
         
-        log.debug("Contando consultas da semana - OrgId: {}, ProfId: {}, Inicio: {}, Fim: {}", 
-                  organizacaoId, profissionalId, inicioSemana, fimSemana);
+        log.debug("consulta.semana contar profissionalId={} inicio={} fim={}",
+                profissionalId, inicioSemana, fimSemana);
         
         return consultaRepository.countConsultasPorMedicoEIntervalo(
             organizacaoId,
@@ -978,8 +987,8 @@ public class ConsultaService {
         LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
         LocalDate fimSemana = inicioSemana.plusDays(6);
 
-        log.debug("Contando consultas da semana globalmente - Inicio: {}, Fim: {}",
-                  inicioSemana, fimSemana);
+        log.debug("consulta.semana contar escopo=GLOBAL inicio={} fim={}",
+                inicioSemana, fimSemana);
 
         return consultaRepository.countConsultasSemanaGlobal(
             inicioSemana.atStartOfDay(),
@@ -1004,8 +1013,8 @@ public class ConsultaService {
             LocalDate dataInicio, 
             LocalDate dataFim) {
         
-        log.debug("Buscando duracoes de consultas - OrgId: {}, UsuarioId: {}, Inicio: {}, Fim: {}", 
-                  organizacaoId, usuarioId, dataInicio, dataFim);
+        log.debug("consulta.duracoes buscar usuarioId={} dataInicio={} dataFim={}",
+                usuarioId, dataInicio, dataFim);
 
         List<Integer> duracoes = consultaRepository.findDuracoesConsultasPorMedicoEIntervalo(
             organizacaoId,
@@ -1014,7 +1023,7 @@ public class ConsultaService {
             dataFim.atTime(23, 59, 59)
         );
         
-        log.debug("Encontradas {} consultas com duracao", duracoes.size());
+        log.debug("consulta.duracoes resultado quantidade={}", duracoes.size());
         
         return duracoes;
     }
@@ -1024,8 +1033,8 @@ public class ConsultaService {
     public List<Consulta> pesquisarClinicasEmIntervaloDeDatas(Long profissionalId, LocalDate dataInicio, LocalDate dataFim, String status) {
         Long orgId = tenantHelper.getCurrentTenantId();
 
-        log.debug("Pesquisando consultas - OrgId: {}, UsuarioId: {}, Inicio: {}, Fim: {}, Status: {}", 
-                  orgId, profissionalId, dataInicio, dataFim, status);
+        log.debug("consulta.pesquisar inicio profissionalId={} dataInicio={} dataFim={} status={}",
+                profissionalId, dataInicio, dataFim, status);
 
         StatusConsulta statusEnum = converterStatus(status);
 
@@ -1241,7 +1250,7 @@ public class ConsultaService {
             .observacao(observacao)
             .alteradoPor(alteradoPor)
             .build();
-        log.info("Historico registrado para consulta ID: {}", consulta.getId());
+        log.debug("consulta.historico registrado consultaId={}", consulta.getId());
         historicoRepository.save(historico);
     }
     
@@ -1261,7 +1270,7 @@ public class ConsultaService {
     @Transactional(readOnly = true)
     public List<String> buscarHorariosOcupados(Long profissionalId, String data) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando horarios ocupados para profissional {} na data {} na organizacao: {}", profissionalId, data, orgId);
+        log.debug("consulta.horariosOcupados buscar profissionalId={} data={}", profissionalId, data);
 
         // Converte a string da data para LocalDateTime
         LocalDateTime dataConsulta = LocalDate.parse(data).atStartOfDay();
@@ -1297,13 +1306,13 @@ public class ConsultaService {
     @Transactional(readOnly = true)
     public boolean verificarDisponibilidade(String data, String horario, Long medicoId) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Verificando disponibilidade - profissional: {}, data: {}, horario: {}, organizacao: {}", medicoId, data, horario, orgId);
+        log.debug("consulta.disponibilidade inicio profissionalId={} data={} horario={}", medicoId, data, horario);
 
         LocalDateTime dataHora;
         try {
             dataHora = LocalDateTime.parse(data + "T" + horario); // formato ISO
         } catch (java.time.format.DateTimeParseException e) {
-            log.warn("Data/horario invalidos na verificacao de disponibilidade: data={} horario={}", data, horario);
+            log.warn("consulta.disponibilidade negado motivo=DATA_HORARIO_INVALIDOS data={} horario={}", data, horario);
             return false;
         }
 
@@ -1314,7 +1323,7 @@ public class ConsultaService {
             .orElse(DURACAO_PADRAO_MINUTOS);
         boolean ocupado = existeConflitoDeHorario(orgId, medicoId, dataHora, duracaoMinutos, null);
 
-        log.debug("Resultado verificacao - horario ocupado: {}", ocupado);
+        log.debug("consulta.disponibilidade resultado ocupado={}", ocupado);
         return ocupado;
     }
 
@@ -1334,8 +1343,8 @@ public class ConsultaService {
     @Transactional(readOnly = true)
     public List<Consulta> buscarConsultasPorMedicoEPeriodo(Long usuarioId, String tipoPeriodo) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando consultas para usuario {} com periodo {} na organizacao {}", 
-                  usuarioId, tipoPeriodo, orgId);
+        log.debug("consulta.buscar periodo usuarioId={} tipoPeriodo={}",
+                usuarioId, tipoPeriodo);
 
         LocalDate hoje = LocalDate.now();
         LocalDateTime inicio;
@@ -1373,12 +1382,12 @@ public class ConsultaService {
                 break;
 
             default:
-                log.warn("Tipo de periodo invalido: {}. Usando 'diario' como padrao.", tipoPeriodo);
+                log.warn("consulta.periodo negado motivo=TIPO_INVALIDO tipo={} acao=USA_DIARIO", tipoPeriodo);
                 inicio = hoje.atStartOfDay();
                 fim = hoje.atTime(23, 59, 59);
         }
 
-        log.debug("Periodo calculado: {} ate {}", inicio, fim);
+        log.debug("consulta.periodo calculado inicio={} fim={}", inicio, fim);
         return consultaRepository.findConsultasPorMedicoEPeriodo(orgId, usuarioId, inicio, fim);
     }
 
@@ -1408,10 +1417,10 @@ public class ConsultaService {
                 }
             }
             
-            log.warn("Formato de data nao reconhecido: {}", dataString);
+            log.warn("consulta.data negado motivo=FORMATO_NAO_RECONHECIDO data={}", dataString);
             return null;
         } catch (Exception e) {
-            log.error("Erro ao converter data: {}", dataString, e);
+            log.warn("consulta.data negado motivo=ERRO_CONVERSAO data={} causa={}", dataString, e.getClass().getSimpleName());
             return null;
         }
     }
@@ -1441,6 +1450,7 @@ public class ConsultaService {
                           "horarios-ocupados-org", "disponibilidade-consulta"}, allEntries = true)
     @Transactional
     public void deletarConsulta(Long consultaId) {
+        log.info("consulta.excluir inicio consultaId={}", consultaId);
         Long orgId = tenantHelper.getCurrentTenantId();
         Consulta consulta = consultaRepository.findByIdAndOrganizacao_Id(consultaId, orgId)
                 .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada ou não pertence à organização"));
@@ -1448,32 +1458,34 @@ public class ConsultaService {
         // Bloqueia exclusão se houver prontuário dentista (consulta concluída)
         boolean temProntuarioDentista = !prontuarioDentistaRepository.findByConsultaId(consultaId).isEmpty();
         if (temProntuarioDentista) {
+            log.warn("consulta.excluir negado motivo=TEM_PRONTUARIO_ODONTOLOGICO consultaId={}", consultaId);
             throw new IllegalStateException("Não é possível excluir uma consulta que possui prontuário odontológico. Os dados clínicos devem ser preservados.");
         }
 
         // Bloqueia exclusão se houver prontuário médico (consulta concluída)
         boolean temProntuarioMedico = prontuarioRepository.findByConsulta_Id(consultaId) != null;
         if (temProntuarioMedico) {
+            log.warn("consulta.excluir negado motivo=TEM_PRONTUARIO_MEDICO consultaId={}", consultaId);
             throw new IllegalStateException("Não é possível excluir uma consulta que possui prontuário médico. Os dados clínicos devem ser preservados.");
         }
 
-        log.info("Iniciando exclusao da consulta {} e registros relacionados", consultaId);
+        log.debug("consulta.excluir cascata consultaId={}", consultaId);
 
         // 1. Termo de autorização / questionário de saúde
         termoAutorizacaoRepository.deleteByConsultaId(consultaId);
-        log.debug("Termos de autorizacao excluidos para consulta {}", consultaId);
+        log.debug("consulta.excluir termos consultaId={}", consultaId);
 
         // 2. Planejamentos terapêuticos (via FK direta com consulta)
         planejamentoTerapeuticoRepository.deleteByConsultaId(consultaId);
-        log.debug("Planejamentos excluidos para consulta {}", consultaId);
+        log.debug("consulta.excluir planejamentos consultaId={}", consultaId);
 
         // 3. Histórico de alterações de status
         historicoRepository.deleteByConsultaId(consultaId);
-        log.debug("Historico de consulta excluido para consulta {}", consultaId);
+        log.debug("consulta.excluir historico consultaId={}", consultaId);
 
         // 4. Consulta
         consultaRepository.delete(consulta);
-        log.info("Consulta {} excluida com sucesso", consultaId);
+        log.info("consulta.excluir ok consultaId={}", consultaId);
     }
 
     /**
