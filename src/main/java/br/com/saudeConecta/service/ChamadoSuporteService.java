@@ -94,7 +94,7 @@ public class ChamadoSuporteService {
         adicionarAnexos(chamado, request.anexos());
 
         ChamadoSuporte salvo = chamadoSuporteRepository.save(chamado);
-        log.info("Chamado de suporte {} criado na organizacao {} pelo usuario {}",
+        log.info("chamado.cadastrar ok protocolo={} organizacaoId={} usuarioId={}",
                 salvo.getProtocolo(), organizacaoId, usuarioId);
 
         notificarCriador(salvo, organizacaoId);
@@ -117,7 +117,7 @@ public class ChamadoSuporteService {
         Long organizacaoId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
 
         if (organizacaoId == null) {
-            log.info("ROOT: listando chamados de suporte globais");
+            log.debug("chamado.listar escopo=ROOT");
             return chamadoSuporteRepository.findAllWithFilters(status, prioridade, pageable)
                     .map(ChamadoSuporteResponse::fromEntity);
         }
@@ -157,13 +157,13 @@ public class ChamadoSuporteService {
 
         StatusChamado statusAnterior = chamado.getStatus();
         if (statusAnterior == request.status()) {
-            log.info("Chamado {} ja esta no status {}. Nenhuma alteracao realizada.", chamadoId, statusAnterior);
+            log.info("chamado.status ignorado motivo=SEM_MUDANCA chamadoId={} status={}", chamadoId, statusAnterior);
             return ChamadoSuporteResponse.fromEntityComAnexos(chamado);
         }
 
         chamado.setStatus(request.status());
         ChamadoSuporte salvo = chamadoSuporteRepository.save(chamado);
-        log.info("Status do chamado {} alterado de {} para {}", chamadoId, statusAnterior, request.status());
+        log.info("chamado.status ok chamadoId={} de={} para={}", chamadoId, statusAnterior, request.status());
 
         notificarAtualizacaoStatus(salvo, statusAnterior, request.observacao());
 
@@ -178,8 +178,9 @@ public class ChamadoSuporteService {
     @Transactional
     public void deletar(String chamadoId) {
         ChamadoSuporte chamado = buscarValidandoTenant(chamadoId);
+        log.info("chamado.excluir inicio chamadoId={}", chamadoId);
         chamadoSuporteRepository.delete(chamado);
-        log.info("Chamado de suporte {} excluido", chamadoId);
+        log.info("chamado.excluir ok chamadoId={}", chamadoId);
     }
 
     /**
@@ -212,7 +213,7 @@ public class ChamadoSuporteService {
             if (!chamadoSuporteRepository.existsById(identificador)) {
                 return identificador;
             }
-            log.warn("Colisao de identificador de chamado detectada: {}", identificador);
+            log.warn("chamado.cadastrar conflito motivo=IDENTIFICADOR_COLIDIU identificador={}", identificador);
         }
         throw new IllegalStateException("Nao foi possivel gerar um identificador unico para o chamado");
     }
@@ -269,7 +270,7 @@ public class ChamadoSuporteService {
      */
     private void notificarCriador(ChamadoSuporte chamado, Long organizacaoId) {
         if (chamado.getCriadorEmail() == null || chamado.getCriadorEmail().isBlank()) {
-            log.warn("Chamado {} sem email do criador. Confirmacao nao enviada.", chamado.getProtocolo());
+            log.warn("chamado.notificar ignorado motivo=SEM_EMAIL_CRIADOR protocolo={} tipo=CONFIRMACAO", chamado.getProtocolo());
             return;
         }
 
@@ -298,7 +299,7 @@ public class ChamadoSuporteService {
      */
     private void notificarAtualizacaoStatus(ChamadoSuporte chamado, StatusChamado statusAnterior, String observacao) {
         if (chamado.getCriadorEmail() == null || chamado.getCriadorEmail().isBlank()) {
-            log.warn("Chamado {} sem email do criador. Notificacao de status nao enviada.", chamado.getProtocolo());
+            log.warn("chamado.notificar ignorado motivo=SEM_EMAIL_CRIADOR protocolo={} tipo=STATUS", chamado.getProtocolo());
             return;
         }
 

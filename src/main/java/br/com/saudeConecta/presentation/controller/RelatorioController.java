@@ -52,8 +52,6 @@ public class RelatorioController {
             @AuthenticationPrincipal Usuario usuarioLogado) {
 
         Long profissionalFiltro = resolverProfissionalFiltro(profissionalId, usuarioLogado);
-        log.debug("- Listando relatorios de pacientes - usuario={}, profissionalFiltro={}",
-                usuarioLogado.getId(), profissionalFiltro);
 
         return ResponseEntity.ok(relatorioPacienteService.buscarPacientesAtendidos(
                 profissionalFiltro, null, termo, dataInicio, dataFim));
@@ -72,7 +70,6 @@ public class RelatorioController {
             @AuthenticationPrincipal Usuario usuarioLogado) {
 
         Long profissionalFiltro = resolverProfissionalFiltro(null, usuarioLogado);
-        log.debug("- Buscando relatorios do paciente {} - usuario={}", pacienteId, usuarioLogado.getId());
 
         return relatorioPacienteService.buscarRelatoriosDoPaciente(pacienteId, profissionalFiltro)
                 .map(ResponseEntity::ok)

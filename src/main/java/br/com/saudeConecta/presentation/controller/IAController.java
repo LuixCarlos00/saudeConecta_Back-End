@@ -24,12 +24,9 @@ public class IAController {
      */
     @PostMapping("/resumir-historico")
     public ResponseEntity<String> resumirHistorico(@RequestBody ResumirHistoricoRequest request) {
-        log.info("=== Requisição recebida: POST /ia/resumir-historico (IA Local) ===");
-        log.debug("Paciente ID: {}, Tipo: {}", request.getPacienteId(), request.getTipo());
         
         // Usar IA local - gratuito e sem configuração
         String resumo = iaLocalService.gerarResumoHistorico(request.getPacienteId(), request.getTipo());
-        log.info("Resumo gerado com sucesso usando IA local para paciente ID: {}", request.getPacienteId());
         return ResponseEntity.ok(resumo);
     }
 

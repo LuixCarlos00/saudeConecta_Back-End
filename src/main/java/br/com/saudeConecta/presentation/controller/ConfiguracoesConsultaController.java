@@ -26,7 +26,6 @@ public class ConfiguracoesConsultaController {
      */
     @GetMapping("/atual")
     public ResponseEntity<ConfiguracoesConsultaResponse> buscarConfiguracaoAtual() {
-        log.info("Buscando configuracao de fluxo de consulta da organizacao atual");
         ConfiguracoesConsulta config = configuracoesConsultaService.buscarConfiguracaoAtual();
         return ResponseEntity.ok(toResponse(config));
     }
@@ -40,7 +39,6 @@ public class ConfiguracoesConsultaController {
     @GetMapping("/organizacao/{organizacaoId}")
     public ResponseEntity<ConfiguracoesConsultaResponse> buscarConfiguracaoPorOrganizacao(
             @PathVariable Long organizacaoId) {
-        log.info("Buscando configuracao de fluxo de consulta para organizacao {}", organizacaoId);
         ConfiguracoesConsulta config = configuracoesConsultaService.buscarConfiguracaoPorOrganizacao(organizacaoId);
         return ResponseEntity.ok(toResponse(config));
     }
@@ -56,7 +54,6 @@ public class ConfiguracoesConsultaController {
     public ResponseEntity<ConfiguracoesConsultaResponse> criarConfiguracao(
             @PathVariable Long organizacaoId,
             @Valid @RequestBody ConfiguracoesConsultaRequest request) {
-        log.info("Criando configuracao de fluxo de consulta para organizacao {}", organizacaoId);
         ConfiguracoesConsulta config = configuracoesConsultaService.criarConfiguracao(
                 organizacaoId,
                 request.getPularParaConfirmado(),
@@ -76,7 +73,6 @@ public class ConfiguracoesConsultaController {
     public ResponseEntity<ConfiguracoesConsultaResponse> atualizarConfiguracao(
             @PathVariable Long id,
             @Valid @RequestBody ConfiguracoesConsultaRequest request) {
-        log.info("Atualizando configuracao de fluxo de consulta {}", id);
         ConfiguracoesConsulta config = configuracoesConsultaService.atualizarConfiguracao(
                 id,
                 request.getPularParaConfirmado(),
@@ -95,7 +91,6 @@ public class ConfiguracoesConsultaController {
     public ResponseEntity<ConfiguracoesConsultaResponse> atualizarConfiguracaoAtual(
             @Valid @RequestBody ConfiguracoesConsultaRequest request) {
         Long organizacaoId = TenantContext.getCurrentTenant();
-        log.info("Atualizando configuracao de fluxo de consulta da organizacao atual {}", organizacaoId);
         ConfiguracoesConsulta config = configuracoesConsultaService.atualizarConfiguracaoAtual(
                 request.getPularParaConfirmado(),
                 request.getDescricao()
@@ -110,7 +105,6 @@ public class ConfiguracoesConsultaController {
      */
     @GetMapping("/deve-pular-confirmado")
     public ResponseEntity<Boolean> devePularParaConfirmado() {
-        log.info("Verificando se organizacao atual deve pular para CONFIRMADA");
         boolean devePular = configuracoesConsultaService.devePularParaConfirmado();
         return ResponseEntity.ok(devePular);
     }

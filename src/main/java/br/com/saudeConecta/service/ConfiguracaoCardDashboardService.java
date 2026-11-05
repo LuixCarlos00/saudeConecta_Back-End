@@ -106,7 +106,7 @@ public class ConfiguracaoCardDashboardService {
                 cardRepository.findByUsuarioIdAndAtivoTrueOrderByOrdemExibicaoAsc(usuarioId);
 
         if (ativosNoDb.isEmpty()) {
-            log.info("Usuario {} sem configuracoes de card — inicializando automaticamente", usuarioId);
+            log.info("dashboard.card inicializar usuarioId={} motivo=SEM_CONFIGURACAO", usuarioId);
             Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
             if (usuario != null) {
                 inicializarParaNovoUsuario(usuario);

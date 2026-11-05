@@ -105,7 +105,7 @@ public class ConfiguracaoGraficoDashboardService {
 
         if (apenasAtivos.isEmpty()
                 && configuracaoRepository.findByUsuarioIdOrderByOrdemExibicaoAsc(usuarioId).isEmpty()) {
-            log.info("Usuario {} sem configuracoes de grafico — inicializando automaticamente", usuarioId);
+            log.info("dashboard.grafico inicializar usuarioId={} motivo=SEM_CONFIGURACAO", usuarioId);
             if (usuario != null) {
                 inicializarParaNovoUsuario(usuario);
                 apenasAtivos = configuracaoRepository

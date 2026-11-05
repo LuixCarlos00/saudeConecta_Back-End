@@ -154,10 +154,10 @@ public class CacheEvictionService {
     private void evict(String cacheName, Object key) {
         Cache cache = cacheManager.getCache(cacheName);
         if (cache == null) {
-            log.warn("Cache '{}' nao encontrado ao tentar invalidar chave: {}", cacheName, key);
+            log.warn("cache.invalidar negado motivo=CACHE_NAO_ENCONTRADO cache={} chave={}", cacheName, key);
             return;
         }
         cache.evict(key);
-        log.debug("Cache '{}' invalidado para a chave: {}", cacheName, key);
+        log.debug("cache.invalidar ok cache={} chave={}", cacheName, key);
     }
 }

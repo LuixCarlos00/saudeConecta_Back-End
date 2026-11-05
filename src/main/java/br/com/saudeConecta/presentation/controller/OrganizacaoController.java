@@ -27,7 +27,6 @@ public class OrganizacaoController {
 
     @GetMapping("/minha")
     public ResponseEntity<OrganizacaoResponse> buscarMinhaOrganizacao() {
-        log.debug("Buscando organizacao do usuario atual");
         return organizacaoService.buscarAtual()
             .map(OrganizacaoResponse::fromEntity)
             .map(ResponseEntity::ok)
@@ -37,7 +36,6 @@ public class OrganizacaoController {
     @GetMapping
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<List<OrganizacaoResponse>> listarTodas() {
-        log.debug("Listando todas as organizacoes");
         List<OrganizacaoResponse> response = organizacaoService.listarTodas()
             .stream()
             .map(OrganizacaoResponse::fromEntity)
@@ -48,7 +46,6 @@ public class OrganizacaoController {
     @GetMapping("/ativas")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<List<OrganizacaoResponse>> listarAtivas() {
-        log.debug("Listando organizacoes ativas");
         List<OrganizacaoResponse> response = organizacaoService.listarAtivas()
             .stream()
             .map(OrganizacaoResponse::fromEntity)
@@ -59,7 +56,6 @@ public class OrganizacaoController {
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<OrganizacaoResponse> buscarPorId(@PathVariable Long id) {
-        log.debug("Buscando organizacao por ID: {}", id);
         return organizacaoService.buscarPorId(id)
             .map(OrganizacaoResponse::fromEntity)
             .map(ResponseEntity::ok)
@@ -69,7 +65,6 @@ public class OrganizacaoController {
     @PostMapping
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<OrganizacaoResponse> criar(@Valid @RequestBody CriarOrganizacaoRequest request) {
-        log.info("Criando nova organizacao: {}", request.nome());
         Organizacao org = organizacaoService.criar(request);
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(OrganizacaoResponse.fromEntity(org));
@@ -80,7 +75,6 @@ public class OrganizacaoController {
     public ResponseEntity<OrganizacaoResponse> atualizar(
             @PathVariable Long id,
             @Valid @RequestBody AtualizarOrganizacaoRequest request) {
-        log.info("Atualizando organizacao ID: {}", id);
         Organizacao org = organizacaoService.atualizar(id, request);
         return ResponseEntity.ok(OrganizacaoResponse.fromEntity(org));
     }
@@ -88,7 +82,6 @@ public class OrganizacaoController {
     @PutMapping("/{id}/ativar")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Void> ativar(@PathVariable Long id) {
-        log.info("Ativando organizacao ID: {}", id);
         organizacaoService.ativar(id);
         return ResponseEntity.ok().build();
     }
@@ -96,7 +89,6 @@ public class OrganizacaoController {
     @PutMapping("/{id}/inativar")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Void> inativar(@PathVariable Long id) {
-        log.info("Inativando organizacao ID: {}", id);
         organizacaoService.inativar(id);
         return ResponseEntity.ok().build();
     }

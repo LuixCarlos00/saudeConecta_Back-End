@@ -34,7 +34,7 @@ public class ConfiguracoesConsultaService {
         Optional<ConfiguracoesConsulta> config = configuracoesConsultaRepository.findByOrganizacaoId(organizacaoId);
         
         if (config.isEmpty()) {
-            log.info("Configuracao de fluxo nao encontrada para organizacao {}, retornando padrao", organizacaoId);
+            log.debug("consulta.configuracao buscar organizacaoId={} resultado=PADRAO", organizacaoId);
             return ConfiguracoesConsulta.builder()
                     .pularParaConfirmado(false)
                     .descricao("Configuração padrão - fluxo normal")
@@ -53,7 +53,7 @@ public class ConfiguracoesConsultaService {
     public ConfiguracoesConsulta buscarConfiguracaoAtual() {
         Long organizacaoId = TenantContext.getCurrentTenant();
         if (organizacaoId == null) {
-            log.warn("Organizacao nao identificada no contexto, retornando configuracao padrao");
+            log.warn("consulta.configuracao negado motivo=SEM_ORGANIZACAO acao=USA_PADRAO");
             return ConfiguracoesConsulta.builder()
                     .pularParaConfirmado(false)
                     .descricao("Configuração padrão - fluxo normal")

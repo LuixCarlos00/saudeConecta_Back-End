@@ -62,7 +62,7 @@ public class IALocalService {
             return gerarResumoEstruturado(analise, historico.size(), tipo);
             
         } catch (Exception e) {
-            log.error("Erro ao gerar resumo local: {}", e.getMessage(), e);
+            log.error("ia.resumo falha", e);
             return "📋 **Resumo Clínico**\n\nErro ao analisar o histórico. Tente novamente.";
         }
     }
@@ -113,7 +113,7 @@ public class IALocalService {
                         ultimaData = data;
                     }
                 } catch (Exception e) {
-                    log.debug("Erro ao parsear data: {}", dataStr);
+                    log.debug("ia.resumo data invalida data={}", dataStr);
                 }
             }
 

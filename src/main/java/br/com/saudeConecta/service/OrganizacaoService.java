@@ -31,33 +31,33 @@ public class OrganizacaoService {
             return Optional.empty();
         }
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando organização atual: {}", orgId);
+        log.debug("organizacao.buscar atual organizacaoId={}", orgId);
         return organizacaoRepository.findById(orgId);
     }
 
     public List<Organizacao> listarTodas() {
-        log.debug("Listando todas as organizações");
+        log.debug("organizacao.listar escopo=TODAS");
         return organizacaoRepository.findAll();
     }
 
     public List<Organizacao> listarAtivas() {
-        log.debug("Listando organizações ativas");
+        log.debug("organizacao.listar escopo=ATIVAS");
         return organizacaoRepository.findByStatus(StatusOrganizacao.ATIVO);
     }
 
     public Optional<Organizacao> buscarPorId(Long id) {
-        log.debug("Buscando organização por ID: {}", id);
+        log.debug("organizacao.buscar organizacaoId={}", id);
         return organizacaoRepository.findById(id);
     }
 
     public Optional<Organizacao> buscarPorCnpj(String cnpj) {
-        log.debug("Buscando organização por CNPJ: {}", cnpj);
+        log.debug("organizacao.buscar cnpj={}", cnpj);
         return organizacaoRepository.findByCnpj(cnpj);
     }
 
     @Transactional
     public Organizacao criar(CriarOrganizacaoRequest request) {
-        log.info("Criando nova organização: {}", request.nome());
+        log.info("organizacao.criar inicio comCnpj={}", request.cnpj() != null);
         
         if (request.cnpj() != null && organizacaoRepository.existsByCnpj(request.cnpj())) {
             throw new IllegalArgumentException("CNPJ já cadastrado");
@@ -82,13 +82,13 @@ public class OrganizacaoService {
             .build();
 
         Organizacao salva = organizacaoRepository.save(org);
-        log.info("Organização criada com sucesso. ID: {}", salva.getId());
+        log.info("organizacao.criar ok organizacaoId={}", salva.getId());
         return salva;
     }
 
     @Transactional
     public Organizacao atualizar(Long id, AtualizarOrganizacaoRequest request) {
-        log.info("Atualizando organização ID: {}", id);
+        log.info("organizacao.atualizar inicio organizacaoId={}", id);
         
         Organizacao org = organizacaoRepository.findById(id)
             .orElseThrow(() -> new EntityNotFoundException("Organização não encontrada"));
@@ -112,26 +112,28 @@ public class OrganizacaoService {
         }
 
         Organizacao atualizada = organizacaoRepository.save(org);
-        log.info("Organização ID: {} atualizada com sucesso", id);
+        log.info("organizacao.atualizar ok organizacaoId={}", id);
         return atualizada;
     }
 
     @Transactional
     public void ativar(Long id) {
-        log.info("Ativando organização ID: {}", id);
+        log.info("organizacao.ativar inicio organizacaoId={}", id);
         Organizacao org = organizacaoRepository.findById(id)
             .orElseThrow(() -> new EntityNotFoundException("Organização não encontrada"));
         org.setStatus(StatusOrganizacao.ATIVO);
         organizacaoRepository.save(org);
+        log.info("organizacao.ativar ok organizacaoId={}", id);
     }
 
     @Transactional
     public void inativar(Long id) {
-        log.info("Inativando organização ID: {}", id);
+        log.info("organizacao.inativar inicio organizacaoId={}", id);
         Organizacao org = organizacaoRepository.findById(id)
             .orElseThrow(() -> new EntityNotFoundException("Organização não encontrada"));
         org.setStatus(StatusOrganizacao.INATIVO);
         organizacaoRepository.save(org);
+        log.info("organizacao.inativar ok organizacaoId={}", id);
     }
 
     public Long contarAtivas() {

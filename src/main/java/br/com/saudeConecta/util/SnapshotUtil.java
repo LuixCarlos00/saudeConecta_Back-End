@@ -46,14 +46,14 @@ public class SnapshotUtil {
                 try {
                     field.set(clone, field.get(original));
                 } catch (Exception e) {
-                    log.warn("Não foi possivel copiar campo '{}': {}", field.getName(), e.getMessage());
+                    log.warn("snapshot.criar ignorado motivo=CAMPO_INACESSIVEL campo={} causa={}", field.getName(), e.getClass().getSimpleName());
                 }
             }
 
-            log.debug("Snapshot criado com sucesso para {}", clazz.getSimpleName());
+            log.debug("snapshot.criar ok classe={}", clazz.getSimpleName());
             return clone;
         } catch (Exception e) {
-            log.error("Falha ao criar snapshot de {}: {}", clazz.getSimpleName(), e.getMessage(), e);
+            log.error("snapshot.criar falha classe={}", clazz.getSimpleName(), e);
             throw new RuntimeException("Falha ao criar snapshot de " + clazz.getSimpleName() + ": " + e.getMessage(), e);
         }
     }

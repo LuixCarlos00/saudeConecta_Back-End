@@ -31,7 +31,7 @@ public class CepController {
     @GetMapping("/{cep}")
     public ResponseEntity<?> buscarEnderecoPorCep(@PathVariable String cep) {
         try {
-            log.debug("Buscando endereco para CEP: {}", cep);
+            log.debug("cep.buscar inicio cep={}", cep);
             
             // Remove caracteres não numéricos do CEP
             String cepLimpo = cep.replaceAll("[^0-9]", "");
@@ -42,7 +42,7 @@ public class CepController {
             }
 
             String url = VIACEP_URL + "/" + cepLimpo + "/json";
-            log.debug("Fazendo requisicao para ViaCEP: {}", url);
+            log.debug("cep.buscar viacep url={}", url);
             
             ResponseEntity<Object> response = restTemplate.getForEntity(url, Object.class);
             
@@ -51,23 +51,23 @@ public class CepController {
                 
                 // Verifica se o CEP foi encontrado
                 if (responseBody.containsKey("erro") && Boolean.TRUE.equals(responseBody.get("erro"))) {
-                    log.warn("CEP nao encontrado: {}", cep);
+                    log.warn("cep.buscar negado motivo=NAO_ENCONTRADO cep={}", cep);
                     return ResponseEntity.notFound().build();
                 }
                 
                 // Verifica se os campos essenciais estão vazios
                 if (!responseBody.containsKey("logradouro") && !responseBody.containsKey("localidade")) {
-                    log.warn("CEP incompleto ou invalido: {}", cep);
+                    log.warn("cep.buscar negado motivo=CEP_INCOMPLETO cep={}", cep);
                     return ResponseEntity.notFound().build();
                 }
             }
             
-            log.debug("Endereco encontrado para CEP: {}", cep);
+            log.debug("cep.buscar ok cep={}", cep);
             return ResponseEntity.ok(response.getBody());
             
         } catch (RestClientException e) {
             // ViaCEP fora do ar/lento é falha do serviço externo, não nossa: 502 com mensagem para o usuário
-            log.warn("ViaCEP indisponivel ao buscar CEP {}", cep, e);
+            log.warn("cep.buscar falha motivo=VIACEP_INDISPONIVEL cep={}", cep, e);
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(ErrorResponse.of(HttpStatus.BAD_GATEWAY.value(), "CEP_INDISPONIVEL",
                         "Servico de CEP indisponivel no momento. Tente novamente.", "/cep/" + cep));
