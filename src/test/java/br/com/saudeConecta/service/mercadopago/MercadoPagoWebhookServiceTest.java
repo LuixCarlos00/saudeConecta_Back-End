@@ -61,7 +61,7 @@ class MercadoPagoWebhookServiceTest {
         // Serviço real: a regra "authorized não promove status" vive nele e precisa ser exercitada aqui
         AssinaturaMercadoPagoService assinaturaMercadoPagoService = new AssinaturaMercadoPagoService(
                 assinaturaTenantRepository, adminOrganizacaoRepository, mercadoPagoClient,
-                new MercadoPagoProperties(), emailNotificacaoService,
+                new MercadoPagoProperties(), emailNotificacaoService, cobrancaTenantRepository, eventoRepository,
                 mock(org.springframework.transaction.PlatformTransactionManager.class),
                 mock(MercadoPagoWebhookService.class));
         service = new MercadoPagoWebhookService(eventoRepository, assinaturaTenantRepository,

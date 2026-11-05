@@ -131,6 +131,26 @@ Gerar um link novo quando já existe um preapproval (A) que não serve mais:
 2. Depois do commit, cancela A no MP e limpa `mp_preapproval_substituido_id`. Se o MP
    falhar, a coluna fica preenchida e a reconciliação (4 h) tenta de novo.
 
+**A não é cancelado às cegas.** Antes de cancelar, A é consultado no MP:
+
+| A no MP | O que acontece |
+|---|---|
+| `cancelled` ou não encontrado | Só limpa a coluna |
+| `authorized`, mas não estava com cartão (`authorized`/`paused`) no momento da troca — ex.: o cliente terminou o checkout do link abandonado | **Pendência manual** `PREAPPROVAL_SUBSTITUIDO_AUTORIZADO`, log WARN, A não é cancelado |
+| Fatura aprovada no MP sem cobrança `PAGO` local | **Pendência manual** `PREAPPROVAL_SUBSTITUIDO_AUTORIZADO` |
+| Outros casos (inclusive `authorized` já conhecido na troca: cortesia, troca de cartão) | Cancela normalmente |
+
+Na nova tentativa da reconciliação o status na troca é desconhecido, então um `authorized`
+vai para pendência. A pendência é gravada uma vez por preapproval em `mp_webhook_evento`
+(`tipo = pendencia_preapproval_substituido`, `data_id` = A) e aparece em
+`/assinaturas/pendencias-manuais`. A coluna de substituído continua preenchida, então os
+webhooks de A seguem ignorados. Para resolver, o SUPER_ADMIN estorna/cancela A no painel do
+MP (a reconciliação vê `cancelled` e limpa a coluna) ou religa manualmente.
+
+Enquanto houver um substituído em pendência, uma troca nova que precisaria da coluna (link
+novo, cortesia, troca de plano com link pendente) é recusada com `409` e
+`code = PREAPPROVAL_SUBSTITUIDO_EM_ANALISE`.
+
 O webhook de A (inclusive `cancelled`) é sempre ignorado: ou a assinatura está
 vinculada a B (`OUTRO_PREAPPROVAL_VINCULADO`), ou A está na coluna de substituído
 (`PREAPPROVAL_SUBSTITUIDO`), ou não há preapproval vinculado e A está cancelado

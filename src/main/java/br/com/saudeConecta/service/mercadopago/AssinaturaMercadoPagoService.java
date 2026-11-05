@@ -2,13 +2,18 @@ package br.com.saudeConecta.service.mercadopago;
 
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
+import br.com.saudeConecta.domain.planos.CobrancaTenant;
+import br.com.saudeConecta.domain.planos.MpWebhookEvento;
 import br.com.saudeConecta.domain.planos.OrigemCancelamento;
 import br.com.saudeConecta.domain.planos.StatusAssinatura;
 import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.CobrancaTenantRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.MpWebhookEventoRepository;
 import br.com.saudeConecta.presentation.dto.planos.LinkPagamentoResponse;
+import br.com.saudeConecta.service.mercadopago.dto.AuthorizedPaymentResponse;
 import br.com.saudeConecta.service.mercadopago.dto.PreapprovalResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,12 +46,24 @@ public class AssinaturaMercadoPagoService {
     public static final String CODIGO_PAGAMENTO_JA_RECEBIDO = "PAGAMENTO_JA_RECEBIDO";
     /** Código do erro 502 quando o MP não confirma o valor novo (troca de plano desfeita). */
     public static final String CODIGO_MP_VALOR_NAO_ATUALIZADO = "MP_VALOR_NAO_ATUALIZADO";
+    /**
+     * Código do erro 409 quando um preapproval substituído anterior está em pendência manual
+     * (autorizado ou pago depois da troca) e ainda ocupa a coluna de substituído.
+     */
+    public static final String CODIGO_PREAPPROVAL_SUBSTITUIDO_EM_ANALISE = "PREAPPROVAL_SUBSTITUIDO_EM_ANALISE";
+    private static final String PAGAMENTO_APROVADO = "approved";
+
+    /** O que aconteceu ao tentar cancelar um preapproval que saiu da assinatura. */
+    private enum DesfechoCancelamento { CANCELADO, PENDENCIA_MANUAL }
 
     private final AssinaturaTenantRepository assinaturaTenantRepository;
     private final AdminOrganizacaoRepository adminOrganizacaoRepository;
     private final MercadoPagoClient mercadoPagoClient;
     private final MercadoPagoProperties properties;
     private final EmailNotificacaoService emailNotificacaoService;
+    private final CobrancaTenantRepository cobrancaTenantRepository;
+    /** Pendências manuais (preapproval substituído autorizado ou pago depois da troca). */
+    private final MpWebhookEventoRepository eventoRepository;
     /** Transação própria das fases da troca de preapproval (commit independente do chamador). */
     private final TransactionTemplate transacaoNova;
     /** Suspende a transação corrente (usado no afterCommit). */
@@ -60,8 +77,12 @@ public class AssinaturaMercadoPagoService {
             MercadoPagoClient mercadoPagoClient,
             MercadoPagoProperties properties,
             EmailNotificacaoService emailNotificacaoService,
+            CobrancaTenantRepository cobrancaTenantRepository,
+            MpWebhookEventoRepository eventoRepository,
             PlatformTransactionManager transactionManager,
             @Lazy MercadoPagoWebhookService webhookService) {
+        this.cobrancaTenantRepository = cobrancaTenantRepository;
+        this.eventoRepository = eventoRepository;
         this.transacaoNova = new TransactionTemplate(transactionManager);
         this.transacaoNova.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         this.semTransacao = new TransactionTemplate(transactionManager);
@@ -128,14 +149,15 @@ public class AssinaturaMercadoPagoService {
             recusarSeJaPagou(assinatura);
         }
         AtomicReference<String> criadoNoMp = new AtomicReference<>();
+        AtomicReference<String> statusDoSubstituido = new AtomicReference<>();
         LinkPagamentoResponse link;
         try {
-            link = transacaoNova.execute(status -> vincularNovoPreapproval(assinaturaId, criadoNoMp));
+            link = transacaoNova.execute(status -> vincularNovoPreapproval(assinaturaId, criadoNoMp, statusDoSubstituido));
         } catch (RuntimeException e) {
             compensarPreapprovalNaoVinculado(criadoNoMp.get(), assinaturaId);
             throw e;
         }
-        cancelarPreapprovalSubstituido(assinaturaId);
+        cancelarPreapprovalSubstituido(assinaturaId, statusDoSubstituido.get());
         return link;
     }
 
@@ -250,12 +272,14 @@ public class AssinaturaMercadoPagoService {
         }
         if (assinatura.temPreapprovalSubstituidoPendente()) {
             // Só há uma coluna para o antigo: o substituído anterior precisa estar cancelado antes
-            cancelarNoMercadoPago(assinatura.getMpPreapprovalSubstituidoId());
+            cancelarSubstituidoAnteriorOuRecusar(assinatura);
         }
         String preapprovalId = assinatura.getMpPreapprovalId();
+        String statusNaTroca = assinatura.getMpStatus();
         assinatura.desvincularPreapproval();
         Long assinaturaId = assinatura.getId();
-        executarAposCommit("mp.preapproval.desvincular", assinaturaId, () -> cancelarPreapprovalSubstituido(assinaturaId));
+        executarAposCommit("mp.preapproval.desvincular", assinaturaId,
+                () -> cancelarPreapprovalSubstituido(assinaturaId, statusNaTroca));
         log.info("mp.preapproval.desvincular ok motivo={} preapprovalId={} assinaturaId={}",
                 motivo, preapprovalId, assinaturaId);
     }
@@ -315,7 +339,8 @@ public class AssinaturaMercadoPagoService {
      * gerações simultâneas e a troca de plano: quem chega depois relê o estado e reaproveita
      * o link que o primeiro acabou de criar.
      */
-    private LinkPagamentoResponse vincularNovoPreapproval(Long assinaturaId, AtomicReference<String> criadoNoMp) {
+    private LinkPagamentoResponse vincularNovoPreapproval(Long assinaturaId, AtomicReference<String> criadoNoMp,
+                                                         AtomicReference<String> statusDoSubstituido) {
         AssinaturaTenant assinatura = assinaturaTenantRepository.findByIdParaAtualizacao(assinaturaId)
                 .orElseThrow(() -> new BusinessException(
                         "Assinatura não encontrada: " + assinaturaId, HttpStatus.NOT_FOUND));
@@ -327,9 +352,10 @@ public class AssinaturaMercadoPagoService {
         }
         if (assinatura.temPreapproval() && assinatura.temPreapprovalSubstituidoPendente()) {
             // Só há uma coluna para o antigo: o substituído anterior precisa estar cancelado antes
-            cancelarNoMercadoPago(assinatura.getMpPreapprovalSubstituidoId());
+            cancelarSubstituidoAnteriorOuRecusar(assinatura);
             assinatura.setMpPreapprovalSubstituidoId(null);
         }
+        statusDoSubstituido.set(assinatura.getMpStatus());
 
         String payerEmail = resolverPayerEmail(assinatura);
         String reason = properties.getReasonPrefix() + " — Plano "
@@ -385,10 +411,20 @@ public class AssinaturaMercadoPagoService {
      * Deve rodar fora de transação (ou depois do commit da troca): a chamada HTTP não segura
      * a linha e a limpeza da coluna usa transação própria.
      *
+     * Sem saber como o substituído estava na troca (nova tentativa da reconciliação), um
+     * {@code authorized} vai para pendência manual em vez de ser cancelado.
+     *
      * @param assinaturaId ID da assinatura
      * @return true se o substituído foi confirmado como cancelado e a coluna foi limpa
      */
     public boolean cancelarPreapprovalSubstituido(Long assinaturaId) {
+        return cancelarPreapprovalSubstituido(assinaturaId, null);
+    }
+
+    /**
+     * @param statusNaTroca status local do substituído no momento da troca (null se desconhecido)
+     */
+    private boolean cancelarPreapprovalSubstituido(Long assinaturaId, String statusNaTroca) {
         // Leitura em transação nova: o chamador pode ter um contexto de persistência com a foto
         // anterior ao commit da troca
         String substituido = transacaoNova.execute(status -> assinaturaTenantRepository.findById(assinaturaId)
@@ -399,7 +435,10 @@ public class AssinaturaMercadoPagoService {
             return false;
         }
         try {
-            cancelarNoMercadoPago(substituido);
+            if (cancelarSeSeguro(assinaturaId, substituido, statusNaTroca) == DesfechoCancelamento.PENDENCIA_MANUAL) {
+                // A coluna continua preenchida: os webhooks do substituído seguem ignorados
+                return false;
+            }
         } catch (BusinessException e) {
             log.warn("mp.preapproval.substituido falha motivo=MP_INDISPONIVEL preapprovalId={} assinaturaId={} proximo=RECONCILIACAO",
                     substituido, assinaturaId);
@@ -418,17 +457,95 @@ public class AssinaturaMercadoPagoService {
     }
 
     /**
-     * Cancela o preapproval no MP se ele ainda não estiver cancelado. Consultar antes evita
-     * repetir o PUT na nova tentativa.
+     * Cancela no MP um preapproval que saiu da assinatura, se ainda não estiver cancelado
+     * (consultar antes evita repetir o PUT na nova tentativa). Não cancela às cegas: se ele foi
+     * autorizado depois da troca (ex.: o cliente terminou o checkout do link abandonado) ou tem
+     * fatura aprovada sem registro local, o cliente pagou por ele. Nesse caso registra uma
+     * pendência manual e deixa a decisão para o SUPER_ADMIN.
      *
+     * Um {@code authorized} que já era conhecido na troca (cortesia ou troca de cartão de quem
+     * tinha cartão cadastrado) é abandonado de propósito e é cancelado normalmente.
+     *
+     * @param statusNaTroca status local do preapproval quando ele saiu da assinatura (null se desconhecido)
      * @throws BusinessException quando o Mercado Pago não responde
      */
-    private void cancelarNoMercadoPago(String preapprovalId) {
+    private DesfechoCancelamento cancelarSeSeguro(Long assinaturaId, String preapprovalId, String statusNaTroca) {
         PreapprovalResponse remoto = mercadoPagoClient.buscarPreapproval(preapprovalId);
         if (remoto == null || MercadoPagoClient.STATUS_CANCELLED.equals(remoto.status())) {
-            return;
+            return DesfechoCancelamento.CANCELADO;
+        }
+        boolean cartaoJaConhecido = MercadoPagoClient.STATUS_AUTHORIZED.equals(statusNaTroca)
+                || MercadoPagoClient.STATUS_PAUSED.equals(statusNaTroca);
+        boolean autorizadoDepoisDaTroca = MercadoPagoClient.STATUS_AUTHORIZED.equals(remoto.status()) && !cartaoJaConhecido;
+        long faturasSemRegistro = autorizadoDepoisDaTroca ? 0 : contarFaturasAprovadasSemRegistro(preapprovalId);
+        if (autorizadoDepoisDaTroca || faturasSemRegistro > 0) {
+            registrarPendenciaSubstituido(assinaturaId, preapprovalId, remoto.status(), faturasSemRegistro);
+            return DesfechoCancelamento.PENDENCIA_MANUAL;
         }
         mercadoPagoClient.cancelarPreapproval(preapprovalId);
+        return DesfechoCancelamento.CANCELADO;
+    }
+
+    /**
+     * Faturas aprovadas no MP que não estão registradas como PAGO aqui: a de um preapproval já
+     * desvinculado vira {@code PAGAMENTO_SEM_ASSINATURA} no webhook e não gera cobrança local.
+     */
+    private long contarFaturasAprovadasSemRegistro(String preapprovalId) {
+        return mercadoPagoClient.buscarAuthorizedPaymentsDoPreapproval(preapprovalId).stream()
+                .filter(fatura -> fatura != null && fatura.id() != null
+                        && PAGAMENTO_APROVADO.equals(fatura.statusPagamento()))
+                .map(AuthorizedPaymentResponse::id)
+                .filter(faturaId -> !cobrancaTenantRepository.findByMpAuthorizedPaymentId(faturaId)
+                        .map(CobrancaTenant::isPago).orElse(false))
+                .count();
+    }
+
+    /**
+     * Registra (uma vez por preapproval, em transação própria) a pendência que aparece em
+     * {@code /assinaturas/pendencias-manuais}. A nova tentativa da reconciliação não duplica.
+     */
+    private void registrarPendenciaSubstituido(Long assinaturaId, String preapprovalId, String statusMp,
+                                               long faturasSemRegistro) {
+        Boolean criada = transacaoNova.execute(status -> {
+            if (eventoRepository.findByTipoAndDataId(MpWebhookEvento.TIPO_PENDENCIA_PREAPPROVAL_SUBSTITUIDO, preapprovalId).isPresent()) {
+                return false;
+            }
+            MpWebhookEvento pendencia = MpWebhookEvento.builder()
+                    .tipo(MpWebhookEvento.TIPO_PENDENCIA_PREAPPROVAL_SUBSTITUIDO)
+                    .dataId(preapprovalId)
+                    .processado(true)
+                    .recebidoEm(LocalDateTime.now())
+                    .build();
+            pendencia.marcarParaAtencao(MpWebhookEvento.MOTIVO_PREAPPROVAL_SUBSTITUIDO_AUTORIZADO,
+                    "preapproval " + preapprovalId + " saiu da assinatura " + assinaturaId + " e está " + statusMp
+                            + " (faturas aprovadas sem registro: " + faturasSemRegistro
+                            + ") — estornar e cancelar no MP, ou religar manualmente");
+            eventoRepository.save(pendencia);
+            return true;
+        });
+        if (Boolean.TRUE.equals(criada)) {
+            log.warn("mp.preapproval.substituido negado motivo=PREAPPROVAL_SUBSTITUIDO_AUTORIZADO preapprovalId={} assinaturaId={} statusMp={} faturasSemRegistro={} acao=TRATAR_MANUALMENTE",
+                    preapprovalId, assinaturaId, statusMp, faturasSemRegistro);
+        } else {
+            log.info("mp.preapproval.substituido ignorado motivo=PENDENCIA_JA_REGISTRADA preapprovalId={} assinaturaId={}",
+                    preapprovalId, assinaturaId);
+        }
+    }
+
+    /**
+     * Antes de ocupar de novo a coluna de substituído, o anterior precisa estar cancelado. Se
+     * ele está em pendência manual, a troca é recusada: sobrescrever a coluna faria os webhooks
+     * dele deixarem de ser ignorados.
+     *
+     * @throws BusinessException 409 {@code PREAPPROVAL_SUBSTITUIDO_EM_ANALISE}, ou a falha do MP
+     */
+    private void cancelarSubstituidoAnteriorOuRecusar(AssinaturaTenant assinatura) {
+        String anterior = assinatura.getMpPreapprovalSubstituidoId();
+        if (cancelarSeSeguro(assinatura.getId(), anterior, null) == DesfechoCancelamento.PENDENCIA_MANUAL) {
+            throw new BusinessException(
+                    "Há um pagamento anterior desta assinatura em análise pelo suporte. Tente novamente mais tarde.",
+                    HttpStatus.CONFLICT, CODIGO_PREAPPROVAL_SUBSTITUIDO_EM_ANALISE);
+        }
     }
 
     /**

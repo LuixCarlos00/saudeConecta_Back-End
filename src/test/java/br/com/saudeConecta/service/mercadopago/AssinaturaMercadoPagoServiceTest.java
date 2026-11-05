@@ -11,6 +11,10 @@ import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.CobrancaTenantRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.MpWebhookEventoRepository;
+import br.com.saudeConecta.domain.planos.MpWebhookEvento;
+import br.com.saudeConecta.service.mercadopago.dto.AuthorizedPaymentResponse;
 import br.com.saudeConecta.presentation.dto.planos.LinkPagamentoResponse;
 import br.com.saudeConecta.service.mercadopago.dto.PreapprovalResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +30,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,6 +56,8 @@ class AssinaturaMercadoPagoServiceTest {
     @Mock private EmailNotificacaoService emailNotificacaoService;
     @Mock private PlatformTransactionManager transactionManager;
     @Mock private MercadoPagoWebhookService webhookService;
+    @Mock private CobrancaTenantRepository cobrancaTenantRepository;
+    @Mock private MpWebhookEventoRepository eventoRepository;
 
     private MercadoPagoProperties properties;
     private AssinaturaMercadoPagoService service;
@@ -64,7 +71,7 @@ class AssinaturaMercadoPagoServiceTest {
 
         service = new AssinaturaMercadoPagoService(assinaturaTenantRepository,
                 adminOrganizacaoRepository, mercadoPagoClient, properties, emailNotificacaoService,
-                transactionManager, webhookService);
+                cobrancaTenantRepository, eventoRepository, transactionManager, webhookService);
 
         Organizacao org = new Organizacao();
         org.setId(ORG_ID);
@@ -756,5 +763,111 @@ class AssinaturaMercadoPagoServiceTest {
         assinatura.setDataVencimento(LocalDate.now().plusDays(10));
         assertThat(service.sincronizar(assinatura)).isFalse();
         verify(mercadoPagoClient, never()).reativarPreapproval(any());
+    }
+
+    private PreapprovalResponse noMp(String id, String status) {
+        return new PreapprovalResponse(id, status, null, EMAIL_ADMIN, null, null, null);
+    }
+
+    @Test
+    @DisplayName("R2 - Link pendente abandonado e o cliente termina o checkout: authorized vira pendência, não é cancelado")
+    void linkAbandonadoAutorizadoViraPendencia() {
+        comPreapprovalNoMp("pending");
+        assinatura.setStatus(StatusAssinatura.TRIAL);
+        // Entre a troca de plano e o cancelamento, o cliente cadastrou o cartão no checkout do A
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID))
+                .thenReturn(noMp(PREAPPROVAL_ID, "pending"))
+                .thenReturn(noMp(PREAPPROVAL_ID, "authorized"));
+        when(eventoRepository.findByTipoAndDataId(any(), any())).thenReturn(Optional.empty());
+
+        service.propagarNovoValor(assinatura, BigDecimal.valueOf(279));
+
+        verify(mercadoPagoClient, never()).cancelarPreapproval(any());
+        assertThat(assinatura.getMpPreapprovalId()).isNull();
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isEqualTo(PREAPPROVAL_ID);
+        var pendencia = org.mockito.ArgumentCaptor.forClass(MpWebhookEvento.class);
+        verify(eventoRepository).save(pendencia.capture());
+        assertThat(pendencia.getValue().getTipo()).isEqualTo(MpWebhookEvento.TIPO_PENDENCIA_PREAPPROVAL_SUBSTITUIDO);
+        assertThat(pendencia.getValue().getDataId()).isEqualTo(PREAPPROVAL_ID);
+        assertThat(pendencia.getValue().getRequerAtencao()).isTrue();
+        assertThat(pendencia.getValue().getProcessado()).isTrue();
+        assertThat(pendencia.getValue().getMotivoAtencao()).startsWith("PREAPPROVAL_SUBSTITUIDO_AUTORIZADO");
+    }
+
+    @Test
+    @DisplayName("R2 - Substituído com fatura aprovada sem registro: pendência; a nova tentativa não duplica")
+    void substituidoComFaturaAprovadaViraPendencia() {
+        assinatura.setMpPreapprovalSubstituidoId("pa-antigo");
+        when(mercadoPagoClient.buscarPreapproval("pa-antigo")).thenReturn(noMp("pa-antigo", "paused"));
+        when(mercadoPagoClient.buscarAuthorizedPaymentsDoPreapproval("pa-antigo")).thenReturn(List.of(
+                new AuthorizedPaymentResponse("fat-1", "pa-antigo", "processed", BigDecimal.valueOf(279),
+                        new AuthorizedPaymentResponse.Payment(1L, "approved", "accredited"))));
+        when(cobrancaTenantRepository.findByMpAuthorizedPaymentId("fat-1")).thenReturn(Optional.empty());
+        when(eventoRepository.findByTipoAndDataId(MpWebhookEvento.TIPO_PENDENCIA_PREAPPROVAL_SUBSTITUIDO, "pa-antigo"))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(new MpWebhookEvento()));
+
+        assertThat(service.cancelarPreapprovalSubstituido(ASSINATURA_ID)).isFalse();
+        assertThat(service.cancelarPreapprovalSubstituido(ASSINATURA_ID)).isFalse();
+
+        verify(mercadoPagoClient, never()).cancelarPreapproval(any());
+        verify(eventoRepository, times(1)).save(any());
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isEqualTo("pa-antigo");
+    }
+
+    @Test
+    @DisplayName("R2 - Faturas antigas já registradas como PAGO e status não authorized: cancela normalmente")
+    void substituidoComFaturasJaRegistradasEhCancelado() {
+        assinatura.setMpPreapprovalSubstituidoId("pa-antigo");
+        when(mercadoPagoClient.buscarPreapproval("pa-antigo")).thenReturn(noMp("pa-antigo", "paused"));
+        when(mercadoPagoClient.buscarAuthorizedPaymentsDoPreapproval("pa-antigo")).thenReturn(List.of(
+                new AuthorizedPaymentResponse("fat-1", "pa-antigo", "processed", BigDecimal.valueOf(279),
+                        new AuthorizedPaymentResponse.Payment(1L, "approved", "accredited"))));
+        br.com.saudeConecta.domain.planos.CobrancaTenant paga = new br.com.saudeConecta.domain.planos.CobrancaTenant();
+        paga.setStatus(br.com.saudeConecta.domain.planos.StatusCobranca.PAGO);
+        when(cobrancaTenantRepository.findByMpAuthorizedPaymentId("fat-1")).thenReturn(Optional.of(paga));
+
+        assertThat(service.cancelarPreapprovalSubstituido(ASSINATURA_ID)).isTrue();
+
+        verify(mercadoPagoClient).cancelarPreapproval("pa-antigo");
+        verify(eventoRepository, never()).save(any());
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isNull();
+    }
+
+    @Test
+    @DisplayName("R2 - Cortesia de quem já tinha cartão authorized: abandono deliberado, cancela normalmente")
+    void cortesiaComCartaoConhecidoCancela() {
+        assinatura.setStatus(StatusAssinatura.ATIVA);
+        assinatura.setCortesia(true);
+        assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
+        assinatura.setMpStatus("authorized");
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(noMp(PREAPPROVAL_ID, "authorized"));
+
+        service.desvincularECancelarAposCommit(assinatura, "CORTESIA");
+
+        verify(mercadoPagoClient).cancelarPreapproval(PREAPPROVAL_ID);
+        verify(eventoRepository, never()).save(any());
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isNull();
+    }
+
+    @Test
+    @DisplayName("R2 - Substituído anterior em pendência ocupa a coluna: troca nova é recusada com 409")
+    void substituidoAnteriorEmPendenciaRecusaTroca() {
+        assinatura.setStatus(StatusAssinatura.SUSPENSA);
+        assinatura.setMpPreapprovalId("pa-b");
+        assinatura.setMpStatus("paused");
+        assinatura.setMpPreapprovalSubstituidoId("pa-a");
+        when(mercadoPagoClient.buscarPreapproval("pa-a")).thenReturn(noMp("pa-a", "authorized"));
+        when(eventoRepository.findByTipoAndDataId(any(), any())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.gerarLinkPagamento(assinatura))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo("PREAPPROVAL_SUBSTITUIDO_EM_ANALISE"));
+
+        verify(mercadoPagoClient, never()).criarPreapprovalPendente(any(), any(), any(), any());
+        verify(mercadoPagoClient, never()).cancelarPreapproval(any());
+        assertThat(assinatura.getMpPreapprovalId()).isEqualTo("pa-b");
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isEqualTo("pa-a");
     }
 }

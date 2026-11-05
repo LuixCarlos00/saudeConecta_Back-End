@@ -33,6 +33,17 @@ public class MpWebhookEvento implements Serializable {
     public static final String MOTIVO_PAGAMENTO_SEM_ASSINATURA = "PAGAMENTO_SEM_ASSINATURA";
     /** Prefixo do motivo: fatura aprovada de assinatura em cortesia (não renova; tratar manualmente). */
     public static final String MOTIVO_PAGAMENTO_EM_CORTESIA = "PAGAMENTO_EM_CORTESIA";
+    /**
+     * Prefixo do motivo: preapproval que saiu da assinatura (link novo, troca de plano, cortesia)
+     * foi autorizado depois da troca ou tem fatura aprovada sem registro. Não é cancelado às
+     * cegas: o SUPER_ADMIN decide (estornar e cancelar no MP, ou religar).
+     */
+    public static final String MOTIVO_PREAPPROVAL_SUBSTITUIDO_AUTORIZADO = "PREAPPROVAL_SUBSTITUIDO_AUTORIZADO";
+    /**
+     * Tipo dos registros de pendência criados pelo sistema (não vêm de notificação do MP);
+     * {@code dataId} é o id do preapproval. Já nascem processados: o reprocessamento não os toca.
+     */
+    public static final String TIPO_PENDENCIA_PREAPPROVAL_SUBSTITUIDO = "pendencia_preapproval_substituido";
     private static final int TAMANHO_MAXIMO_MOTIVO = 255;
 
     @Id
