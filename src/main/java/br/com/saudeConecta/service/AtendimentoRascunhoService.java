@@ -149,7 +149,8 @@ public class AtendimentoRascunhoService {
     public void descartar(Long consultaId) {
         log.info("rascunho.descartar inicio consultaId={}", consultaId);
         Long orgId = tenantHelper.getCurrentTenantId();
-        Consulta consulta = consultaDoUsuario(consultaRepository.findByIdAndOrganizacao_Id(consultaId, orgId),
+        // Lock na consulta (mesma ordem do salvar): um PUT que chega depois do DELETE só roda após o commit dele.
+        Consulta consulta = consultaDoUsuario(consultaRepository.buscarComLock(consultaId, orgId),
                 "rascunho.descartar", consultaId);
         int removidos = rascunhoRepository.apagarPorConsulta(consulta.getId());
         log.info("rascunho.descartar ok consultaId={} removidos={}", consultaId, removidos);
@@ -210,6 +211,12 @@ public class AtendimentoRascunhoService {
         if (dados == null || dados.isNull() || dados.isMissingNode()) {
             log.warn("rascunho.salvar negado motivo=DADOS_AUSENTES consultaId={}", consultaId);
             throw new BusinessException("Dados do rascunho sao obrigatorios",
+                    HttpStatus.UNPROCESSABLE_ENTITY, CODE_INVALIDO);
+        }
+        if (!dados.isObject()) {
+            log.warn("rascunho.salvar negado motivo=DADOS_NAO_OBJETO consultaId={} tipoJson={}",
+                    consultaId, dados.getNodeType());
+            throw new BusinessException("Dados do rascunho devem ser um objeto JSON",
                     HttpStatus.UNPROCESSABLE_ENTITY, CODE_INVALIDO);
         }
         String json;

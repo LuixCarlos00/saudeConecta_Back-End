@@ -305,6 +305,18 @@ class AtendimentoRascunhoServiceTest {
                     .satisfies(t -> assertCodigo(t, HttpStatus.UNPROCESSABLE_ENTITY, "RASCUNHO_INVALIDO"));
         }
 
+        @ParameterizedTest
+        @ValueSource(strings = {"\"texto\"", "[1,2]", "42", "true"})
+        @DisplayName("Dados que não são objeto JSON (string, array, número): 422 RASCUNHO_INVALIDO")
+        void dadosNaoObjeto(String jsonDados) throws Exception {
+            consultaComLock(consultaDe(USUARIO_DONO, StatusConsulta.AGENDADA));
+            var req = new SalvarRascunhoAtendimentoRequest("MEDICO", json(jsonDados), 1, null);
+
+            assertThatThrownBy(() -> service.salvar(CONSULTA, req))
+                    .satisfies(t -> assertCodigo(t, HttpStatus.UNPROCESSABLE_ENTITY, "RASCUNHO_INVALIDO"));
+            verify(rascunhoRepository, never()).saveAndFlush(any());
+        }
+
         @Test
         @DisplayName("Tempo negativo: 422 RASCUNHO_INVALIDO")
         void tempoNegativo() throws Exception {
@@ -393,7 +405,7 @@ class AtendimentoRascunhoServiceTest {
         @Test
         @DisplayName("Idempotente: apaga quando existe e não falha quando não existe")
         void idempotente() {
-            when(consultaRepository.findByIdAndOrganizacao_Id(CONSULTA, ORG))
+            when(consultaRepository.buscarComLock(CONSULTA, ORG))
                     .thenReturn(Optional.of(consultaDe(USUARIO_DONO, StatusConsulta.AGENDADA)));
             when(rascunhoRepository.apagarPorConsulta(CONSULTA)).thenReturn(1, 0);
 
@@ -406,7 +418,7 @@ class AtendimentoRascunhoServiceTest {
         @Test
         @DisplayName("Consulta de outro profissional: 404 e nada é apagado")
         void outroProfissional() {
-            when(consultaRepository.findByIdAndOrganizacao_Id(CONSULTA, ORG))
+            when(consultaRepository.buscarComLock(CONSULTA, ORG))
                     .thenReturn(Optional.of(consultaDe(OUTRO_USUARIO, StatusConsulta.AGENDADA)));
 
             assertThatThrownBy(() -> service.descartar(CONSULTA)).isInstanceOf(ResourceNotFoundException.class);
