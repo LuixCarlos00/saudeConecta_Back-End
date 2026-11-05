@@ -206,6 +206,48 @@ class PagamentoAssinaturaFluxoE2ETest {
     }
 
     @Test
+    @DisplayName("C1 - Token de clínica SUSPENSA: pacientes, prontuário e rota do profissional devolvem 403 PLANO_SEM_ACESSO")
+    void suspensaSoAcessaRotasDePagamento() throws Exception {
+        AssinaturaTenant suspensa = salvarAssinatura(StatusAssinatura.SUSPENSA, null, null, LocalDate.now().minusDays(20));
+        suspensa.setDataSuspensao(LocalDateTime.now().minusDays(5));
+        assinaturaTenantRepository.save(suspensa);
+        Usuario profissional = usuarioRepository.save(Usuario.builder()
+                .login("e2e-pagamento-prof-" + System.nanoTime())
+                .senha(passwordEncoder.encode(SENHA))
+                .tipoUsuarioNovo(TipoUsuarioNovo.CLINICO)
+                .status(StatusUsuario.ATIVO)
+                .organizacao(organizacao)
+                .build());
+        try {
+            String tokenGestor = login();
+
+            mockMvc.perform(get("/pacientes/buscar-por-nome").param("nome", "Maria").header("Authorization", tokenGestor))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("PLANO_SEM_ACESSO"));
+            mockMvc.perform(get("/prontuario/paciente/1").header("Authorization", tokenGestor))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("PLANO_SEM_ACESSO"));
+
+            String corpo = mockMvc.perform(post("/Home/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"login\":\"" + profissional.getLogin() + "\",\"senha\":\"" + SENHA
+                                    + "\",\"perfil\":\"CLINICO\"}"))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+            String tokenProfissional = "Bearer " + objectMapper.readTree(corpo).get("token").asText();
+
+            mockMvc.perform(get("/consultas/hoje").header("Authorization", tokenProfissional))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("PLANO_SEM_ACESSO"));
+            mockMvc.perform(get("/prontuario/profissional/1").header("Authorization", tokenProfissional))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("PLANO_SEM_ACESSO"));
+        } finally {
+            usuarioRepository.delete(profissional);
+        }
+    }
+
+    @Test
     @DisplayName("C1 - CANCELADA continua sem token no login (403)")
     void canceladaNaoRecebeToken() throws Exception {
         salvarAssinatura(StatusAssinatura.CANCELADA, null, null, LocalDate.now().minusDays(60));
