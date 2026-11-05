@@ -228,6 +228,21 @@ class PagamentoAssinaturaFluxoE2ETest {
         assertThat(antiga.getId()).isLessThan(atual.getId());
     }
 
+    @Test
+    @DisplayName("R6 - SUSPENSA antiga com CANCELADA mais recente: sem vigente e o login é negado (403)")
+    void suspensaAntigaComCanceladaMaisRecenteNaoEhVigente() throws Exception {
+        AssinaturaTenant suspensa = salvarAssinatura(StatusAssinatura.SUSPENSA, null, null, LocalDate.now().minusDays(40));
+        AssinaturaTenant cancelada = salvarAssinatura(StatusAssinatura.CANCELADA, null, null, LocalDate.now().minusDays(10));
+        assertThat(suspensa.getId()).isLessThan(cancelada.getId());
+
+        assertThat(assinaturaTenantRepository.findAssinaturaVigenteByOrganizacaoId(organizacao.getId())).isEmpty();
+        mockMvc.perform(post("/Home/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"login\":\"" + gestor.getLogin() + "\",\"senha\":\"" + SENHA
+                                + "\",\"perfil\":\"GESTOR\"}"))
+                .andExpect(status().isForbidden());
+    }
+
     private static PreapprovalResponse preapproval(String id, String status, String referencia) {
         return new PreapprovalResponse(id, status, "pending".equals(status) ? "https://mp/checkout/" + id : null,
                 PAGADOR, referencia, null, null);

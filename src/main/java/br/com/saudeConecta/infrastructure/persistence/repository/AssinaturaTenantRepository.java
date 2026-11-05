@@ -29,18 +29,18 @@ public interface AssinaturaTenantRepository extends JpaRepository<AssinaturaTena
     Optional<AssinaturaTenant> findAssinaturaAtivaByOrganizacaoId(@Param("orgId") Long orgId);
 
     /**
-     * Busca a assinatura vigente da organização: a mais recente que não está CANCELADA.
-     * Diferente de {@link #findAssinaturaAtivaByOrganizacaoId}, inclui a SUSPENSA, que precisa
-     * enxergar a própria assinatura e gerar o link para voltar a pagar. Com histórico
-     * (cancelou e assinou de novo), a mais recente (maior id) é a que vale.
+     * Busca a assinatura vigente da organização: a mais recente (maior id), desde que não esteja
+     * CANCELADA. Diferente de {@link #findAssinaturaAtivaByOrganizacaoId}, inclui a SUSPENSA, que
+     * precisa enxergar a própria assinatura e gerar o link para voltar a pagar. Com histórico, só
+     * a mais recente vale: se ela foi cancelada, uma SUSPENSA mais antiga não volta a ser vigente.
      *
      * @param orgId ID da organização
-     * @return assinatura TRIAL, ATIVA, INADIMPLENTE ou SUSPENSA mais recente, se houver
+     * @return a assinatura mais recente, se ela for TRIAL, ATIVA, INADIMPLENTE ou SUSPENSA
      */
     @Query("SELECT a FROM AssinaturaTenant a " +
            "JOIN FETCH a.planoAssinatura " +
-           "WHERE a.id = (SELECT MAX(v.id) FROM AssinaturaTenant v " +
-           "              WHERE v.organizacao.id = :orgId AND v.status <> 'CANCELADA')")
+           "WHERE a.id = (SELECT MAX(v.id) FROM AssinaturaTenant v WHERE v.organizacao.id = :orgId) " +
+           "AND a.status <> 'CANCELADA'")
     Optional<AssinaturaTenant> findAssinaturaVigenteByOrganizacaoId(@Param("orgId") Long orgId);
 
 
