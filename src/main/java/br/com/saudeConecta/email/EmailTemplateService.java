@@ -28,7 +28,7 @@ public class EmailTemplateService {
      * @return HTML renderizado como String
      */
     public String renderizar(String nomeTemplate, Map<String, Object> variaveis) {
-        log.debug("Renderizando template: {}", nomeTemplate);
+        log.debug("email.template renderizar template={}", nomeTemplate);
         Context contexto = new Context(Locale.getDefault(), variaveis);
         return templateEngine.process(nomeTemplate, contexto);
     }

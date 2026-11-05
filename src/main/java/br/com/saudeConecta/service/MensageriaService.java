@@ -67,7 +67,7 @@ public class MensageriaService {
     public Page<MensageriaResponse> listarMensagens(StatusMensagem status, TipoMensagem tipo, Pageable pageable) {
         Long orgId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
         if (orgId == null) {
-            log.info("SUPER_ADMIN: listando mensagens globais");
+            log.debug("mensageria.listar escopo=SUPER_ADMIN");
             return mensageriaRepository
                     .findAllWithFilters(status, tipo, pageable)
                     .map(MensageriaResponse::fromEntity);
@@ -87,7 +87,7 @@ public class MensageriaService {
     public List<MensageriaResponse> listarFalhasPendentesNotificacao() {
         Long orgId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
         if (orgId == null) {
-            log.info("SUPER_ADMIN: listando falhas pendentes globais");
+            log.debug("mensageria.falhas buscar escopo=SUPER_ADMIN");
             return mensageriaRepository
                     .findByAdminNotificadoFalseAndStatus(StatusMensagem.FALHOU)
                     .stream()
@@ -121,7 +121,7 @@ public class MensageriaService {
         mensageria.setAdminNotificado(true);
         mensageria.setStatus(StatusMensagem.RENOTIFICADO);
         mensageriaRepository.save(mensageria);
-        log.info("Mensagem {} marcada como notificada ao admin.", mensageriaId);
+        log.info("mensageria.notificar ok mensageriaId={}", mensageriaId);
     }
 
     /**
@@ -182,7 +182,7 @@ public class MensageriaService {
         // Buscar email atualizado da entidade de domínio
         String emailAtualizado = obterEmailAtualizadoDoDominio(mensageria);
         
-        log.info("Reenviando mensagem ID: {} para email atualizado: {}", mensageriaId, MascaraLog.email(emailAtualizado));
+        log.info("mensageria.reenviar inicio mensageriaId={} email={}", mensageriaId, MascaraLog.email(emailAtualizado));
 
         mensageria.setStatus(StatusMensagem.PENDENTE);
         mensageria.setErroDetalhe(null);
@@ -195,7 +195,7 @@ public class MensageriaService {
                 mensageria.getCorpoMensagem()
         );
 
-        log.info("Reenvio delegado ao EmailNotificacaoService. Mensagem ID: {}", mensageriaId);
+        log.debug("mensageria.reenviar delegado mensageriaId={}", mensageriaId);
     }
 
     /**
@@ -243,8 +243,8 @@ public class MensageriaService {
         }
 
         // Fallback: usar email armazenado na mensageria para outros tipos
-        log.warn("Nao foi possivel buscar email do dominio para mensagem ID: {}. Usando email armazenado.", 
-                 mensageria.getId());
+        log.warn("mensageria.reenviar ignorado motivo=EMAIL_DOMINIO_INDISPONIVEL mensageriaId={} acao=USA_EMAIL_ARMAZENADO",
+                mensageria.getId());
         return mensageria.getDestinatarioEmail();
     }
 

@@ -36,7 +36,7 @@ public class EmailRemetenteService {
      * @throws MessagingException se ocorrer erro no envio SMTP
      */
     public void enviarHtml(String destinatario, String assunto, String corpoHtml) throws MessagingException {
-        log.info("Enviando email HTML para: {}", MascaraLog.email(destinatario));
+        log.debug("email.enviar inicio email={}", MascaraLog.email(destinatario));
         MimeMessage mensagem = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mensagem, "UTF-8");
         helper.setFrom(remetenteEmail);
@@ -44,6 +44,6 @@ public class EmailRemetenteService {
         helper.setSubject(assunto);
         helper.setText(corpoHtml, true);
         mailSender.send(mensagem);
-        log.info("Email HTML enviado com sucesso para: {}", MascaraLog.email(destinatario));
+        log.info("email.enviar ok email={}", MascaraLog.email(destinatario));
     }
 }

@@ -1,5 +1,6 @@
 package br.com.saudeConecta.email;
 
+import br.com.saudeConecta.util.MascaraLog;
 import br.com.saudeConecta.domain.mensageria.Mensageria;
 import br.com.saudeConecta.domain.mensageria.StatusMensagem;
 import br.com.saudeConecta.domain.mensageria.TipoMensagem;
@@ -39,7 +40,7 @@ public class EmailMensageriaService {
                                   String nome, String assunto, String corpo,
                                   TipoMensagem tipo, int tentativas) {
         if (organizacaoId == null) {
-            log.debug("Sucesso de email não registrado: organizacaoId nulo para {}", email);
+            log.debug("email.mensageria sucesso.registrar ignorado motivo=SEM_ORGANIZACAO email={}", MascaraLog.email(email));
             return;
         }
 
@@ -61,9 +62,9 @@ public class EmailMensageriaService {
                     .build();
 
             mensageriaRepository.save(mensageria);
-            log.info("Sucesso registrado na mensageria para: {} [{}]", email, tipo);
+            log.info("email.mensageria sucesso.registrar ok email={} tipo={}", MascaraLog.email(email), tipo);
         } catch (Exception ex) {
-            log.error("Erro ao registrar sucesso na mensageria para {}: {}", email, ex.getMessage(), ex);
+            log.error("email.mensageria sucesso.registrar falha email={}", MascaraLog.email(email), ex);
         }
     }
 
@@ -84,7 +85,7 @@ public class EmailMensageriaService {
                                 String nome, String assunto, String corpo,
                                 TipoMensagem tipo, String erroDetalhe, int tentativas) {
         if (organizacaoId == null) {
-            log.warn("Falha de email não registrada: organizacaoId nulo para {}", email);
+            log.warn("email.mensageria falha.registrar negado motivo=SEM_ORGANIZACAO email={}", MascaraLog.email(email));
             return;
         }
 
@@ -107,9 +108,9 @@ public class EmailMensageriaService {
                     .build();
 
             mensageriaRepository.save(mensageria);
-            log.info("Falha registrada na mensageria para: {} [{}]", email, tipo);
+            log.info("email.mensageria falha.registrar ok email={} tipo={}", MascaraLog.email(email), tipo);
         } catch (Exception ex) {
-            log.error("Erro CRÍTICO ao registrar falha na mensageria para {}: {}", email, ex.getMessage(), ex);
+            log.error("email.mensageria falha.registrar falha email={} tipo={} acao=REGISTRO_PERDIDO", MascaraLog.email(email), tipo, ex);
         }
     }
 
@@ -129,9 +130,9 @@ public class EmailMensageriaService {
             mensageria.setTentativas(tentativas);
             mensageria.setErroDetalhe(null);
             mensageriaRepository.save(mensageria);
-            log.info("Reenvio registrado com sucesso na mensageria ID: {}", mensageriaId);
+            log.info("email.mensageria reenvio.sucesso ok mensageriaId={}", mensageriaId);
         } catch (Exception ex) {
-            log.error("Erro ao atualizar sucesso na mensageria ID {}: {}", mensageriaId, ex.getMessage(), ex);
+            log.error("email.mensageria reenvio.sucesso falha mensageriaId={} acao=REGISTRO_NAO_ATUALIZADO", mensageriaId, ex);
         }
     }
 
@@ -152,9 +153,9 @@ public class EmailMensageriaService {
             mensageria.setErroDetalhe(erroDetalhe);
             mensageria.setTentativas(tentativas);
             mensageriaRepository.save(mensageria);
-            log.info("Falha de reenvio registrada na mensageria ID: {}", mensageriaId);
+            log.info("email.mensageria reenvio.falha ok mensageriaId={}", mensageriaId);
         } catch (Exception ex) {
-            log.error("Erro CRÍTICO ao atualizar falha na mensageria ID {}: {}", mensageriaId, ex.getMessage(), ex);
+            log.error("email.mensageria reenvio.falha falha mensageriaId={} acao=REGISTRO_NAO_ATUALIZADO", mensageriaId, ex);
         }
     }
 
