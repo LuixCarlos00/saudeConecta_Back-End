@@ -141,6 +141,19 @@ O lock segura a linha durante as chamadas HTTP ao MP; o tempo é limitado por
 única linha de `assinatura_tenant`, como a régua, então não há ordem de locks que
 possa formar deadlock entre elas.
 
+### Dia âncora do ciclo (`dia_cobranca`)
+
+O dia âncora é fixado no primeiro pagamento aprovado e preserva o dia nos meses curtos.
+Quando um preapproval novo é vinculado (link novo), `dia_cobranca` volta a `NULL`: o MP
+cobra o preapproval novo a partir do dia em que o cartão foi cadastrado, então o próximo
+pagamento aprovado define a âncora nova (ex.: âncora 5, link novo pago no dia 22 → âncora 22).
+
+O `next_payment_date` do MP **não** é usado para recalcular o vencimento depois de cada
+fatura paga: exigiria um GET extra dentro da transação do webhook, o campo vem com fuso
+do MP (a conversão está pendente) e, durante as novas tentativas de uma fatura recusada,
+ele aponta para a próxima tentativa e não para o próximo ciclo. Ele só é usado ao remover
+a cortesia de quem já tem cartão autorizado.
+
 ## 8. Rotinas automáticas (`CobrancaScheduler`)
 
 | Cron | Ação |

@@ -112,7 +112,10 @@ public class AssinaturaTenant implements Serializable {
     @Column(name = "data_suspensao")
     private LocalDateTime dataSuspensao;
 
-    /** Dia do mês do ciclo de cobrança, fixado no primeiro pagamento (1 a 31). */
+    /**
+     * Dia do mês do ciclo de cobrança (1 a 31), fixado no primeiro pagamento aprovado de cada
+     * preapproval: volta a null quando um preapproval novo é vinculado.
+     */
     @Column(name = "dia_cobranca")
     private Integer diaCobranca;
 
@@ -183,6 +186,8 @@ public class AssinaturaTenant implements Serializable {
     /**
      * Vincula um preapproval novo no lugar do atual. O atual (se houver) fica em
      * {@code mpPreapprovalSubstituidoId}, para ser cancelado no MP depois do commit.
+     * O dia âncora é zerado: o MP cobra o preapproval novo a partir do dia em que o cartão
+     * for cadastrado, então o próximo pagamento aprovado define a âncora nova.
      *
      * @param preapprovalId id do preapproval novo
      * @param mpStatus      status do preapproval novo no MP
@@ -197,6 +202,7 @@ public class AssinaturaTenant implements Serializable {
         this.mpStatus = mpStatus;
         mpInitPoint = initPoint;
         mpPayerEmail = payerEmail;
+        diaCobranca = null;
     }
 
     /**

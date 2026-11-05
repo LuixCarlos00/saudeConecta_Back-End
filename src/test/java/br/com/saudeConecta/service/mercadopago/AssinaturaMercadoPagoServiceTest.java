@@ -375,6 +375,7 @@ class AssinaturaMercadoPagoServiceTest {
     void gerarLinkCriaNovoAntesDeCancelarAntigo() {
         assinatura.setMpPreapprovalId("pa-antigo");
         assinatura.setMpStatus("paused");
+        assinatura.setDiaCobranca(5);
         when(mercadoPagoClient.buscarPreapproval("pa-antigo")).thenReturn(
                 new PreapprovalResponse("pa-antigo", "paused", null, EMAIL_ADMIN, null, null, null));
         when(mercadoPagoClient.cancelarPreapproval("pa-antigo")).thenReturn(
@@ -394,6 +395,8 @@ class AssinaturaMercadoPagoServiceTest {
         assertThat(link.initPoint()).isEqualTo(INIT_POINT);
         assertThat(assinatura.getMpPreapprovalId()).isEqualTo(PREAPPROVAL_ID);
         assertThat(assinatura.getMpPreapprovalSubstituidoId()).isNull();
+        // A1: o próximo pagamento aprovado do preapproval novo define a âncora
+        assertThat(assinatura.getDiaCobranca()).isNull();
     }
 
     @Test

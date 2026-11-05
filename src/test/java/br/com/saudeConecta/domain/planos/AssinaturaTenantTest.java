@@ -74,4 +74,44 @@ class AssinaturaTenantTest {
 
         assertThat(assinatura.getDataVencimento()).isEqualTo(LocalDate.of(2027, 7, 15));
     }
+
+    @Test
+    @DisplayName("A1 - Âncora no dia 5; link novo (preapproval trocado) pago no dia 22: a âncora vira 22")
+    void preapprovalNovoRedefineDiaAncora() {
+        AssinaturaTenant assinatura = assinaturaVencendoEm(LocalDate.of(2027, 4, 5));
+        assinatura.setStatus(StatusAssinatura.SUSPENSA);
+        assinatura.setDiaCobranca(5);
+        assinatura.setMpPreapprovalId("pa-antigo");
+        assinatura.setMpStatus("paused");
+
+        assinatura.vincularNovoPreapproval("pa-novo", "pending", "https://mp/checkout", "p@x.com");
+        assertThat(assinatura.getDiaCobranca()).isNull();
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isEqualTo("pa-antigo");
+
+        assinatura.renovarCiclo(LocalDate.of(2027, 4, 22));
+
+        assertThat(assinatura.getDiaCobranca()).isEqualTo(22);
+        assertThat(assinatura.getDataVencimento()).isEqualTo(LocalDate.of(2027, 5, 22));
+
+        assinatura.renovarCiclo(LocalDate.of(2027, 5, 22));
+        assertThat(assinatura.getDataVencimento()).isEqualTo(LocalDate.of(2027, 6, 22));
+    }
+
+    @Test
+    @DisplayName("A1 - Desvincular guarda o atual como substituído e limpa o vínculo; sem preapproval não faz nada")
+    void desvincularGuardaSubstituido() {
+        AssinaturaTenant assinatura = assinaturaVencendoEm(LocalDate.of(2027, 4, 5));
+        assinatura.desvincularPreapproval();
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isNull();
+
+        assinatura.setMpPreapprovalId("pa-1");
+        assinatura.setMpStatus("pending");
+        assinatura.setMpInitPoint("https://mp/checkout");
+        assinatura.desvincularPreapproval();
+
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isEqualTo("pa-1");
+        assertThat(assinatura.temPreapproval()).isFalse();
+        assertThat(assinatura.getMpStatus()).isNull();
+        assertThat(assinatura.getMpInitPoint()).isNull();
+    }
 }
