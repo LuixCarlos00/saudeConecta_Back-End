@@ -50,6 +50,7 @@ class AssinaturaMercadoPagoServiceTest {
     @Mock private MercadoPagoClient mercadoPagoClient;
     @Mock private EmailNotificacaoService emailNotificacaoService;
     @Mock private PlatformTransactionManager transactionManager;
+    @Mock private MercadoPagoWebhookService webhookService;
 
     private MercadoPagoProperties properties;
     private AssinaturaMercadoPagoService service;
@@ -63,7 +64,7 @@ class AssinaturaMercadoPagoServiceTest {
 
         service = new AssinaturaMercadoPagoService(assinaturaTenantRepository,
                 adminOrganizacaoRepository, mercadoPagoClient, properties, emailNotificacaoService,
-                transactionManager);
+                transactionManager, webhookService);
 
         Organizacao org = new Organizacao();
         org.setId(ORG_ID);
@@ -521,5 +522,49 @@ class AssinaturaMercadoPagoServiceTest {
 
         assertThatThrownBy(() -> service.gerarLinkPagamento(assinatura))
                 .isInstanceOf(IllegalStateException.class).hasMessage("banco caiu");
+    }
+
+    @Test
+    @DisplayName("M2 - Fatura aprovada do preapproval atual recuperada: 409 PAGAMENTO_JA_RECEBIDO e nenhum link novo")
+    void pagamentoRecuperadoRecusaLinkNovo() {
+        assinatura.setStatus(StatusAssinatura.SUSPENSA);
+        assinatura.setMpPreapprovalId("pa-antigo");
+        assinatura.setMpStatus("paused");
+        when(webhookService.recuperarFaturasAprovadas("pa-antigo")).thenReturn(1);
+
+        assertThatThrownBy(() -> service.gerarLinkPagamento(ORG_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> {
+                    BusinessException be = (BusinessException) e;
+                    assertThat(be.getStatus()).isEqualTo(org.springframework.http.HttpStatus.CONFLICT);
+                    assertThat(be.getErrorCode()).isEqualTo("PAGAMENTO_JA_RECEBIDO");
+                });
+
+        verify(mercadoPagoClient, never()).criarPreapprovalPendente(any(), any(), any(), any());
+        verify(mercadoPagoClient, never()).cancelarPreapproval(any());
+        assertThat(assinatura.getMpPreapprovalId()).isEqualTo("pa-antigo");
+    }
+
+    @Test
+    @DisplayName("M2 - Sem fatura a recuperar o link novo é gerado; sem preapproval não consulta faturas")
+    void semPagamentoRecuperadoSegueComLinkNovo() {
+        when(mercadoPagoClient.criarPreapprovalPendente(any(), any(), any(), any()))
+                .thenReturn(new PreapprovalResponse(PREAPPROVAL_ID, "pending", INIT_POINT,
+                        EMAIL_ADMIN, "ASSINATURA-42", null, null));
+
+        service.gerarLinkPagamento(ORG_ID);
+        verify(webhookService, never()).recuperarFaturasAprovadas(any());
+
+        assinatura.setStatus(StatusAssinatura.SUSPENSA);
+        assinatura.setMpStatus("paused");
+        when(webhookService.recuperarFaturasAprovadas(PREAPPROVAL_ID)).thenReturn(0);
+        when(mercadoPagoClient.criarPreapprovalPendente(any(), any(), any(), any()))
+                .thenReturn(new PreapprovalResponse("pa-novo", "pending", INIT_POINT,
+                        EMAIL_ADMIN, "ASSINATURA-42", null, null));
+
+        service.gerarLinkPagamento(ORG_ID);
+
+        verify(webhookService).recuperarFaturasAprovadas(PREAPPROVAL_ID);
+        assertThat(assinatura.getMpPreapprovalId()).isEqualTo("pa-novo");
     }
 }

@@ -48,6 +48,16 @@ class AssinaturaTenantServiceTest {
     void criarService() {
         service = new AssinaturaTenantService(assinaturaTenantRepository, organizacaoRepository,
                 planoAssinaturaService, assinaturaMercadoPagoService, Clock.system(FusoHorarioConfig.ZONA));
+        // Sem transação no teste unitário: a ação "após o commit" roda na hora e, como no serviço
+        // real, a falha dela é só registrada
+        lenient().doAnswer(inv -> {
+            try {
+                inv.<Runnable>getArgument(2).run();
+            } catch (RuntimeException ignorada) {
+                // o executarAposCommit real só registra a falha
+            }
+            return null;
+        }).when(assinaturaMercadoPagoService).executarAposCommit(any(), any(), any());
     }
 
     // ========== Helpers ==========

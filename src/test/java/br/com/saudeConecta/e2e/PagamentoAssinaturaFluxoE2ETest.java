@@ -346,6 +346,28 @@ class PagamentoAssinaturaFluxoE2ETest {
         assertThat(recarregar(trial).getMpPreapprovalId()).isEqualTo("pa-m1");
     }
 
+    @Test
+    @DisplayName("M2 - Pagar com fatura aprovada sem webhook: 409 PAGAMENTO_JA_RECEBIDO, assinatura renovada e nenhum link novo")
+    void pagamentoJaRecebidoNaoGeraLinkNovo() throws Exception {
+        AssinaturaTenant inadimplente = salvarAssinatura(StatusAssinatura.INADIMPLENTE, "pa-m2", "authorized",
+                LocalDate.now().minusDays(8));
+        when(mercadoPagoClient.buscarAuthorizedPaymentsDoPreapproval("pa-m2"))
+                .thenReturn(java.util.List.of(faturaAprovada("fat-m2", "pa-m2")));
+        when(mercadoPagoClient.buscarAuthorizedPayment("fat-m2")).thenReturn(faturaAprovada("fat-m2", "pa-m2"));
+        String token = login();
+
+        mockMvc.perform(post("/assinaturas/minha-assinatura/gerar-link-pagamento").header("Authorization", token))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PAGAMENTO_JA_RECEBIDO"));
+
+        AssinaturaTenant depois = recarregar(inadimplente);
+        assertThat(depois.getStatus()).isEqualTo(StatusAssinatura.ATIVA);
+        assertThat(depois.getDataVencimento()).isAfter(LocalDate.now());
+        assertThat(depois.getMpPreapprovalId()).isEqualTo("pa-m2");
+        verify(mercadoPagoClient, never()).criarPreapprovalPendente(anyString(), anyString(), anyString(), any());
+        verify(mercadoPagoClient, never()).cancelarPreapproval(anyString());
+    }
+
     private void gerarLink(AssinaturaTenant assinatura) {
         assinaturaMercadoPagoService.gerarLinkPagamento(organizacao.getId());
     }

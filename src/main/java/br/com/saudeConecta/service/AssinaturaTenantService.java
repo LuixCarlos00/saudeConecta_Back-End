@@ -16,8 +16,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -465,24 +463,8 @@ public class AssinaturaTenantService {
      * desfaz a remoção da cortesia (a rotina diária de links de trial tenta de novo).
      */
     private void enviarLinkDePagamentoAposCommit(Long assinaturaId) {
-        Runnable envio = () -> {
-            try {
-                assinaturaMercadoPagoService.gerarLinkENotificar(assinaturaId);
-            } catch (Exception e) {
-                log.error("assinatura.cortesia.link falha assinaturaId={}", assinaturaId, e);
-            }
-        };
-
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    envio.run();
-                }
-            });
-        } else {
-            envio.run();
-        }
+        assinaturaMercadoPagoService.executarAposCommit("assinatura.cortesia.link", assinaturaId,
+                () -> assinaturaMercadoPagoService.gerarLinkENotificar(assinaturaId));
     }
 
     /**

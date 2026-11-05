@@ -12,11 +12,14 @@ import br.com.saudeConecta.presentation.dto.planos.LinkPagamentoResponse;
 import br.com.saudeConecta.service.mercadopago.dto.PreapprovalResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
@@ -33,6 +36,8 @@ public class AssinaturaMercadoPagoService {
 
     private static final Logger log = LoggerFactory.getLogger(AssinaturaMercadoPagoService.class);
     private static final String PREFIXO_EXTERNAL_REFERENCE = "ASSINATURA-";
+    /** Código do erro 409 quando a recuperação de faturas mostra que o cliente já pagou. */
+    public static final String CODIGO_PAGAMENTO_JA_RECEBIDO = "PAGAMENTO_JA_RECEBIDO";
 
     private final AssinaturaTenantRepository assinaturaTenantRepository;
     private final AdminOrganizacaoRepository adminOrganizacaoRepository;
@@ -41,6 +46,10 @@ public class AssinaturaMercadoPagoService {
     private final EmailNotificacaoService emailNotificacaoService;
     /** Transação própria das fases da troca de preapproval (commit independente do chamador). */
     private final TransactionTemplate transacaoNova;
+    /** Suspende a transação corrente (usado no afterCommit). */
+    private final TransactionTemplate semTransacao;
+    /** Recuperação de faturas aprovadas; @Lazy porque o webhook também depende deste serviço. */
+    private final MercadoPagoWebhookService webhookService;
 
     public AssinaturaMercadoPagoService(
             AssinaturaTenantRepository assinaturaTenantRepository,
@@ -48,9 +57,13 @@ public class AssinaturaMercadoPagoService {
             MercadoPagoClient mercadoPagoClient,
             MercadoPagoProperties properties,
             EmailNotificacaoService emailNotificacaoService,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager,
+            @Lazy MercadoPagoWebhookService webhookService) {
         this.transacaoNova = new TransactionTemplate(transactionManager);
         this.transacaoNova.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        this.semTransacao = new TransactionTemplate(transactionManager);
+        this.semTransacao.setPropagationBehavior(TransactionDefinition.PROPAGATION_NOT_SUPPORTED);
+        this.webhookService = webhookService;
         this.assinaturaTenantRepository = assinaturaTenantRepository;
         this.adminOrganizacaoRepository = adminOrganizacaoRepository;
         this.mercadoPagoClient = mercadoPagoClient;
@@ -108,6 +121,9 @@ public class AssinaturaMercadoPagoService {
         }
 
         Long assinaturaId = assinatura.getId();
+        if (assinatura.temPreapproval()) {
+            recusarSeJaPagou(assinatura);
+        }
         AtomicReference<String> criadoNoMp = new AtomicReference<>();
         LinkPagamentoResponse link;
         try {
@@ -118,6 +134,55 @@ public class AssinaturaMercadoPagoService {
         }
         cancelarPreapprovalSubstituido(assinaturaId);
         return link;
+    }
+
+    /**
+     * Antes de abandonar o preapproval atual, registra as faturas dele aprovadas no MP cujo
+     * webhook se perdeu. Se alguma renovou a assinatura, o cliente já pagou: gerar outro link
+     * abriria caminho para uma segunda cobrança do mesmo ciclo.
+     *
+     * @throws BusinessException 409 {@code PAGAMENTO_JA_RECEBIDO} quando houve pagamento recuperado
+     */
+    private void recusarSeJaPagou(AssinaturaTenant assinatura) {
+        int recuperadas = webhookService.recuperarFaturasAprovadas(assinatura.getMpPreapprovalId());
+        if (recuperadas > 0) {
+            log.warn("mp.preapproval.criar negado motivo=PAGAMENTO_JA_RECEBIDO assinaturaId={} preapprovalId={} recuperadas={}",
+                    assinatura.getId(), assinatura.getMpPreapprovalId(), recuperadas);
+            throw new BusinessException(
+                    "O pagamento desta assinatura já foi recebido e a assinatura foi renovada. Atualize a página.",
+                    HttpStatus.CONFLICT, CODIGO_PAGAMENTO_JA_RECEBIDO);
+        }
+    }
+
+    /**
+     * Roda a ação depois do commit da transação corrente (ou na hora, se não houver
+     * transação), suspendendo a transação que acabou de fazer commit: dentro do
+     * {@code afterCommit} o Spring ainda a mantém associada à thread e uma escrita com
+     * REQUIRED entraria nela e seria perdida. Falhas são registradas e não sobem: o
+     * commit já aconteceu.
+     *
+     * @param evento       nome do evento de log da operação chamadora
+     * @param assinaturaId ID da assinatura (para o log)
+     * @param acao         o que fazer depois do commit
+     */
+    public void executarAposCommit(String evento, Long assinaturaId, Runnable acao) {
+        Runnable protegida = () -> {
+            try {
+                semTransacao.executeWithoutResult(status -> acao.run());
+            } catch (RuntimeException e) {
+                log.error("{} falha etapa=APOS_COMMIT assinaturaId={}", evento, assinaturaId, e);
+            }
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    protegida.run();
+                }
+            });
+        } else {
+            protegida.run();
+        }
     }
 
     /**
