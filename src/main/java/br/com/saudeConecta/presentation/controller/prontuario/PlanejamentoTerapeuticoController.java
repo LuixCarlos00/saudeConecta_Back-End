@@ -1,16 +1,13 @@
 package br.com.saudeConecta.presentation.controller.prontuario;
 
 import br.com.saudeConecta.application.prontuario.PlanejamentoTerapeuticoService;
-import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Controller para gerenciar planejamento terapêutico do prontuário odontológico.
@@ -51,19 +48,5 @@ public class PlanejamentoTerapeuticoController {
         response.put("token", token);
 
         return ResponseEntity.ok(response);
-    }
-
-    private List<Map<String, Object>> converterParaResponse(List<PlanejamentoTerapeutico> lista) {
-        return lista.stream().map(p -> {
-            Map<String, Object> item = new HashMap<>();
-            item.put("id", p.getId());
-            item.put("dataProcedimento", p.getDataProcedimento());
-            item.put("procedimentoRealizado", p.getProcedimentoRealizado());
-            item.put("valor", p.getValor());
-            item.put("statusAssinatura", p.getStatusAssinatura());
-            item.put("dataAssinatura", p.getDataAssinatura());
-            item.put("assinaturaBase64", p.getAssinaturaBase64());
-            return item;
-        }).collect(Collectors.toList());
     }
 }

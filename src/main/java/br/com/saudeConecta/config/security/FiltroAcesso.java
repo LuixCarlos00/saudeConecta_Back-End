@@ -14,11 +14,11 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.MDC;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -29,6 +29,7 @@ import java.util.List;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class FiltroAcesso extends OncePerRequestFilter {
 
     /** Serializa o ErrorResponse igual ao Jackson do Spring (datas ISO, sem nulos). */
@@ -47,14 +48,9 @@ public class FiltroAcesso extends OncePerRequestFilter {
             "/cobrancas/pendente-atual"
     );
 
-    @Autowired
-    private TokenService tokenService;
-
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-
-    @Autowired
-    private AcessoAssinaturaService acessoAssinaturaService;
+    private final TokenService tokenService;
+    private final UsuarioRepository usuarioRepository;
+    private final AcessoAssinaturaService acessoAssinaturaService;
 
     /**
      * Autentica a requisição pelo JWT e revalida, a cada chamada, o que pode ter mudado depois

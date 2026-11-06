@@ -26,7 +26,7 @@ public class SecretariaController {
     @PostMapping("/cadastrarSecretariaByOrg")
     @PreAuthorize("hasRole('ADMIN')")
     @Description("Cadastra nova secretária. Utilizado em: CadastroSecretariaComponent")
-    public ResponseEntity<?> cadastrarSecretariaByOrg(@RequestBody @Valid CadastrarSecretariaRequest request) {
+    public ResponseEntity<SecretariaResponse> cadastrarSecretariaByOrg(@RequestBody @Valid CadastrarSecretariaRequest request) {
         Secretaria secretaria = secretariaService.cadastrarSecretariaByOrg(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(SecretariaResponse.fromEntity(secretaria));
@@ -58,7 +58,7 @@ public class SecretariaController {
     @DeleteMapping("/deletarSecretariaIdByOrg/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     @Description("Deleta secretária por ID")
-    public ResponseEntity<?> deletarSecretariaIdByOrg(@PathVariable Long id) {
+    public ResponseEntity<Void> deletarSecretariaIdByOrg(@PathVariable Long id) {
         try {
             secretariaService.deletarSecretariaIdByOrg(id);
             return ResponseEntity.ok().build();

@@ -25,6 +25,8 @@ import java.util.Map;
 @Description("Endpoints para autenticação principal do sistema")
 public class HomeController {
 
+    private static final String CHAVE_MENSAGEM = "message";
+
     private final AutenticacaoService autenticacaoService;
 
     /** Mesma resposta para e-mail cadastrado ou não: impede descobrir quais e-mails existem. */
@@ -41,7 +43,7 @@ public class HomeController {
      */
     @PostMapping("/login")
     @Description("Realiza autenticação do usuário e retorna token JWT. Utilizado em: LoginComponent, AuthService")
-    public ResponseEntity<?> autenticar(@RequestBody @NotNull DadosLoginUsuario dados, HttpServletRequest request) {
+    public ResponseEntity<Object> autenticar(@RequestBody @NotNull DadosLoginUsuario dados, HttpServletRequest request) {
         ResultadoLogin resultado = autenticacaoService.autenticar(dados, request.getRemoteAddr());
         if (resultado.isAutenticado()) {
             return ResponseEntity.ok(new DadosTokenJWT(resultado.token()));
@@ -49,7 +51,7 @@ public class HomeController {
         HttpStatus status = resultado.recusa() == ResultadoLogin.Recusa.TIPO_INVALIDO
                 ? HttpStatus.BAD_REQUEST
                 : HttpStatus.FORBIDDEN;
-        return ResponseEntity.status(status).body(Map.of("message", resultado.mensagem()));
+        return ResponseEntity.status(status).body(Map.of(CHAVE_MENSAGEM, resultado.mensagem()));
     }
 
     /**
@@ -61,13 +63,13 @@ public class HomeController {
      */
     @PostMapping("/esqueciMinhaSenha")
     @Description("Recupera senha do usuário enviando nova senha por email")
-    public ResponseEntity<?> esqueciMinhaSenha(@RequestBody Map<String, String> dados) {
+    public ResponseEntity<Map<String, String>> esqueciMinhaSenha(@RequestBody Map<String, String> dados) {
         String email = dados.get("email");
         if (email == null || email.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Informe o e-mail"));
+            return ResponseEntity.badRequest().body(Map.of(CHAVE_MENSAGEM, "Informe o e-mail"));
         }
 
         autenticacaoService.solicitarRecuperacaoSenha(email);
-        return ResponseEntity.ok(Map.of("message", MENSAGEM_RECUPERACAO_GENERICA));
+        return ResponseEntity.ok(Map.of(CHAVE_MENSAGEM, MENSAGEM_RECUPERACAO_GENERICA));
     }
 }

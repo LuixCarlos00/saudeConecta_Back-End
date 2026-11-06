@@ -104,7 +104,7 @@ public class ConsultaController {
      * @return 204 No Content em caso de sucesso, 404 se não encontrada, 409 se possuir prontuário
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deletarConsulta(@PathVariable Long id) {
+    public ResponseEntity<Void> deletarConsulta(@PathVariable Long id) {
         // Exclusão bloqueada (IllegalStateException) vira 409 com mensagem no GlobalExceptionHandler
         try {
             consultaAgendamentoService.deletarConsulta(id);

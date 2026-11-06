@@ -83,7 +83,7 @@ public class MensageriaController {
      * @return Resposta sem conteúdo em caso de sucesso
      */
     @PostMapping("/{id}/reenviar")
-    public ResponseEntity<?> reenviarMensagem(@PathVariable Long id) {
+    public ResponseEntity<Void> reenviarMensagem(@PathVariable Long id) {
         // Regra de negócio (IllegalStateException) sobe para o handler global e vira 409
         try {
             mensageriaService.reenviarMensagem(id);
