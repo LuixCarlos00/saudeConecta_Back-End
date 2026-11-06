@@ -1,7 +1,7 @@
 package br.com.saudeConecta.domain.planos;
 
 import br.com.saudeConecta.domain.organizacao.Organizacao;
-import br.com.saudeConecta.service.AssinaturaTenantCacheListener;
+import br.com.saudeConecta.infrastructure.persistence.listener.AssinaturaTenantCacheListener;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;

@@ -1,14 +1,14 @@
 package br.com.saudeConecta.integration;
 
-import br.com.saudeConecta.infra.exceptions.BusinessException;
-import br.com.saudeConecta.presentation.dto.planos.AssinaturaPlataformaResponse;
-import br.com.saudeConecta.presentation.dto.planos.PendenciaManualResponse;
-import br.com.saudeConecta.service.AssinaturaTenantService;
-import br.com.saudeConecta.service.CobrancaService;
-import br.com.saudeConecta.service.LimitePlanoService;
-import br.com.saudeConecta.service.PendenciaManualService;
-import br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService;
-import br.com.saudeConecta.service.mercadopago.LinkPagamentoAssinaturaService;
+import br.com.saudeConecta.application.assinatura.AssinaturaMercadoPagoService;
+import br.com.saudeConecta.application.assinatura.AssinaturaTenantService;
+import br.com.saudeConecta.application.assinatura.LimitePlanoService;
+import br.com.saudeConecta.application.assinatura.LinkPagamentoAssinaturaService;
+import br.com.saudeConecta.application.assinatura.PendenciaManualService;
+import br.com.saudeConecta.application.assinatura.dto.AssinaturaPlataformaResponse;
+import br.com.saudeConecta.application.assinatura.dto.PendenciaManualResponse;
+import br.com.saudeConecta.application.cobranca.CobrancaService;
+import br.com.saudeConecta.application.exception.BusinessException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

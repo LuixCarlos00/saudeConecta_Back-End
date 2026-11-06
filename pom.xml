@@ -141,44 +141,57 @@
 				<configuration>
 					<excludes>
 						<!-- DTOs (records sem lógica) -->
-						<exclude>br/com/saudeConecta/presentation/dto/**/*</exclude>
+						<exclude>br/com/saudeConecta/application/*/dto/**/*</exclude>
 						<!-- Domain entities, enums e converters -->
 						<exclude>br/com/saudeConecta/domain/**/*</exclude>
 						<!-- Configurações Spring -->
-						<exclude>br/com/saudeConecta/config/**/*</exclude>
+						<!-- config/ é excluído por subpacote: MascaraLog e InputSanitizer têm lógica e teste, e são medidos -->
+						<!-- raiz de config/ classe a classe: "config/*" no agente vira "config.*" e pegaria os subpacotes -->
+						<exclude>br/com/saudeConecta/config/AsyncConfig*</exclude>
+						<exclude>br/com/saudeConecta/config/CacheConfig*</exclude>
+						<exclude>br/com/saudeConecta/config/FusoHorarioConfig*</exclude>
+						<exclude>br/com/saudeConecta/config/RestTemplateConfig*</exclude>
+						<exclude>br/com/saudeConecta/config/security/**/*</exclude>
+						<exclude>br/com/saudeConecta/config/tenant/**/*</exclude>
+						<exclude>br/com/saudeConecta/config/logging/CorrelationIdFilter*</exclude>
+						<exclude>br/com/saudeConecta/config/logging/MdcChaves*</exclude>
+						<exclude>br/com/saudeConecta/config/logging/MdcTaskDecorator*</exclude>
+						<exclude>br/com/saudeConecta/config/logging/ScheduledMdcAspect*</exclude>
+						<exclude>br/com/saudeConecta/config/web/RateLimiter*</exclude>
+						<exclude>br/com/saudeConecta/config/web/LimiteCorpoRascunhoFilter*</exclude>
+						<exclude>br/com/saudeConecta/config/web/SafeInput*</exclude>
 						<!-- Infraestrutura: repositórios JPA, tenant, filtros -->
-						<exclude>br/com/saudeConecta/infra/**/*</exclude>
+						<!-- (ex-infra/exceptions: exceções e handler HTTP, excluídos como antes da B5) -->
+						<exclude>br/com/saudeConecta/application/exception/**/*</exclude>
+						<exclude>br/com/saudeConecta/presentation/erro/**/*</exclude>
 						<exclude>br/com/saudeConecta/infrastructure/**/*</exclude>
 						<!-- Infraestrutura de email: depende de SMTP/Thymeleaf reais -->
-						<exclude>br/com/saudeConecta/email/EmailRemetenteService*</exclude>
-						<exclude>br/com/saudeConecta/email/EmailRetryService*</exclude>
-						<exclude>br/com/saudeConecta/email/EmailTemplateService*</exclude>
-						<exclude>br/com/saudeConecta/email/EmailMensageriaService*</exclude>
-						<exclude>br/com/saudeConecta/email/EmailConfig*</exclude>
+						<exclude>br/com/saudeConecta/infrastructure/email/EmailRemetenteService*</exclude>
+						<exclude>br/com/saudeConecta/infrastructure/email/EmailRetryService*</exclude>
+						<exclude>br/com/saudeConecta/infrastructure/email/EmailTemplateService*</exclude>
+						<exclude>br/com/saudeConecta/application/notificacao/EmailMensageriaService*</exclude>
+						<exclude>br/com/saudeConecta/infrastructure/email/EmailConfig*</exclude>
 						<!-- Gateway de pagamento Mercado Pago (integração externa) -->
-						<exclude>br/com/saudeConecta/service/mercadopago/MercadoPagoClient*</exclude>
-						<exclude>br/com/saudeConecta/service/mercadopago/MercadoPagoProperties*</exclude>
-						<exclude>br/com/saudeConecta/service/mercadopago/dto/**/*</exclude>
-						<!-- Validação de anotação customizada -->
-						<exclude>br/com/saudeConecta/util/validation/**/*</exclude>
+						<exclude>br/com/saudeConecta/infrastructure/mercadopago/MercadoPagoClient*</exclude>
+						<exclude>br/com/saudeConecta/infrastructure/mercadopago/MercadoPagoProperties*</exclude>
 						<!-- Utilitários com dependências de repositório/infraestrutura -->
-						<exclude>br/com/saudeConecta/util/EmailUnicoService*</exclude>
-						<exclude>br/com/saudeConecta/util/SnapshotUtil*</exclude>
+						<exclude>br/com/saudeConecta/application/usuario/EmailUnicoService*</exclude>
+						<exclude>br/com/saudeConecta/application/historico/SnapshotUtil*</exclude>
 						<!-- Controllers: cobertos por testes de integração (MockMvc não gera cobertura de instrução JaCoCo) -->
 						<exclude>br/com/saudeConecta/presentation/controller/**/*</exclude>
 						<!-- Services de IA (requer modelo externo) -->
-						<exclude>br/com/saudeConecta/service/IALocalService*</exclude>
+						<exclude>br/com/saudeConecta/application/atendimento/IALocalService*</exclude>
 						<!-- Services de cobrança/financeiro (integração com gateway externo) -->
-						<exclude>br/com/saudeConecta/service/CobrancaService*</exclude>
-						<exclude>br/com/saudeConecta/service/CobrancaScheduler*</exclude>
+						<exclude>br/com/saudeConecta/application/cobranca/CobrancaService*</exclude>
+						<exclude>br/com/saudeConecta/application/cobranca/CobrancaScheduler*</exclude>
 						<!-- Services de dashboard (configuraçōes visuais, sem lógica de negócio crítica) -->
-						<exclude>br/com/saudeConecta/service/ConfiguracaoGraficoDashboardService*</exclude>
-						<exclude>br/com/saudeConecta/service/ConfiguracaoCardDashboardService*</exclude>
+						<exclude>br/com/saudeConecta/application/dashboard/ConfiguracaoGraficoDashboardService*</exclude>
+						<exclude>br/com/saudeConecta/application/dashboard/ConfiguracaoCardDashboardService*</exclude>
 						<!-- Services de histórico e planejamento (dependem de queries complexas sem lógica de negócio) -->
-						<exclude>br/com/saudeConecta/service/HistoricoDadosPessoaisService*</exclude>
-						<exclude>br/com/saudeConecta/service/PlanejamentoTerapeuticoService*</exclude>
-						<exclude>br/com/saudeConecta/service/TermoAutorizacaoService*</exclude>
-						<exclude>br/com/saudeConecta/service/ProcedimentoPadraoService*</exclude>
+						<exclude>br/com/saudeConecta/application/historico/HistoricoDadosPessoaisService*</exclude>
+						<exclude>br/com/saudeConecta/application/prontuario/PlanejamentoTerapeuticoService*</exclude>
+						<exclude>br/com/saudeConecta/application/prontuario/TermoAutorizacaoService*</exclude>
+						<exclude>br/com/saudeConecta/application/prontuario/ProcedimentoPadraoService*</exclude>
 						<!-- Classe principal da aplicação -->
 						<exclude>br/com/saudeConecta/SaudeConectaApplication*</exclude>
 					</excludes>

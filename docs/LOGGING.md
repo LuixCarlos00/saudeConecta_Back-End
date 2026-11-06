@@ -5,8 +5,8 @@ Objetivo: olhando só o log, saber **o que** aconteceu, **com quais ids**, **ond
 ## 1. O que já vem de graça em toda linha
 
 ```
-2026-11-05 14:02:11.482  INFO --- [nio-8080-exec-3] [a1b2c3d4 t=3 u=27] ConsultaService.cadastrar:254 : consulta.agendar inicio profissionalId=12 ...
-                                                     │        │    │     │                              └─ mensagem (seção 2)
+2026-11-05 14:02:11.482  INFO --- [nio-8080-exec-3] [a1b2c3d4 t=3 u=27] ConsultaAgendamentoService.cadastrarConsultaByOrg:69 : consulta.agendar inicio profissionalId=12 ...
+                                                     │        │    │     │                                                     └─ mensagem (seção 2)
                                                      │        │    │     └─ Classe.metodo:linha (pattern)
                                                      │        │    └─ userId   (MDC, FiltroAcesso)
                                                      │        └─ tenantId (clínica) (MDC, TenantFilter)
@@ -17,6 +17,20 @@ Objetivo: olhando só o log, saber **o que** aconteceu, **com quais ids**, **ond
 - Toda requisição termina com uma linha `http fim <MÉTODO> <rota> status=<n> duracaoMs=<n>`
   (`CorrelationIdFilter`). A rota é o padrão do Spring (`/consultas/{id}`), nunca a URI crua.
 - **Não** repita na mensagem nada disso: nem tenant, nem usuário, nem o nome da classe ou do método.
+
+**Nome do logger depois da B6 (06/11):** a fase B6 tirou regra de controllers e do `ConsultaService`, então
+algumas linhas continuam com o **mesmo evento** mas saem com **outra classe** no `Classe.metodo:linha`.
+Quem filtra log pelo nome da classe precisa atualizar o filtro:
+
+| Evento | Antes | Agora |
+|---|---|---|
+| `auth.login *`, `auth.senhaMaster *`, `auth.senha.recuperar ignorado` | `HomeController` | `AutenticacaoService` |
+| `consulta.historico negado` | `ConsultaController` | `BuscarHistoricoPacientePorPerfilUseCase` |
+| `cep.buscar viacep`, `cep.buscar negado`, `cep.buscar falha` | `CepController` | `ViaCepClient` (`cep.buscar inicio/ok` seguem no `CepController`) |
+| `consulta.agendar/atualizar/status/excluir/disponibilidade/horariosOcupados/formaPagamento *`, `consulta.historico registrado` | `ConsultaService` | `ConsultaAgendamentoService` (os `negado` de status inválido e consulta não encontrada seguem no `ConsultaController`) |
+| `consulta.buscar *`, `consulta.pesquisar *`, `consulta.periodo *` | `ConsultaService` | `ConsultaBuscaService` |
+| `consulta.dashboard *`, `consulta.estatisticas *`, `consulta.duracoes *` | `ConsultaService` | `ConsultaEstatisticaService` |
+| `consulta.estatisticas negado`, `consulta.saldoFinanceiro negado` | `ConsultaController` | `ConsultaEstatisticaController` |
 
 **Para investigar:** pegue o `X-Request-Id` da resposta (ou do erro no front) e faça `grep <requestId>`.
 A história da requisição aparece em ordem; a última linha antes de `http fim` (ou a ausência dele) é onde parou.
@@ -51,7 +65,7 @@ Controllers não logam "recebi a requisição": o `http fim` e os logs do servic
 ## 4. Dados sensíveis (LGPD)
 
 Nunca em log, em nenhum nível: senha, hash, JWT, conteúdo clínico (anamnese, diagnóstico, prescrição...).
-Com máscara obrigatória (`util/MascaraLog`):
+Com máscara obrigatória (`config/logging/MascaraLog`):
 
 | Dado | Como |
 |---|---|

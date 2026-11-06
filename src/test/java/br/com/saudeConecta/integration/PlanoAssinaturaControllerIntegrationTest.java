@@ -1,6 +1,6 @@
 package br.com.saudeConecta.integration;
 
-import br.com.saudeConecta.service.PlanoAssinaturaService;
+import br.com.saudeConecta.application.assinatura.PlanoAssinaturaService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

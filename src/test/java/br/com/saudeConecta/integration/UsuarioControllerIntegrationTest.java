@@ -1,10 +1,10 @@
 package br.com.saudeConecta.integration;
 
-import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
-import br.com.saudeConecta.presentation.dto.usuario.BloquearUsuarioRequest;
-import br.com.saudeConecta.presentation.dto.usuario.TodosUsuariosAgrupadosResponse;
-import br.com.saudeConecta.presentation.dto.usuario.UsuarioPerfilCompletoResponse;
-import br.com.saudeConecta.service.UsuarioService;
+import br.com.saudeConecta.application.usuario.UsuarioService;
+import br.com.saudeConecta.application.usuario.dto.BloquearUsuarioRequest;
+import br.com.saudeConecta.application.usuario.dto.TodosUsuariosAgrupadosResponse;
+import br.com.saudeConecta.application.usuario.dto.UsuarioPerfilCompletoResponse;
+import br.com.saudeConecta.config.tenant.TenantAccessDeniedException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,14 +58,14 @@ class UsuarioControllerIntegrationTest {
 
         @AfterEach
         void limparTenant() {
-            br.com.saudeConecta.infra.tenant.TenantContext.clear();
+            br.com.saudeConecta.config.tenant.TenantContext.clear();
         }
 
         @Test
         @WithMockUser(roles = "PROFISSIONAL")
         @DisplayName("Deve retornar 200 quando o perfil é da mesma organização do token")
         void deveRetornar200QuandoExiste() throws Exception {
-            br.com.saudeConecta.infra.tenant.TenantContext.setCurrentTenant(1L);
+            br.com.saudeConecta.config.tenant.TenantContext.setCurrentTenant(1L);
             when(usuarioService.buscarPerfilCompleto(1L)).thenReturn(Optional.of(perfilDaOrg(1L)));
 
             mockMvc.perform(get("/usuario/buscarPerfilCompleto/1"))
@@ -76,7 +76,7 @@ class UsuarioControllerIntegrationTest {
         @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
         @DisplayName("Item 3 - perfil de usuário de outra organização responde 404")
         void deveRetornar404ParaOutraOrganizacao() throws Exception {
-            br.com.saudeConecta.infra.tenant.TenantContext.setCurrentTenant(1L);
+            br.com.saudeConecta.config.tenant.TenantContext.setCurrentTenant(1L);
             when(usuarioService.buscarPerfilCompleto(1L)).thenReturn(Optional.of(perfilDaOrg(2L)));
 
             mockMvc.perform(get("/usuario/buscarPerfilCompleto/1"))
@@ -168,7 +168,7 @@ class UsuarioControllerIntegrationTest {
         @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
         @DisplayName("4.4 - Reativar acima do limite do plano responde 422 com a mensagem (antes: 500 sem corpo)")
         void deveRetornar422QuandoLimiteDoPlanoAtingido() throws Exception {
-            doThrow(new br.com.saudeConecta.infra.exceptions.LimitePlanoException("PROFISSIONAL", 3, 3L))
+            doThrow(new br.com.saudeConecta.application.exception.LimitePlanoException("PROFISSIONAL", 3, 3L))
                     .when(usuarioService).bloquearUsuariobyOrg(any());
 
             BloquearUsuarioRequest request = new BloquearUsuarioRequest(20L, 10L, 1);

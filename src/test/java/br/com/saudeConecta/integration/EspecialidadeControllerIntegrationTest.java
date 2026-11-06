@@ -1,7 +1,7 @@
 package br.com.saudeConecta.integration;
 
+import br.com.saudeConecta.application.especialidade.EspecialidadeService;
 import br.com.saudeConecta.domain.profissional.Especialidade;
-import br.com.saudeConecta.service.EspecialidadeService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;

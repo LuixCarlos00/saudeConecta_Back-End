@@ -1,15 +1,15 @@
 package br.com.saudeConecta.integration;
 
+import br.com.saudeConecta.application.prontuario.dto.ProntuarioCompletoResponse;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.paciente.Paciente;
-import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.pagamento.FormaPagamento;
+import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.domain.profissional.TipoProfissional;
 import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
 import br.com.saudeConecta.domain.prontuario.Prontuario;
 import br.com.saudeConecta.domain.prontuario.TermoAutorizacao;
-import br.com.saudeConecta.domain.profissional.TipoProfissional;
-import br.com.saudeConecta.presentation.dto.prontuario.ProntuarioCompletoResponse;
 import br.com.saudeConecta.infrastructure.persistence.repository.FormaPagamentoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.PlanejamentoTerapeuticoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProntuarioRepository;
