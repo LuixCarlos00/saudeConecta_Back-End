@@ -89,7 +89,9 @@ public class ConfiguracaoGraficoDashboardService {
      * Retorna apenas os gráficos ativos do usuário, ordenados por ordem de exibição.
      * Resultado cacheado por usuarioId — invalidado quando configurações são alteradas.
      * Sem @Transactional: o cache resolve antes de qualquer abertura de sessão JPA.
-     * No caminho de inicialização automática, a transação é gerenciada pelo método chamado.
+     * No caminho de inicialização automática, a criação roda SEM transação envolvente (cada save
+     * abre a sua própria): chamada via this não passa pelo proxy, então não se chama aqui um método
+     * @Transactional — usa-se o helper privado criarConfiguracoesPadrao (comportamento preservado).
      *
      * @param usuarioId ID do usuário autenticado
      * @return lista de gráficos ativos ordenados
@@ -107,7 +109,7 @@ public class ConfiguracaoGraficoDashboardService {
                 && configuracaoRepository.findByUsuarioIdOrderByOrdemExibicaoAsc(usuarioId).isEmpty()) {
             log.info("dashboard.grafico inicializar usuarioId={} motivo=SEM_CONFIGURACAO", usuarioId);
             if (usuario != null) {
-                inicializarParaNovoUsuario(usuario);
+                criarConfiguracoesPadrao(usuario);
                 apenasAtivos = configuracaoRepository
                         .findByUsuarioIdAndAtivoTrueOrderByOrdemExibicaoAsc(usuarioId);
             }
@@ -211,6 +213,11 @@ public class ConfiguracaoGraficoDashboardService {
     /** Chamado ao criar um novo usuário — inicializa configs já ativas */
     @Transactional
     public void inicializarParaNovoUsuario(Usuario usuario) {
+        criarConfiguracoesPadrao(usuario);
+    }
+
+    /** Cria as configurações padrão ativas; sem anotação de transação, quem chama define o contexto. */
+    private void criarConfiguracoesPadrao(Usuario usuario) {
         List<TipoGraficoDashboard> tipos = resolverTiposOrdenados(usuario.getTipoUsuarioNovo());
         int ordem = 1;
         for (TipoGraficoDashboard tipo : tipos) {
