@@ -1,11 +1,9 @@
 package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
-import br.com.saudeConecta.presentation.dto.prontuario.PlanejamentoTerapeuticoRequest;
 import br.com.saudeConecta.service.PlanejamentoTerapeuticoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,39 +22,6 @@ import java.util.stream.Collectors;
 public class PlanejamentoTerapeuticoController {
 
     private final PlanejamentoTerapeuticoService planejamentoService;
-
-    /**
-     * Lista planejamentos de um prontuário.
-     * GET /planejamento-terapeutico/prontuario/{prontuarioId}
-     */
-    @GetMapping("/prontuario/{prontuarioId}")
-    public ResponseEntity<List<Map<String, Object>>> listar(@PathVariable Long prontuarioId) {
-
-        List<PlanejamentoTerapeutico> lista = planejamentoService.listarPorProntuario(prontuarioId);
-        return ResponseEntity.ok(converterParaResponse(lista));
-    }
-
-    /**
-     * Adiciona um item ao planejamento.
-     * POST /planejamento-terapeutico/profissional/{profissionalId}
-     */
-    @PostMapping("/profissional/{profissionalId}")
-    public ResponseEntity<Map<String, Object>> adicionar(
-            @PathVariable Long profissionalId,
-            @RequestBody PlanejamentoTerapeuticoRequest request) {
-
-
-        PlanejamentoTerapeutico criado = planejamentoService.adicionar(profissionalId, request);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("id", criado.getId());
-        response.put("dataProcedimento", criado.getDataProcedimento());
-        response.put("procedimentoRealizado", criado.getProcedimentoRealizado());
-        response.put("valor", criado.getValor());
-        response.put("statusAssinatura", criado.getStatusAssinatura());
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
 
     /**
      * Remove um item do planejamento.

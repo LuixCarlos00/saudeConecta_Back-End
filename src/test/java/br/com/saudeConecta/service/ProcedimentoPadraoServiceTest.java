@@ -46,16 +46,15 @@ class ProcedimentoPadraoServiceTest {
     }
 
     @Test
-    @DisplayName("toggle, PUT e DELETE de procedimento de outra clínica respondem não encontrado e não gravam")
+    @DisplayName("toggle e PUT de procedimento de outra clínica respondem não encontrado e não gravam")
     void alteracoesOutraClinica() {
         ProcedimentoPadraoRequest request = new ProcedimentoPadraoRequest();
         request.setNomeProcedimento("Limpeza");
 
         assertThatThrownBy(() -> service.toggleAtivo(9L)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> service.atualizar(9L, request)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> service.desativar(9L)).isInstanceOf(IllegalArgumentException.class);
 
-        verify(procedimentoRepository, times(3)).findByIdAndOrganizacao_Id(9L, ORG);
+        verify(procedimentoRepository, times(2)).findByIdAndOrganizacao_Id(9L, ORG);
         verify(procedimentoRepository, never()).save(any());
     }
 

@@ -343,46 +343,6 @@ class ProntuarioServiceTest {
         }
     }
 
-    // ========== buscarPorPaciente / buscarPorProfissional ==========
-
-    @Nested
-    @DisplayName("buscarPorPaciente e buscarPorProfissional")
-    class BuscarPorPacienteProfissional {
-
-        @Test
-        @DisplayName("Deve retornar prontuários do paciente")
-        void deveRetornarPorPaciente() {
-            when(prontuarioRepository.findByPacienteEOrganizacaoComFetch(1L, ORG))
-                    .thenReturn(List.of(criarProntuario(1L), criarProntuario(2L)));
-
-            List<Prontuario> resultado = service.buscarPorPaciente(1L);
-
-            assertThat(resultado).hasSize(2);
-        }
-
-        @Test
-        @DisplayName("Deve retornar lista vazia quando paciente sem prontuários")
-        void deveRetornarListaVaziaParaPacienteSemProntuario() {
-            when(prontuarioRepository.findByPacienteEOrganizacaoComFetch(99L, ORG))
-                    .thenReturn(Collections.emptyList());
-
-            List<Prontuario> resultado = service.buscarPorPaciente(99L);
-
-            assertThat(resultado).isEmpty();
-        }
-
-        @Test
-        @DisplayName("Deve retornar prontuários do profissional")
-        void deveRetornarPorProfissional() {
-            when(prontuarioRepository.findByProfissionalEOrganizacaoComFetch(1L, ORG))
-                    .thenReturn(List.of(criarProntuario(1L)));
-
-            List<Prontuario> resultado = service.buscarPorProfissional(1L);
-
-            assertThat(resultado).hasSize(1);
-        }
-    }
-
     // ========== buscarMaisRecentePorConsulta ==========
 
     @Nested
@@ -679,16 +639,6 @@ class ProntuarioServiceTest {
         }
 
         @Test
-        @DisplayName("buscarPorPaciente e buscarPorProfissional consultam somente a organização do token")
-        void listasFiltradas() {
-            service.buscarPorPaciente(7L);
-            service.buscarPorProfissional(8L);
-
-            verify(prontuarioRepository).findByPacienteEOrganizacaoComFetch(7L, ORG);
-            verify(prontuarioRepository).findByProfissionalEOrganizacaoComFetch(8L, ORG);
-        }
-
-        @Test
         @DisplayName("cadastrar recusa consulta de outra clínica e não grava nada")
         void cadastrarConsultaOutraClinica() {
             when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
@@ -740,7 +690,7 @@ class ProntuarioServiceTest {
         void semTenantNega() {
             TenantContext.clear();
 
-            assertThatThrownBy(() -> service.buscarPorPaciente(7L))
+            assertThatThrownBy(() -> service.buscarMaisRecentePorConsulta(10L))
                     .isInstanceOf(br.com.saudeConecta.infra.tenant.TenantNotDefinedException.class);
             verifyNoInteractions(prontuarioRepository);
         }

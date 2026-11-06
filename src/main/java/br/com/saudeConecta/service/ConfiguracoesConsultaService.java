@@ -90,31 +90,6 @@ public class ConfiguracoesConsultaService {
     }
 
     /**
-     * Atualiza uma configuração de fluxo de consulta existente.
-     *
-     * @param id ID da configuração
-     * @param pularParaConfirmado Se deve pular para status CONFIRMADA
-     * @param descricao Descrição da configuração
-     * @return ConfiguracoesConsulta atualizada
-     */
-    @Transactional
-    public ConfiguracoesConsulta atualizarConfiguracao(Long id, Boolean pularParaConfirmado, String descricao) {
-        // Configuração de outra clínica responde igual a inexistente.
-        ConfiguracoesConsulta config = configuracoesConsultaRepository
-                .findByIdAndOrganizacaoId(id, tenantHelper.getCurrentTenantId())
-                .orElseThrow(() -> new EntityNotFoundException("Configuração de fluxo não encontrada"));
-
-        if (pularParaConfirmado != null) {
-            config.setPularParaConfirmado(pularParaConfirmado);
-        }
-        if (descricao != null) {
-            config.setDescricao(descricao);
-        }
-
-        return configuracoesConsultaRepository.save(config);
-    }
-
-    /**
      * Atualiza a configuração de fluxo de consulta da organização atual.
      *
      * @param pularParaConfirmado Se deve pular para status CONFIRMADA

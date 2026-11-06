@@ -103,22 +103,6 @@ class ConsultaFluxoE2ETest {
     }
 
     @Test
-    @Order(3)
-    @WithMockUser(roles = "PROFISSIONAL")
-    @DisplayName("Passo 3 - Realizar (concluir) consulta confirmada")
-    void passo3_realizarConsulta() throws Exception {
-        when(consultaService.concluirConsultabyOrg(CONSULTA_ID))
-                .thenReturn(buildConsultaMock(StatusConsulta.REALIZADA));
-
-        mockMvc.perform(put("/consultas/concluirConsultabyOrg/{id}", CONSULTA_ID)
-                        .with(csrf()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("REALIZADA"));
-
-        verify(consultaService).concluirConsultabyOrg(CONSULTA_ID);
-    }
-
-    @Test
     @Order(4)
     @WithMockUser(roles = "ADMIN")
     @DisplayName("Passo 4 - Registrar pagamento da consulta realizada")

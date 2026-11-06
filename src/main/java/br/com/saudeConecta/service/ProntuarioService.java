@@ -321,30 +321,6 @@ public class ProntuarioService {
                         "Prontuário médico não encontrado: id=" + id));
     }
 
-    /**
-     * Busca todos os prontuarios de um paciente
-     * @param pacienteId ID do paciente
-     * @return Lista de prontuarios do paciente
-     */
-    @Transactional(readOnly = true)
-    public List<Prontuario> buscarPorPaciente(Long pacienteId) {
-        log.debug("prontuario.medico.buscar pacienteId={}", pacienteId);
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return prontuarioRepository.findByPacienteEOrganizacaoComFetch(pacienteId, orgId);
-    }
-
-    /**
-     * Busca todos os prontuarios de um profissional
-     * @param profissionalId ID do profissional
-     * @return Lista de prontuarios do profissional
-     */
-    @Transactional(readOnly = true)
-    public List<Prontuario> buscarPorProfissional(Long profissionalId) {
-        log.debug("prontuario.medico.buscar profissionalId={}", profissionalId);
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return prontuarioRepository.findByProfissionalEOrganizacaoComFetch(profissionalId, orgId);
-    }
-
     private Date parseData(Date data) {
         return data;
     }

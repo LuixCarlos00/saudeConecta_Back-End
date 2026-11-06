@@ -120,43 +120,6 @@ class ConsultaControllerIntegrationTest {
         }
     }
 
-    // ========== PUT /consultas/concluirConsultabyOrg/{id} ==========
-
-    @Nested
-    @DisplayName("PUT /consultas/concluirConsultabyOrg/{id}")
-    class ConcluirConsulta {
-
-        @Test
-        @WithMockUser(roles = "PROFISSIONAL")
-        @DisplayName("Deve retornar 200 ao concluir consulta existente")
-        void deveRetornar200AoConcluirConsultaExistente() throws Exception {
-            Consulta consultaMock = Consulta.builder()
-                    .id(1L).status(StatusConsulta.REALIZADA)
-                    .duracaoMinutos(30)
-                    .dataHora(LocalDateTime.now())
-                    .build();
-
-            when(consultaService.concluirConsultabyOrg(1L)).thenReturn(consultaMock);
-
-            mockMvc.perform(put("/consultas/concluirConsultabyOrg/1")
-                            .with(csrf()))
-                    .andExpect(status().isOk());
-        }
-
-        @Test
-        @WithMockUser(roles = "PROFISSIONAL")
-        @DisplayName("Deve retornar 409 (handler global) quando consulta não estiver em estado válido")
-        void deveRetornar409QuandoConsultaNaoAgendada() throws Exception {
-            when(consultaService.concluirConsultabyOrg(1L))
-                    .thenThrow(new IllegalStateException("Apenas consultas AGENDADAS podem ser concluídas"));
-
-            mockMvc.perform(put("/consultas/concluirConsultabyOrg/1")
-                            .with(csrf()))
-                    .andExpect(status().isConflict())
-                    .andExpect(jsonPath("$.message").value("Apenas consultas AGENDADAS podem ser concluídas"));
-        }
-    }
-
     // ========== GET /consultas/horarios-ocupados-detalhado ==========
 
     @Nested
@@ -242,12 +205,7 @@ class ConsultaControllerIntegrationTest {
         void organizacaoDaUrlDeOutraClinica403() throws Exception {
             tenant(1L, 5L);
             String[] urls = {
-                    "/consultas/organizacao/2/especialidade/Cardiologia",
                     "/consultas/estatisticas/organizacao/2/dashboard",
-                    "/consultas/estatisticas/organizacao/2/consultas-hoje",
-                    "/consultas/estatisticas/organizacao/2/consultas-atendidas-hoje",
-                    "/consultas/estatisticas/organizacao/2/consultas-agendadas-hoje",
-                    "/consultas/estatisticas/organizacao/2/consultas-semana",
                     "/consultas/organizacao/2/intervalo?dataInicial=2026-01-01&dataFinal=2026-01-31"
             };
             for (String url : urls) {
@@ -307,42 +265,6 @@ class ConsultaControllerIntegrationTest {
 
             mockMvc.perform(get("/consultas/estatisticas/dashboard/super-admin"))
                     .andExpect(status().isOk());
-        }
-    }
-
-    // ========== Estatísticas globais (somente SUPER_ADMIN) ==========
-
-    @Nested
-    @DisplayName("Estatísticas globais exigem SUPER_ADMIN")
-    class EstatisticasGlobais {
-
-        private static final String[] ROTAS = {
-                "/consultas/estatisticas/consultas-hoje",
-                "/consultas/estatisticas/consultas-realizadas-hoje",
-                "/consultas/estatisticas/consultas-agendadas-hoje",
-                "/consultas/estatisticas/consultas-semana-global"
-        };
-
-        @Test
-        @WithMockUser(roles = "GESTOR")
-        @DisplayName("GESTOR recebe 403 nas contagens globais")
-        void gestorRecebe403() throws Exception {
-            for (String rota : ROTAS) {
-                mockMvc.perform(get(rota)).andExpect(status().isForbidden());
-            }
-        }
-
-        @Test
-        @WithMockUser(roles = "SUPER_ADMIN")
-        @DisplayName("SUPER_ADMIN recebe 200 nas contagens globais")
-        void superAdminRecebe200() throws Exception {
-            when(consultaService.contarTodasConsultasHoje()).thenReturn(1L);
-            when(consultaService.contarTodasConsultasRealizadasHoje()).thenReturn(1L);
-            when(consultaService.contarTodasConsultasAgendadasHoje()).thenReturn(1L);
-            when(consultaService.contarConsultasSemanaGlobal()).thenReturn(1L);
-            for (String rota : ROTAS) {
-                mockMvc.perform(get(rota)).andExpect(status().isOk());
-            }
         }
     }
 }

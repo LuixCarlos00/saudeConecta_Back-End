@@ -344,19 +344,6 @@ public class ProntuarioDentistaService {
     // =========================================================================
 
     @Transactional(readOnly = true)
-    public ProntuarioDentista buscarPorId(Long id) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(id, orgId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Prontuario odontologico nao encontrado: " + id));
-    }
-
-    @Transactional(readOnly = true)
-    public List<ProntuarioDentista> listarPorConsulta(Long consultaId) {
-        return prontuarioDentistaRepository.findByConsultaIdAndOrganizacaoId(consultaId, tenantHelper.getCurrentTenantId());
-    }
-
-    @Transactional(readOnly = true)
     public ProntuarioDentista buscarMaisRecentePorConsulta(Long consultaId) {
         Long id = prontuarioDentistaRepository
                 .findIdMaisRecentePorConsulta(consultaId, tenantHelper.getCurrentTenantId())
@@ -372,26 +359,6 @@ public class ProntuarioDentistaService {
         Hibernate.initialize(pd.getPlanejamentos());
 
         return pd;
-    }
-
-    @Transactional(readOnly = true)
-    public List<ProntuarioDentista> listarPorProfissional(Long profissionalId) {
-        return prontuarioDentistaRepository.findByProfissionalId(profissionalId, tenantHelper.getCurrentTenantId());
-    }
-
-    /**
-     * Lista prontuários de um paciente (histórico).
-     *
-     * @param pacienteId ID do paciente
-     * @return lista de prontuários do paciente
-     */
-    @Transactional(readOnly = true)
-    public List<ProntuarioDentista> listarPorPaciente(Long pacienteId) {
-        List<ProntuarioDentista> lista = prontuarioDentistaRepository
-                .findByPacienteId(pacienteId, tenantHelper.getCurrentTenantId());
-        // Inicializa planejamentos em query separada para evitar cartesian product com dentes
-        lista.forEach(pd -> Hibernate.initialize(pd.getPlanejamentos()));
-        return lista;
     }
 
     // =========================================================================

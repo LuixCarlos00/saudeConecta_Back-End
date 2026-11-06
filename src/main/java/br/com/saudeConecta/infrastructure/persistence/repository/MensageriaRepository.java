@@ -19,8 +19,6 @@ import java.util.List;
 public interface MensageriaRepository extends JpaRepository<Mensageria, Long> {
 
 
-    List<Mensageria> findByOrganizacao_IdAndAdminNotificadoFalseAndStatus(Long organizacaoId, StatusMensagem status);
-
 
     @Query("SELECT m FROM Mensageria m WHERE m.organizacao.id = :orgId " +
            "AND (:status IS NULL OR m.status = :status) " +
@@ -45,8 +43,6 @@ public interface MensageriaRepository extends JpaRepository<Mensageria, Long> {
             @Param("tipo") TipoMensagem tipo,
             Pageable pageable);
 
-
-    List<Mensageria> findByAdminNotificadoFalseAndStatus(StatusMensagem status);
 
 
     long countByAdminNotificadoFalseAndStatus(StatusMensagem status);

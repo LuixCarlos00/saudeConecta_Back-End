@@ -121,38 +121,6 @@ class MensageriaServiceTest {
         }
     }
 
-    // ========== listarFalhasPendentesNotificacao ==========
-
-    @Nested
-    @DisplayName("listarFalhasPendentesNotificacao")
-    class ListarFalhasPendentes {
-
-        @Test
-        @DisplayName("Admin Org deve listar falhas da sua organização")
-        void adminOrgDeveListarFalhasDaSuaOrg() {
-            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
-            when(mensageriaRepository.findByOrganizacao_IdAndAdminNotificadoFalseAndStatus(ORG_ID, StatusMensagem.FALHOU))
-                    .thenReturn(List.of(mensageria));
-
-            List<MensageriaResponse> resultado = mensageriaService.listarFalhasPendentesNotificacao();
-
-            assertThat(resultado).hasSize(1);
-        }
-
-        @Test
-        @DisplayName("Super Admin deve listar falhas globais")
-        void superAdminDeveListarFalhasGlobais() {
-            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(null);
-            when(mensageriaRepository.findByAdminNotificadoFalseAndStatus(StatusMensagem.FALHOU))
-                    .thenReturn(List.of(mensageria));
-
-            List<MensageriaResponse> resultado = mensageriaService.listarFalhasPendentesNotificacao();
-
-            assertThat(resultado).hasSize(1);
-            verify(mensageriaRepository).findByAdminNotificadoFalseAndStatus(StatusMensagem.FALHOU);
-        }
-    }
-
     // ========== marcarComoNotificado ==========
 
     @Nested
@@ -207,50 +175,6 @@ class MensageriaServiceTest {
             mensageriaService.marcarComoNotificado(MSG_ID);
 
             assertThat(mensageria.getAdminNotificado()).isTrue();
-        }
-    }
-
-    // ========== buscarPorId ==========
-
-    @Nested
-    @DisplayName("buscarPorId")
-    class BuscarPorId {
-
-        @Test
-        @DisplayName("Deve retornar mensagem quando encontrada na organização")
-        void deveRetornarMensagemQuandoEncontrada() {
-            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
-            when(mensageriaRepository.findById(MSG_ID)).thenReturn(Optional.of(mensageria));
-
-            MensageriaResponse resultado = mensageriaService.buscarPorId(MSG_ID);
-
-            assertThat(resultado).isNotNull();
-        }
-
-        @Test
-        @DisplayName("Deve lançar exceção quando mensagem não existir")
-        void deveLancarExcecaoQuandoNaoExistir() {
-            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
-            when(mensageriaRepository.findById(999L)).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> mensageriaService.buscarPorId(999L))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Mensagem não encontrada");
-        }
-
-        @Test
-        @DisplayName("Deve lançar exceção de acesso negado para outra organização")
-        void deveLancarExcecaoDeAcessoNegado() {
-            Organizacao outraOrg = Organizacao.builder().nome("Outra Org").build();
-            outraOrg.setId(99L);
-            mensageria.setOrganizacao(outraOrg);
-
-            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
-            when(mensageriaRepository.findById(MSG_ID)).thenReturn(Optional.of(mensageria));
-
-            assertThatThrownBy(() -> mensageriaService.buscarPorId(MSG_ID))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Acesso negado");
         }
     }
 
@@ -362,12 +286,5 @@ class MensageriaServiceTest {
             verify(mensageriaRepository, never()).countByAdminNotificadoFalseAndStatus(any());
         }
 
-        @Test
-        @DisplayName("buscarPorId nega antes de ler a mensagem")
-        void buscarNega() {
-            assertThatThrownBy(() -> mensageriaService.buscarPorId(1L))
-                    .isInstanceOf(TenantNotDefinedException.class);
-            verify(mensageriaRepository, never()).findById(any());
-        }
     }
 }

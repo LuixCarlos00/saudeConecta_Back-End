@@ -14,7 +14,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -47,32 +46,6 @@ public class MensageriaController {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "dataCriacao"));
         Page<MensageriaResponse> resultado = mensageriaService.listarMensagens(status, tipo, pageable);
         return ResponseEntity.ok(resultado);
-    }
-
-    /**
-     * Busca uma mensagem específica por ID.
-     *
-     * @param id ID da mensagem
-     * @return Dados da mensagem
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<MensageriaResponse> buscarPorId(@PathVariable Long id) {
-        try {
-            return ResponseEntity.ok(mensageriaService.buscarPorId(id));
-        } catch (IllegalArgumentException e) {
-            log.warn("mensageria.buscar negado motivo=NAO_ENCONTRADA mensageriaId={}", id);
-            return ResponseEntity.notFound().build();
-        }
-    }
-
-    /**
-     * Lista mensagens com falha ainda não notificadas ao administrador.
-     *
-     * @return Lista de falhas pendentes de notificação
-     */
-    @GetMapping("/falhas-pendentes")
-    public ResponseEntity<List<MensageriaResponse>> listarFalhasPendentes() {
-        return ResponseEntity.ok(mensageriaService.listarFalhasPendentesNotificacao());
     }
 
     /**

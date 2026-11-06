@@ -117,21 +117,6 @@ public class ProcedimentoPadraoService {
     }
 
     /**
-     * Desativa um procedimento (soft delete).
-     *
-     * @param id ID do procedimento
-     */
-    @CacheEvict(value = "procedimentos-padrao", allEntries = true)
-    @Transactional
-    public void desativar(Long id) {
-        ProcedimentoPadrao procedimento = buscarDaOrganizacao(id);
-
-        procedimento.setAtivo(false);
-        procedimentoRepository.save(procedimento);
-        log.info("procedimento.desativar ok procedimentoId={}", id);
-    }
-
-    /**
      * Busca o procedimento restrito à organização do token; de outra clínica responde "não encontrado".
      *
      * @param id ID do procedimento

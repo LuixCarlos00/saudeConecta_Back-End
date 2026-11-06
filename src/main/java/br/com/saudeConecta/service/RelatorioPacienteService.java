@@ -90,21 +90,6 @@ public class RelatorioPacienteService {
     }
 
     /**
-     * Busca os relatorios de um unico paciente.
-     *
-     * @param pacienteId     paciente desejado
-     * @param profissionalId profissional a filtrar; nulo considera toda a organizacao
-     * @return paciente com consultas e documentos, quando houver atendimento
-     */
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public Optional<PacienteAtendidoResponse> buscarRelatoriosDoPaciente(Long pacienteId, Long profissionalId) {
-        return buscarPacientesAtendidos(profissionalId, pacienteId, null, null, null)
-                .stream()
-                .findFirst();
-    }
-
-    /**
      * Resolve o profissional vinculado a um usuario logado.
      *
      * @param usuarioId usuario autenticado

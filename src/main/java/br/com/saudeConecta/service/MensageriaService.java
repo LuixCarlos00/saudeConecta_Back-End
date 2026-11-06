@@ -25,8 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.com.saudeConecta.email.EmailNotificacaoService;
 
-import java.util.List;
-
 /**
  * Service responsável pelo gerenciamento de mensagens do sistema.
  * Registra mensagens enviadas, falhas de envio e notificações ao administrador.
@@ -44,7 +42,6 @@ public class MensageriaService {
     private final PacienteRepository pacienteRepository;
     private final TenantHelper tenantHelper;
     private final EmailNotificacaoService emailNotificacaoService;
-
 
     /**
      * Lista mensagens com paginação e filtros opcionais.
@@ -75,30 +72,6 @@ public class MensageriaService {
         return mensageriaRepository
                 .findByOrganizacaoIdWithFilters(orgId, status, tipo, pageable)
                 .map(MensageriaResponse::fromEntity);
-    }
-
-    /**
-     * Busca mensagens com falha ainda não notificadas ao administrador.
-     * SuperAdmin vê falhas de todas as organizações.
-     *
-     * @return Lista de mensagens com falha pendentes de notificação
-     */
-    @Transactional(readOnly = true)
-    public List<MensageriaResponse> listarFalhasPendentesNotificacao() {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
-        if (orgId == null) {
-            log.debug("mensageria.falhas buscar escopo=SUPER_ADMIN");
-            return mensageriaRepository
-                    .findByAdminNotificadoFalseAndStatus(StatusMensagem.FALHOU)
-                    .stream()
-                    .map(MensageriaResponse::fromEntity)
-                    .toList();
-        }
-        return mensageriaRepository
-                .findByOrganizacao_IdAndAdminNotificadoFalseAndStatus(orgId, StatusMensagem.FALHOU)
-                .stream()
-                .map(MensageriaResponse::fromEntity)
-                .toList();
     }
 
     /**
@@ -138,26 +111,6 @@ public class MensageriaService {
             return mensageriaRepository.countByAdminNotificadoFalseAndStatus(StatusMensagem.FALHOU);
         }
         return mensageriaRepository.countByOrganizacao_IdAndAdminNotificadoFalseAndStatus(orgId, StatusMensagem.FALHOU);
-    }
-
-    /**
-     * Busca uma mensagem específica por ID.
-     * SuperAdmin pode acessar mensagens de qualquer organização.
-     *
-     * @param mensageriaId ID da mensagem
-     * @return DTO da mensagem
-     */
-    @Transactional(readOnly = true)
-    public MensageriaResponse buscarPorId(Long mensageriaId) {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
-        Mensageria mensageria = mensageriaRepository.findById(mensageriaId)
-                .orElseThrow(() -> new IllegalArgumentException("Mensagem não encontrada: " + mensageriaId));
-
-        if (orgId != null && !mensageria.getOrganizacaoId().equals(orgId)) {
-            throw new IllegalArgumentException("Acesso negado à mensagem: " + mensageriaId);
-        }
-
-        return MensageriaResponse.fromEntity(mensageria);
     }
 
     /**

@@ -310,64 +310,6 @@ class ProntuarioDentistaServiceTest {
         }
     }
 
-    // ========== buscarPorId ==========
-
-    @Nested
-    @DisplayName("buscarPorId")
-    class BuscarPorId {
-
-        @Test
-        @DisplayName("Deve retornar prontuário quando encontrado")
-        void deveRetornarProntuario() {
-            ProntuarioDentista prontuario = criarProntuario(1L);
-            when(prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(1L, ORG)).thenReturn(Optional.of(prontuario));
-
-            ProntuarioDentista resultado = service.buscarPorId(1L);
-
-            assertThat(resultado).isNotNull();
-            assertThat(resultado.getCodigo()).isEqualTo(1L);
-        }
-
-        @Test
-        @DisplayName("Deve lançar exceção quando prontuário não encontrado")
-        void deveLancarExcecaoQuandoNaoEncontrado() {
-            when(prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(99L, ORG)).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> service.buscarPorId(99L))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Prontuario odontologico nao encontrado");
-        }
-    }
-
-    // ========== listarPorConsulta ==========
-
-    @Nested
-    @DisplayName("listarPorConsulta")
-    class ListarPorConsulta {
-
-        @Test
-        @DisplayName("Deve retornar lista de prontuários da consulta")
-        void deveRetornarListaPorConsulta() {
-            when(prontuarioDentistaRepository.findByConsultaIdAndOrganizacaoId(10L, ORG))
-                    .thenReturn(List.of(criarProntuario(1L), criarProntuario(2L)));
-
-            List<ProntuarioDentista> resultado = service.listarPorConsulta(10L);
-
-            assertThat(resultado).hasSize(2);
-        }
-
-        @Test
-        @DisplayName("Deve retornar lista vazia quando não há prontuários")
-        void deveRetornarVazioQuandoSemProntuarios() {
-            when(prontuarioDentistaRepository.findByConsultaIdAndOrganizacaoId(99L, ORG))
-                    .thenReturn(Collections.emptyList());
-
-            List<ProntuarioDentista> resultado = service.listarPorConsulta(99L);
-
-            assertThat(resultado).isEmpty();
-        }
-    }
-
     // ========== buscarMaisRecentePorConsulta ==========
 
     @Nested
@@ -398,46 +340,6 @@ class ProntuarioDentistaServiceTest {
             assertThatThrownBy(() -> service.buscarMaisRecentePorConsulta(99L))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Nenhum Prontuario odontologico encontrado");
-        }
-    }
-
-    // ========== listarPorProfissional / listarPorPaciente ==========
-
-    @Nested
-    @DisplayName("listarPorProfissional e listarPorPaciente")
-    class ListarPorAssociacao {
-
-        @Test
-        @DisplayName("Deve retornar prontuários do profissional")
-        void deveRetornarPorProfissional() {
-            when(prontuarioDentistaRepository.findByProfissionalId(1L, ORG))
-                    .thenReturn(List.of(criarProntuario(1L)));
-
-            List<ProntuarioDentista> resultado = service.listarPorProfissional(1L);
-
-            assertThat(resultado).hasSize(1);
-        }
-
-        @Test
-        @DisplayName("Deve retornar prontuários do paciente")
-        void deveRetornarPorPaciente() {
-            when(prontuarioDentistaRepository.findByPacienteId(1L, ORG))
-                    .thenReturn(List.of(criarProntuario(1L), criarProntuario(2L)));
-
-            List<ProntuarioDentista> resultado = service.listarPorPaciente(1L);
-
-            assertThat(resultado).hasSize(2);
-        }
-
-        @Test
-        @DisplayName("Deve retornar lista vazia para paciente sem prontuários")
-        void deveRetornarVazioParaPacienteSemProntuarios() {
-            when(prontuarioDentistaRepository.findByPacienteId(99L, ORG))
-                    .thenReturn(Collections.emptyList());
-
-            List<ProntuarioDentista> resultado = service.listarPorPaciente(99L);
-
-            assertThat(resultado).isEmpty();
         }
     }
 
@@ -599,30 +501,6 @@ class ProntuarioDentistaServiceTest {
     @Nested
     @DisplayName("Isolamento entre clínicas")
     class IsolamentoEntreClinicas {
-
-        @Test
-        @DisplayName("buscarPorId não devolve prontuário odontológico de outra clínica")
-        void buscarPorIdOutraClinica() {
-            lenient().when(prontuarioDentistaRepository.findById(1L)).thenReturn(Optional.of(criarProntuario(1L)));
-
-            assertThatThrownBy(() -> service.buscarPorId(1L))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("nao encontrado");
-            verify(prontuarioDentistaRepository).findByCodigoAndConsulta_Organizacao_Id(1L, ORG);
-        }
-
-        @Test
-        @DisplayName("Listagens por consulta, profissional e paciente filtram pela organização do token")
-        void listasFiltradas() {
-            service.listarPorConsulta(10L);
-            service.listarPorProfissional(8L);
-            service.listarPorPaciente(7L);
-
-            verify(prontuarioDentistaRepository).findByConsultaIdAndOrganizacaoId(10L, ORG);
-            verify(prontuarioDentistaRepository).findByProfissionalId(8L, ORG);
-            verify(prontuarioDentistaRepository).findByPacienteId(7L, ORG);
-            verify(prontuarioDentistaRepository, never()).findByConsultaId(any());
-        }
 
         @Test
         @DisplayName("buscarMaisRecentePorConsulta filtra pela organização do token")

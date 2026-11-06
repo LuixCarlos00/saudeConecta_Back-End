@@ -224,7 +224,7 @@ class PagamentoAssinaturaFluxoE2ETest {
             mockMvc.perform(get("/pacientes/buscar-por-nome").param("nome", "Maria").header("Authorization", tokenGestor))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("PLANO_SEM_ACESSO"));
-            mockMvc.perform(get("/prontuario/paciente/1").header("Authorization", tokenGestor))
+            mockMvc.perform(get("/prontuario/buscarProntuarioById/1").header("Authorization", tokenGestor))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("PLANO_SEM_ACESSO"));
 
@@ -239,7 +239,7 @@ class PagamentoAssinaturaFluxoE2ETest {
             mockMvc.perform(get("/consultas/hoje").header("Authorization", tokenProfissional))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("PLANO_SEM_ACESSO"));
-            mockMvc.perform(get("/prontuario/profissional/1").header("Authorization", tokenProfissional))
+            mockMvc.perform(get("/prontuario/consulta/1/recente").header("Authorization", tokenProfissional))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("PLANO_SEM_ACESSO"));
         } finally {

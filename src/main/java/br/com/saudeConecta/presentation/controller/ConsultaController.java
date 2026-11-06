@@ -18,8 +18,6 @@ import br.com.saudeConecta.service.SaldoFinanceiroService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -109,12 +107,6 @@ public class ConsultaController {
         return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
     }
 
-    @PutMapping("/concluirConsultabyOrg/{id}")
-    public ResponseEntity<ConsultaResponse> concluirConsultabyOrg(@PathVariable Long id) {
-        Consulta consulta = consultaService.concluirConsultabyOrg(id);
-        return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
-    }
-
     /**
      * Exclui uma consulta e registros associados (questionário, planejamentos, histórico).
      * Consultas com prontuário (dentista ou médico) não podem ser excluídas.
@@ -143,7 +135,7 @@ public class ConsultaController {
      * - CONFIRMADA → AGENDADA, CANCELADA
      * - REALIZADA → PAGO (AdminOrg pode marcar como pago após médico concluir)
      * 
-     * IMPORTANTE: Status REALIZADA só pode ser definido pelo médico através do endpoint PUT /concluirConsultabyOrg/{id}
+     * IMPORTANTE: Status REALIZADA só é definido quando o profissional finaliza o prontuário (médico ou odontológico)
      *
      * @param id     ID da consulta
      * @param status Novo status (AGENDADA, CONFIRMADA, CANCELADA, PAGO)
@@ -276,15 +268,6 @@ public class ConsultaController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/profissional/{profissionalId}")
-    public ResponseEntity<List<ConsultaResponse>> listarPorProfissional(@PathVariable Long profissionalId) {
-        List<ConsultaResponse> response = consultaService.buscarPorProfissional(profissionalId).stream()
-                .map(ConsultaResponse::fromEntity)
-                .toList();
-        return ResponseEntity.ok(response);
-    }
-// TODO verificar quais metodo estao sendo usados no front e com back , altera a url dels com o nome do metodo no front e back para vinculação
-
     /**
      * Busca consultas por médico e intervalo de datas
      * 
@@ -307,120 +290,14 @@ public class ConsultaController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/profissional/{profissionalId}/especialidade/intervalo")
-    public ResponseEntity<List<ConsultaResponse>> pesquisarMedicoEspecialidadeEmIntervaloDeDatas(
-            @PathVariable Long profissionalId,
-            @RequestParam String especialidade,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal,
-            @RequestParam(required = false) String status) {
-        List<ConsultaResponse> response = consultaService.pesquisarMedicoEspecialidadeEmIntervaloDeDatas(
-                        profissionalId, especialidade, dataInicial, dataFinal, status).stream()
-                .map(ConsultaResponse::fromEntity)
-                .toList();
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/profissional/{profissionalId}/especialidade")
-    public ResponseEntity<List<ConsultaResponse>> pesquisarPorProfissionalEEspecialidade(
-            @PathVariable Long profissionalId,
-            @RequestParam String especialidade,
-            @RequestParam(required = false) String status) {
-        List<ConsultaResponse> response = consultaService.pesquisarPorProfissionalEEspecialidade(
-                        profissionalId, especialidade, status).stream()
-                .map(ConsultaResponse::fromEntity)
-                .toList();
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/especialidade/intervalo")
-    public ResponseEntity<List<ConsultaResponse>> pesquisarEspecialidadeEmIntervaloDeDatas(
-            @RequestParam String especialidade,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal,
-            @RequestParam(required = false) String status) {
-        List<ConsultaResponse> response = consultaService.pesquisarEspecialidadeEmIntervaloDeDatas(
-                        especialidade, dataInicial, dataFinal, status).stream()
-                .map(ConsultaResponse::fromEntity)
-                .toList();
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/especialidade/{especialidade}")
-    public ResponseEntity<List<ConsultaResponse>> pesquisarPorEspecialidade(
-            @PathVariable String especialidade,
-            @RequestParam(required = false) String status) {
-        List<ConsultaResponse> response = consultaService.pesquisarPorEspecialidade(especialidade, status).stream()
-                .map(ConsultaResponse::fromEntity)
-                .toList();
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/organizacao/{organizacaoId}/especialidade/{especialidade}")
-    public ResponseEntity<List<ConsultaResponse>> pesquisarPorEspecialidadeEOrganizacao(
-            @PathVariable Long organizacaoId,
-            @PathVariable String especialidade,
-            @RequestParam(required = false) String status) {
-        tenantHelper.validateTenant(organizacaoId);
-        List<ConsultaResponse> response = consultaService.pesquisarPorEspecialidadeEOrganizacao(
-                        organizacaoId, especialidade, status).stream()
-                .map(ConsultaResponse::fromEntity)
-                .toList();
-        return ResponseEntity.ok(response);
-    }
-
 //============================================================
 
-    @GetMapping("/paginado")
-    public ResponseEntity<Page<ConsultaResponse>> listarTodasPaginado(Pageable pageable) {
-        Page<ConsultaResponse> response = consultaService.buscarTodas(pageable)
-            .map(ConsultaResponse::fromEntity);
-        return ResponseEntity.ok(response);
-    }
-    
     @GetMapping("/{id}")
     public ResponseEntity<ConsultaResponse> buscarPorId(@PathVariable Long id) {
         return consultaService.buscarPorId(id)
             .map(ConsultaResponse::fromEntity)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
-    }
-    
-
-    
-    @GetMapping("/profissional/{profissionalId}/agenda")
-    public ResponseEntity<List<ConsultaResponse>> buscarAgendaDia(
-            @PathVariable Long profissionalId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
-        List<ConsultaResponse> response = consultaService.buscarAgendaDia(profissionalId, data).stream()
-            .map(ConsultaResponse::fromEntity)
-            .toList();
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/periodo")
-    public ResponseEntity<List<ConsultaResponse>> buscarPorPeriodo(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fim) {
-        List<ConsultaResponse> response = consultaService.buscarPorPeriodo(inicio, fim).stream()
-            .map(ConsultaResponse::fromEntity)
-            .toList();
-        return ResponseEntity.ok(response);
-    }
-    
-    @GetMapping("/paciente/{pacienteId}")
-    public ResponseEntity<List<ConsultaResponse>> listarPorPaciente(@PathVariable Long pacienteId) {
-        List<ConsultaResponse> response = consultaService.buscarPorPaciente(pacienteId).stream()
-            .map(ConsultaResponse::fromEntity)
-            .toList();
-        return ResponseEntity.ok(response);
-    }
-
-    
-
-    @GetMapping("/count/hoje")
-    public ResponseEntity<Long> contarAgendadasHoje() {
-        return ResponseEntity.ok(consultaService.contarAgendadasHoje());
     }
 
     /**
@@ -459,7 +336,6 @@ public class ConsultaController {
             @PathVariable Long organizacaoId) {
         // Validado antes do service: o @Cacheable usa o orgId como chave e responderia do cache sem checar.
         tenantHelper.validateTenant(organizacaoId);
-
 
         EstatisticasDashboardAdminOrgResponse response =
             consultaService.getEstatisticasDashboardAdminOrg(organizacaoId);
@@ -507,35 +383,6 @@ public class ConsultaController {
         return ResponseEntity.ok(consultaService.getEstatisticasDashboardSuperAdmin());
     }
 
-    @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-hoje")
-    public ResponseEntity<Long> getEstatisticaConsultasHojeByAdmiOrg(@PathVariable Long organizacaoId) {
-        tenantHelper.validateTenant(organizacaoId);
-        return ResponseEntity.ok(consultaService.getEstatisticaConsultasHojeByAdmiOrg(organizacaoId));
-    }
-
-    @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-atendidas-hoje")
-    public ResponseEntity<Long> getEstatisticaConsultasAtendidasByAdmiOrg(@PathVariable Long organizacaoId) {
-        tenantHelper.validateTenant(organizacaoId);
-        return ResponseEntity.ok(consultaService.getEstatisticaConsultasAtendidasByAdmiOrg(organizacaoId));
-    }
-
-    @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-agendadas-hoje")
-    public ResponseEntity<Long> getEstatisticasConsultaAgendadasHojeByOrd(@PathVariable Long organizacaoId) {
-        tenantHelper.validateTenant(organizacaoId);
-        return ResponseEntity.ok(consultaService.getEstatisticasConsultaAgendadasHojeByOrd(organizacaoId));
-    }
-
-    @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-semana")
-    public ResponseEntity<Long> getEstatisticasSemanaPorOrganizacao(
-            @PathVariable Long organizacaoId) {
-        tenantHelper.validateTenant(organizacaoId);
-
-
-        Long quantidade = consultaService.getEstatisticasSemanaPorOrganizacao(organizacaoId);
-
-        return ResponseEntity.ok(quantidade);
-    }
-
     //==================================FIM=============================================
 
     @GetMapping("/organizacao/{organizacaoId}/intervalo")
@@ -549,83 +396,6 @@ public class ConsultaController {
             .map(ConsultaResponse::fromEntity)
             .toList();
         return ResponseEntity.ok(response);
-    }
-
-    // ==========================================
-    // ESTATÍSTICAS POR PROFISSIONAL (usuarioId + orgId) - HOJE
-    // ==========================================
-
-    /**
-     * Conta todas as consultas de hoje do profissional logado
-     * Filtra por usuarioId (via JOIN com profissional) + organizacaoId do TenantContext
-     *
-     * @param usuarioId ID do usuário logado (profissional)
-     * @return Quantidade de consultas hoje
-     */
-    @GetMapping("/estatisticas/profissional/{usuarioId}/consultas-hoje")
-    public ResponseEntity<Long> contarConsultasHojePorProfissional(@PathVariable Long usuarioId) {
-        Long organizacaoId = TenantContext.getCurrentTenant();
-        if (organizacaoId == null) {
-            log.warn("consulta.estatisticas negado motivo=SEM_ORGANIZACAO");
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok(consultaService.contarConsultasHojePorUsuarioEOrg(organizacaoId, usuarioId));
-    }
-
-    /**
-     * Conta consultas REALIZADAS hoje do profissional logado
-     * Filtra por usuarioId (via JOIN com profissional) + organizacaoId do TenantContext
-     *
-     * @param usuarioId ID do usuário logado (profissional)
-     * @return Quantidade de consultas realizadas hoje
-     */
-    @GetMapping("/estatisticas/profissional/{usuarioId}/consultas-realizadas-hoje")
-    public ResponseEntity<Long> contarConsultasRealizadasHojePorProfissional(@PathVariable Long usuarioId) {
-        Long organizacaoId = TenantContext.getCurrentTenant();
-        if (organizacaoId == null) {
-            log.warn("consulta.estatisticas negado motivo=SEM_ORGANIZACAO");
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok(consultaService.contarConsultasRealizadasHojePorUsuarioEOrg(organizacaoId, usuarioId));
-    }
-
-    /**
-     * Conta consultas AGENDADAS hoje do profissional logado
-     * Filtra por usuarioId (via JOIN com profissional) + organizacaoId do TenantContext
-     *
-     * @param usuarioId ID do usuário logado (profissional)
-     * @return Quantidade de consultas agendadas hoje
-     */
-    @GetMapping("/estatisticas/profissional/{usuarioId}/consultas-agendadas-hoje")
-    public ResponseEntity<Long> contarConsultasAgendadasHojePorProfissional(@PathVariable Long usuarioId) {
-        Long organizacaoId = TenantContext.getCurrentTenant();
-        if (organizacaoId == null) {
-            log.warn("consulta.estatisticas negado motivo=SEM_ORGANIZACAO");
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok(consultaService.contarConsultasAgendadasHojePorUsuarioEOrg(organizacaoId, usuarioId));
-    }
-
-    // ==========================================
-    // ESTATÍSTICAS GLOBAIS (SUPER ADMIN)
-    // ==========================================
-
-    @GetMapping("/estatisticas/consultas-hoje")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ResponseEntity<Long> contarTodasConsultasHoje() {
-        return ResponseEntity.ok(consultaService.contarTodasConsultasHoje());
-    }
-
-    @GetMapping("/estatisticas/consultas-realizadas-hoje")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ResponseEntity<Long> contarTodasRealizadasHoje() {
-        return ResponseEntity.ok(consultaService.contarTodasConsultasRealizadasHoje());
-    }
-
-    @GetMapping("/estatisticas/consultas-agendadas-hoje")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ResponseEntity<Long> contarTodasAgendadasHoje() {
-        return ResponseEntity.ok(consultaService.contarTodasConsultasAgendadasHoje());
     }
 
     // ==========================================
@@ -670,55 +440,6 @@ public class ConsultaController {
         );
         
         return ResponseEntity.ok(estatisticas);
-    }
-
-    /**
-     * Conta consultas da semana atual para o profissional logado (filtra por orgId + medicoId)
-     * Se medicoId for fornecido, conta apenas consultas desse médico
-     * Caso contrário, conta todas as consultas da organização
-     *
-     * @param medicoId ID do médico/profissional (opcional)
-     * @return Quantidade de consultas da semana
-     */
-    @GetMapping("/estatisticas/consultas-semana")
-    public ResponseEntity<Long> contarConsultasSemana(
-            @RequestParam(required = false) Long medicoId) {
-
-
-        Long organizacaoId = TenantContext.getCurrentTenant();
-
-        if (organizacaoId == null) {
-            log.warn("consulta.estatisticas negado motivo=SEM_ORGANIZACAO");
-            return ResponseEntity.badRequest().build();
-        }
-
-        Long quantidade = consultaService.contarConsultasSemana(organizacaoId, medicoId);
-
-        return ResponseEntity.ok(quantidade);
-    }
-
-    /**
-     * Conta consultas da semana atual de uma organização específica (AdminOrg)
-     * Retorna total de consultas da organização na semana de segunda a domingo
-     *
-     * @param organizacaoId ID da organização
-     * @return Quantidade de consultas da semana
-     */
-
-    /**
-     * Conta consultas da semana atual de todas as organizações (SuperAdmin)
-     * Retorna total global de consultas na semana de segunda a domingo
-     *
-     * @return Quantidade total de consultas da semana
-     */
-    @GetMapping("/estatisticas/consultas-semana-global")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ResponseEntity<Long> contarConsultasSemanaGlobal() {
-
-
-        Long quantidade = consultaService.contarConsultasSemanaGlobal();
-
-        return ResponseEntity.ok(quantidade);
     }
 
     /**
@@ -774,7 +495,6 @@ public class ConsultaController {
             @PathVariable Long pacienteId,
             @AuthenticationPrincipal Usuario usuarioLogado) {
 
-
         List<HistoricoConsultaPacienteResponse> historico;
 
         if (usuarioLogado.isClinico()) {
@@ -823,7 +543,6 @@ public class ConsultaController {
             log.warn("consulta.saldoFinanceiro negado motivo=SEM_ORGANIZACAO");
             return ResponseEntity.badRequest().build();
         }
-
 
         SaldoFinanceiroResponse response = saldoFinanceiroService
                 .calcularSaldo(organizacaoId, inicio, fim, agruparPor);

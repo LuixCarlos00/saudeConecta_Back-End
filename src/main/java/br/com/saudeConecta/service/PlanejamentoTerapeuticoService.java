@@ -1,14 +1,8 @@
 package br.com.saudeConecta.service;
 
-import br.com.saudeConecta.domain.consulta.Consulta;
-import br.com.saudeConecta.domain.organizacao.Organizacao;
-import br.com.saudeConecta.domain.paciente.Paciente;
-import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
-import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
-import br.com.saudeConecta.presentation.dto.prontuario.PlanejamentoTerapeuticoRequest;
 import br.com.saudeConecta.util.MascaraLog;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.EntityNotFoundException;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -27,82 +20,10 @@ import java.util.UUID;
 public class PlanejamentoTerapeuticoService {
 
     private final PlanejamentoTerapeuticoRepository planejamentoRepository;
-    private final ProntuarioDentistaRepository prontuarioRepository;
-    private final ConsultaRepository consultaRepository;
-    private final ProfissionalRepository profissionalRepository;
-    private final PacienteRepository pacienteRepository;
     private final TenantHelper tenantHelper;
 
     /** Validade do link público de assinatura do planejamento. */
     private static final int DIAS_EXPIRACAO_LINK = 7;
-
-    /**
-     * Lista planejamentos de um prontuário (dentista ou médico).
-     * Tenta buscar primeiro por prontuário dentista, depois por prontuário médico.
-     *
-     * @param prontuarioId ID do prontuário
-     * @return lista de planejamentos
-     */
-    @Transactional(readOnly = true)
-    public List<PlanejamentoTerapeutico> listarPorProntuario(Long prontuarioId) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        List<PlanejamentoTerapeutico> lista = planejamentoRepository.findByProntuarioId(prontuarioId, orgId);
-        if (lista.isEmpty()) {
-            lista = planejamentoRepository.findByProntuarioMedicoId(prontuarioId, orgId);
-        }
-        return lista;
-    }
-
-    /**
-     * Adiciona um item ao planejamento terapêutico.
-     *
-     * @param profissionalId ID do profissional logado
-     * @param request dados do planejamento
-     * @return planejamento criado
-     */
-    @Transactional
-    public PlanejamentoTerapeutico adicionar(Long profissionalId, PlanejamentoTerapeuticoRequest request) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("planejamento.criar inicio prontuarioId={}",
-                request.getProntuarioDentistaId());
-
-        // Prontuário, profissional e paciente precisam ser da clínica do token; de outra = "não encontrado".
-        ProntuarioDentista prontuario = prontuarioRepository
-                .findByCodigoAndConsulta_Organizacao_Id(request.getProntuarioDentistaId(), orgId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "prontuario nao encontrado: " + request.getProntuarioDentistaId()));
-
-        Profissional profissional = profissionalRepository.findByIdAndOrganizacao_Id(profissionalId, orgId)
-                .orElseThrow(() -> new IllegalArgumentException("Profissional nao encontrado: " + profissionalId));
-
-        Paciente paciente = pacienteRepository
-                .findByPaciCodigoAndOrganizacao_IdWithEndereco(request.getPacienteId(), orgId)
-                .orElseThrow(() -> new IllegalArgumentException("Paciente nao encontrado: " + request.getPacienteId()));
-
-        Organizacao organizacao = new Organizacao();
-        organizacao.setId(orgId);
-
-        Consulta consulta = null;
-        if (request.getConsultaId() != null) {
-            consulta = consultaRepository.findByIdAndOrganizacao_Id(request.getConsultaId(), orgId).orElse(null);
-        }
-
-        PlanejamentoTerapeutico planejamento = PlanejamentoTerapeutico.builder()
-                .prontuarioDentista(prontuario)
-                .consulta(consulta)
-                .paciente(paciente)
-                .profissional(profissional)
-                .organizacao(organizacao)
-                .dataProcedimento(parseData(request.getDataProcedimento()))
-                .procedimentoRealizado(request.getProcedimentoRealizado())
-                .valor(request.getValor())
-                .statusAssinatura("PENDENTE")
-                .build();
-
-        PlanejamentoTerapeutico salvo = planejamentoRepository.save(planejamento);
-        log.info("planejamento.criar ok planejamentoId={}", salvo.getId());
-        return salvo;
-    }
 
     /**
      * Remove um item do planejamento.
@@ -204,13 +125,4 @@ public class PlanejamentoTerapeuticoService {
         log.info("planejamento.assinar ok itens={}", atualizados);
     }
 
-    private LocalDate parseData(String data) {
-        if (data == null || data.isBlank()) return LocalDate.now();
-        try {
-            return LocalDate.parse(data);
-        } catch (Exception e) {
-            log.warn("planejamento.data negado motivo=DATA_INVALIDA data={} acao=USA_DATA_ATUAL", data);
-            return LocalDate.now();
-        }
-    }
 }

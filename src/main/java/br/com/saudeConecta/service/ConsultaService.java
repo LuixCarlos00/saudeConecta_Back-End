@@ -23,8 +23,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,13 +57,6 @@ public class ConsultaService {
     private final TenantHelper tenantHelper;
     private final ConfiguracoesConsultaService configuracoesConsultaService;
 
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public Page<Consulta> buscarTodas(Pageable pageable) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return consultaRepository.findByOrganizacao_Id(orgId, pageable);
-    }
-    
     @RequiresTenant
     @Transactional(readOnly = true)
     public Optional<Consulta> buscarPorId(Long id) {
@@ -174,34 +165,6 @@ public class ConsultaService {
         return consultaRepository.findByOrganizacaoIdAndPeriodo(orgId, inicioAno.atStartOfDay(), fimAno.atTime(23, 59, 59));
     }
     
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public List<Consulta> buscarPorProfissional(Long profissionalId) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return consultaRepository.findByOrganizacao_IdAndProfissional_IdWithRelations(orgId, profissionalId);
-    }
-    
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public List<Consulta> buscarAgendaDia(Long profissionalId, LocalDate data) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return consultaRepository.findAgendaDia(orgId, profissionalId, data);
-    }
-    
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public List<Consulta> buscarPorPeriodo(LocalDateTime inicio, LocalDateTime fim) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return consultaRepository.findByOrganizacaoIdAndPeriodo(orgId, inicio, fim);
-    }
-    
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public List<Consulta> buscarPorPaciente(Long pacienteId) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return consultaRepository.findByOrganizacao_IdAndPaciente_PaciCodigoWithRelations(orgId, pacienteId);
-    }
-
     /**
      * Busca consultas com filtros dinâmicos opcionais
      * 
@@ -310,35 +273,6 @@ public class ConsultaService {
         return salva;
     }
 
-    @RequiresTenant
-    @CacheEvict(value = {"dashboard-admin-org", "dashboard-profissional", "dashboard-super-admin", "consultas-intervalo-org",
-                          "consultas-hoje-org", "consultas-semana-org", "consultas-mes-org", "consultas-ano-org",
-                          "horarios-ocupados-org", "disponibilidade-consulta"}, allEntries = true)
-    @Transactional
-    public Consulta concluirConsultabyOrg(Long id) {
-        log.info("consulta.concluir inicio consultaId={}", id);
-
-        Consulta consulta = buscarPorId(id)
-            .orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada"));
-
-        if (!StatusConsulta.AGENDADA.equals(consulta.getStatus())
-                && !StatusConsulta.CONFIRMADA.equals(consulta.getStatus())) {
-            throw new IllegalStateException("Apenas consultas AGENDADAS ou CONFIRMADAS podem ser concluídas");
-        }
-
-        StatusConsulta statusAnterior = consulta.getStatus();
-        consulta.setStatus(StatusConsulta.REALIZADA);
-        Consulta salva = consultaRepository.save(consulta);
-
-        registrarHistorico(salva, statusAnterior, StatusConsulta.REALIZADA, "Consulta concluída", getUsuarioAtual());
-log.info("consulta.concluir ok consultaId={} status=REALIZADA", salva.getId());
-
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return consultaRepository.findByIdAndOrganizacao_IdWithRelations(salva.getId(), orgId)
-            .orElse(salva);
-    }
-    
-
     
 
     /**
@@ -347,7 +281,7 @@ log.info("consulta.concluir ok consultaId={} status=REALIZADA", salva.getId());
      * - CONFIRMADA → AGENDADA, CANCELADA
      * - REALIZADA → PAGO (AdminOrg pode marcar como pago após médico concluir)
      * 
-     * IMPORTANTE: Status REALIZADA só pode ser definido pelo médico através do método concluirConsultabyOrg
+     * IMPORTANTE: Status REALIZADA só é definido quando o profissional finaliza o prontuário (médico ou odontológico)
      *
      * @param id             ID da consulta
      * @param novoStatus     Novo status desejado
@@ -443,7 +377,7 @@ log.info("consulta.concluir ok consultaId={} status=REALIZADA", salva.getId());
     /**
      * Valida se a transição de status é permitida conforme regras de negócio.
      * 
-     * IMPORTANTE: Status REALIZADA não pode ser definido manualmente, apenas via concluirConsultabyOrg
+     * IMPORTANTE: Status REALIZADA não pode ser definido manualmente, apenas ao finalizar o prontuário
      */
     private void validarTransicaoStatus(StatusConsulta statusAtual, StatusConsulta novoStatus) {
         switch (statusAtual) {
@@ -582,66 +516,9 @@ log.info("consulta.concluir ok consultaId={} status=REALIZADA", salva.getId());
         return salva;
     }
     
-    @RequiresTenant
-    public Long contarAgendadasHoje() {
-        Long orgId = tenantHelper.getCurrentTenantId();
-        return consultaRepository.countAgendadasHoje(orgId);
-    }
-
     // ==========================================
     // ESTATÍSTICAS POR PROFISSIONAL (usuarioId + orgId) - HOJE
     // ==========================================
-
-    /**
-     * Conta todas as consultas de hoje de um profissional específico na organização
-     *
-     * @param organizacaoId ID da organização
-     * @param usuarioId ID do usuário logado (profissional)
-     * @return Quantidade de consultas hoje
-     */
-    public Long contarConsultasHojePorUsuarioEOrg(Long organizacaoId, Long usuarioId) {
-        LocalDate hoje = LocalDate.now();
-        return consultaRepository.countConsultasHojePorUsuarioEOrg(
-            organizacaoId,
-            usuarioId,
-            hoje.atStartOfDay(),
-            hoje.plusDays(1).atStartOfDay()
-        );
-    }
-
-    /**
-     * Conta consultas REALIZADAS hoje de um profissional específico na organização
-     *
-     * @param organizacaoId ID da organização
-     * @param usuarioId ID do usuário logado (profissional)
-     * @return Quantidade de consultas realizadas hoje
-     */
-    public Long contarConsultasRealizadasHojePorUsuarioEOrg(Long organizacaoId, Long usuarioId) {
-        LocalDate hoje = LocalDate.now();
-        return consultaRepository.countConsultasRealizadasHojePorUsuarioEOrg(
-            organizacaoId,
-            usuarioId,
-            hoje.atStartOfDay(),
-            hoje.plusDays(1).atStartOfDay()
-        );
-    }
-
-    /**
-     * Conta consultas AGENDADAS hoje de um profissional específico na organização
-     *
-     * @param organizacaoId ID da organização
-     * @param usuarioId ID do usuário logado (profissional)
-     * @return Quantidade de consultas agendadas hoje
-     */
-    public Long contarConsultasAgendadasHojePorUsuarioEOrg(Long organizacaoId, Long usuarioId) {
-        LocalDate hoje = LocalDate.now();
-        return consultaRepository.countConsultasAgendadasHojePorUsuarioEOrg(
-            organizacaoId,
-            usuarioId,
-            hoje.atStartOfDay(),
-            hoje.plusDays(1).atStartOfDay()
-        );
-    }
 
     // ===============================================================
     // BUSCAS DE ESTATISTICAS - Dashboard - Gestor
@@ -860,35 +737,6 @@ log.info("consulta.concluir ok consultaId={} status=REALIZADA", salva.getId());
             .build();
     }
 
-    public Long getEstatisticaConsultasHojeByAdmiOrg(Long organizacaoId) {
-        LocalDate hoje = LocalDate.now();
-        return consultaRepository.countByOrganizacao_IdAndDataHoraBetween(
-            organizacaoId, 
-            hoje.atStartOfDay(), 
-            hoje.plusDays(1).atStartOfDay()
-        );
-    }
-
-    public Long getEstatisticaConsultasAtendidasByAdmiOrg(Long organizacaoId) {
-        LocalDate hoje = LocalDate.now();
-        return consultaRepository.countByOrganizacao_IdAndStatusAndDataHoraBetween(
-            organizacaoId,
-            StatusConsulta.REALIZADA,
-            hoje.atStartOfDay(),
-            hoje.plusDays(1).atStartOfDay()
-        );
-    }
-
-    public Long getEstatisticasConsultaAgendadasHojeByOrd(Long organizacaoId) {
-        LocalDate hoje = LocalDate.now();
-        return consultaRepository.countByOrganizacao_IdAndStatusAndDataHoraBetween(
-            organizacaoId,
-            StatusConsulta.AGENDADA,
-            hoje.atStartOfDay(),
-            hoje.plusDays(1).atStartOfDay()
-        );
-    }
-
     @Cacheable(value = "consultas-intervalo-org", key = "@tenantHelper.getCurrentTenantIdOrNull() + '-' + #dataInicio + '-' + #dataFim")
     @Transactional(readOnly = true)
     public List<Consulta> buscarConsultasPorOrganizacaoEIntervalo(Long organizacaoId, LocalDate dataInicio, LocalDate dataFim) {
@@ -897,22 +745,6 @@ log.info("consulta.concluir ok consultaId={} status=REALIZADA", salva.getId());
             organizacaoId,
             dataInicio.atStartOfDay(),
             dataFim.plusDays(1).atStartOfDay()
-        );
-    }
-
-    @Transactional(readOnly = true)
-    public Long getEstatisticasSemanaPorOrganizacao(Long organizacaoId) {
-        LocalDate hoje = LocalDate.now();
-        LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
-        LocalDate fimSemana = inicioSemana.plusDays(6);
-
-        log.debug("consulta.semana contar escopo=ORGANIZACAO inicio={} fim={}",
-                inicioSemana, fimSemana);
-
-        return consultaRepository.countConsultasSemanaByOrganizacao(
-                organizacaoId,
-                inicioSemana.atStartOfDay(),
-                fimSemana.atTime(23, 59, 59)
         );
     }
 
@@ -945,51 +777,6 @@ log.info("consulta.concluir ok consultaId={} status=REALIZADA", salva.getId());
             usuarioId,
             dataInicio.atStartOfDay(),
             dataFim.atTime(23, 59, 59)
-        );
-    }
-
-    /**
-     * Conta consultas da semana atual por médico e organização
-     * Se profissionalId for null, conta todas as consultas da organização
-     * 
-     * @param organizacaoId ID da organização
-     * @param profissionalId ID do profissional/médico (opcional)
-     * @return Quantidade de consultas da semana
-     */
-    @Transactional(readOnly = true)
-    public Long contarConsultasSemana(Long organizacaoId, Long profissionalId) {
-        LocalDate hoje = LocalDate.now();
-        LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
-        LocalDate fimSemana = inicioSemana.plusDays(6);
-        
-        log.debug("consulta.semana contar profissionalId={} inicio={} fim={}",
-                profissionalId, inicioSemana, fimSemana);
-        
-        return consultaRepository.countConsultasPorMedicoEIntervalo(
-            organizacaoId,
-            profissionalId,
-            inicioSemana.atStartOfDay(),
-            fimSemana.atTime(23, 59, 59)
-        );
-    }
-
-    /**
-     * Conta consultas da semana atual de todas as organizações (SuperAdmin)
-     *
-     * @return Quantidade total de consultas da semana
-     */
-    @Transactional(readOnly = true)
-    public Long contarConsultasSemanaGlobal() {
-        LocalDate hoje = LocalDate.now();
-        LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
-        LocalDate fimSemana = inicioSemana.plusDays(6);
-
-        log.debug("consulta.semana contar escopo=GLOBAL inicio={} fim={}",
-                inicioSemana, fimSemana);
-
-        return consultaRepository.countConsultasSemanaGlobal(
-            inicioSemana.atStartOfDay(),
-            fimSemana.atTime(23, 59, 59)
         );
     }
 
@@ -1044,166 +831,9 @@ log.info("consulta.concluir ok consultaId={} status=REALIZADA", salva.getId());
         );
     }
 
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public List<Consulta> pesquisarMedicoEspecialidadeEmIntervaloDeDatas(Long profissionalId, String especialidade, LocalDate dataInicio, LocalDate dataFim, String status) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-
-        if (status != null && status.trim().equalsIgnoreCase("ALL")) {
-            return consultaRepository.
-                    findByOrganizacaoIdAndProfissionalIdAndEspecialidadeNomeContainingAndDataHoraBetweenWithRelations(
-                orgId,
-                profissionalId,
-                especialidade,
-                dataInicio.atStartOfDay(),
-                dataFim.plusDays(1).atStartOfDay()
-            );
-        }
-
-        StatusConsulta statusEnum = null;
-        if (status != null && !status.isBlank()) {
-            statusEnum = StatusConsulta.valueOf(status.trim().toUpperCase());
-        }
-
-        return consultaRepository.
-                findByOrganizacaoIdAndProfissionalIdAndEspecialidadeNomeContainingAndStatusOptionalAndDataHoraBetweenWithRelations(
-            orgId,
-            profissionalId,
-            especialidade,
-            statusEnum,
-            dataInicio.atStartOfDay(),
-            dataFim.plusDays(1).atStartOfDay()
-        );
-    }
-
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public List<Consulta> pesquisarEspecialidadeEmIntervaloDeDatas(String especialidade, LocalDate dataInicio, LocalDate dataFim, String status) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-
-        if (status != null && status.trim().equalsIgnoreCase("ALL")) {
-            return consultaRepository.findByOrganizacaoIdAndEspecialidadeNomeContainingAndDataHoraBetweenWithRelations(
-                orgId,
-                especialidade,
-                dataInicio.atStartOfDay(),
-                dataFim.plusDays(1).atStartOfDay()
-            );
-        }
-
-        StatusConsulta statusEnum = null;
-        if (status != null && !status.isBlank()) {
-            statusEnum = StatusConsulta.valueOf(status.trim().toUpperCase());
-        }
-
-        return consultaRepository.findByOrganizacaoIdAndEspecialidadeNomeContainingAndStatusOptionalAndDataHoraBetweenWithRelations(
-            orgId,
-            especialidade,
-            statusEnum,
-            dataInicio.atStartOfDay(),
-            dataFim.plusDays(1).atStartOfDay()
-        );
-    }
-
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public List<Consulta> pesquisarPorProfissionalEEspecialidade(Long profissionalId, String especialidade, String status) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-
-        if (status != null && status.trim().equalsIgnoreCase("ALL")) {
-            return consultaRepository.findByOrganizacaoIdAndProfissionalIdAndEspecialidadeNomeContainingWithRelations(
-                orgId,
-                profissionalId,
-                especialidade
-            );
-        }
-
-        StatusConsulta statusEnum = null;
-        if (status != null && !status.isBlank()) {
-            statusEnum = StatusConsulta.valueOf(status.trim().toUpperCase());
-        }
-
-        return consultaRepository.findByOrganizacaoIdAndProfissionalIdAndEspecialidadeNomeContainingAndStatusOptionalWithRelations(
-            orgId,
-            profissionalId,
-            especialidade,
-            statusEnum
-        );
-    }
-
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public List<Consulta> pesquisarPorEspecialidade(String especialidade, String status) {
-        Long orgId = tenantHelper.getCurrentTenantId();
-
-        if (status != null && status.trim().equalsIgnoreCase("ALL")) {
-            return consultaRepository.findByOrganizacaoIdAndEspecialidadeNomeContainingWithRelations(
-                orgId,
-                especialidade
-            );
-        }
-
-        StatusConsulta statusEnum = null;
-        if (status != null && !status.isBlank()) {
-            statusEnum = StatusConsulta.valueOf(status.trim().toUpperCase());
-        }
-
-        return consultaRepository.findByOrganizacaoIdAndEspecialidadeNomeContainingAndStatusOptionalWithRelations(
-            orgId,
-            especialidade,
-            statusEnum
-        );
-    }
-
-    @Transactional(readOnly = true)
-    public List<Consulta> pesquisarPorEspecialidadeEOrganizacao(Long organizacaoId, String especialidade, String status) {
-        if (status != null && status.trim().equalsIgnoreCase("ALL")) {
-            return consultaRepository.findByOrganizacaoIdAndEspecialidadeNomeContainingWithRelations(
-                organizacaoId,
-                especialidade
-            );
-        }
-
-        StatusConsulta statusEnum = null;
-        if (status != null && !status.isBlank()) {
-            statusEnum = StatusConsulta.valueOf(status.trim().toUpperCase());
-        }
-
-        return consultaRepository.findByOrganizacaoIdAndEspecialidadeNomeContainingAndStatusOptionalWithRelations(
-            organizacaoId,
-            especialidade,
-            statusEnum
-        );
-    }
-
     // ==========================================
     // ESTATÍSTICAS GLOBAIS (SUPER ADMIN)
     // ==========================================
-
-    public Long contarTodasConsultasHoje() {
-        LocalDate hoje = LocalDate.now();
-        return consultaRepository.countByDataHoraBetween(
-            hoje.atStartOfDay(),
-            hoje.plusDays(1).atStartOfDay()
-        );
-    }
-
-    public Long contarTodasConsultasRealizadasHoje() {
-        LocalDate hoje = LocalDate.now();
-        return consultaRepository.countByStatusAndDataHoraBetween(
-            StatusConsulta.REALIZADA,
-            hoje.atStartOfDay(),
-            hoje.plusDays(1).atStartOfDay()
-        );
-    }
-
-    public Long contarTodasConsultasAgendadasHoje() {
-        LocalDate hoje = LocalDate.now();
-        return consultaRepository.countByStatusAndDataHoraBetween(
-            StatusConsulta.AGENDADA,
-            hoje.atStartOfDay(),
-            hoje.plusDays(1).atStartOfDay()
-        );
-    }
 
     @RequiresTenant
     @Transactional(readOnly = true)

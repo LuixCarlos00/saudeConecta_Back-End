@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -31,7 +30,6 @@ public class ProntuarioDentistaController {
     public ResponseEntity<Void> cadastrarProntuarioByOrg(
             @RequestBody CadastrarProntuarioDentistaRequest request) {
 
-
         prontuarioDentistaService.cadastrarProntuarioByOrg(request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -50,25 +48,6 @@ public class ProntuarioDentistaController {
     }
 
     /**
-     * Busca prontuário por ID (inclui odontograma completo para recarregar o SVG).
-     * GET /prontuario-dentista/{id}
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<ProntuarioDentista> buscarPorId(@PathVariable Long id) {
-        return ResponseEntity.ok(prontuarioDentistaService.buscarPorId(id));
-    }
-
-    /**
-     * Lista prontuários de uma consulta.
-     * GET /prontuario-dentista/consulta/{consultaId}
-     */
-    @GetMapping("/consulta/{consultaId}")
-    public ResponseEntity<List<ProntuarioDentista>> listarPorConsulta(
-            @PathVariable Long consultaId) {
-        return ResponseEntity.ok(prontuarioDentistaService.listarPorConsulta(consultaId));
-    }
-
-    /**
      * Retorna o prontuário mais recente de uma consulta.
      * GET /prontuario-dentista/consulta/{consultaId}/recente
      */
@@ -80,35 +59,12 @@ public class ProntuarioDentistaController {
     }
 
     /**
-     * Lista prontuários de um profissional.
-     * GET /prontuario-dentista/profissional/{profissionalId}
-     */
-    @GetMapping("/profissional/{profissionalId}")
-    public ResponseEntity<List<ProntuarioDentista>> listarPorProfissional(
-            @PathVariable Long profissionalId) {
-        return ResponseEntity.ok(
-                prontuarioDentistaService.listarPorProfissional(profissionalId));
-    }
-
-    /**
-     * Lista prontuários de um paciente (histórico).
-     * GET /prontuario-dentista/paciente/{pacienteId}
-     */
-    @GetMapping("/paciente/{pacienteId}")
-    public ResponseEntity<List<ProntuarioDentista>> listarPorPaciente(
-            @PathVariable Long pacienteId) {
-        return ResponseEntity.ok(
-                prontuarioDentistaService.listarPorPaciente(pacienteId));
-    }
-
-    /**
      * Gera link do questionário de saúde para uma consulta.
      * POST /prontuario-dentista/gerar-link-questionario/{consultaId}
      */
     @PostMapping("/gerar-link-questionario/{consultaId}")
     public ResponseEntity<Map<String, String>> gerarLinkQuestionario(
             @PathVariable Long consultaId) {
-
 
         String token = termoAutorizacaoService.gerarLinkQuestionario(consultaId);
 
@@ -125,7 +81,6 @@ public class ProntuarioDentistaController {
     @GetMapping("/questionario-saude/{consultaId}")
     public ResponseEntity<Map<String, Object>> buscarQuestionarioSaude(
             @PathVariable Long consultaId) {
-
 
         TermoAutorizacao termo = termoAutorizacaoService.buscarPorConsultaId(consultaId);
 

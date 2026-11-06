@@ -15,7 +15,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -74,92 +73,6 @@ class EspecialidadeControllerIntegrationTest {
             when(service.carregarEspecialidades()).thenReturn(Collections.emptyList());
 
             mockMvc.perform(get("/especialidades/carregarEspecialidades"))
-                    .andExpect(status().isOk());
-        }
-    }
-
-    // ========== GET /especialidades/{id} ==========
-
-    @Nested
-    @DisplayName("GET /especialidades/{id}")
-    class BuscarPorId {
-
-        @Test
-        @WithMockUser
-        @DisplayName("Deve retornar 200 quando especialidade existe")
-        void deveRetornar200QuandoExiste() throws Exception {
-            when(service.buscarPorId(1L))
-                    .thenReturn(Optional.of(criarEspecialidade(1L, "Cardiologia")));
-
-            mockMvc.perform(get("/especialidades/1"))
-                    .andExpect(status().isOk());
-        }
-
-        @Test
-        @WithMockUser
-        @DisplayName("Deve retornar 404 quando não existe")
-        void deveRetornar404QuandoNaoExiste() throws Exception {
-            when(service.buscarPorId(99L)).thenReturn(Optional.empty());
-
-            mockMvc.perform(get("/especialidades/99"))
-                    .andExpect(status().isNotFound());
-        }
-
-        @Test
-        @DisplayName("Deve retornar 403 sem autenticação")
-        void deveRetornar403SemAutenticacao() throws Exception {
-            mockMvc.perform(get("/especialidades/1"))
-                    .andExpect(status().isForbidden());
-        }
-    }
-
-    // ========== GET /especialidades/medicas e /odontologicas ==========
-
-    @Nested
-    @DisplayName("GET /especialidades/medicas e /odontologicas")
-    class ListarPorTipo {
-
-        @Test
-        @WithMockUser
-        @DisplayName("Deve retornar 200 para especialidades médicas")
-        void deveRetornar200Medicas() throws Exception {
-            when(service.listarMedicas())
-                    .thenReturn(List.of(criarEspecialidade(1L, "Cardiologia")));
-
-            mockMvc.perform(get("/especialidades/medicas"))
-                    .andExpect(status().isOk());
-        }
-
-        @Test
-        @WithMockUser
-        @DisplayName("Deve retornar 200 para especialidades odontológicas")
-        void deveRetornar200Odontologicas() throws Exception {
-            when(service.listarOdontologicas())
-                    .thenReturn(List.of(criarEspecialidade(2L, "Ortodontia")));
-
-            mockMvc.perform(get("/especialidades/odontologicas"))
-                    .andExpect(status().isOk());
-        }
-
-        @Test
-        @WithMockUser
-        @DisplayName("Deve retornar 200 para especialidades por tipo código")
-        void deveRetornar200PorCodigoTipo() throws Exception {
-            when(service.listarPorTipo("MED"))
-                    .thenReturn(List.of(criarEspecialidade(1L, "Cardiologia")));
-
-            mockMvc.perform(get("/especialidades/tipo/MED"))
-                    .andExpect(status().isOk());
-        }
-
-        @Test
-        @WithMockUser
-        @DisplayName("Deve retornar 200 para especialidades por tipo ID")
-        void deveRetornar200PorIdTipo() throws Exception {
-            when(service.listarPorTipoId(1L))
-                    .thenReturn(List.of(criarEspecialidade(1L, "Cardiologia")));
-
-            mockMvc.perform(get("/especialidades/tipo-id/1"))
                     .andExpect(status().isOk());
         }
     }

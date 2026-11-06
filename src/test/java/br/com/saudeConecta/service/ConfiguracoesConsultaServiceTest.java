@@ -1,12 +1,10 @@
 package br.com.saudeConecta.service;
 
-import br.com.saudeConecta.domain.consulta.ConfiguracoesConsulta;
 import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConfiguracoesConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
-import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -60,18 +58,6 @@ class ConfiguracoesConsultaServiceTest {
     void criarOutraClinica() {
         assertThatThrownBy(() -> service.criarConfiguracao(2L, true, "x"))
                 .isInstanceOf(TenantAccessDeniedException.class);
-        verify(configuracoesConsultaRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("PUT /{id} de configuração de outra clínica responde não encontrado e não grava")
-    void atualizarOutraClinica() {
-        lenient().when(configuracoesConsultaRepository.findById(9L))
-                .thenReturn(Optional.of(ConfiguracoesConsulta.builder().id(9L).build()));
-
-        assertThatThrownBy(() -> service.atualizarConfiguracao(9L, true, null))
-                .isInstanceOf(EntityNotFoundException.class);
-        verify(configuracoesConsultaRepository).findByIdAndOrganizacaoId(9L, ORG);
         verify(configuracoesConsultaRepository, never()).save(any());
     }
 

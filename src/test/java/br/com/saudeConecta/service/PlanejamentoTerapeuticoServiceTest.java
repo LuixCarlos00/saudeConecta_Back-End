@@ -1,13 +1,9 @@
 package br.com.saudeConecta.service;
 
 import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
-import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
-import br.com.saudeConecta.domain.profissional.Profissional;
-import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
-import br.com.saudeConecta.presentation.dto.prontuario.PlanejamentoTerapeuticoRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -22,7 +18,6 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 import jakarta.persistence.EntityNotFoundException;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,10 +32,6 @@ class PlanejamentoTerapeuticoServiceTest {
     private static final Long ORG = 1L;
 
     @Mock private PlanejamentoTerapeuticoRepository planejamentoRepository;
-    @Mock private ProntuarioDentistaRepository prontuarioRepository;
-    @Mock private ConsultaRepository consultaRepository;
-    @Mock private ProfissionalRepository profissionalRepository;
-    @Mock private PacienteRepository pacienteRepository;
     @Spy private TenantHelper tenantHelper = new TenantHelper();
 
     @InjectMocks
@@ -54,61 +45,6 @@ class PlanejamentoTerapeuticoServiceTest {
     @AfterEach
     void limpar() {
         TenantContext.clear();
-    }
-
-    private PlanejamentoTerapeuticoRequest request() {
-        PlanejamentoTerapeuticoRequest r = new PlanejamentoTerapeuticoRequest();
-        r.setProntuarioDentistaId(5L);
-        r.setPacienteId(7L);
-        r.setProcedimentoRealizado("Restauração");
-        return r;
-    }
-
-    @Test
-    @DisplayName("listarPorProntuario consulta somente a organização do token")
-    void listarFiltrado() {
-        service.listarPorProntuario(5L);
-
-        verify(planejamentoRepository).findByProntuarioId(5L, ORG);
-        verify(planejamentoRepository).findByProntuarioMedicoId(5L, ORG);
-    }
-
-    @Test
-    @DisplayName("adicionar recusa prontuário de outra clínica e não grava")
-    void adicionarProntuarioOutraClinica() {
-        lenient().when(prontuarioRepository.findById(5L)).thenReturn(Optional.of(new ProntuarioDentista()));
-
-        assertThatThrownBy(() -> service.adicionar(3L, request()))
-                .isInstanceOf(IllegalArgumentException.class);
-        verify(prontuarioRepository).findByCodigoAndConsulta_Organizacao_Id(5L, ORG);
-        verify(planejamentoRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("adicionar recusa profissional de outra clínica e não grava")
-    void adicionarProfissionalOutraClinica() {
-        when(prontuarioRepository.findByCodigoAndConsulta_Organizacao_Id(5L, ORG))
-                .thenReturn(Optional.of(new ProntuarioDentista()));
-        lenient().when(profissionalRepository.findById(3L)).thenReturn(Optional.of(new Profissional()));
-
-        assertThatThrownBy(() -> service.adicionar(3L, request()))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Profissional nao encontrado");
-        verify(planejamentoRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("adicionar recusa paciente de outra clínica e não grava")
-    void adicionarPacienteOutraClinica() {
-        when(prontuarioRepository.findByCodigoAndConsulta_Organizacao_Id(5L, ORG))
-                .thenReturn(Optional.of(new ProntuarioDentista()));
-        when(profissionalRepository.findByIdAndOrganizacao_Id(3L, ORG)).thenReturn(Optional.of(new Profissional()));
-        lenient().when(pacienteRepository.findById(7L)).thenReturn(Optional.of(new Paciente()));
-
-        assertThatThrownBy(() -> service.adicionar(3L, request()))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Paciente nao encontrado");
-        verify(planejamentoRepository, never()).save(any());
     }
 
     @Test

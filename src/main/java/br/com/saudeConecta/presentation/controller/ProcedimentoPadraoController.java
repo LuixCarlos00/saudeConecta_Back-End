@@ -126,13 +126,4 @@ public class ProcedimentoPadraoController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Desativa um procedimento (soft delete).
-     * DELETE /procedimentos-padrao/{id}
-     */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> desativar(@PathVariable Long id) {
-        procedimentoService.desativar(id);
-        return ResponseEntity.noContent().build();
-    }
 }
