@@ -1,6 +1,11 @@
 package br.com.saudeConecta.application.plataforma;
 
 import br.com.saudeConecta.application.exception.BusinessException;
+import br.com.saudeConecta.application.plataforma.dto.AtencaoResponse;
+import br.com.saudeConecta.application.plataforma.dto.DashboardPlataformaResponse;
+import br.com.saudeConecta.application.plataforma.dto.PlanoResumoResponse;
+import br.com.saudeConecta.application.plataforma.dto.SerieMensalResponse;
+import br.com.saudeConecta.application.plataforma.dto.StatusQuantidadeResponse;
 import br.com.saudeConecta.config.FusoHorarioConfig;
 import br.com.saudeConecta.domain.planos.StatusAssinatura;
 import br.com.saudeConecta.domain.planos.TipoPlano;
@@ -12,11 +17,6 @@ import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaReposit
 import br.com.saudeConecta.infrastructure.persistence.repository.MpWebhookEventoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
-import br.com.saudeConecta.presentation.dto.plataforma.AtencaoResponse;
-import br.com.saudeConecta.presentation.dto.plataforma.DashboardPlataformaResponse;
-import br.com.saudeConecta.presentation.dto.plataforma.PlanoResumoResponse;
-import br.com.saudeConecta.presentation.dto.plataforma.SerieMensalResponse;
-import br.com.saudeConecta.presentation.dto.plataforma.StatusQuantidadeResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

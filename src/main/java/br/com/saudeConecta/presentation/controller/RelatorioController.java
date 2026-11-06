@@ -1,8 +1,8 @@
 package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.application.relatorio.RelatorioPacienteService;
+import br.com.saudeConecta.application.relatorio.dto.PacienteAtendidoResponse;
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.presentation.dto.relatorio.PacienteAtendidoResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;

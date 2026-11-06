@@ -1,12 +1,12 @@
 package br.com.saudeConecta.application.cobranca;
 
 import br.com.saudeConecta.application.assinatura.AssinaturaTenantService;
+import br.com.saudeConecta.application.assinatura.dto.CobrancaTenantResponse;
 import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.domain.planos.CobrancaTenant;
 import br.com.saudeConecta.domain.planos.FormaPagamentoCobranca;
 import br.com.saudeConecta.domain.planos.StatusCobranca;
 import br.com.saudeConecta.infrastructure.persistence.repository.CobrancaTenantRepository;
-import br.com.saudeConecta.presentation.dto.planos.CobrancaTenantResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;

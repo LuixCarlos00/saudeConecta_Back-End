@@ -2,6 +2,7 @@ package br.com.saudeConecta.application.prontuario;
 
 import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.application.exception.ResourceNotFoundException;
+import br.com.saudeConecta.application.prontuario.dto.CadastrarProntuarioDentistaRequest;
 import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.consulta.Consulta;
@@ -16,7 +17,6 @@ import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaReposit
 import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProntuarioDentistaRepository;
-import br.com.saudeConecta.presentation.dto.prontuario.CadastrarProntuarioDentistaRequest;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

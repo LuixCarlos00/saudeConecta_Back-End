@@ -1,10 +1,10 @@
 package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.application.consulta.ConfiguracoesConsultaService;
+import br.com.saudeConecta.application.consulta.dto.ConfiguracoesConsultaRequest;
+import br.com.saudeConecta.application.consulta.dto.ConfiguracoesConsultaResponse;
 import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.domain.consulta.ConfiguracoesConsulta;
-import br.com.saudeConecta.presentation.dto.consulta.ConfiguracoesConsultaRequest;
-import br.com.saudeConecta.presentation.dto.consulta.ConfiguracoesConsultaResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

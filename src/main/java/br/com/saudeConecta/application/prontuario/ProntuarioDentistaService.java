@@ -3,6 +3,7 @@ package br.com.saudeConecta.application.prontuario;
 import org.springframework.http.HttpStatus;
 import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.application.exception.ResourceNotFoundException;
+import br.com.saudeConecta.application.prontuario.dto.CadastrarProntuarioDentistaRequest;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
@@ -17,7 +18,6 @@ import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaReposit
 import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProntuarioDentistaRepository;
-import br.com.saudeConecta.presentation.dto.prontuario.CadastrarProntuarioDentistaRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;

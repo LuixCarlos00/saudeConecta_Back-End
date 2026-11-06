@@ -1,6 +1,14 @@
 package br.com.saudeConecta.application.plataforma;
 
 import br.com.saudeConecta.application.exception.BusinessException;
+import br.com.saudeConecta.application.plataforma.dto.AtencaoResponse;
+import br.com.saudeConecta.application.plataforma.dto.ClinicaUsoResponse;
+import br.com.saudeConecta.application.plataforma.dto.DashboardPlataformaResponse;
+import br.com.saudeConecta.application.plataforma.dto.PerfilQuantidadeResponse;
+import br.com.saudeConecta.application.plataforma.dto.PlanoResumoResponse;
+import br.com.saudeConecta.application.plataforma.dto.ResumoPlataformaResponse;
+import br.com.saudeConecta.application.plataforma.dto.SerieMensalResponse;
+import br.com.saudeConecta.application.plataforma.dto.StatusQuantidadeResponse;
 import br.com.saudeConecta.domain.planos.StatusAssinatura;
 import br.com.saudeConecta.domain.planos.TipoPlano;
 import br.com.saudeConecta.infrastructure.persistence.projection.PlataformaProjecoes;
@@ -10,14 +18,6 @@ import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaReposit
 import br.com.saudeConecta.infrastructure.persistence.repository.MpWebhookEventoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
-import br.com.saudeConecta.presentation.dto.plataforma.AtencaoResponse;
-import br.com.saudeConecta.presentation.dto.plataforma.ClinicaUsoResponse;
-import br.com.saudeConecta.presentation.dto.plataforma.DashboardPlataformaResponse;
-import br.com.saudeConecta.presentation.dto.plataforma.PerfilQuantidadeResponse;
-import br.com.saudeConecta.presentation.dto.plataforma.PlanoResumoResponse;
-import br.com.saudeConecta.presentation.dto.plataforma.ResumoPlataformaResponse;
-import br.com.saudeConecta.presentation.dto.plataforma.SerieMensalResponse;
-import br.com.saudeConecta.presentation.dto.plataforma.StatusQuantidadeResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;

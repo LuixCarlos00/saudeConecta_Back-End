@@ -1,5 +1,8 @@
 package br.com.saudeConecta.application.atendimento;
 
+import br.com.saudeConecta.application.atendimento.dto.RascunhoAtendimentoResponse;
+import br.com.saudeConecta.application.atendimento.dto.RascunhoAtendimentoResumoResponse;
+import br.com.saudeConecta.application.atendimento.dto.SalvarRascunhoAtendimentoRequest;
 import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.application.exception.ResourceNotFoundException;
 import br.com.saudeConecta.config.tenant.TenantContext;
@@ -14,9 +17,6 @@ import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infrastructure.persistence.repository.AtendimentoRascunhoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
-import br.com.saudeConecta.presentation.dto.atendimento.RascunhoAtendimentoResponse;
-import br.com.saudeConecta.presentation.dto.atendimento.RascunhoAtendimentoResumoResponse;
-import br.com.saudeConecta.presentation.dto.atendimento.SalvarRascunhoAtendimentoRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.NullNode;

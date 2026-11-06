@@ -1,13 +1,13 @@
 package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.application.organizacao.AdminOrganizacaoService;
+import br.com.saudeConecta.application.organizacao.dto.AdminOrgCompletoResponse;
+import br.com.saudeConecta.application.organizacao.dto.AtualizarAdminOrgCompletoRequest;
+import br.com.saudeConecta.application.organizacao.dto.AtualizarAdminRequest;
+import br.com.saudeConecta.application.organizacao.dto.CadastrarAdminOrgCompletoRequest;
+import br.com.saudeConecta.application.organizacao.dto.CadastrarAdminRequest;
 import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
-import br.com.saudeConecta.presentation.dto.admin.AdminOrgCompletoResponse;
-import br.com.saudeConecta.presentation.dto.admin.AtualizarAdminOrgCompletoRequest;
-import br.com.saudeConecta.presentation.dto.admin.AtualizarAdminRequest;
-import br.com.saudeConecta.presentation.dto.admin.CadastrarAdminOrgCompletoRequest;
-import br.com.saudeConecta.presentation.dto.admin.CadastrarAdminRequest;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jdk.jfr.Description;

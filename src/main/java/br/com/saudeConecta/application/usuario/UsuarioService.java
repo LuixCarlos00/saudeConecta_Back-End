@@ -1,6 +1,7 @@
 package br.com.saudeConecta.application.usuario;
 
 import br.com.saudeConecta.application.assinatura.LimitePlanoService;
+import br.com.saudeConecta.application.usuario.dto.*;
 import br.com.saudeConecta.config.CacheEvictionService;
 import br.com.saudeConecta.config.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.config.tenant.TenantContext;
@@ -15,7 +16,6 @@ import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
-import br.com.saudeConecta.presentation.dto.usuario.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.password.PasswordEncoder;

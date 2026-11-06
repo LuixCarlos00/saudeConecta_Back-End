@@ -1,7 +1,7 @@
 package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.application.plataforma.PlataformaDashboardService;
-import br.com.saudeConecta.presentation.dto.plataforma.DashboardPlataformaResponse;
+import br.com.saudeConecta.application.plataforma.dto.DashboardPlataformaResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

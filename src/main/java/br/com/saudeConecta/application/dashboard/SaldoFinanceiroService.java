@@ -1,10 +1,10 @@
 package br.com.saudeConecta.application.dashboard;
 
+import br.com.saudeConecta.application.dashboard.dto.SaldoFinanceiroResponse.SaldoPorPeriodo;
+import br.com.saudeConecta.application.dashboard.dto.SaldoFinanceiroResponse;
 import br.com.saudeConecta.domain.common.Periodo;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.PlanejamentoTerapeuticoRepository;
-import br.com.saudeConecta.presentation.dto.dashboard.SaldoFinanceiroResponse.SaldoPorPeriodo;
-import br.com.saudeConecta.presentation.dto.dashboard.SaldoFinanceiroResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

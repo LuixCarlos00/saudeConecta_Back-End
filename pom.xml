@@ -141,7 +141,7 @@
 				<configuration>
 					<excludes>
 						<!-- DTOs (records sem lógica) -->
-						<exclude>br/com/saudeConecta/presentation/dto/**/*</exclude>
+						<exclude>br/com/saudeConecta/application/*/dto/**/*</exclude>
 						<!-- Domain entities, enums e converters -->
 						<exclude>br/com/saudeConecta/domain/**/*</exclude>
 						<!-- Configurações Spring -->

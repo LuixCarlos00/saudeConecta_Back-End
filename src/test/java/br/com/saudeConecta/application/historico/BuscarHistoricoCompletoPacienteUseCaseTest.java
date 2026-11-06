@@ -1,5 +1,6 @@
 package br.com.saudeConecta.application.historico;
 
+import br.com.saudeConecta.application.consulta.dto.HistoricoConsultaPacienteResponse;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
@@ -12,7 +13,6 @@ import br.com.saudeConecta.domain.prontuario.ProntuarioDentistaDente;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProntuarioDentistaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProntuarioRepository;
-import br.com.saudeConecta.presentation.dto.consulta.HistoricoConsultaPacienteResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

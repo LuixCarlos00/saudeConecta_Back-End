@@ -1,5 +1,7 @@
 package br.com.saudeConecta.integration;
 
+import br.com.saudeConecta.application.consulta.dto.ConsultaResponse;
+import br.com.saudeConecta.domain.common.Periodo;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.paciente.Paciente;
@@ -7,8 +9,6 @@ import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.profissional.TipoProfissional;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
-import br.com.saudeConecta.presentation.dto.consulta.ConsultaResponse;
-import br.com.saudeConecta.domain.common.Periodo;
 import jakarta.persistence.EntityManager;
 import org.hibernate.Hibernate;
 import org.junit.jupiter.api.BeforeEach;

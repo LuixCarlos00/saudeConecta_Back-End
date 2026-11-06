@@ -1,7 +1,7 @@
 package br.com.saudeConecta.integration;
 
 import br.com.saudeConecta.application.usuario.HomeService;
-import br.com.saudeConecta.presentation.dto.usuario.DadosLoginUsuario;
+import br.com.saudeConecta.application.usuario.dto.DadosLoginUsuario;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,11 +1,11 @@
 package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.application.suporte.ChamadoSuporteService;
+import br.com.saudeConecta.application.suporte.dto.AtualizarStatusChamadoRequest;
+import br.com.saudeConecta.application.suporte.dto.ChamadoSuporteRequest;
+import br.com.saudeConecta.application.suporte.dto.ChamadoSuporteResponse;
 import br.com.saudeConecta.domain.suporte.PrioridadeChamado;
 import br.com.saudeConecta.domain.suporte.StatusChamado;
-import br.com.saudeConecta.presentation.dto.suporte.AtualizarStatusChamadoRequest;
-import br.com.saudeConecta.presentation.dto.suporte.ChamadoSuporteRequest;
-import br.com.saudeConecta.presentation.dto.suporte.ChamadoSuporteResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

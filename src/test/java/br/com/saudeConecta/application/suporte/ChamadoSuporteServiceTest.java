@@ -1,5 +1,6 @@
 package br.com.saudeConecta.application.suporte;
 
+import br.com.saudeConecta.application.suporte.dto.AtualizarStatusChamadoRequest;
 import br.com.saudeConecta.config.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.config.tenant.TenantNotDefinedException;
@@ -8,7 +9,6 @@ import br.com.saudeConecta.domain.suporte.ChamadoSuporte;
 import br.com.saudeConecta.domain.suporte.StatusChamado;
 import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
-import br.com.saudeConecta.presentation.dto.suporte.AtualizarStatusChamadoRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

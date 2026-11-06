@@ -1,13 +1,13 @@
 package br.com.saudeConecta.application.dashboard;
 
+import br.com.saudeConecta.application.dashboard.dto.AtualizarConfiguracaoGraficoRequest;
+import br.com.saudeConecta.application.dashboard.dto.ConfiguracaoGraficoResponse;
 import br.com.saudeConecta.domain.dashboard.ConfiguracaoGraficoDashboard;
 import br.com.saudeConecta.domain.dashboard.TipoGraficoDashboard;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConfiguracaoGraficoDashboardRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
-import br.com.saudeConecta.presentation.dto.dashboard.AtualizarConfiguracaoGraficoRequest;
-import br.com.saudeConecta.presentation.dto.dashboard.ConfiguracaoGraficoResponse;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

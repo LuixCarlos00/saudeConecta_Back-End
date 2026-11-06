@@ -2,11 +2,11 @@ package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.application.prontuario.PlanejamentoTerapeuticoService;
 import br.com.saudeConecta.application.prontuario.TermoAutorizacaoService;
+import br.com.saudeConecta.application.prontuario.dto.AssinaturaPlanjamentoRequest;
+import br.com.saudeConecta.application.prontuario.dto.QuestionarioSaudeRequest;
 import br.com.saudeConecta.config.logging.MascaraLog;
 import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
 import br.com.saudeConecta.domain.prontuario.TermoAutorizacao;
-import br.com.saudeConecta.presentation.dto.prontuario.AssinaturaPlanjamentoRequest;
-import br.com.saudeConecta.presentation.dto.prontuario.QuestionarioSaudeRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,11 +1,11 @@
 package br.com.saudeConecta.application.assinatura;
 
+import br.com.saudeConecta.application.assinatura.dto.PlanoAssinaturaRequest;
+import br.com.saudeConecta.application.assinatura.dto.PlanoAssinaturaResponse;
 import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.domain.planos.PlanoAssinatura;
 import br.com.saudeConecta.domain.planos.TipoPlano;
 import br.com.saudeConecta.infrastructure.persistence.repository.PlanoAssinaturaRepository;
-import br.com.saudeConecta.presentation.dto.planos.PlanoAssinaturaRequest;
-import br.com.saudeConecta.presentation.dto.planos.PlanoAssinaturaResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

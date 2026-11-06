@@ -2,6 +2,7 @@ package br.com.saudeConecta.application.secretaria;
 
 import br.com.saudeConecta.application.assinatura.LimitePlanoService;
 import br.com.saudeConecta.application.historico.HistoricoDadosPessoaisService;
+import br.com.saudeConecta.application.secretaria.dto.CadastrarSecretariaRequest;
 import br.com.saudeConecta.application.usuario.EmailUnicoService;
 import br.com.saudeConecta.config.CacheEvictionService;
 import br.com.saudeConecta.config.tenant.TenantHelper;
@@ -15,7 +16,6 @@ import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.SecretariaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
-import br.com.saudeConecta.presentation.dto.secretaria.CadastrarSecretariaRequest;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

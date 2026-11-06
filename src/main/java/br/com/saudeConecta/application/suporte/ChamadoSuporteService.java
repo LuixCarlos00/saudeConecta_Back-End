@@ -1,5 +1,9 @@
 package br.com.saudeConecta.application.suporte;
 
+import br.com.saudeConecta.application.suporte.dto.AtualizarStatusChamadoRequest;
+import br.com.saudeConecta.application.suporte.dto.ChamadoAnexoRequest;
+import br.com.saudeConecta.application.suporte.dto.ChamadoSuporteRequest;
+import br.com.saudeConecta.application.suporte.dto.ChamadoSuporteResponse;
 import br.com.saudeConecta.config.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
@@ -16,10 +20,6 @@ import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepo
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.SecretariaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
-import br.com.saudeConecta.presentation.dto.suporte.AtualizarStatusChamadoRequest;
-import br.com.saudeConecta.presentation.dto.suporte.ChamadoAnexoRequest;
-import br.com.saudeConecta.presentation.dto.suporte.ChamadoSuporteRequest;
-import br.com.saudeConecta.presentation.dto.suporte.ChamadoSuporteResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

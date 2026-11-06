@@ -1,7 +1,9 @@
 package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.application.consulta.ConsultaService;
+import br.com.saudeConecta.application.consulta.dto.*;
 import br.com.saudeConecta.application.dashboard.SaldoFinanceiroService;
+import br.com.saudeConecta.application.dashboard.dto.SaldoFinanceiroResponse;
 import br.com.saudeConecta.application.historico.BuscarHistoricoCompletoPacienteAdminUseCase;
 import br.com.saudeConecta.application.historico.BuscarHistoricoCompletoPacienteDentistaUseCase;
 import br.com.saudeConecta.application.historico.BuscarHistoricoCompletoPacienteMedicoUseCase;
@@ -14,8 +16,6 @@ import br.com.saudeConecta.domain.consulta.StatusConsulta;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
-import br.com.saudeConecta.presentation.dto.consulta.*;
-import br.com.saudeConecta.presentation.dto.dashboard.SaldoFinanceiroResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

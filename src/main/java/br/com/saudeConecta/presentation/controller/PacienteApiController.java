@@ -1,11 +1,11 @@
 package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.application.paciente.PacienteService;
+import br.com.saudeConecta.application.paciente.dto.AtualizarPacienteRequest;
+import br.com.saudeConecta.application.paciente.dto.CadastrarPacienteCompletoRequest;
+import br.com.saudeConecta.application.paciente.dto.PacienteResponse;
+import br.com.saudeConecta.application.usuario.dto.BloquearUsuarioRequest;
 import br.com.saudeConecta.domain.paciente.Paciente;
-import br.com.saudeConecta.presentation.dto.paciente.AtualizarPacienteRequest;
-import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteCompletoRequest;
-import br.com.saudeConecta.presentation.dto.paciente.PacienteResponse;
-import br.com.saudeConecta.presentation.dto.usuario.BloquearUsuarioRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

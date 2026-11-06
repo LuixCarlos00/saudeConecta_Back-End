@@ -1,13 +1,13 @@
 package br.com.saudeConecta.application.dashboard;
 
+import br.com.saudeConecta.application.dashboard.dto.AtualizarConfiguracaoCardRequest;
+import br.com.saudeConecta.application.dashboard.dto.ConfiguracaoCardResponse;
 import br.com.saudeConecta.domain.dashboard.ConfiguracaoCardDashboard;
 import br.com.saudeConecta.domain.dashboard.TipoCardDashboard;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConfiguracaoCardDashboardRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
-import br.com.saudeConecta.presentation.dto.dashboard.AtualizarConfiguracaoCardRequest;
-import br.com.saudeConecta.presentation.dto.dashboard.ConfiguracaoCardResponse;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

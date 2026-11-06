@@ -1,5 +1,8 @@
 package br.com.saudeConecta.application.assinatura;
 
+import br.com.saudeConecta.application.assinatura.dto.AssinaturaPlataformaResponse;
+import br.com.saudeConecta.application.assinatura.dto.AssinaturaTenantResponse;
+import br.com.saudeConecta.application.assinatura.dto.CustomizarPlanoTenantRequest;
 import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
@@ -9,9 +12,6 @@ import br.com.saudeConecta.domain.planos.StatusAssinatura;
 import br.com.saudeConecta.domain.planos.TipoPlano;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
-import br.com.saudeConecta.presentation.dto.planos.AssinaturaPlataformaResponse;
-import br.com.saudeConecta.presentation.dto.planos.AssinaturaTenantResponse;
-import br.com.saudeConecta.presentation.dto.planos.CustomizarPlanoTenantRequest;
 import br.com.saudeConecta.service.mercadopago.MercadoPagoClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

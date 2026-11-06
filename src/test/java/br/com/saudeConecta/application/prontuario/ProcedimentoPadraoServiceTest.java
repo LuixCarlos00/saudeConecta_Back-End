@@ -1,11 +1,11 @@
 package br.com.saudeConecta.application.prontuario;
 
+import br.com.saudeConecta.application.prontuario.dto.ProcedimentoPadraoRequest;
 import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.prontuario.ProcedimentoPadrao;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProcedimentoPadraoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
-import br.com.saudeConecta.presentation.dto.prontuario.ProcedimentoPadraoRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

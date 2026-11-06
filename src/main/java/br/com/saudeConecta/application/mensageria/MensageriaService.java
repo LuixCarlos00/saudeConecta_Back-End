@@ -2,6 +2,7 @@ package br.com.saudeConecta.application.mensageria;
 
 import br.com.saudeConecta.config.logging.MascaraLog;
 
+import br.com.saudeConecta.application.mensageria.dto.MensageriaResponse;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.mensageria.Mensageria;
 import br.com.saudeConecta.domain.mensageria.StatusMensagem;
@@ -13,7 +14,6 @@ import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepo
 import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.SecretariaRepository;
-import br.com.saudeConecta.presentation.dto.mensageria.MensageriaResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;

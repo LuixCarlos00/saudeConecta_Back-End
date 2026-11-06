@@ -9,10 +9,10 @@ import br.com.saudeConecta.domain.pagamento.FormaPagamento;
 import br.com.saudeConecta.domain.profissional.Especialidade;
 import br.com.saudeConecta.domain.profissional.Profissional;
  import br.com.saudeConecta.config.tenant.TenantHelper;
+import br.com.saudeConecta.application.consulta.dto.AgendarConsultaRequest;
+import br.com.saudeConecta.application.consulta.dto.AtualizarConsultaRequest;
+import br.com.saudeConecta.application.consulta.dto.EstatisticasDashboardAdminOrgResponse;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
-import br.com.saudeConecta.presentation.dto.consulta.AgendarConsultaRequest;
-import br.com.saudeConecta.presentation.dto.consulta.AtualizarConsultaRequest;
-import br.com.saudeConecta.presentation.dto.consulta.EstatisticasDashboardAdminOrgResponse;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -1649,7 +1649,7 @@ class ConsultaServiceTest {
                     ORG_ID, 5L, LocalDateTime.of(2030, 5, 10, 0, 0), LocalDateTime.of(2030, 5, 11, 0, 0)))
                     .thenReturn(List.of(a, b));
 
-            List<br.com.saudeConecta.presentation.dto.consulta.HorarioOcupadoResponse> resultado =
+            List<br.com.saudeConecta.application.consulta.dto.HorarioOcupadoResponse> resultado =
                     consultaService.buscarHorariosOcupadosDetalhado(5L, "2030-05-10");
 
             assertThat(resultado).extracting("inicio", "duracaoMinutos")

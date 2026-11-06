@@ -1,5 +1,8 @@
 package br.com.saudeConecta.application.relatorio;
 
+import br.com.saudeConecta.application.relatorio.dto.ConsultaRelatorioResponse;
+import br.com.saudeConecta.application.relatorio.dto.DocumentoRelatorioResponse;
+import br.com.saudeConecta.application.relatorio.dto.PacienteAtendidoResponse;
 import br.com.saudeConecta.config.tenant.RequiresTenant;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.consulta.Consulta;
@@ -13,9 +16,6 @@ import br.com.saudeConecta.domain.prontuario.TermoAutorizacao;
 import br.com.saudeConecta.domain.relatorio.TipoDocumentoRelatorio;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.RelatorioRepository;
-import br.com.saudeConecta.presentation.dto.relatorio.ConsultaRelatorioResponse;
-import br.com.saudeConecta.presentation.dto.relatorio.DocumentoRelatorioResponse;
-import br.com.saudeConecta.presentation.dto.relatorio.PacienteAtendidoResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

@@ -1,12 +1,12 @@
 package br.com.saudeConecta.application.historico;
 
+import br.com.saudeConecta.application.consulta.dto.HistoricoConsultaPacienteResponse;
 import br.com.saudeConecta.config.tenant.RequiresTenant;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.prontuario.Prontuario;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProntuarioRepository;
-import br.com.saudeConecta.presentation.dto.consulta.HistoricoConsultaPacienteResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

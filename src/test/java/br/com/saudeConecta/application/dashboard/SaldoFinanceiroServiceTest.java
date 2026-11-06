@@ -1,8 +1,8 @@
 package br.com.saudeConecta.application.dashboard;
 
+import br.com.saudeConecta.application.dashboard.dto.SaldoFinanceiroResponse;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.PlanejamentoTerapeuticoRepository;
-import br.com.saudeConecta.presentation.dto.dashboard.SaldoFinanceiroResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

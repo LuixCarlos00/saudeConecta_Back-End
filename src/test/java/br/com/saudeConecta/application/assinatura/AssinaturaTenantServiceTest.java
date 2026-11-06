@@ -1,11 +1,13 @@
 package br.com.saudeConecta.application.assinatura;
 
-import br.com.saudeConecta.presentation.dto.planos.AssinaturaPlataformaResponse;
+import br.com.saudeConecta.application.assinatura.dto.AssinaturaPlataformaResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import br.com.saudeConecta.application.assinatura.dto.AssinaturaTenantResponse;
+import br.com.saudeConecta.application.assinatura.dto.CustomizarPlanoTenantRequest;
 import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
@@ -14,8 +16,6 @@ import br.com.saudeConecta.domain.planos.StatusAssinatura;
 import br.com.saudeConecta.domain.planos.TipoPlano;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
-import br.com.saudeConecta.presentation.dto.planos.AssinaturaTenantResponse;
-import br.com.saudeConecta.presentation.dto.planos.CustomizarPlanoTenantRequest;
 import org.springframework.http.HttpStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

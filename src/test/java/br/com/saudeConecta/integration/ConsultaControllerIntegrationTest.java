@@ -1,9 +1,9 @@
 package br.com.saudeConecta.integration;
 
 import br.com.saudeConecta.application.consulta.ConsultaService;
+import br.com.saudeConecta.application.consulta.dto.AgendarConsultaRequest;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
-import br.com.saudeConecta.presentation.dto.consulta.AgendarConsultaRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.*;
@@ -132,7 +132,7 @@ class ConsultaControllerIntegrationTest {
         void deveRetornarInicioEDuracao() throws Exception {
             when(consultaService.buscarHorariosOcupadosDetalhado(5L, "2030-05-10"))
                     .thenReturn(java.util.List.of(
-                            new br.com.saudeConecta.presentation.dto.consulta.HorarioOcupadoResponse("09:00:00", 60)));
+                            new br.com.saudeConecta.application.consulta.dto.HorarioOcupadoResponse("09:00:00", 60)));
 
             mockMvc.perform(get("/consultas/horarios-ocupados-detalhado")
                             .param("medicoId", "5").param("data", "2030-05-10"))

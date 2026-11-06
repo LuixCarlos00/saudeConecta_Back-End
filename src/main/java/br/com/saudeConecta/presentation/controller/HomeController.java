@@ -20,8 +20,8 @@ import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRep
 import br.com.saudeConecta.infrastructure.persistence.repository.SecretariaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import br.com.saudeConecta.presentation.dto.usuario.DadosLoginUsuario;
-import br.com.saudeConecta.presentation.dto.usuario.DadosTokenJWT;
+import br.com.saudeConecta.application.usuario.dto.DadosLoginUsuario;
+import br.com.saudeConecta.application.usuario.dto.DadosTokenJWT;
 import jakarta.validation.constraints.NotNull;
 import jdk.jfr.Description;
 import lombok.RequiredArgsConstructor;

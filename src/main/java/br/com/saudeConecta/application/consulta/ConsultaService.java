@@ -1,5 +1,10 @@
 package br.com.saudeConecta.application.consulta;
 
+import br.com.saudeConecta.application.consulta.dto.AgendarConsultaRequest;
+import br.com.saudeConecta.application.consulta.dto.AtualizarConsultaRequest;
+import br.com.saudeConecta.application.consulta.dto.EstatisticasDashboardAdminOrgResponse;
+import br.com.saudeConecta.application.consulta.dto.HistoricoConsultaPacienteResponse;
+import br.com.saudeConecta.application.consulta.dto.HorarioOcupadoResponse;
 import br.com.saudeConecta.config.tenant.RequiresTenant;
 import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.config.tenant.TenantHelper;
@@ -15,11 +20,6 @@ import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.infrastructure.persistence.specification.ConsultaSpecification;
-import br.com.saudeConecta.presentation.dto.consulta.AgendarConsultaRequest;
-import br.com.saudeConecta.presentation.dto.consulta.AtualizarConsultaRequest;
-import br.com.saudeConecta.presentation.dto.consulta.EstatisticasDashboardAdminOrgResponse;
-import br.com.saudeConecta.presentation.dto.consulta.HistoricoConsultaPacienteResponse;
-import br.com.saudeConecta.presentation.dto.consulta.HorarioOcupadoResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;

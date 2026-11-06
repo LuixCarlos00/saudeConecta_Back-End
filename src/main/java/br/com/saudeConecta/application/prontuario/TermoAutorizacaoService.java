@@ -1,5 +1,6 @@
 package br.com.saudeConecta.application.prontuario;
 
+import br.com.saudeConecta.application.prontuario.dto.QuestionarioSaudeRequest;
 import br.com.saudeConecta.config.CacheEvictionService;
 import br.com.saudeConecta.config.logging.MascaraLog;
 import br.com.saudeConecta.config.tenant.TenantHelper;
@@ -9,7 +10,6 @@ import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.domain.prontuario.TermoAutorizacao;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.TermoAutorizacaoRepository;
-import br.com.saudeConecta.presentation.dto.prontuario.QuestionarioSaudeRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;

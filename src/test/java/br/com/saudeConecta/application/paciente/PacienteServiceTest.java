@@ -1,6 +1,8 @@
 package br.com.saudeConecta.application.paciente;
 
 import br.com.saudeConecta.application.historico.HistoricoDadosPessoaisService;
+import br.com.saudeConecta.application.paciente.dto.AtualizarPacienteRequest;
+import br.com.saudeConecta.application.paciente.dto.CadastrarPacienteCompletoRequest;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
@@ -8,8 +10,6 @@ import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
-import br.com.saudeConecta.presentation.dto.paciente.AtualizarPacienteRequest;
-import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteCompletoRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

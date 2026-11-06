@@ -1,5 +1,6 @@
 package br.com.saudeConecta.application.mensageria;
 
+import br.com.saudeConecta.application.mensageria.dto.MensageriaResponse;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.config.tenant.TenantNotDefinedException;
 import br.com.saudeConecta.domain.mensageria.Mensageria;
@@ -9,7 +10,6 @@ import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
-import br.com.saudeConecta.presentation.dto.mensageria.MensageriaResponse;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

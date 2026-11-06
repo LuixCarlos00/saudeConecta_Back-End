@@ -1,6 +1,7 @@
 package br.com.saudeConecta.application.assinatura;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
+import br.com.saudeConecta.application.assinatura.dto.LinkPagamentoResponse;
 import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
@@ -14,7 +15,6 @@ import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizaca
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.CobrancaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.MpWebhookEventoRepository;
-import br.com.saudeConecta.presentation.dto.planos.LinkPagamentoResponse;
 import br.com.saudeConecta.service.mercadopago.MercadoPagoClient;
 import br.com.saudeConecta.service.mercadopago.MercadoPagoProperties;
 import br.com.saudeConecta.service.mercadopago.dto.AuthorizedPaymentResponse;

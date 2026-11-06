@@ -2,6 +2,8 @@ package br.com.saudeConecta.application.profissional;
 
 import br.com.saudeConecta.application.assinatura.LimitePlanoService;
 import br.com.saudeConecta.application.historico.HistoricoDadosPessoaisService;
+import br.com.saudeConecta.application.profissional.dto.AtualizarClinicoRequest;
+import br.com.saudeConecta.application.profissional.dto.CadastrarClinicoRequest;
 import br.com.saudeConecta.application.usuario.EmailUnicoService;
 import br.com.saudeConecta.config.CacheEvictionService;
 import br.com.saudeConecta.config.tenant.TenantHelper;
@@ -18,8 +20,6 @@ import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
-import br.com.saudeConecta.presentation.dto.profissional.AtualizarClinicoRequest;
-import br.com.saudeConecta.presentation.dto.profissional.CadastrarClinicoRequest;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

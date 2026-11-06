@@ -1,9 +1,9 @@
 package br.com.saudeConecta.application.assinatura;
 
+import br.com.saudeConecta.application.assinatura.dto.LinkPagamentoResponse;
 import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
-import br.com.saudeConecta.presentation.dto.planos.LinkPagamentoResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;

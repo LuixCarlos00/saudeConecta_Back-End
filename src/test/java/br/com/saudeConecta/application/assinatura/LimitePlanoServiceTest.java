@@ -1,5 +1,6 @@
 package br.com.saudeConecta.application.assinatura;
 
+import br.com.saudeConecta.application.assinatura.dto.LimitesPlanoResponse;
 import br.com.saudeConecta.application.exception.LimitePlanoException;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
 import br.com.saudeConecta.domain.planos.PlanoAssinatura;
@@ -9,7 +10,6 @@ import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizaca
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.SecretariaRepository;
-import br.com.saudeConecta.presentation.dto.planos.LimitesPlanoResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
