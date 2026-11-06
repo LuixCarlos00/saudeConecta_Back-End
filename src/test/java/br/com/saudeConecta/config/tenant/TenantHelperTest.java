@@ -10,6 +10,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DisplayName("TenantHelper - checagem explícita de SUPER_ADMIN")
@@ -95,7 +96,7 @@ class TenantHelperTest {
         autenticarCom("ROLE_ADMIN", "ROLE_PROFISSIONAL", "ROLE_RECEPCIONISTA");
         TenantContext.setCurrentUser(1L);
 
-        tenantHelper.validarGestorOuDono(2L);
+        assertThatCode(() -> tenantHelper.validarGestorOuDono(2L)).doesNotThrowAnyException();
     }
 
     @Test
@@ -104,7 +105,7 @@ class TenantHelperTest {
         autenticarCom("ROLE_PROFISSIONAL");
         TenantContext.setCurrentUser(7L);
 
-        tenantHelper.validarGestorOuDono(7L);
+        assertThatCode(() -> tenantHelper.validarGestorOuDono(7L)).doesNotThrowAnyException();
     }
 
     @Test
