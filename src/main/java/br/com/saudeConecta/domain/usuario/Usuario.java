@@ -147,8 +147,4 @@ public class Usuario implements Serializable, UserDetails, TenantAware {
     public boolean isAssistente() {
         return TipoUsuarioNovo.ASSISTENTE.equals(this.tipoUsuarioNovo);
     }
-
-    public boolean hasOrganization() {
-        return this.organizacao != null;
-    }
 }

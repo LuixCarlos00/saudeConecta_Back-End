@@ -74,15 +74,6 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("organizacaoId") Long organizacaoId,
         @Param("pacienteId") Long pacienteId);
 
-    @Query("SELECT c FROM Consulta c " +
-           "LEFT JOIN FETCH c.profissional p " +
-           "LEFT JOIN FETCH p.tipoProfissional " +
-           "LEFT JOIN FETCH c.paciente " +
-           "LEFT JOIN FETCH c.especialidade " +
-           "LEFT JOIN FETCH c.formaPagamento " +
-           "WHERE c.organizacao.id = :organizacaoId")
-    List<Consulta> findByOrganizacao_IdWithRelations(@Param("organizacaoId") Long organizacaoId);
-    
 
     @Query("SELECT c FROM Consulta c " +
            "LEFT JOIN FETCH c.profissional p " +
@@ -125,22 +116,6 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
         @Param("profId") Long profissionalId,
         @Param("data") LocalDate data);
 
-    @Query("SELECT c FROM Consulta c " +
-           "LEFT JOIN FETCH c.profissional p " +
-           "LEFT JOIN FETCH p.tipoProfissional " +
-           "LEFT JOIN FETCH c.paciente " +
-           "LEFT JOIN FETCH c.especialidade " +
-           "LEFT JOIN FETCH c.formaPagamento " +
-           "WHERE c.organizacao.id = :orgId " +
-           "AND DATE(c.dataHora) = CURRENT_DATE ORDER BY c.dataHora")
-    List<Consulta> findConsultasHoje(@Param("orgId") Long organizacaoId);
-    
-
-    boolean existsByProfissional_IdAndOrganizacao_IdAndDataHoraAndStatus(
-        Long profissionalId, Long organizacaoId, LocalDateTime dataHora, StatusConsulta status);
-
-    List<Consulta> findByProfissional_IdAndOrganizacao_IdAndDataHora(
-        Long profissionalId, Long organizacaoId, LocalDateTime dataHora);
 
     /**
      * Consultas que ocupam a agenda (AGENDADA ou CONFIRMADA) de um profissional com início em [de, ate).
@@ -182,20 +157,6 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSp
            "ORDER BY c.dataHora")
     List<Consulta> findByOrganizacaoIdAndDataHoraBetweenWithRelations(
         @Param("organizacaoId") Long organizacaoId,
-        @Param("inicio") LocalDateTime inicio,
-        @Param("fim") LocalDateTime fim);
-
-    @Query("SELECT c FROM Consulta c " +
-           "LEFT JOIN FETCH c.profissional p " +
-           "LEFT JOIN FETCH p.tipoProfissional " +
-           "LEFT JOIN FETCH c.paciente " +
-           "LEFT JOIN FETCH c.especialidade " +
-           "LEFT JOIN FETCH c.formaPagamento " +
-           "WHERE c.profissional.id = :profissionalId " +
-           "AND c.dataHora BETWEEN :inicio AND :fim " +
-           "ORDER BY c.dataHora")
-    List<Consulta> findByProfissionalIdAndDataHoraBetweenWithRelations(
-        @Param("profissionalId") Long profissionalId,
         @Param("inicio") LocalDateTime inicio,
         @Param("fim") LocalDateTime fim);
 

@@ -203,15 +203,6 @@ class EspecialidadeServiceTest {
             verify(tipoProfissionalRepository).findByCodigo("MEDICO");
         }
 
-        @Test
-        @DisplayName("listarTodosTiposProfissional deve retornar todos os tipos")
-        void deveListarTodosOsTipos() {
-            when(tipoProfissionalRepository.findAll()).thenReturn(List.of(tipoProfissionalMedico));
-
-            List<TipoProfissional> resultado = especialidadeService.listarTodosTiposProfissional();
-
-            assertThat(resultado).hasSize(1);
-        }
 
         @Test
         @DisplayName("listarTiposProfissional deve retornar tipos ativos ordenados por nome")

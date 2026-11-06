@@ -16,8 +16,6 @@ import java.util.Optional;
 @Repository
 public interface CobrancaTenantRepository extends JpaRepository<CobrancaTenant, Long> {
 
-    Optional<CobrancaTenant> findByTxid(String txid);
-
     /**
      * Busca a cobrança vinculada a um pagamento autorizado do Mercado Pago.
      * Usado pelo webhook para garantir idempotência no lançamento financeiro.
@@ -34,11 +32,6 @@ public interface CobrancaTenantRepository extends JpaRepository<CobrancaTenant, 
            "WHERE c.status = :status " +
            "ORDER BY c.criadaEm DESC")
     List<CobrancaTenant> findByStatusOrderByCriadaEmDesc(@Param("status") StatusCobranca status);
-
-    /**
-     * Verifica se já existe cobrança pendente para a assinatura.
-     */
-    boolean existsByAssinaturaTenantIdAndStatus(Long assinaturaId, StatusCobranca status);
 
     /**
      * Busca a cobrança pendente mais recente de uma organização (para dashboard).

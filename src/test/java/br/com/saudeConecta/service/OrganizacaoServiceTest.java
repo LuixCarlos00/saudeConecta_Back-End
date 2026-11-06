@@ -108,10 +108,10 @@ class OrganizacaoServiceTest {
         }
     }
 
-    // ========== buscarPorId e buscarPorCnpj ==========
+    // ========== buscarPorId ==========
 
     @Nested
-    @DisplayName("buscarPorId e buscarPorCnpj")
+    @DisplayName("buscarPorId")
     class BuscasPorId {
 
         @Test
@@ -124,16 +124,6 @@ class OrganizacaoServiceTest {
             assertThat(resultado).isPresent();
         }
 
-        @Test
-        @DisplayName("Deve retornar organização pelo CNPJ")
-        void deveRetornarOrganizacaoPorCnpj() {
-            when(organizacaoRepository.findByCnpj("12345678000100")).thenReturn(Optional.of(organizacao));
-
-            Optional<Organizacao> resultado = organizacaoService.buscarPorCnpj("12345678000100");
-
-            assertThat(resultado).isPresent();
-            assertThat(resultado.get().getCnpj()).isEqualTo("12345678000100");
-        }
     }
 
     // ========== criar ==========

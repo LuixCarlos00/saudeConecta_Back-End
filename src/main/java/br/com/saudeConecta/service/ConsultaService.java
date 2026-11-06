@@ -15,10 +15,8 @@ import br.com.saudeConecta.infrastructure.persistence.specification.ConsultaSpec
 import br.com.saudeConecta.presentation.dto.consulta.AgendarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.HorarioOcupadoResponse;
 import br.com.saudeConecta.presentation.dto.consulta.AtualizarConsultaRequest;
-import br.com.saudeConecta.presentation.dto.consulta.CancelarConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.EstatisticasDashboardAdminOrgResponse;
 import br.com.saudeConecta.presentation.dto.consulta.HistoricoConsultaPacienteResponse;
-import br.com.saudeConecta.presentation.dto.consulta.HistoricoConsultaDentistaResponse;
 import br.com.saudeConecta.domain.prontuario.Prontuario;
 import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
 import lombok.RequiredArgsConstructor;

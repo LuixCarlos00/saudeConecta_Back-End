@@ -157,7 +157,6 @@
 						<!-- Utilitários com dependências de repositório/infraestrutura -->
 						<exclude>br/com/saudeConecta/util/EmailUnicoService*</exclude>
 						<exclude>br/com/saudeConecta/util/SnapshotUtil*</exclude>
-						<exclude>br/com/saudeConecta/util/RecuperaSenha*</exclude>
 						<!-- Controllers: cobertos por testes de integração (MockMvc não gera cobertura de instrução JaCoCo) -->
 						<exclude>br/com/saudeConecta/presentation/controller/**/*</exclude>
 						<!-- Services de IA (requer modelo externo) -->

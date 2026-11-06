@@ -49,15 +49,6 @@ public enum TipoUsuarioNovo {
         return authorities;
     }
 
-    public static TipoUsuarioNovo fromCodigo(int codigo) {
-        for (TipoUsuarioNovo tipo : values()) {
-            if (tipo.codigo == codigo) {
-                return tipo;
-            }
-        }
-        throw new IllegalArgumentException("Código de tipo de usuário inválido: " + codigo);
-    }
-
     public boolean isRoot() {
         return this == ROOT;
     }
@@ -72,9 +63,5 @@ public enum TipoUsuarioNovo {
 
     public boolean isAssistente() {
         return this == ASSISTENTE;
-    }
-
-    public boolean canManageOrganization() {
-        return this == ROOT || this == GESTOR;
     }
 }

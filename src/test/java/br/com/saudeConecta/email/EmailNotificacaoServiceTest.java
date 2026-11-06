@@ -39,27 +39,6 @@ class EmailNotificacaoServiceTest {
                 emailTemplateService, emailRetryService, executorSincrono);
     }
 
-    // ========== isEmailHabilitado ==========
-
-    @Nested
-    @DisplayName("isEmailHabilitado")
-    class IsEmailHabilitado {
-
-        @Test
-        @DisplayName("Deve retornar true quando email está habilitado")
-        void deveRetornarTrueQuandoHabilitado() {
-            ReflectionTestUtils.setField(emailNotificacaoService, "emailHabilitado", true);
-            assertThat(emailNotificacaoService.isEmailHabilitado()).isTrue();
-        }
-
-        @Test
-        @DisplayName("Deve retornar false quando email está desabilitado")
-        void deveRetornarFalseQuandoDesabilitado() {
-            ReflectionTestUtils.setField(emailNotificacaoService, "emailHabilitado", false);
-            assertThat(emailNotificacaoService.isEmailHabilitado()).isFalse();
-        }
-    }
-
     // ========== enviarCredenciaisAdministrador ==========
 
     @Nested

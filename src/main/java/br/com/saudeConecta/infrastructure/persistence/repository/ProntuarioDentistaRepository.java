@@ -113,20 +113,6 @@ public interface ProntuarioDentistaRepository extends JpaRepository<ProntuarioDe
     List<ProntuarioDentista> findByPacienteId(@Param("pacienteId") Long pacienteId, @Param("orgId") Long orgId);
 
     /**
-     * Exclui todos os dentes (odontograma) dos prontuários vinculados a uma consulta.
-     */
-    @Modifying
-    @Query("DELETE FROM ProntuarioDentistaDente d WHERE d.prontuarioDentista.codigo IN (SELECT pd.codigo FROM ProntuarioDentista pd WHERE pd.consulta.id = :consultaId)")
-    void deleteDentesByConsultaId(@Param("consultaId") Long consultaId);
-
-    /**
-     * Exclui todos os planejamentos terapêuticos vinculados aos prontuários de uma consulta.
-     */
-    @Modifying
-    @Query("DELETE FROM PlanejamentoTerapeutico p WHERE p.prontuarioDentista.codigo IN (SELECT pd.codigo FROM ProntuarioDentista pd WHERE pd.consulta.id = :consultaId)")
-    void deletePlanejamentosByConsultaId(@Param("consultaId") Long consultaId);
-
-    /**
      * Exclui todos os prontuários dentista vinculados a uma consulta.
      */
     @Modifying

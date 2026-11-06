@@ -115,42 +115,6 @@ public class TokenService {
         }
     }
 
-    public Integer getTipoUsuarioFromToken(String token) {
-        try {
-            DecodedJWT jwt = decodeToken(token);
-            return jwt.getClaim(CLAIM_TIPO_USUARIO).asInt();
-        } catch (Exception e) {
-            log.warn("auth.token negado motivo=CLAIM_INVALIDA claim=tipoUsuario causa={}", e.getClass().getSimpleName());
-            return null;
-        }
-    }
-
-    /**
-     * Extrai a especializacao do profissional (MEDICO/DENTISTA) do token.
-     *
-     * @param token token JWT
-     * @return tipo do profissional ou null quando ausente
-     */
-    public String getTipoProfissionalFromToken(String token) {
-        try {
-            DecodedJWT jwt = decodeToken(token);
-            return jwt.getClaim(CLAIM_TIPO_PROFISSIONAL).asString();
-        } catch (Exception e) {
-            log.warn("auth.token negado motivo=CLAIM_INVALIDA claim=tipoProfissional causa={}", e.getClass().getSimpleName());
-            return null;
-        }
-    }
-
-    public String getNomeFromToken(String token) {
-        try {
-            DecodedJWT jwt = decodeToken(token);
-            return jwt.getClaim(CLAIM_NOME).asString();
-        } catch (Exception e) {
-            log.warn("auth.token negado motivo=CLAIM_INVALIDA claim=nome causa={}", e.getClass().getSimpleName());
-            return null;
-        }
-    }
-
     private DecodedJWT decodeToken(String token) {
         Algorithm algorithm = Algorithm.HMAC256(secret);
         return JWT.require(algorithm)

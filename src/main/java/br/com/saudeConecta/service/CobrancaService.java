@@ -71,17 +71,6 @@ public class CobrancaService {
     }
 
     /**
-     * Verifica se existe cobrança pendente para uma assinatura.
-     *
-     * @param assinaturaId ID da assinatura
-     * @return true se existe cobrança pendente
-     */
-    public boolean existeCobrancaPendente(Long assinaturaId) {
-        return cobrancaTenantRepository.existsByAssinaturaTenantIdAndStatus(
-                assinaturaId, StatusCobranca.PENDENTE);
-    }
-
-    /**
      * Lista todas as cobranças pendentes de todas as organizações (SUPER_ADMIN).
      *
      * @return lista de CobrancaTenantResponse pendentes

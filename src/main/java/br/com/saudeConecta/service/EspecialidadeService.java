@@ -56,10 +56,6 @@ public class EspecialidadeService {
         return tipoProfissionalRepository.findByStatusOrderByNomeAsc((byte) 1);
     }
 
-    public List<TipoProfissional> listarTodosTiposProfissional() {
-        return tipoProfissionalRepository.findAll();
-    }
-
     public Optional<TipoProfissional> buscarTipoPorCodigo(String codigo) {
         return tipoProfissionalRepository.findByCodigo(codigo.toUpperCase());
     }

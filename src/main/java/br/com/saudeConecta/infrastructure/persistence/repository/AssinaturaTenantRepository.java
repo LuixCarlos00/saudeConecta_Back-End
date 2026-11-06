@@ -50,27 +50,6 @@ public interface AssinaturaTenantRepository extends JpaRepository<AssinaturaTena
 
 
     /**
-     * Busca assinaturas por lista de status (para geração automática de cobranças).
-     */
-    @Query("SELECT a FROM AssinaturaTenant a " +
-           "JOIN FETCH a.planoAssinatura " +
-           "JOIN FETCH a.organizacao " +
-           "WHERE a.status IN :statuses")
-    List<AssinaturaTenant> findByStatusIn(@Param("statuses") List<StatusAssinatura> statuses);
-
-    /**
-     * Busca assinaturas com vencimento dentro de um intervalo (para gerar cobranças).
-     */
-    @Query("SELECT a FROM AssinaturaTenant a " +
-           "JOIN FETCH a.planoAssinatura " +
-           "JOIN FETCH a.organizacao " +
-           "WHERE a.status IN ('ATIVA', 'TRIAL') " +
-           "AND a.dataVencimento BETWEEN :inicio AND :fim")
-    List<AssinaturaTenant> findVencendoNoIntervalo(
-            @Param("inicio") LocalDate inicio,
-            @Param("fim") LocalDate fim);
-
-    /**
      * Busca a assinatura vinculada a um preapproval do Mercado Pago.
      * Usado pelo webhook e pela rotina de reconciliação.
      */

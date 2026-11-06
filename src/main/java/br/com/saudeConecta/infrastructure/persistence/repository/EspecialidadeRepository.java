@@ -22,5 +22,4 @@ public interface EspecialidadeRepository extends JpaRepository<Especialidade, Lo
     
     Optional<Especialidade> findByTipoProfissional_IdAndNome(Long tipoProfissionalId, String nome);
     
-    boolean existsByTipoProfissional_IdAndNome(Long tipoProfissionalId, String nome);
 }

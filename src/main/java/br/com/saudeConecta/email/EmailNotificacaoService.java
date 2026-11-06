@@ -60,15 +60,6 @@ public class EmailNotificacaoService {
     }
 
     /**
-     * Verifica se o envio de email está habilitado na configuração.
-     *
-     * @return true se o envio está habilitado
-     */
-    public boolean isEmailHabilitado() {
-        return emailHabilitado;
-    }
-
-    /**
      * Envia credenciais de acesso para um administrador de forma assíncrona.
      *
      * @param email            email do destinatário

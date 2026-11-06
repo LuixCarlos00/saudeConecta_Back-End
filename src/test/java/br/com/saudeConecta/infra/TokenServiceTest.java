@@ -110,7 +110,7 @@ class TokenServiceTest {
         @DisplayName("Deve gerar token com tipoUsuario embutido")
         void deveGerarTokenComTipoUsuario() {
             String token = tokenService.gerarToken(usuario, 1L, "Dr. Teste", "CLINICO", "MEDICO");
-            Integer tipo = tokenService.getTipoUsuarioFromToken(token);
+            Integer tipo = JWT.decode(token).getClaim("tipoUsuario").asInt();
 
             assertThat(tipo).isEqualTo(TipoUsuarioNovo.CLINICO.getCodigo());
         }
@@ -119,7 +119,7 @@ class TokenServiceTest {
         @DisplayName("Deve gerar token com nome embutido")
         void deveGerarTokenComNome() {
             String token = tokenService.gerarToken(usuario, 1L, "Dr. Teste", "CLINICO", "MEDICO");
-            String nome = tokenService.getNomeFromToken(token);
+            String nome = JWT.decode(token).getClaim("nome").asString();
 
             assertThat(nome).isEqualTo("Dr. Teste");
         }
@@ -180,21 +180,7 @@ class TokenServiceTest {
             assertThat(resultado).isNull();
         }
 
-        @Test
-        @DisplayName("getTipoUsuarioFromToken deve retornar null com token inválido")
-        void deveRetornarNullParaTipoComTokenInvalido() {
-            Integer resultado = tokenService.getTipoUsuarioFromToken("token.invalido");
 
-            assertThat(resultado).isNull();
-        }
-
-        @Test
-        @DisplayName("getNomeFromToken deve retornar null com token inválido")
-        void deveRetornarNullParaNomeComTokenInvalido() {
-            String resultado = tokenService.getNomeFromToken("token.invalido");
-
-            assertThat(resultado).isNull();
-        }
     }
 
     // ========== expiração ==========

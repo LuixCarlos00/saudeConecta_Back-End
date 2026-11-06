@@ -50,11 +50,6 @@ public class OrganizacaoService {
         return organizacaoRepository.findById(id);
     }
 
-    public Optional<Organizacao> buscarPorCnpj(String cnpj) {
-        log.debug("organizacao.buscar cnpj={}", cnpj);
-        return organizacaoRepository.findByCnpj(cnpj);
-    }
-
     @Transactional
     public Organizacao criar(CriarOrganizacaoRequest request) {
         log.info("organizacao.criar inicio comCnpj={}", request.cnpj() != null);
