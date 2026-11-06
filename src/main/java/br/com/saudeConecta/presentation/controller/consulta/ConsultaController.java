@@ -1,6 +1,8 @@
 package br.com.saudeConecta.presentation.controller.consulta;
 
-import br.com.saudeConecta.application.consulta.ConsultaService;
+import br.com.saudeConecta.application.consulta.ConsultaAgendamentoService;
+import br.com.saudeConecta.application.consulta.ConsultaBuscaService;
+import br.com.saudeConecta.application.consulta.ConsultaEstatisticaService;
 import br.com.saudeConecta.application.consulta.dto.*;
 import br.com.saudeConecta.application.dashboard.SaldoFinanceiroService;
 import br.com.saudeConecta.application.dashboard.dto.SaldoFinanceiroResponse;
@@ -33,7 +35,9 @@ import java.util.List;
 @Slf4j
 public class ConsultaController {
     
-    private final ConsultaService consultaService;
+    private final ConsultaAgendamentoService consultaAgendamentoService;
+    private final ConsultaBuscaService consultaBuscaService;
+    private final ConsultaEstatisticaService consultaEstatisticaService;
     private final SaldoFinanceiroService saldoFinanceiroService;
     private final BuscarHistoricoPacientePorPerfilUseCase buscarHistoricoPacientePorPerfilUseCase;
     private final TenantHelper tenantHelper;
@@ -44,7 +48,7 @@ public class ConsultaController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data,
             @AuthenticationPrincipal Usuario usuarioLogado) {
 
-        List<ConsultaResponse> response = consultaService.buscarConsultasHoje(data, usuarioLogado).stream()
+        List<ConsultaResponse> response = consultaBuscaService.buscarConsultasHoje(data, usuarioLogado).stream()
                 .map(ConsultaResponse::fromEntity)
                 .toList();
         return ResponseEntity.ok(response);
@@ -56,7 +60,7 @@ public class ConsultaController {
             @AuthenticationPrincipal Usuario usuarioLogado) {
 
         List<ConsultaResponse> response =
-                consultaService.buscarConsultasDaSemanaAtual(data, usuarioLogado).stream()
+                consultaBuscaService.buscarConsultasDaSemanaAtual(data, usuarioLogado).stream()
                 .map(ConsultaResponse::fromEntity)
                 .toList();
         return ResponseEntity.ok(response);
@@ -68,7 +72,7 @@ public class ConsultaController {
             @AuthenticationPrincipal Usuario usuarioLogado) {
 
         List<ConsultaResponse> response =
-                consultaService.buscarConsultasDoMesAtual(data, usuarioLogado).stream()
+                consultaBuscaService.buscarConsultasDoMesAtual(data, usuarioLogado).stream()
                 .map(ConsultaResponse::fromEntity)
                 .toList();
         return ResponseEntity.ok(response);
@@ -77,7 +81,7 @@ public class ConsultaController {
     @GetMapping("/ano-atual")
     public ResponseEntity<List<ConsultaResponse>> buscarDoAnoAtual() {
         List<ConsultaResponse> response =
-                consultaService.buscarConsultasDoAnoAtual().stream()
+                consultaBuscaService.buscarConsultasDoAnoAtual().stream()
                 .map(ConsultaResponse::fromEntity)
                 .toList();
         return ResponseEntity.ok(response);
@@ -88,7 +92,7 @@ public class ConsultaController {
 
     @PostMapping("/cadastrarConsultaByOrg")
     public ResponseEntity<ConsultaResponse> cadastrarConsultaByOrg(@Valid @RequestBody AgendarConsultaRequest request) {
-        Consulta consulta = consultaService.cadastrarConsultaByOrg(request);
+        Consulta consulta = consultaAgendamentoService.cadastrarConsultaByOrg(request);
         return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
     }
 
@@ -96,7 +100,7 @@ public class ConsultaController {
     public ResponseEntity<ConsultaResponse> atualizarConsultabyOrg(
             @PathVariable Long id,
             @Valid @RequestBody AtualizarConsultaRequest request) {
-        Consulta consulta = consultaService.atualizarConsultaByOrg(id, request);
+        Consulta consulta = consultaAgendamentoService.atualizarConsultaByOrg(id, request);
         return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
     }
 
@@ -111,7 +115,7 @@ public class ConsultaController {
     public ResponseEntity<?> deletarConsulta(@PathVariable Long id) {
         // Exclusão bloqueada (IllegalStateException) vira 409 com mensagem no GlobalExceptionHandler
         try {
-            consultaService.deletarConsulta(id);
+            consultaAgendamentoService.deletarConsulta(id);
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException e) {
             log.warn("consulta.excluir negado motivo=NAO_ENCONTRADA consultaId={}", id);
@@ -142,7 +146,7 @@ public class ConsultaController {
             @RequestParam(required = false) String motivo) {
         try {
             StatusConsulta novoStatus = StatusConsulta.valueOf(status.toUpperCase());
-            Consulta consulta = consultaService.atualizarStatus(id, novoStatus, motivo);
+            Consulta consulta = consultaAgendamentoService.atualizarStatus(id, novoStatus, motivo);
             return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
         } catch (IllegalArgumentException e) {
             log.warn("consulta.status negado motivo=STATUS_INVALIDO_OU_NAO_ENCONTRADA consultaId={} status={} detalhe={}",
@@ -165,7 +169,7 @@ public class ConsultaController {
     public ResponseEntity<List<String>> buscarHorariosOcupados(
             @RequestParam Long medicoId,
             @RequestParam String data) {
-        List<String> horariosOcupados = consultaService.buscarHorariosOcupados(medicoId, data);
+        List<String> horariosOcupados = consultaAgendamentoService.buscarHorariosOcupados(medicoId, data);
         return ResponseEntity.ok(horariosOcupados);
     }
 
@@ -181,7 +185,7 @@ public class ConsultaController {
     public ResponseEntity<List<HorarioOcupadoResponse>> buscarHorariosOcupadosDetalhado(
             @RequestParam Long medicoId,
             @RequestParam String data) {
-        return ResponseEntity.ok(consultaService.buscarHorariosOcupadosDetalhado(medicoId, data));
+        return ResponseEntity.ok(consultaAgendamentoService.buscarHorariosOcupadosDetalhado(medicoId, data));
     }
 
     /**
@@ -198,7 +202,7 @@ public class ConsultaController {
             @RequestParam String data,
             @RequestParam String horario,
             @RequestParam Long medicoId) {
-        boolean existeConsulta = consultaService.verificarDisponibilidade(data, horario, medicoId);
+        boolean existeConsulta = consultaAgendamentoService.verificarDisponibilidade(data, horario, medicoId);
         return ResponseEntity.ok(existeConsulta);
     }
 
@@ -236,7 +240,7 @@ public class ConsultaController {
                     .toList();
         }
         
-        List<ConsultaResponse> response = consultaService.buscarComFiltrosDinamicos(
+        List<ConsultaResponse> response = consultaBuscaService.buscarComFiltrosDinamicos(
                 profissionalId,
                 especialidade,
                 inicio,
@@ -255,7 +259,7 @@ public class ConsultaController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal,
             @RequestParam(required = false) String status) {
-        List<ConsultaResponse> response = consultaService.buscarConsultasPorIntervalo(dataInicial, dataFinal, status).stream()
+        List<ConsultaResponse> response = consultaBuscaService.buscarConsultasPorIntervalo(dataInicial, dataFinal, status).stream()
                 .map(ConsultaResponse::fromEntity)
                 .toList();
         return ResponseEntity.ok(response);
@@ -276,7 +280,7 @@ public class ConsultaController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal,
             @RequestParam(required = false) String status) {
-        List<ConsultaResponse> response = consultaService.pesquisarClinicasEmIntervaloDeDatas(
+        List<ConsultaResponse> response = consultaBuscaService.pesquisarClinicasEmIntervaloDeDatas(
                         profissionalId, dataInicial, dataFinal, status).stream()
                 .map(ConsultaResponse::fromEntity)
                 .toList();
@@ -287,7 +291,7 @@ public class ConsultaController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ConsultaResponse> buscarPorId(@PathVariable Long id) {
-        return consultaService.buscarPorIdComRelacoes(id)
+        return consultaBuscaService.buscarPorIdComRelacoes(id)
             .map(ConsultaResponse::fromEntity)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
@@ -305,7 +309,7 @@ public class ConsultaController {
     public ResponseEntity<List<ConsultaResponse>> buscarAgendaMedicoPorPeriodo(
             @PathVariable Long usuarioId,
             @RequestParam(defaultValue = "diario") String tipoPeriodo) {
-        List<ConsultaResponse> response = consultaService.buscarConsultasPorMedicoEPeriodo(usuarioId, tipoPeriodo)
+        List<ConsultaResponse> response = consultaBuscaService.buscarConsultasPorMedicoEPeriodo(usuarioId, tipoPeriodo)
                 .stream()
                 .map(ConsultaResponse::fromEntity)
                 .toList();
@@ -331,7 +335,7 @@ public class ConsultaController {
         tenantHelper.validateTenant(organizacaoId);
 
         EstatisticasDashboardAdminOrgResponse response =
-            consultaService.getEstatisticasDashboardAdminOrg(organizacaoId);
+            consultaEstatisticaService.getEstatisticasDashboardAdminOrg(organizacaoId);
 
         return ResponseEntity.ok(response);
     }
@@ -356,7 +360,7 @@ public class ConsultaController {
         if (!usuarioId.equals(tenantHelper.getCurrentUserId())) {
             throw new TenantAccessDeniedException("Acesso negado: dashboard de outro usuário");
         }
-        return ResponseEntity.ok(consultaService.getEstatisticasDashboardProfissional(usuarioId));
+        return ResponseEntity.ok(consultaEstatisticaService.getEstatisticasDashboardProfissional(usuarioId));
     }
 
     // ===============================================================
@@ -373,7 +377,7 @@ public class ConsultaController {
     @GetMapping("/estatisticas/dashboard/super-admin")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<EstatisticasDashboardAdminOrgResponse> getEstatisticasDashboardSuperAdmin() {
-        return ResponseEntity.ok(consultaService.getEstatisticasDashboardSuperAdmin());
+        return ResponseEntity.ok(consultaEstatisticaService.getEstatisticasDashboardSuperAdmin());
     }
 
     //==================================FIM=============================================
@@ -384,7 +388,7 @@ public class ConsultaController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal) {
         tenantHelper.validateTenant(organizacaoId);
-        List<ConsultaResponse> response = consultaService.buscarConsultasPorOrganizacaoEIntervalo(
+        List<ConsultaResponse> response = consultaBuscaService.buscarConsultasPorOrganizacaoEIntervalo(
                 organizacaoId, dataInicial, dataFinal).stream()
             .map(ConsultaResponse::fromEntity)
             .toList();
@@ -425,7 +429,7 @@ public class ConsultaController {
             return ResponseEntity.badRequest().build();
         }
         
-        List<Object[]> estatisticas = consultaService.buscarEstatisticasPorMedicoEIntervalo(
+        List<Object[]> estatisticas = consultaEstatisticaService.buscarEstatisticasPorMedicoEIntervalo(
             organizacaoId, 
             medicoId, 
             dataInicial, 
@@ -460,7 +464,7 @@ public class ConsultaController {
             return ResponseEntity.badRequest().build();
         }
         
-        List<Integer> duracoes = consultaService.buscarDuracoesConsultas(
+        List<Integer> duracoes = consultaEstatisticaService.buscarDuracoesConsultas(
             organizacaoId, 
             medicoId, 
             dataInicial, 

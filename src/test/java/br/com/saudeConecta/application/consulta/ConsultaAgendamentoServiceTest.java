@@ -32,8 +32,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("ConsultaService - Testes unitários")
-class ConsultaServiceTest {
+@DisplayName("ConsultaAgendamentoService - cadastro, edição, status, exclusão e agenda")
+class ConsultaAgendamentoServiceTest {
 
     @Mock private ConsultaRepository consultaRepository;
     @Mock private ConsultaHistoricoRepository historicoRepository;
@@ -51,7 +51,7 @@ class ConsultaServiceTest {
     @Mock private br.com.saudeConecta.application.consulta.ConfiguracoesConsultaService configuracoesConsultaService;
 
     @InjectMocks
-    private ConsultaService consultaService;
+    private ConsultaAgendamentoService consultaAgendamentoService;
 
     private static final Long ORG_ID = 1L;
     private static final Long USUARIO_ID = 10L;
@@ -84,49 +84,6 @@ class ConsultaServiceTest {
                 .build();
     }
 
-    // ========== buscarPorId ==========
-
-    @Nested
-    @DisplayName("buscarPorId")
-    class BuscarPorId {
-
-        @Test
-        @DisplayName("Deve retornar consulta quando ID existir na organização")
-        void deveRetornarConsultaQuandoIdExistir() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByIdAndOrganizacao_Id(100L, ORG_ID))
-                    .thenReturn(Optional.of(consultaAgendada));
-
-            Optional<Consulta> resultado = consultaService.buscarPorId(100L);
-
-            assertThat(resultado).isPresent();
-            assertThat(resultado.get().getId()).isEqualTo(100L);
-        }
-
-        @Test
-        @DisplayName("Deve retornar Optional vazio quando ID não existir")
-        void deveRetornarVazioQuandoIdNaoExistir() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByIdAndOrganizacao_Id(999L, ORG_ID))
-                    .thenReturn(Optional.empty());
-
-            Optional<Consulta> resultado = consultaService.buscarPorId(999L);
-
-            assertThat(resultado).isEmpty();
-        }
-
-        @Test
-        @DisplayName("buscarPorIdComRelacoes usa a query com fetch e filtra pela organização do token")
-        void comRelacoesUsaFetchDaOrganizacao() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByIdAndOrganizacao_IdWithRelations(100L, ORG_ID))
-                    .thenReturn(Optional.of(consultaAgendada));
-
-            assertThat(consultaService.buscarPorIdComRelacoes(100L)).contains(consultaAgendada);
-            verify(consultaRepository, never()).findByIdAndOrganizacao_Id(anyLong(), any());
-        }
-    }
-
     // ========== cadastrarConsultaByOrg ==========
 
     @Nested
@@ -154,7 +111,7 @@ class ConsultaServiceTest {
             when(consultaRepository.save(any(Consulta.class))).thenReturn(consultaAgendada);
             when(historicoRepository.save(any(ConsultaHistorico.class))).thenReturn(null);
 
-            Consulta resultado = consultaService.cadastrarConsultaByOrg(requestValido);
+            Consulta resultado = consultaAgendamentoService.cadastrarConsultaByOrg(requestValido);
 
             assertThat(resultado).isNotNull();
             assertThat(resultado.getId()).isEqualTo(100L);
@@ -181,7 +138,7 @@ class ConsultaServiceTest {
             });
             when(historicoRepository.save(any())).thenReturn(null);
 
-            consultaService.cadastrarConsultaByOrg(requestSemDuracao);
+            consultaAgendamentoService.cadastrarConsultaByOrg(requestSemDuracao);
         }
 
         @Test
@@ -190,7 +147,7 @@ class ConsultaServiceTest {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(organizacaoRepository.findById(ORG_ID)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> consultaService.cadastrarConsultaByOrg(requestValido))
+            assertThatThrownBy(() -> consultaAgendamentoService.cadastrarConsultaByOrg(requestValido))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("Organização não encontrada");
         }
@@ -202,7 +159,7 @@ class ConsultaServiceTest {
             when(organizacaoRepository.findById(ORG_ID)).thenReturn(Optional.of(organizacao));
             when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> consultaService.cadastrarConsultaByOrg(requestValido))
+            assertThatThrownBy(() -> consultaAgendamentoService.cadastrarConsultaByOrg(requestValido))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Profissional não encontrado");
         }
@@ -215,7 +172,7 @@ class ConsultaServiceTest {
             when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.of(profissional));
             when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(20L, ORG_ID)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> consultaService.cadastrarConsultaByOrg(requestValido))
+            assertThatThrownBy(() -> consultaAgendamentoService.cadastrarConsultaByOrg(requestValido))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Paciente não encontrado");
         }
@@ -230,7 +187,7 @@ class ConsultaServiceTest {
             lenient().when(pacienteRepository.findById(20L)).thenReturn(Optional.of(paciente));
             when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(20L, ORG_ID)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> consultaService.cadastrarConsultaByOrg(requestValido))
+            assertThatThrownBy(() -> consultaAgendamentoService.cadastrarConsultaByOrg(requestValido))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Paciente não encontrado");
             verify(consultaRepository, never()).save(any());
@@ -246,7 +203,7 @@ class ConsultaServiceTest {
             lenient().when(formaPagamentoRepository.findById(99L)).thenReturn(Optional.of(new FormaPagamento()));
             when(formaPagamentoRepository.findDisponivelParaOrganizacao(99L, ORG_ID)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> consultaService.cadastrarConsultaByOrg(comFormaAlheia))
+            assertThatThrownBy(() -> consultaAgendamentoService.cadastrarConsultaByOrg(comFormaAlheia))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Forma de pagamento nao encontrada");
             verify(consultaRepository, never()).save(any());
@@ -276,7 +233,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
                     .thenReturn(List.of(existente(nove, 60, StatusConsulta.AGENDADA)));
 
-            assertThatThrownBy(() -> consultaService.cadastrarConsultaByOrg(requestEm(nove.plusMinutes(30), 30)))
+            assertThatThrownBy(() -> consultaAgendamentoService.cadastrarConsultaByOrg(requestEm(nove.plusMinutes(30), 30)))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("Já existe consulta agendada para este horário");
             verify(consultaRepository, never()).save(any());
@@ -290,7 +247,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
                     .thenReturn(List.of(existente(nove, 60, StatusConsulta.CONFIRMADA)));
 
-            assertThatThrownBy(() -> consultaService.cadastrarConsultaByOrg(requestEm(nove, 30)))
+            assertThatThrownBy(() -> consultaAgendamentoService.cadastrarConsultaByOrg(requestEm(nove, 30)))
                     .isInstanceOf(IllegalStateException.class);
             verify(consultaRepository, never()).save(any());
         }
@@ -303,7 +260,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
                     .thenReturn(List.of(existente(nove.plusMinutes(15), 15, StatusConsulta.AGENDADA)));
 
-            assertThatThrownBy(() -> consultaService.cadastrarConsultaByOrg(requestEm(nove, 60)))
+            assertThatThrownBy(() -> consultaAgendamentoService.cadastrarConsultaByOrg(requestEm(nove, 60)))
                     .isInstanceOf(IllegalStateException.class);
         }
 
@@ -315,7 +272,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
                     .thenReturn(List.of(existente(nove, null, StatusConsulta.AGENDADA)));
 
-            assertThatThrownBy(() -> consultaService.cadastrarConsultaByOrg(requestEm(nove.plusMinutes(29), 30)))
+            assertThatThrownBy(() -> consultaAgendamentoService.cadastrarConsultaByOrg(requestEm(nove.plusMinutes(29), 30)))
                     .isInstanceOf(IllegalStateException.class);
         }
 
@@ -328,7 +285,7 @@ class ConsultaServiceTest {
                     .thenReturn(List.of(existente(nove, 60, StatusConsulta.AGENDADA)));
             when(consultaRepository.save(any())).thenReturn(consultaAgendada);
 
-            consultaService.cadastrarConsultaByOrg(requestEm(nove.plusMinutes(60), 30));
+            consultaAgendamentoService.cadastrarConsultaByOrg(requestEm(nove.plusMinutes(60), 30));
 
             verify(consultaRepository).save(any(Consulta.class));
         }
@@ -342,7 +299,7 @@ class ConsultaServiceTest {
                     .thenReturn(List.of(existente(nove, 60, StatusConsulta.AGENDADA)));
             when(consultaRepository.save(any())).thenReturn(consultaAgendada);
 
-            consultaService.cadastrarConsultaByOrg(requestEm(nove.minusMinutes(30), 30));
+            consultaAgendamentoService.cadastrarConsultaByOrg(requestEm(nove.minusMinutes(30), 30));
 
             verify(consultaRepository).save(any(Consulta.class));
         }
@@ -354,7 +311,7 @@ class ConsultaServiceTest {
             prepararCadastro();
             when(consultaRepository.save(any())).thenReturn(consultaAgendada);
 
-            consultaService.cadastrarConsultaByOrg(requestEm(nove, 30));
+            consultaAgendamentoService.cadastrarConsultaByOrg(requestEm(nove, 30));
 
             org.mockito.InOrder ordem = inOrder(profissionalRepository, consultaRepository);
             ordem.verify(profissionalRepository).buscarParaAgendamentoComLock(5L, ORG_ID);
@@ -382,7 +339,7 @@ class ConsultaServiceTest {
             when(consultaRepository.save(any())).thenReturn(consultaAgendada);
             when(historicoRepository.save(any())).thenReturn(null);
 
-            consultaService.cadastrarConsultaByOrg(requestComEspecialidade);
+            consultaAgendamentoService.cadastrarConsultaByOrg(requestComEspecialidade);
 
             verify(especialidadeRepository).findById(3L);
         }
@@ -405,7 +362,7 @@ class ConsultaServiceTest {
                     .thenReturn(Optional.of(consultaAgendada));
             when(historicoRepository.save(any())).thenReturn(null);
 
-            Consulta resultado = consultaService.atualizarStatus(100L, StatusConsulta.CONFIRMADA, null);
+            Consulta resultado = consultaAgendamentoService.atualizarStatus(100L, StatusConsulta.CONFIRMADA, null);
             assertThat(resultado).isNotNull();
         }
 
@@ -416,7 +373,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findByIdAndOrganizacao_Id(100L, ORG_ID))
                     .thenReturn(Optional.of(consultaAgendada));
 
-            assertThatThrownBy(() -> consultaService.atualizarStatus(100L, StatusConsulta.CANCELADA, null))
+            assertThatThrownBy(() -> consultaAgendamentoService.atualizarStatus(100L, StatusConsulta.CANCELADA, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Motivo é obrigatório");
         }
@@ -432,7 +389,7 @@ class ConsultaServiceTest {
                     .thenReturn(Optional.of(consultaAgendada));
             when(historicoRepository.save(any())).thenReturn(null);
 
-            consultaService.atualizarStatus(100L, StatusConsulta.CANCELADA, "Paciente cancelou");
+            consultaAgendamentoService.atualizarStatus(100L, StatusConsulta.CANCELADA, "Paciente cancelou");
             assertThat(consultaAgendada.getMotivoCancelamento()).isEqualTo("Paciente cancelou");
         }
 
@@ -443,7 +400,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findByIdAndOrganizacao_Id(100L, ORG_ID))
                     .thenReturn(Optional.of(consultaAgendada));
 
-            assertThatThrownBy(() -> consultaService.atualizarStatus(100L, StatusConsulta.REALIZADA, null))
+            assertThatThrownBy(() -> consultaAgendamentoService.atualizarStatus(100L, StatusConsulta.REALIZADA, null))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("AGENDADA só pode ir para CONFIRMADA ou CANCELADA");
         }
@@ -461,7 +418,7 @@ class ConsultaServiceTest {
                     .thenReturn(Optional.of(consultaAgendada));
             when(historicoRepository.save(any())).thenReturn(null);
 
-            Consulta resultado = consultaService.atualizarStatus(100L, StatusConsulta.AGENDADA, null);
+            Consulta resultado = consultaAgendamentoService.atualizarStatus(100L, StatusConsulta.AGENDADA, null);
             assertThat(resultado).isNotNull();
         }
 
@@ -474,7 +431,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findByIdAndOrganizacao_Id(100L, ORG_ID))
                     .thenReturn(Optional.of(consultaAgendada));
 
-            assertThatThrownBy(() -> consultaService.atualizarStatus(100L, StatusConsulta.PAGO, null))
+            assertThatThrownBy(() -> consultaAgendamentoService.atualizarStatus(100L, StatusConsulta.PAGO, null))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("CONFIRMADA só pode voltar para AGENDADA ou ir para CANCELADA");
         }
@@ -492,7 +449,7 @@ class ConsultaServiceTest {
                     .thenReturn(Optional.of(consultaAgendada));
             when(historicoRepository.save(any())).thenReturn(null);
 
-            Consulta resultado = consultaService.atualizarStatus(100L, StatusConsulta.PAGO, null);
+            Consulta resultado = consultaAgendamentoService.atualizarStatus(100L, StatusConsulta.PAGO, null);
             assertThat(resultado).isNotNull();
         }
 
@@ -505,7 +462,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findByIdAndOrganizacao_Id(100L, ORG_ID))
                     .thenReturn(Optional.of(consultaAgendada));
 
-            assertThatThrownBy(() -> consultaService.atualizarStatus(100L, StatusConsulta.AGENDADA, null))
+            assertThatThrownBy(() -> consultaAgendamentoService.atualizarStatus(100L, StatusConsulta.AGENDADA, null))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("REALIZADA só pode ir para PAGO");
         }
@@ -519,7 +476,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findByIdAndOrganizacao_Id(100L, ORG_ID))
                     .thenReturn(Optional.of(consultaAgendada));
 
-            assertThatThrownBy(() -> consultaService.atualizarStatus(100L, StatusConsulta.AGENDADA, null))
+            assertThatThrownBy(() -> consultaAgendamentoService.atualizarStatus(100L, StatusConsulta.AGENDADA, null))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("não podem ter o status alterado");
         }
@@ -533,7 +490,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findByIdAndOrganizacao_Id(100L, ORG_ID))
                     .thenReturn(Optional.of(consultaAgendada));
 
-            assertThatThrownBy(() -> consultaService.atualizarStatus(100L, StatusConsulta.AGENDADA, null))
+            assertThatThrownBy(() -> consultaAgendamentoService.atualizarStatus(100L, StatusConsulta.AGENDADA, null))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("não podem ter o status alterado");
         }
@@ -545,156 +502,9 @@ class ConsultaServiceTest {
             when(consultaRepository.findByIdAndOrganizacao_Id(999L, ORG_ID))
                     .thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> consultaService.atualizarStatus(999L, StatusConsulta.CONFIRMADA, null))
+            assertThatThrownBy(() -> consultaAgendamentoService.atualizarStatus(999L, StatusConsulta.CONFIRMADA, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Consulta não encontrada com ID: 999");
-        }
-    }
-
-    // ========== getEstatisticasDashboardAdminOrg ==========
-
-    @Nested
-    @DisplayName("getEstatisticasDashboardAdminOrg")
-    class DashboardAdminOrg {
-
-        @Test
-        @DisplayName("Deve retornar zeros quando não há consultas")
-        void deveRetornarZerosQuandoSemConsultas() {
-            when(consultaRepository.findEstatisticasDashboardByOrganizacao(
-                    eq(ORG_ID), any(), any(), any(), any())).thenReturn(Collections.emptyList());
-
-            EstatisticasDashboardAdminOrgResponse resultado =
-                    consultaService.getEstatisticasDashboardAdminOrg(ORG_ID);
-
-            assertThat(resultado.getConsultasHoje()).isZero();
-            assertThat(resultado.getConsultasSemana()).isZero();
-        }
-
-        @Test
-        @DisplayName("Deve agregar corretamente consultas AGENDADA de hoje")
-        void deveAgregarConsultasAgendadasHoje() {
-            List<Object[]> rows = new ArrayList<>();
-            rows.add(new Object[]{ StatusConsulta.AGENDADA, "HOJE", 4L });
-            when(consultaRepository.findEstatisticasDashboardByOrganizacao(
-                    eq(ORG_ID), any(), any(), any(), any())).thenReturn(rows);
-
-            EstatisticasDashboardAdminOrgResponse resultado =
-                    consultaService.getEstatisticasDashboardAdminOrg(ORG_ID);
-
-            assertThat(resultado.getConsultasHoje()).isEqualTo(4L);
-            assertThat(resultado.getConsultasAguardando()).isEqualTo(4L);
-            assertThat(resultado.getConsultasSemana()).isEqualTo(4L);
-        }
-
-        @Test
-        @DisplayName("Deve agregar corretamente consultas REALIZADA de hoje")
-        void deveAgregarConsultasRealizadasHoje() {
-            List<Object[]> rows = new ArrayList<>();
-            rows.add(new Object[]{ StatusConsulta.REALIZADA, "HOJE", 2L });
-            when(consultaRepository.findEstatisticasDashboardByOrganizacao(
-                    eq(ORG_ID), any(), any(), any(), any())).thenReturn(rows);
-
-            EstatisticasDashboardAdminOrgResponse resultado =
-                    consultaService.getEstatisticasDashboardAdminOrg(ORG_ID);
-
-            assertThat(resultado.getConsultasAtendidas()).isEqualTo(2L);
-        }
-
-        @Test
-        @DisplayName("Deve agregar corretamente consultas CANCELADA da semana")
-        void deveAgregarCancelamentosDaSemana() {
-            List<Object[]> rows = new ArrayList<>();
-            rows.add(new Object[]{ StatusConsulta.CANCELADA, "SEMANA", 3L });
-            when(consultaRepository.findEstatisticasDashboardByOrganizacao(
-                    eq(ORG_ID), any(), any(), any(), any())).thenReturn(rows);
-
-            EstatisticasDashboardAdminOrgResponse resultado =
-                    consultaService.getEstatisticasDashboardAdminOrg(ORG_ID);
-
-            assertThat(resultado.getCanceladosSemana()).isEqualTo(3L);
-        }
-
-        @Test
-        @DisplayName("Deve agregar corretamente consultas CONFIRMADA da semana")
-        void deveAgregarConfirmadosDaSemana() {
-            List<Object[]> rows = new ArrayList<>();
-            rows.add(new Object[]{ StatusConsulta.CONFIRMADA, "SEMANA", 5L });
-            when(consultaRepository.findEstatisticasDashboardByOrganizacao(
-                    eq(ORG_ID), any(), any(), any(), any())).thenReturn(rows);
-
-            EstatisticasDashboardAdminOrgResponse resultado =
-                    consultaService.getEstatisticasDashboardAdminOrg(ORG_ID);
-
-            assertThat(resultado.getConfirmadosSemana()).isEqualTo(5L);
-        }
-    }
-
-    // ========== getEstatisticasDashboardProfissional ==========
-
-    @Nested
-    @DisplayName("getEstatisticasDashboardProfissional")
-    class DashboardProfissional {
-
-        @Test
-        @DisplayName("Deve retornar zeros quando não há consultas do profissional")
-        void deveRetornarZerosQuandoSemConsultasDoProfissional() {
-            when(consultaRepository.findEstatisticasDashboardByProfissional(
-                    eq(USUARIO_ID), any(), any(), any(), any())).thenReturn(Collections.emptyList());
-
-            EstatisticasDashboardAdminOrgResponse resultado =
-                    consultaService.getEstatisticasDashboardProfissional(USUARIO_ID);
-
-            assertThat(resultado.getConsultasHoje()).isZero();
-            assertThat(resultado.getConsultasSemana()).isZero();
-        }
-
-        @Test
-        @DisplayName("Deve agregar CONFIRMADA de hoje para o profissional")
-        void deveAgregarConfirmadaDeHojeParaProfissional() {
-            List<Object[]> rows = new ArrayList<>();
-            rows.add(new Object[]{ StatusConsulta.CONFIRMADA, "HOJE", 3L });
-            when(consultaRepository.findEstatisticasDashboardByProfissional(
-                    eq(USUARIO_ID), any(), any(), any(), any())).thenReturn(rows);
-
-            EstatisticasDashboardAdminOrgResponse resultado =
-                    consultaService.getEstatisticasDashboardProfissional(USUARIO_ID);
-
-            assertThat(resultado.getConsultasAguardando()).isEqualTo(3L);
-            assertThat(resultado.getConfirmadosSemana()).isEqualTo(3L);
-        }
-    }
-
-    // ========== getEstatisticasDashboardSuperAdmin ==========
-
-    @Nested
-    @DisplayName("getEstatisticasDashboardSuperAdmin")
-    class DashboardSuperAdmin {
-
-        @Test
-        @DisplayName("Deve retornar zeros quando não há consultas globais")
-        void deveRetornarZerosGlobal() {
-            when(consultaRepository.findEstatisticasDashboardGlobal(any(), any(), any(), any()))
-                    .thenReturn(Collections.emptyList());
-
-            EstatisticasDashboardAdminOrgResponse resultado =
-                    consultaService.getEstatisticasDashboardSuperAdmin();
-
-            assertThat(resultado.getConsultasSemana()).isZero();
-        }
-
-        @Test
-        @DisplayName("Deve agregar REALIZADA de hoje no dashboard global")
-        void deveAgregarRealizadaDeHojeGlobal() {
-            List<Object[]> rows = new ArrayList<>();
-            rows.add(new Object[]{ StatusConsulta.REALIZADA, "HOJE", 6L });
-            when(consultaRepository.findEstatisticasDashboardGlobal(any(), any(), any(), any()))
-                    .thenReturn(rows);
-
-            EstatisticasDashboardAdminOrgResponse resultado =
-                    consultaService.getEstatisticasDashboardSuperAdmin();
-
-            assertThat(resultado.getConsultasAtendidas()).isEqualTo(6L);
-            assertThat(resultado.getConsultasHoje()).isEqualTo(6L);
         }
     }
 
@@ -716,7 +526,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
                     .thenReturn(List.of(consultaAs(10, 0, 30, StatusConsulta.AGENDADA)));
 
-            boolean resultado = consultaService.verificarDisponibilidade("2025-12-01", "10:00", 5L);
+            boolean resultado = consultaAgendamentoService.verificarDisponibilidade("2025-12-01", "10:00", 5L);
 
             assertThat(resultado).isTrue();
         }
@@ -728,7 +538,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
                     .thenReturn(List.of(consultaAs(9, 30, 60, StatusConsulta.AGENDADA)));
 
-            assertThat(consultaService.verificarDisponibilidade("2025-12-01", "10:00", 5L)).isTrue();
+            assertThat(consultaAgendamentoService.verificarDisponibilidade("2025-12-01", "10:00", 5L)).isTrue();
         }
 
         @Test
@@ -738,7 +548,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
                     .thenReturn(List.of(consultaAs(10, 0, 30, StatusConsulta.CONFIRMADA)));
 
-            assertThat(consultaService.verificarDisponibilidade("2025-12-01", "10:00", 5L)).isTrue();
+            assertThat(consultaAgendamentoService.verificarDisponibilidade("2025-12-01", "10:00", 5L)).isTrue();
         }
 
         @Test
@@ -748,7 +558,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
                     .thenReturn(List.of(consultaAs(10, 0, 30, StatusConsulta.AGENDADA)));
 
-            assertThat(consultaService.verificarDisponibilidade("2025-12-01", "09:45", 5L)).isTrue();
+            assertThat(consultaAgendamentoService.verificarDisponibilidade("2025-12-01", "09:45", 5L)).isTrue();
         }
 
         @Test
@@ -758,7 +568,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
                     .thenReturn(List.of(consultaAs(9, 30, 30, StatusConsulta.AGENDADA)));
 
-            assertThat(consultaService.verificarDisponibilidade("2025-12-01", "10:00", 5L)).isFalse();
+            assertThat(consultaAgendamentoService.verificarDisponibilidade("2025-12-01", "10:00", 5L)).isFalse();
         }
 
         @Test
@@ -766,7 +576,7 @@ class ConsultaServiceTest {
         void deveRetornarFalseQuandoHorarioDisponivel() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
 
-            boolean resultado = consultaService.verificarDisponibilidade("2025-12-01", "10:00", 5L);
+            boolean resultado = consultaAgendamentoService.verificarDisponibilidade("2025-12-01", "10:00", 5L);
 
             assertThat(resultado).isFalse();
         }
@@ -776,7 +586,7 @@ class ConsultaServiceTest {
         void deveRetornarFalseQuandoDataHoraInvalida() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
 
-            boolean resultado = consultaService.verificarDisponibilidade("data-invalida", "hora-invalida", 5L);
+            boolean resultado = consultaAgendamentoService.verificarDisponibilidade("data-invalida", "hora-invalida", 5L);
 
             assertThat(resultado).isFalse();
         }
@@ -798,7 +608,7 @@ class ConsultaServiceTest {
                     .thenReturn(Collections.emptyList());
             when(prontuarioRepository.findByConsulta_Id(100L)).thenReturn(null);
 
-            consultaService.deletarConsulta(100L);
+            consultaAgendamentoService.deletarConsulta(100L);
 
             verify(termoAutorizacaoRepository).deleteByConsultaId(100L);
             verify(planejamentoTerapeuticoRepository).deleteByConsultaId(100L);
@@ -813,7 +623,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findByIdAndOrganizacao_Id(999L, ORG_ID))
                     .thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> consultaService.deletarConsulta(999L))
+            assertThatThrownBy(() -> consultaAgendamentoService.deletarConsulta(999L))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Consulta não encontrada");
         }
@@ -827,7 +637,7 @@ class ConsultaServiceTest {
             when(prontuarioDentistaRepository.findByConsultaId(100L))
                     .thenReturn(List.of(mock(br.com.saudeConecta.domain.prontuario.ProntuarioDentista.class)));
 
-            assertThatThrownBy(() -> consultaService.deletarConsulta(100L))
+            assertThatThrownBy(() -> consultaAgendamentoService.deletarConsulta(100L))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("prontuário odontológico");
         }
@@ -843,77 +653,9 @@ class ConsultaServiceTest {
             when(prontuarioRepository.findByConsulta_Id(100L))
                     .thenReturn(mock(br.com.saudeConecta.domain.prontuario.Prontuario.class));
 
-            assertThatThrownBy(() -> consultaService.deletarConsulta(100L))
+            assertThatThrownBy(() -> consultaAgendamentoService.deletarConsulta(100L))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("prontuário médico");
-        }
-    }
-
-    // ========== buscarConsultasPorMedicoEPeriodo ==========
-
-    @Nested
-    @DisplayName("buscarConsultasPorMedicoEPeriodo")
-    class BuscarConsultasPorMedicoEPeriodo {
-
-        @Test
-        @DisplayName("Deve buscar consultas com período diario")
-        void deveBuscarConsultasPeriodoDiario() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findConsultasPorMedicoEPeriodo(eq(ORG_ID), eq(USUARIO_ID), any(), any()))
-                    .thenReturn(List.of(consultaAgendada));
-
-            List<Consulta> resultado = consultaService.buscarConsultasPorMedicoEPeriodo(USUARIO_ID, "diario");
-
-            assertThat(resultado).hasSize(1);
-        }
-
-        @Test
-        @DisplayName("Deve buscar consultas com período semanal")
-        void deveBuscarConsultasPeriodoSemanal() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findConsultasPorMedicoEPeriodo(eq(ORG_ID), eq(USUARIO_ID), any(), any()))
-                    .thenReturn(Collections.emptyList());
-
-            List<Consulta> resultado = consultaService.buscarConsultasPorMedicoEPeriodo(USUARIO_ID, "semanal");
-
-            assertThat(resultado).isEmpty();
-        }
-
-        @Test
-        @DisplayName("Deve buscar consultas com período mensal")
-        void deveBuscarConsultasPeriodoMensal() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findConsultasPorMedicoEPeriodo(eq(ORG_ID), eq(USUARIO_ID), any(), any()))
-                    .thenReturn(Collections.emptyList());
-
-            List<Consulta> resultado = consultaService.buscarConsultasPorMedicoEPeriodo(USUARIO_ID, "mensal");
-
-            assertThat(resultado).isEmpty();
-        }
-
-        @Test
-        @DisplayName("Deve buscar consultas com período anual")
-        void deveBuscarConsultasPeriodoAnual() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findConsultasPorMedicoEPeriodo(eq(ORG_ID), eq(USUARIO_ID), any(), any()))
-                    .thenReturn(Collections.emptyList());
-
-            List<Consulta> resultado = consultaService.buscarConsultasPorMedicoEPeriodo(USUARIO_ID, "anual");
-
-            assertThat(resultado).isEmpty();
-        }
-
-        @Test
-        @DisplayName("Deve usar periodo diario como default para tipo inválido")
-        void deveUsarDiarioComoDefaultParaTipoInvalido() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findConsultasPorMedicoEPeriodo(eq(ORG_ID), eq(USUARIO_ID), any(), any()))
-                    .thenReturn(Collections.emptyList());
-
-            List<Consulta> resultado = consultaService.buscarConsultasPorMedicoEPeriodo(USUARIO_ID, "invalido");
-
-            assertThat(resultado).isEmpty();
-            verify(consultaRepository).findConsultasPorMedicoEPeriodo(eq(ORG_ID), eq(USUARIO_ID), any(), any());
         }
     }
 
@@ -946,7 +688,7 @@ class ConsultaServiceTest {
             when(consultaRepository.save(any(Consulta.class))).thenReturn(consultaAgendada);
             when(historicoRepository.save(any())).thenReturn(null);
 
-            Consulta resultado = consultaService.atualizarConsultaByOrg(100L, requestAtualizar);
+            Consulta resultado = consultaAgendamentoService.atualizarConsultaByOrg(100L, requestAtualizar);
 
             assertThat(resultado).isNotNull();
             verify(consultaRepository).save(consultaAgendada);
@@ -963,7 +705,7 @@ class ConsultaServiceTest {
             when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(20L, ORG_ID)).thenReturn(Optional.empty());
             Paciente pacienteOriginal = consultaAgendada.getPaciente();
 
-            assertThatThrownBy(() -> consultaService.atualizarConsultaByOrg(100L, requestAtualizar))
+            assertThatThrownBy(() -> consultaAgendamentoService.atualizarConsultaByOrg(100L, requestAtualizar))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Paciente não encontrado");
             assertThat(consultaAgendada.getPaciente()).isSameAs(pacienteOriginal);
@@ -983,7 +725,7 @@ class ConsultaServiceTest {
             AtualizarConsultaRequest comFormaAlheia = new AtualizarConsultaRequest(
                     5L, 20L, null, LocalDateTime.now().plusDays(2), 45, "Obs atualizada", 99L, BigDecimal.valueOf(200), null);
 
-            assertThatThrownBy(() -> consultaService.atualizarConsultaByOrg(100L, comFormaAlheia))
+            assertThatThrownBy(() -> consultaAgendamentoService.atualizarConsultaByOrg(100L, comFormaAlheia))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Forma de pagamento nao encontrada");
             assertThat(consultaAgendada.getFormaPagamento()).isSameAs(original);
@@ -998,7 +740,7 @@ class ConsultaServiceTest {
                     .thenReturn(Optional.of(consultaAgendada));
             when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> consultaService.atualizarConsultaByOrg(100L, requestAtualizar))
+            assertThatThrownBy(() -> consultaAgendamentoService.atualizarConsultaByOrg(100L, requestAtualizar))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Profissional não encontrado");
             verify(consultaRepository, never()).save(any());
@@ -1010,7 +752,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findByIdAndOrganizacao_Id(anyLong(), any()))
                     .thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> consultaService.atualizarConsultaByOrg(999L, requestAtualizar))
+            assertThatThrownBy(() -> consultaAgendamentoService.atualizarConsultaByOrg(999L, requestAtualizar))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Consulta não encontrada");
         }
@@ -1023,7 +765,7 @@ class ConsultaServiceTest {
                     .thenReturn(Optional.of(consultaAgendada));
             when(profissionalRepository.buscarClinicoIdByOrg(5L, ORG_ID)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> consultaService.atualizarConsultaByOrg(100L, requestAtualizar))
+            assertThatThrownBy(() -> consultaAgendamentoService.atualizarConsultaByOrg(100L, requestAtualizar))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Profissional não encontrado");
         }
@@ -1047,7 +789,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
                     .thenReturn(List.of(outraConsulta));
 
-            assertThatThrownBy(() -> consultaService.atualizarConsultaByOrg(100L, requestAtualizar))
+            assertThatThrownBy(() -> consultaAgendamentoService.atualizarConsultaByOrg(100L, requestAtualizar))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("consulta agendada");
             verify(consultaRepository, never()).save(any());
@@ -1064,7 +806,7 @@ class ConsultaServiceTest {
                     .thenReturn(List.of(propria));
             when(consultaRepository.save(any())).thenReturn(consultaAgendada);
 
-            consultaService.atualizarConsultaByOrg(100L, requestAtualizar);
+            consultaAgendamentoService.atualizarConsultaByOrg(100L, requestAtualizar);
 
             verify(consultaRepository).save(consultaAgendada);
         }
@@ -1075,7 +817,7 @@ class ConsultaServiceTest {
             prepararAtualizacao();
             when(consultaRepository.save(any())).thenReturn(consultaAgendada);
 
-            consultaService.atualizarConsultaByOrg(100L, requestAtualizar);
+            consultaAgendamentoService.atualizarConsultaByOrg(100L, requestAtualizar);
 
             org.mockito.InOrder ordem = inOrder(profissionalRepository, consultaRepository);
             ordem.verify(profissionalRepository).buscarParaAgendamentoComLock(5L, ORG_ID);
@@ -1089,7 +831,7 @@ class ConsultaServiceTest {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(consultaRepository.findByIdAndOrganizacao_Id(100L, ORG_ID)).thenReturn(Optional.of(consultaAgendada));
 
-            assertThatThrownBy(() -> consultaService.atualizarConsultaByOrg(100L, requestAtualizar))
+            assertThatThrownBy(() -> consultaAgendamentoService.atualizarConsultaByOrg(100L, requestAtualizar))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("PAGO");
             verify(consultaRepository, never()).save(any());
@@ -1102,7 +844,7 @@ class ConsultaServiceTest {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(consultaRepository.findByIdAndOrganizacao_Id(100L, ORG_ID)).thenReturn(Optional.of(consultaAgendada));
 
-            assertThatThrownBy(() -> consultaService.atualizarConsultaByOrg(100L, requestAtualizar))
+            assertThatThrownBy(() -> consultaAgendamentoService.atualizarConsultaByOrg(100L, requestAtualizar))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("CANCELADA");
             verify(consultaRepository, never()).save(any());
@@ -1115,7 +857,7 @@ class ConsultaServiceTest {
                     5L, 20L, null, LocalDateTime.now().plusDays(2), null, null, null, null, "REALIZADA");
             prepararAtualizacao();
 
-            assertThatThrownBy(() -> consultaService.atualizarConsultaByOrg(100L, req))
+            assertThatThrownBy(() -> consultaAgendamentoService.atualizarConsultaByOrg(100L, req))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("AGENDADA só pode ir para");
             assertThat(consultaAgendada.getStatus()).isEqualTo(StatusConsulta.AGENDADA);
@@ -1129,7 +871,7 @@ class ConsultaServiceTest {
                     5L, 20L, null, LocalDateTime.now().plusDays(2), null, null, null, null, "BANANA");
             prepararAtualizacao();
 
-            assertThatThrownBy(() -> consultaService.atualizarConsultaByOrg(100L, req))
+            assertThatThrownBy(() -> consultaAgendamentoService.atualizarConsultaByOrg(100L, req))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Status inválido: BANANA");
         }
@@ -1142,7 +884,7 @@ class ConsultaServiceTest {
             prepararAtualizacao();
             when(consultaRepository.save(any())).thenReturn(consultaAgendada);
 
-            consultaService.atualizarConsultaByOrg(100L, req);
+            consultaAgendamentoService.atualizarConsultaByOrg(100L, req);
 
             assertThat(consultaAgendada.getStatus()).isEqualTo(StatusConsulta.AGENDADA);
         }
@@ -1164,438 +906,9 @@ class ConsultaServiceTest {
             when(consultaRepository.save(any())).thenReturn(consultaAgendada);
             when(historicoRepository.save(any())).thenReturn(null);
 
-            consultaService.atualizarConsultaByOrg(100L, requestComStatus);
+            consultaAgendamentoService.atualizarConsultaByOrg(100L, requestComStatus);
 
             assertThat(consultaAgendada.getStatus()).isEqualTo(StatusConsulta.CONFIRMADA);
-        }
-    }
-
-    // ========== buscarConsultasPorOrganizacaoEIntervalo ==========
-
-    @Nested
-    @DisplayName("buscarConsultasPorOrganizacaoEIntervalo")
-    class BuscarConsultasPorOrganizacaoEIntervalo {
-
-        @Test
-        @DisplayName("Deve retornar lista de consultas no intervalo")
-        void deveRetornarConsultasNoIntervalo() {
-            LocalDate inicio = LocalDate.now().minusDays(7);
-            LocalDate fim = LocalDate.now();
-            when(consultaRepository.findByOrganizacaoIdAndDataHoraBetweenWithRelations(eq(ORG_ID), any(), any()))
-                    .thenReturn(List.of(consultaAgendada));
-
-            List<Consulta> resultado = consultaService.buscarConsultasPorOrganizacaoEIntervalo(ORG_ID, inicio, fim);
-
-            assertThat(resultado).hasSize(1);
-            verify(consultaRepository).findByOrganizacaoIdAndDataHoraBetweenWithRelations(eq(ORG_ID), any(), any());
-        }
-
-        @Test
-        @DisplayName("Deve retornar lista vazia quando não houver consultas no intervalo")
-        void deveRetornarListaVaziaQuandoSemConsultas() {
-            LocalDate inicio = LocalDate.now().minusDays(30);
-            LocalDate fim = LocalDate.now().minusDays(15);
-            when(consultaRepository.findByOrganizacaoIdAndDataHoraBetweenWithRelations(any(), any(), any()))
-                    .thenReturn(Collections.emptyList());
-
-            List<Consulta> resultado = consultaService.buscarConsultasPorOrganizacaoEIntervalo(ORG_ID, inicio, fim);
-
-            assertThat(resultado).isEmpty();
-        }
-    }
-
-    // ========== buscarEstatisticasPorMedicoEIntervalo ==========
-
-    @Nested
-    @DisplayName("buscarEstatisticasPorMedicoEIntervalo")
-    class BuscarEstatisticasPorMedicoEIntervalo {
-
-        @Test
-        @DisplayName("Deve retornar estatísticas de consultas por médico e intervalo")
-        void deveRetornarEstatisticasPorMedicoEIntervalo() {
-            LocalDate inicio = LocalDate.now().minusDays(30);
-            LocalDate fim = LocalDate.now();
-            List<Object[]> estatisticas = new ArrayList<>();
-            estatisticas.add(new Object[]{ StatusConsulta.REALIZADA, 5L });
-            estatisticas.add(new Object[]{ StatusConsulta.CANCELADA, 2L });
-            when(consultaRepository.findEstatisticasPorMedicoEIntervalo(eq(ORG_ID), eq(USUARIO_ID), any(), any()))
-                    .thenReturn(estatisticas);
-
-            List<Object[]> resultado = consultaService.buscarEstatisticasPorMedicoEIntervalo(ORG_ID, USUARIO_ID, inicio, fim);
-
-            assertThat(resultado).hasSize(2);
-            verify(consultaRepository).findEstatisticasPorMedicoEIntervalo(eq(ORG_ID), eq(USUARIO_ID), any(), any());
-        }
-
-        @Test
-        @DisplayName("Deve retornar lista vazia quando não houver estatísticas")
-        void deveRetornarListaVaziaQuandoSemEstatisticas() {
-            LocalDate inicio = LocalDate.now().minusDays(7);
-            LocalDate fim = LocalDate.now();
-            when(consultaRepository.findEstatisticasPorMedicoEIntervalo(any(), any(), any(), any()))
-                    .thenReturn(Collections.emptyList());
-
-            List<Object[]> resultado = consultaService.buscarEstatisticasPorMedicoEIntervalo(ORG_ID, USUARIO_ID, inicio, fim);
-
-            assertThat(resultado).isEmpty();
-        }
-    }
-
-    // ========== pesquisarClinicasEmIntervaloDeDatas ==========
-
-    @Nested
-    @DisplayName("pesquisarClinicasEmIntervaloDeDatas")
-    class PesquisarClinicasEmIntervaloDeDatas {
-
-        private final LocalDate INICIO = LocalDate.now().minusDays(7);
-        private final LocalDate FIM = LocalDate.now();
-
-        @Test
-        @DisplayName("Deve buscar todas as consultas quando status for ALL")
-        void deveBuscarTodasQuandoStatusAll() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndUsuarioIdAndStatusOptionalAndDataHoraBetween(
-                    eq(ORG_ID), eq(5L), isNull(), any(), any()))
-                    .thenReturn(List.of(consultaAgendada));
-
-            List<Consulta> resultado = consultaService.pesquisarClinicasEmIntervaloDeDatas(5L, INICIO, FIM, "ALL");
-
-            assertThat(resultado).hasSize(1);
-            verify(consultaRepository).findByOrganizacaoIdAndUsuarioIdAndStatusOptionalAndDataHoraBetween(
-                    eq(ORG_ID), eq(5L), isNull(), any(), any());
-        }
-
-        @Test
-        @DisplayName("Deve filtrar por status específico")
-        void deveFiltrarPorStatus() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndUsuarioIdAndStatusOptionalAndDataHoraBetween(
-                    eq(ORG_ID), eq(5L), eq(StatusConsulta.AGENDADA), any(), any()))
-                    .thenReturn(List.of(consultaAgendada));
-
-            List<Consulta> resultado = consultaService.pesquisarClinicasEmIntervaloDeDatas(5L, INICIO, FIM, "AGENDADA");
-
-            assertThat(resultado).hasSize(1);
-            verify(consultaRepository).findByOrganizacaoIdAndUsuarioIdAndStatusOptionalAndDataHoraBetween(
-                    eq(ORG_ID), eq(5L), eq(StatusConsulta.AGENDADA), any(), any());
-        }
-
-        @Test
-        @DisplayName("Deve buscar sem filtro de status quando status for nulo")
-        void deveBuscarSemFiltroQuandoStatusNulo() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndUsuarioIdAndStatusOptionalAndDataHoraBetween(
-                    eq(ORG_ID), eq(5L), isNull(), any(), any()))
-                    .thenReturn(List.of(consultaAgendada));
-
-            List<Consulta> resultado = consultaService.pesquisarClinicasEmIntervaloDeDatas(5L, INICIO, FIM, null);
-
-            assertThat(resultado).hasSize(1);
-        }
-
-        @Test
-        @DisplayName("Deve lancar erro quando status for invalido")
-        void deveLancarErroQuandoStatusInvalido() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-
-            assertThatThrownBy(() ->
-                    consultaService.pesquisarClinicasEmIntervaloDeDatas(5L, INICIO, FIM, "INEXISTENTE"))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Status de consulta invalido");
-        }
-    }
-
-    // ========== buscarConsultasHoje ==========
-
-    @Nested
-    @DisplayName("buscarConsultasHoje")
-    class BuscarConsultasHoje {
-
-        @Test
-        @DisplayName("Deve retornar consultas de hoje da organização")
-        void deveRetornarConsultasHoje() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any(), any()))
-                    .thenReturn(List.of(consultaAgendada));
-
-            List<Consulta> resultado = consultaService.buscarConsultasHoje(null);
-
-            assertThat(resultado).hasSize(1);
-            verify(consultaRepository).findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any(), any());
-        }
-
-        @Test
-        @DisplayName("Deve retornar lista vazia quando não houver consultas hoje")
-        void deveRetornarListaVaziaQuandoSemConsultasHoje() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any(), any()))
-                    .thenReturn(Collections.emptyList());
-
-            List<Consulta> resultado = consultaService.buscarConsultasHoje(null);
-
-            assertThat(resultado).isEmpty();
-        }
-
-        @Test
-        @DisplayName("Deve retornar consultas do dia informado quando data for passada")
-        void deveRetornarConsultasDoDiaInformado() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            LocalDate dataInformada = LocalDate.of(2024, 3, 10);
-            when(consultaRepository.findByOrganizacaoIdAndPeriodo(
-                    eq(ORG_ID), any(), eq(dataInformada.atStartOfDay()), eq(dataInformada.atTime(23, 59, 59))))
-                    .thenReturn(List.of(consultaAgendada));
-
-            List<Consulta> resultado = consultaService.buscarConsultasHoje(dataInformada);
-
-            assertThat(resultado).hasSize(1);
-            verify(consultaRepository).findByOrganizacaoIdAndPeriodo(
-                    eq(ORG_ID), any(), eq(dataInformada.atStartOfDay()), eq(dataInformada.atTime(23, 59, 59)));
-        }
-    }
-
-    // ========== buscarConsultasDaSemanaAtual ==========
-
-    @Nested
-    @DisplayName("buscarConsultasDaSemanaAtual")
-    class BuscarConsultasDaSemanaAtual {
-
-        @Test
-        @DisplayName("Deve retornar consultas da semana atual")
-        void deveRetornarConsultasDaSemana() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any(), any()))
-                    .thenReturn(List.of(consultaAgendada));
-
-            List<Consulta> resultado = consultaService.buscarConsultasDaSemanaAtual(null);
-
-            assertThat(resultado).hasSize(1);
-            verify(consultaRepository).findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any(), any());
-        }
-
-        @Test
-        @DisplayName("Deve retornar lista vazia quando não houver consultas na semana")
-        void deveRetornarListaVaziaQuandoSemConsultasNaSemana() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any(), any()))
-                    .thenReturn(Collections.emptyList());
-
-            List<Consulta> resultado = consultaService.buscarConsultasDaSemanaAtual(null);
-
-            assertThat(resultado).isEmpty();
-        }
-    }
-
-    // ========== buscarConsultasDoMesAtual ==========
-
-    @Nested
-    @DisplayName("buscarConsultasDoMesAtual")
-    class BuscarConsultasDoMesAtual {
-
-        @Test
-        @DisplayName("Deve retornar consultas do mês atual")
-        void deveRetornarConsultasDoMes() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any(), any()))
-                    .thenReturn(List.of(consultaAgendada));
-
-            List<Consulta> resultado = consultaService.buscarConsultasDoMesAtual(null);
-
-            assertThat(resultado).hasSize(1);
-            verify(consultaRepository).findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any(), any());
-        }
-
-        @Test
-        @DisplayName("Deve retornar lista vazia quando não houver consultas no mês")
-        void deveRetornarListaVaziaQuandoSemConsultasNoMes() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any(), any()))
-                    .thenReturn(Collections.emptyList());
-
-            List<Consulta> resultado = consultaService.buscarConsultasDoMesAtual(null);
-
-            assertThat(resultado).isEmpty();
-        }
-    }
-
-    // ========== buscarConsultasDoAnoAtual ==========
-
-    @Nested
-    @DisplayName("buscarConsultasDoAnoAtual")
-    class BuscarConsultasDoAnoAtual {
-
-        @Test
-        @DisplayName("Deve retornar consultas do ano atual")
-        void deveRetornarConsultasDoAno() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any()))
-                    .thenReturn(List.of(consultaAgendada));
-
-            List<Consulta> resultado = consultaService.buscarConsultasDoAnoAtual();
-
-            assertThat(resultado).hasSize(1);
-            verify(consultaRepository).findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any());
-        }
-
-        @Test
-        @DisplayName("Deve retornar lista vazia quando não houver consultas no ano")
-        void deveRetornarListaVaziaQuandoSemConsultasNoAno() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByOrganizacaoIdAndPeriodo(eq(ORG_ID), any(), any()))
-                    .thenReturn(Collections.emptyList());
-
-            List<Consulta> resultado = consultaService.buscarConsultasDoAnoAtual();
-
-            assertThat(resultado).isEmpty();
-        }
-    }
-
-    // ========== buscarConsultasPorIntervalo ==========
-
-    @Nested
-    @DisplayName("buscarConsultasPorIntervalo")
-    class BuscarConsultasPorIntervalo {
-
-        @Test
-        @DisplayName("Deve buscar todas as consultas quando status for ALL")
-        void deveBuscarTodasQuandoStatusAll() {
-            LocalDate inicio = LocalDate.of(2024, 1, 1);
-            LocalDate fim = LocalDate.of(2024, 1, 31);
-
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByStatusOptionalAndDataHoraBetweenWithRelations(
-                    eq(ORG_ID), isNull(), any(), any()))
-                    .thenReturn(List.of(consultaAgendada));
-
-            List<Consulta> resultado = consultaService.buscarConsultasPorIntervalo(inicio, fim, "ALL");
-
-            assertThat(resultado).hasSize(1);
-            verify(consultaRepository).findByStatusOptionalAndDataHoraBetweenWithRelations(
-                    eq(ORG_ID), isNull(), any(), any());
-        }
-
-        @Test
-        @DisplayName("Deve filtrar por status específico quando informado")
-        void deveFiltrarPorStatusEspecifico() {
-            LocalDate inicio = LocalDate.of(2024, 1, 1);
-            LocalDate fim = LocalDate.of(2024, 1, 31);
-
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByStatusOptionalAndDataHoraBetweenWithRelations(
-                    eq(ORG_ID), eq(StatusConsulta.AGENDADA), any(), any()))
-                    .thenReturn(List.of(consultaAgendada));
-
-            List<Consulta> resultado = consultaService.buscarConsultasPorIntervalo(inicio, fim, "AGENDADA");
-
-            assertThat(resultado).hasSize(1);
-            verify(consultaRepository).findByStatusOptionalAndDataHoraBetweenWithRelations(
-                    eq(ORG_ID), eq(StatusConsulta.AGENDADA), any(), any());
-        }
-
-        @Test
-        @DisplayName("Deve buscar sem filtro de status quando status for nulo")
-        void deveBuscarSemStatusQuandoNulo() {
-            LocalDate inicio = LocalDate.of(2024, 1, 1);
-            LocalDate fim = LocalDate.of(2024, 1, 31);
-
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findByStatusOptionalAndDataHoraBetweenWithRelations(
-                    eq(ORG_ID), isNull(), any(), any()))
-                    .thenReturn(List.of(consultaAgendada));
-
-            List<Consulta> resultado = consultaService.buscarConsultasPorIntervalo(inicio, fim, null);
-
-            assertThat(resultado).hasSize(1);
-            verify(consultaRepository).findByStatusOptionalAndDataHoraBetweenWithRelations(
-                    eq(ORG_ID), isNull(), any(), any());
-        }
-    }
-
-    // ========== buscarComFiltrosDinamicos ==========
-
-    @Nested
-    @DisplayName("buscarComFiltrosDinamicos")
-    class BuscarComFiltrosDinamicos {
-
-        @Test
-        @DisplayName("Deve buscar com todos os filtros preenchidos")
-        void deveBuscarComTodosFiltros() {
-            LocalDateTime inicio = LocalDateTime.of(2024, 6, 1, 0, 0);
-            LocalDateTime fim = LocalDateTime.of(2024, 6, 30, 23, 59);
-
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class)))
-                    .thenReturn(List.of(consultaAgendada));
-
-            List<Consulta> resultado = consultaService.buscarComFiltrosDinamicos(
-                    5L, "Cardiologia", inicio, fim, List.of(StatusConsulta.AGENDADA));
-
-            assertThat(resultado).hasSize(1);
-            verify(consultaRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class));
-        }
-
-        @Test
-        @DisplayName("Deve buscar com filtros nulos (sem restrições)")
-        void deveBuscarComFiltrosNulos() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class)))
-                    .thenReturn(List.of(consultaAgendada));
-
-            List<Consulta> resultado = consultaService.buscarComFiltrosDinamicos(
-                    null, null, null, null, null);
-
-            assertThat(resultado).hasSize(1);
-        }
-
-        @Test
-        @DisplayName("Deve retornar lista vazia quando não há resultados")
-        void deveRetornarVazioQuandoSemResultados() {
-            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(consultaRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class)))
-                    .thenReturn(Collections.emptyList());
-
-            List<Consulta> resultado = consultaService.buscarComFiltrosDinamicos(
-                    1L, null, null, null, null);
-
-            assertThat(resultado).isEmpty();
-        }
-    }
-
-    // ========== buscarDuracoesConsultas ==========
-
-    @Nested
-    @DisplayName("buscarDuracoesConsultas")
-    class BuscarDuracoesConsultas {
-
-        @Test
-        @DisplayName("Deve retornar lista de durações em minutos")
-        void deveRetornarDuracoes() {
-            LocalDate inicio = LocalDate.of(2024, 6, 1);
-            LocalDate fim = LocalDate.of(2024, 6, 30);
-
-            when(consultaRepository.findDuracoesConsultasPorMedicoEIntervalo(
-                    eq(ORG_ID), eq(5L), any(), any()))
-                    .thenReturn(List.of(30, 45, 60));
-
-            List<Integer> resultado = consultaService.buscarDuracoesConsultas(ORG_ID, 5L, inicio, fim);
-
-            assertThat(resultado).containsExactly(30, 45, 60);
-            verify(consultaRepository).findDuracoesConsultasPorMedicoEIntervalo(
-                    eq(ORG_ID), eq(5L), any(), any());
-        }
-
-        @Test
-        @DisplayName("Deve retornar lista vazia quando não há consultas no período")
-        void deveRetornarVazioQuandoSemConsultas() {
-            LocalDate inicio = LocalDate.of(2024, 6, 1);
-            LocalDate fim = LocalDate.of(2024, 6, 30);
-
-            when(consultaRepository.findDuracoesConsultasPorMedicoEIntervalo(
-                    eq(ORG_ID), eq(5L), any(), any()))
-                    .thenReturn(Collections.emptyList());
-
-            List<Integer> resultado = consultaService.buscarDuracoesConsultas(ORG_ID, 5L, inicio, fim);
-
-            assertThat(resultado).isEmpty();
         }
     }
 
@@ -1612,7 +925,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findHorariosOcupados(eq(ORG_ID), eq(5L), any()))
                     .thenReturn(List.of("08:00", "09:00", "14:00"));
 
-            List<String> resultado = consultaService.buscarHorariosOcupados(5L, "2024-06-15");
+            List<String> resultado = consultaAgendamentoService.buscarHorariosOcupados(5L, "2024-06-15");
 
             assertThat(resultado).containsExactly("08:00", "09:00", "14:00");
             verify(consultaRepository).findHorariosOcupados(eq(ORG_ID), eq(5L), any());
@@ -1625,7 +938,7 @@ class ConsultaServiceTest {
             when(consultaRepository.findHorariosOcupados(eq(ORG_ID), eq(5L), any()))
                     .thenReturn(Collections.emptyList());
 
-            List<String> resultado = consultaService.buscarHorariosOcupados(5L, "2024-06-15");
+            List<String> resultado = consultaAgendamentoService.buscarHorariosOcupados(5L, "2024-06-15");
 
             assertThat(resultado).isEmpty();
         }
@@ -1650,7 +963,7 @@ class ConsultaServiceTest {
                     .thenReturn(List.of(a, b));
 
             List<br.com.saudeConecta.application.consulta.dto.HorarioOcupadoResponse> resultado =
-                    consultaService.buscarHorariosOcupadosDetalhado(5L, "2030-05-10");
+                    consultaAgendamentoService.buscarHorariosOcupadosDetalhado(5L, "2030-05-10");
 
             assertThat(resultado).extracting("inicio", "duracaoMinutos")
                     .containsExactly(tuple("09:00:00", 60), tuple("10:30:00", 30));

@@ -1,6 +1,8 @@
 package br.com.saudeConecta.contrato;
 
-import br.com.saudeConecta.application.consulta.ConsultaService;
+import br.com.saudeConecta.application.consulta.ConsultaAgendamentoService;
+import br.com.saudeConecta.application.consulta.ConsultaBuscaService;
+import br.com.saudeConecta.application.consulta.ConsultaEstatisticaService;
 import br.com.saudeConecta.application.consulta.dto.EstatisticasDashboardAdminOrgResponse;
 import br.com.saudeConecta.application.consulta.dto.HistoricoConsultaPacienteResponse;
 import br.com.saudeConecta.application.dashboard.SaldoFinanceiroService;
@@ -79,7 +81,9 @@ class ConsultaControllerContratoTest {
 
     @Autowired private MockMvc mockMvc;
 
-    @MockBean private ConsultaService consultaService;
+    @MockBean private ConsultaAgendamentoService consultaAgendamentoService;
+    @MockBean private ConsultaBuscaService consultaBuscaService;
+    @MockBean private ConsultaEstatisticaService consultaEstatisticaService;
     @MockBean private SaldoFinanceiroService saldoFinanceiroService;
     @MockBean private BuscarHistoricoCompletoPacienteDentistaUseCase historicoDentista;
     @MockBean private BuscarHistoricoCompletoPacienteMedicoUseCase historicoMedico;
@@ -137,7 +141,7 @@ class ConsultaControllerContratoTest {
         @Test
         @DisplayName("GET /hoje: 200 com todos os campos do ConsultaResponse")
         void hojeCamposCompletos() throws Exception {
-            when(consultaService.buscarConsultasHoje(any(), any(Usuario.class))).thenReturn(List.of(consulta));
+            when(consultaBuscaService.buscarConsultasHoje(any(), any(Usuario.class))).thenReturn(List.of(consulta));
 
             mockMvc.perform(get("/consultas/hoje").param("data", "2030-05-10").with(user(gestor)))
                     .andExpect(status().isOk())
@@ -163,14 +167,14 @@ class ConsultaControllerContratoTest {
                     .andExpect(jsonPath("$[0].formaPagamentoNome").value("PIX"))
                     .andExpect(jsonPath("$[0].valor").value(150.00))
                     .andExpect(jsonPath("$[0].status").value("AGENDADA"));
-            verify(consultaService).buscarConsultasHoje(eq(LocalDate.of(2030, 5, 10)), any(Usuario.class));
+            verify(consultaBuscaService).buscarConsultasHoje(eq(LocalDate.of(2030, 5, 10)), any(Usuario.class));
         }
 
         @Test
         @DisplayName("GET /semana-atual e /mes-atual: 200 com a lista do usuário logado")
         void semanaEMes() throws Exception {
-            when(consultaService.buscarConsultasDaSemanaAtual(any(), any(Usuario.class))).thenReturn(List.of(consulta));
-            when(consultaService.buscarConsultasDoMesAtual(any(), any(Usuario.class))).thenReturn(List.of());
+            when(consultaBuscaService.buscarConsultasDaSemanaAtual(any(), any(Usuario.class))).thenReturn(List.of(consulta));
+            when(consultaBuscaService.buscarConsultasDoMesAtual(any(), any(Usuario.class))).thenReturn(List.of());
 
             mockMvc.perform(get("/consultas/semana-atual").with(user(gestor)))
                     .andExpect(status().isOk())
@@ -184,7 +188,7 @@ class ConsultaControllerContratoTest {
         @WithMockUser
         @DisplayName("GET /ano-atual: 200 com a lista")
         void anoAtual() throws Exception {
-            when(consultaService.buscarConsultasDoAnoAtual()).thenReturn(List.of(consulta));
+            when(consultaBuscaService.buscarConsultasDoAnoAtual()).thenReturn(List.of(consulta));
 
             mockMvc.perform(get("/consultas/ano-atual"))
                     .andExpect(status().isOk())
@@ -195,7 +199,7 @@ class ConsultaControllerContratoTest {
         @WithMockUser
         @DisplayName("GET /buscar: filtros convertidos (datas para início/fim do dia, status separados por vírgula)")
         void buscarComFiltros() throws Exception {
-            when(consultaService.buscarComFiltrosDinamicos(any(), any(), any(), any(), any())).thenReturn(List.of(consulta));
+            when(consultaBuscaService.buscarComFiltrosDinamicos(any(), any(), any(), any(), any())).thenReturn(List.of(consulta));
 
             mockMvc.perform(get("/consultas/buscar")
                             .param("profissionalId", "3").param("especialidade", "Cardio")
@@ -203,7 +207,7 @@ class ConsultaControllerContratoTest {
                             .param("status", "AGENDADA, CONFIRMADA"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].id").value(100));
-            verify(consultaService).buscarComFiltrosDinamicos(3L, "Cardio",
+            verify(consultaBuscaService).buscarComFiltrosDinamicos(3L, "Cardio",
                     LocalDateTime.of(2030, 5, 1, 0, 0),
                     LocalDateTime.of(2030, 5, 31, 23, 59, 59),
                     List.of(StatusConsulta.AGENDADA, StatusConsulta.CONFIRMADA));
@@ -213,7 +217,7 @@ class ConsultaControllerContratoTest {
         @WithMockUser
         @DisplayName("GET /buscar sem filtros: 200 e o service recebe tudo nulo")
         void buscarSemFiltros() throws Exception {
-            when(consultaService.buscarComFiltrosDinamicos(isNull(), isNull(), isNull(), isNull(), isNull()))
+            when(consultaBuscaService.buscarComFiltrosDinamicos(isNull(), isNull(), isNull(), isNull(), isNull()))
                     .thenReturn(List.of());
 
             mockMvc.perform(get("/consultas/buscar"))
@@ -225,9 +229,9 @@ class ConsultaControllerContratoTest {
         @WithMockUser
         @DisplayName("GET /intervalo e /profissional/{id}/intervalo: 200 com a lista")
         void intervalos() throws Exception {
-            when(consultaService.buscarConsultasPorIntervalo(LocalDate.of(2030, 5, 1), LocalDate.of(2030, 5, 31), "ALL"))
+            when(consultaBuscaService.buscarConsultasPorIntervalo(LocalDate.of(2030, 5, 1), LocalDate.of(2030, 5, 31), "ALL"))
                     .thenReturn(List.of(consulta));
-            when(consultaService.pesquisarClinicasEmIntervaloDeDatas(7L, LocalDate.of(2030, 5, 1),
+            when(consultaBuscaService.pesquisarClinicasEmIntervaloDeDatas(7L, LocalDate.of(2030, 5, 1),
                     LocalDate.of(2030, 5, 31), null)).thenReturn(List.of(consulta));
 
             mockMvc.perform(get("/consultas/intervalo")
@@ -244,7 +248,7 @@ class ConsultaControllerContratoTest {
         @WithMockUser
         @DisplayName("GET /intervalo com status inválido: 400 REQUISICAO_INVALIDA")
         void intervaloStatusInvalido() throws Exception {
-            when(consultaService.buscarConsultasPorIntervalo(any(), any(), eq("XYZ")))
+            when(consultaBuscaService.buscarConsultasPorIntervalo(any(), any(), eq("XYZ")))
                     .thenThrow(new IllegalArgumentException("Status de consulta invalido: XYZ"));
 
             mockMvc.perform(get("/consultas/intervalo")
@@ -258,7 +262,7 @@ class ConsultaControllerContratoTest {
         @WithMockUser
         @DisplayName("GET /agenda-medico/{usuarioId}: tipoPeriodo padrão é 'diario'")
         void agendaMedico() throws Exception {
-            when(consultaService.buscarConsultasPorMedicoEPeriodo(7L, "diario")).thenReturn(List.of(consulta));
+            when(consultaBuscaService.buscarConsultasPorMedicoEPeriodo(7L, "diario")).thenReturn(List.of(consulta));
 
             mockMvc.perform(get("/consultas/agenda-medico/7"))
                     .andExpect(status().isOk())
@@ -269,7 +273,7 @@ class ConsultaControllerContratoTest {
         @WithMockUser
         @DisplayName("GET /organizacao/{id}/intervalo da própria clínica: 200")
         void organizacaoIntervaloPropria() throws Exception {
-            when(consultaService.buscarConsultasPorOrganizacaoEIntervalo(ORG_ID, LocalDate.of(2030, 5, 1),
+            when(consultaBuscaService.buscarConsultasPorOrganizacaoEIntervalo(ORG_ID, LocalDate.of(2030, 5, 1),
                     LocalDate.of(2030, 5, 31))).thenReturn(List.of(consulta));
 
             mockMvc.perform(get("/consultas/organizacao/1/intervalo")
@@ -286,7 +290,7 @@ class ConsultaControllerContratoTest {
                             .param("dataInicial", "2030-05-01").param("dataFinal", "2030-05-31"))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("TENANT_ACESSO_NEGADO"));
-            verifyNoInteractions(consultaService);
+            verifyNoInteractions(consultaAgendamentoService, consultaBuscaService, consultaEstatisticaService);
         }
 
         @Test
@@ -307,7 +311,7 @@ class ConsultaControllerContratoTest {
         @WithMockUser
         @DisplayName("POST /cadastrarConsultaByOrg: 200 com o ConsultaResponse")
         void cadastrar() throws Exception {
-            when(consultaService.cadastrarConsultaByOrg(any())).thenReturn(consulta);
+            when(consultaAgendamentoService.cadastrarConsultaByOrg(any())).thenReturn(consulta);
 
             mockMvc.perform(post("/consultas/cadastrarConsultaByOrg")
                             .contentType(MediaType.APPLICATION_JSON).content(CORPO_VALIDO))
@@ -333,7 +337,7 @@ class ConsultaControllerContratoTest {
         @WithMockUser
         @DisplayName("POST /cadastrarConsultaByOrg com horário ocupado: 409 CONFLITO com a mensagem")
         void cadastrarHorarioOcupado() throws Exception {
-            when(consultaService.cadastrarConsultaByOrg(any()))
+            when(consultaAgendamentoService.cadastrarConsultaByOrg(any()))
                     .thenThrow(new IllegalStateException("Já existe consulta agendada para este horário"));
 
             mockMvc.perform(post("/consultas/cadastrarConsultaByOrg")
@@ -347,7 +351,7 @@ class ConsultaControllerContratoTest {
         @WithMockUser
         @DisplayName("PUT /atualizarConsultabyOrg/{id}: 200 com o ConsultaResponse")
         void atualizar() throws Exception {
-            when(consultaService.atualizarConsultaByOrg(eq(100L), any())).thenReturn(consulta);
+            when(consultaAgendamentoService.atualizarConsultaByOrg(eq(100L), any())).thenReturn(consulta);
 
             mockMvc.perform(put("/consultas/atualizarConsultabyOrg/100")
                             .contentType(MediaType.APPLICATION_JSON).content(CORPO_VALIDO))
@@ -359,7 +363,7 @@ class ConsultaControllerContratoTest {
         @WithMockUser
         @DisplayName("PUT /atualizarConsultabyOrg/{id} inexistente: 400 com a mensagem")
         void atualizarInexistente() throws Exception {
-            when(consultaService.atualizarConsultaByOrg(eq(999L), any()))
+            when(consultaAgendamentoService.atualizarConsultaByOrg(eq(999L), any()))
                     .thenThrow(new IllegalArgumentException("Consulta não encontrada"));
 
             mockMvc.perform(put("/consultas/atualizarConsultabyOrg/999")
@@ -373,7 +377,7 @@ class ConsultaControllerContratoTest {
         @DisplayName("PATCH /{id}/status: 200 com o status novo; valor de status case-insensitive")
         void status200() throws Exception {
             consulta.setStatus(StatusConsulta.CANCELADA);
-            when(consultaService.atualizarStatus(100L, StatusConsulta.CANCELADA, "paciente desistiu")).thenReturn(consulta);
+            when(consultaAgendamentoService.atualizarStatus(100L, StatusConsulta.CANCELADA, "paciente desistiu")).thenReturn(consulta);
 
             mockMvc.perform(patch("/consultas/100/status").param("status", "cancelada").param("motivo", "paciente desistiu"))
                     .andExpect(status().isOk())
@@ -387,14 +391,14 @@ class ConsultaControllerContratoTest {
             mockMvc.perform(patch("/consultas/100/status").param("status", "XYZ"))
                     .andExpect(status().isBadRequest())
                     .andExpect(content().string(""));
-            verifyNoInteractions(consultaService);
+            verifyNoInteractions(consultaAgendamentoService, consultaBuscaService, consultaEstatisticaService);
         }
 
         @Test
         @WithMockUser
         @DisplayName("PATCH /{id}/status com transição proibida: 409 CONFLITO")
         void statusTransicaoProibida() throws Exception {
-            when(consultaService.atualizarStatus(100L, StatusConsulta.AGENDADA, null))
+            when(consultaAgendamentoService.atualizarStatus(100L, StatusConsulta.AGENDADA, null))
                     .thenThrow(new IllegalStateException("Consultas com status PAGO não podem ter o status alterado"));
 
             mockMvc.perform(patch("/consultas/100/status").param("status", "AGENDADA"))
@@ -408,13 +412,13 @@ class ConsultaControllerContratoTest {
         void deletar() throws Exception {
             mockMvc.perform(delete("/consultas/100")).andExpect(status().isNoContent());
 
-            doThrow(new IllegalArgumentException("Consulta não encontrada")).when(consultaService).deletarConsulta(999L);
+            doThrow(new IllegalArgumentException("Consulta não encontrada")).when(consultaAgendamentoService).deletarConsulta(999L);
             mockMvc.perform(delete("/consultas/999"))
                     .andExpect(status().isNotFound())
                     .andExpect(content().string(""));
 
             doThrow(new IllegalStateException("Não é possível excluir uma consulta que possui prontuário médico."))
-                    .when(consultaService).deletarConsulta(101L);
+                    .when(consultaAgendamentoService).deletarConsulta(101L);
             mockMvc.perform(delete("/consultas/101"))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.code").value("CONFLITO"));
@@ -429,7 +433,7 @@ class ConsultaControllerContratoTest {
         @WithMockUser
         @DisplayName("GET /horarios-ocupados: 200 com a lista de horários")
         void horariosOcupados() throws Exception {
-            when(consultaService.buscarHorariosOcupados(3L, "2030-05-10")).thenReturn(List.of("09:00", "10:30"));
+            when(consultaAgendamentoService.buscarHorariosOcupados(3L, "2030-05-10")).thenReturn(List.of("09:00", "10:30"));
 
             mockMvc.perform(get("/consultas/horarios-ocupados").param("medicoId", "3").param("data", "2030-05-10"))
                     .andExpect(status().isOk())
@@ -441,7 +445,7 @@ class ConsultaControllerContratoTest {
         @WithMockUser
         @DisplayName("GET /verificarDisponibilidade: 200 com booleano puro")
         void disponibilidade() throws Exception {
-            when(consultaService.verificarDisponibilidade("2030-05-10", "09:00", 3L)).thenReturn(true);
+            when(consultaAgendamentoService.verificarDisponibilidade("2030-05-10", "09:00", 3L)).thenReturn(true);
 
             mockMvc.perform(get("/consultas/verificarDisponibilidade")
                             .param("data", "2030-05-10").param("horario", "09:00").param("medicoId", "3"))
@@ -471,7 +475,7 @@ class ConsultaControllerContratoTest {
         @WithMockUser
         @DisplayName("GET /estatisticas/organizacao/{id}/dashboard: 200 com os seis contadores")
         void dashboardOrganizacao() throws Exception {
-            when(consultaService.getEstatisticasDashboardAdminOrg(ORG_ID)).thenReturn(dashboard);
+            when(consultaEstatisticaService.getEstatisticasDashboardAdminOrg(ORG_ID)).thenReturn(dashboard);
 
             mockMvc.perform(get("/consultas/estatisticas/organizacao/1/dashboard"))
                     .andExpect(status().isOk())
@@ -490,14 +494,14 @@ class ConsultaControllerContratoTest {
             mockMvc.perform(get("/consultas/estatisticas/organizacao/2/dashboard"))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("TENANT_ACESSO_NEGADO"));
-            verifyNoInteractions(consultaService);
+            verifyNoInteractions(consultaAgendamentoService, consultaBuscaService, consultaEstatisticaService);
         }
 
         @Test
         @WithMockUser
         @DisplayName("GET /estatisticas/dashboard/profissional: próprio usuário 200; outro 403")
         void dashboardProfissional() throws Exception {
-            when(consultaService.getEstatisticasDashboardProfissional(USUARIO_ID)).thenReturn(dashboard);
+            when(consultaEstatisticaService.getEstatisticasDashboardProfissional(USUARIO_ID)).thenReturn(dashboard);
 
             mockMvc.perform(get("/consultas/estatisticas/dashboard/profissional").param("usuarioId", "5"))
                     .andExpect(status().isOk())
@@ -507,14 +511,14 @@ class ConsultaControllerContratoTest {
             mockMvc.perform(get("/consultas/estatisticas/dashboard/profissional").param("usuarioId", "99"))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("TENANT_ACESSO_NEGADO"));
-            verify(consultaService, never()).getEstatisticasDashboardProfissional(99L);
+            verify(consultaEstatisticaService, never()).getEstatisticasDashboardProfissional(99L);
         }
 
         @Test
         @WithMockUser(roles = "SUPER_ADMIN")
         @DisplayName("GET /estatisticas/dashboard/super-admin com SUPER_ADMIN: 200")
         void dashboardSuperAdmin() throws Exception {
-            when(consultaService.getEstatisticasDashboardSuperAdmin()).thenReturn(dashboard);
+            when(consultaEstatisticaService.getEstatisticasDashboardSuperAdmin()).thenReturn(dashboard);
 
             mockMvc.perform(get("/consultas/estatisticas/dashboard/super-admin"))
                     .andExpect(status().isOk())
@@ -534,7 +538,7 @@ class ConsultaControllerContratoTest {
         @WithMockUser
         @DisplayName("GET /estatisticas/medico/{id}: 200 com pares [status, quantidade] da organização do token")
         void estatisticasMedico() throws Exception {
-            when(consultaService.buscarEstatisticasPorMedicoEIntervalo(ORG_ID, 7L,
+            when(consultaEstatisticaService.buscarEstatisticasPorMedicoEIntervalo(ORG_ID, 7L,
                     LocalDate.of(2030, 5, 1), LocalDate.of(2030, 5, 31)))
                     .thenReturn(List.<Object[]>of(new Object[]{"AGENDADA", 5L}, new Object[]{"REALIZADA", 3L}));
 
@@ -550,7 +554,7 @@ class ConsultaControllerContratoTest {
         @WithMockUser
         @DisplayName("GET /estatisticas/medico/{id}/duracoes: 200 com a lista de minutos")
         void duracoes() throws Exception {
-            when(consultaService.buscarDuracoesConsultas(ORG_ID, 7L, LocalDate.of(2030, 5, 1), LocalDate.of(2030, 5, 31)))
+            when(consultaEstatisticaService.buscarDuracoesConsultas(ORG_ID, 7L, LocalDate.of(2030, 5, 1), LocalDate.of(2030, 5, 31)))
                     .thenReturn(List.of(30, 45));
 
             mockMvc.perform(get("/consultas/estatisticas/medico/7/duracoes")
@@ -575,7 +579,7 @@ class ConsultaControllerContratoTest {
                         .andExpect(status().isBadRequest())
                         .andExpect(content().string(""));
             }
-            verifyNoInteractions(consultaService, saldoFinanceiroService);
+            verifyNoInteractions(consultaAgendamentoService, consultaBuscaService, consultaEstatisticaService, saldoFinanceiroService);
         }
 
         @Test

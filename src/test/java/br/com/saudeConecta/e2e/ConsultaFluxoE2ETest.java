@@ -1,6 +1,8 @@
 package br.com.saudeConecta.e2e;
 
-import br.com.saudeConecta.application.consulta.ConsultaService;
+import br.com.saudeConecta.application.consulta.ConsultaAgendamentoService;
+import br.com.saudeConecta.application.consulta.ConsultaBuscaService;
+import br.com.saudeConecta.application.consulta.ConsultaEstatisticaService;
 import br.com.saudeConecta.application.consulta.dto.AgendarConsultaRequest;
 import br.com.saudeConecta.application.prontuario.ProntuarioService;
 import br.com.saudeConecta.application.prontuario.dto.CadastrarProntuarioRequest;
@@ -48,7 +50,13 @@ class ConsultaFluxoE2ETest {
     private MockMvc mockMvc;
 
     @MockBean
-    private ConsultaService consultaService;
+    private ConsultaAgendamentoService consultaAgendamentoService;
+
+    @MockBean
+    private ConsultaBuscaService consultaBuscaService;
+
+    @MockBean
+    private ConsultaEstatisticaService consultaEstatisticaService;
 
     @MockBean
     private ProntuarioService prontuarioService;
@@ -83,7 +91,7 @@ class ConsultaFluxoE2ETest {
                 30, "Consulta de rotina", null, BigDecimal.valueOf(200)
         );
 
-        when(consultaService.cadastrarConsultaByOrg(any())).thenReturn(buildConsultaMock(StatusConsulta.AGENDADA));
+        when(consultaAgendamentoService.cadastrarConsultaByOrg(any())).thenReturn(buildConsultaMock(StatusConsulta.AGENDADA));
 
         mockMvc.perform(post("/consultas/cadastrarConsultaByOrg")
                         .with(csrf())
@@ -92,7 +100,7 @@ class ConsultaFluxoE2ETest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("AGENDADA"));
 
-        verify(consultaService).cadastrarConsultaByOrg(any());
+        verify(consultaAgendamentoService).cadastrarConsultaByOrg(any());
     }
 
     @Test
@@ -100,7 +108,7 @@ class ConsultaFluxoE2ETest {
     @WithMockUser(roles = "ADMIN")
     @DisplayName("Passo 2 - Confirmar consulta agendada")
     void passo2_confirmarConsulta() throws Exception {
-        when(consultaService.atualizarStatus(eq(CONSULTA_ID), eq(StatusConsulta.CONFIRMADA), isNull()))
+        when(consultaAgendamentoService.atualizarStatus(eq(CONSULTA_ID), eq(StatusConsulta.CONFIRMADA), isNull()))
                 .thenReturn(buildConsultaMock(StatusConsulta.CONFIRMADA));
 
         mockMvc.perform(patch("/consultas/{id}/status", CONSULTA_ID)
@@ -142,7 +150,7 @@ class ConsultaFluxoE2ETest {
     @WithMockUser(roles = "ADMIN")
     @DisplayName("Passo 4 - Registrar pagamento da consulta realizada")
     void passo4_pagarConsulta() throws Exception {
-        when(consultaService.atualizarStatus(eq(CONSULTA_ID), eq(StatusConsulta.PAGO), isNull()))
+        when(consultaAgendamentoService.atualizarStatus(eq(CONSULTA_ID), eq(StatusConsulta.PAGO), isNull()))
                 .thenReturn(buildConsultaMock(StatusConsulta.PAGO));
 
         mockMvc.perform(patch("/consultas/{id}/status", CONSULTA_ID)
@@ -157,7 +165,7 @@ class ConsultaFluxoE2ETest {
     @WithMockUser(roles = "ADMIN")
     @DisplayName("Passo 5 - Tentativa de cancelar consulta PAGA deve retornar 409 (Conflict)")
     void passo5_naoDeveCancelarConsultaPaga() throws Exception {
-        when(consultaService.atualizarStatus(eq(CONSULTA_ID), eq(StatusConsulta.CANCELADA), eq("Tentativa inválida")))
+        when(consultaAgendamentoService.atualizarStatus(eq(CONSULTA_ID), eq(StatusConsulta.CANCELADA), eq("Tentativa inválida")))
                 .thenThrow(new IllegalStateException("não podem ter o status alterado"));
 
         mockMvc.perform(patch("/consultas/{id}/status", CONSULTA_ID)
