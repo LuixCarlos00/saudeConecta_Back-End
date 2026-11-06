@@ -71,7 +71,7 @@ public class MercadoPagoSignatureValidator {
                 esperado.getBytes(StandardCharsets.UTF_8), v1.getBytes(StandardCharsets.UTF_8));
 
         if (!valida) {
-            log.warn("mp.webhook.assinatura negado motivo=ASSINATURA_INVALIDA dataId={}", dataId);
+            log.warn("mp.webhook.assinatura negado motivo=ASSINATURA_INVALIDA dataId={}", MascaraLog.seguro(dataId));
         }
         return valida;
     }

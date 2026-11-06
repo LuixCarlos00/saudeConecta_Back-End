@@ -87,7 +87,7 @@ public class MensageriaService {
         Mensageria mensageria = mensageriaRepository.findById(mensageriaId)
                 .orElseThrow(() -> new IllegalArgumentException("Mensagem não encontrada: " + mensageriaId));
 
-        if (orgId != null && !mensageria.getOrganizacaoId().equals(orgId)) {
+        if (orgId != null && !orgId.equals(mensageria.getOrganizacaoId())) {
             throw new IllegalArgumentException("Acesso negado à mensagem: " + mensageriaId);
         }
 
@@ -128,7 +128,7 @@ public class MensageriaService {
         Mensageria mensageria = mensageriaRepository.findById(mensageriaId)
                 .orElseThrow(() -> new IllegalArgumentException("Mensagem não encontrada: " + mensageriaId));
 
-        if (orgId != null && !mensageria.getOrganizacaoId().equals(orgId)) {
+        if (orgId != null && !orgId.equals(mensageria.getOrganizacaoId())) {
             throw new IllegalArgumentException("Acesso negado à mensagem: " + mensageriaId);
         }
 

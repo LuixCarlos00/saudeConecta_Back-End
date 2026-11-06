@@ -122,6 +122,21 @@
 
 	<build>
 		<plugins>
+			<!--
+				Testes rodam no mesmo fuso da produção (Dockerfile: TZ e -Duser.timezone = America/Sao_Paulo).
+				Sem isso, na CI (UTC) os testes que calculam "hoje" pelo fuso do sistema divergem do Clock
+				da aplicação depois das 21h de Brasília. Vai por variável de ambiente para não disputar o
+				argLine com o agente do JaCoCo.
+			-->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<environmentVariables>
+						<TZ>America/Sao_Paulo</TZ>
+					</environmentVariables>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>

@@ -167,6 +167,19 @@ class MensageriaServiceTest {
         }
 
         @Test
+        @DisplayName("Deve negar acesso (sem NPE) quando mensagem não tem organização e usuário tem tenant")
+        void deveNegarMensagemSemOrganizacao() {
+            mensageria.setOrganizacao(null);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
+            when(mensageriaRepository.findById(MSG_ID)).thenReturn(Optional.of(mensageria));
+
+            assertThatThrownBy(() -> mensageriaService.marcarComoNotificado(MSG_ID))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Acesso negado");
+            verify(mensageriaRepository, org.mockito.Mockito.never()).save(any());
+        }
+
+        @Test
         @DisplayName("Super Admin deve marcar mensagem de qualquer organização")
         void superAdminDeveMarcarQualquerMensagem() {
             when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(null);
@@ -244,6 +257,19 @@ class MensageriaServiceTest {
             assertThatThrownBy(() -> mensageriaService.reenviarMensagem(MSG_ID))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("Profissional não encontrado");
+        }
+
+        @Test
+        @DisplayName("Deve negar reenvio (sem NPE) quando mensagem não tem organização e usuário tem tenant")
+        void deveNegarReenvioMensagemSemOrganizacao() {
+            mensageria.setOrganizacao(null);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
+            when(mensageriaRepository.findById(MSG_ID)).thenReturn(Optional.of(mensageria));
+
+            assertThatThrownBy(() -> mensageriaService.reenviarMensagem(MSG_ID))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Acesso negado");
+            verify(emailNotificacaoService, org.mockito.Mockito.never()).reenviarEmail(any(), any(), any(), any());
         }
 
         @Test

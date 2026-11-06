@@ -2,6 +2,7 @@ package br.com.saudeConecta.presentation.controller.assinatura;
 
 import br.com.saudeConecta.application.assinatura.MercadoPagoSignatureValidator;
 import br.com.saudeConecta.application.assinatura.MercadoPagoWebhookService;
+import br.com.saudeConecta.config.logging.MascaraLog;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,7 +49,7 @@ public class MercadoPagoWebhookController {
         String dataId = primeiroNaoVazio(idQuery, dataId(corpo), texto(corpo, "id"));
 
         if (!signatureValidator.isValida(xSignature, xRequestId, dataId)) {
-            log.warn("mp.webhook negado motivo=ASSINATURA_INVALIDA tipo={}", tipo);
+            log.warn("mp.webhook negado motivo=ASSINATURA_INVALIDA tipo={}", MascaraLog.seguro(tipo));
             return ResponseEntity.status(401).build();
         }
 
@@ -57,7 +58,7 @@ public class MercadoPagoWebhookController {
             return ResponseEntity.ok().build();
         }
 
-        log.info("mp.webhook aceito tipo={} dataId={}", tipo, dataId);
+        log.info("mp.webhook aceito tipo={} dataId={}", MascaraLog.seguro(tipo), MascaraLog.seguro(dataId));
         webhookService.processarAssincrono(tipo, dataId, corpo != null ? corpo.toString() : null);
 
         return ResponseEntity.ok().build();
