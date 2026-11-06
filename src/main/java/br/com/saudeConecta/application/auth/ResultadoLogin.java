@@ -11,6 +11,18 @@ package br.com.saudeConecta.application.auth;
  */
 public record ResultadoLogin(String token, Recusa recusa, String mensagem) {
 
+    /**
+     * Garante que o resultado é um token OU uma recusa com mensagem, nunca os dois nem nenhum:
+     * o controller monta {@code Map.of("message", mensagem)}, que estoura com mensagem nula.
+     */
+    public ResultadoLogin {
+        boolean temToken = token != null;
+        boolean temRecusa = recusa != null && mensagem != null;
+        if (temToken == temRecusa || (temToken && (recusa != null || mensagem != null))) {
+            throw new IllegalArgumentException("ResultadoLogin precisa ter só token ou só recusa com mensagem");
+        }
+    }
+
     /** Por que o login foi recusado; o controller traduz em status HTTP. */
     public enum Recusa {
         /** Perfil escolhido na tela diferente do tipo do usuário (403). */
@@ -40,6 +52,6 @@ public record ResultadoLogin(String token, Recusa recusa, String mensagem) {
 
     /** @return true quando há token */
     public boolean isAutenticado() {
-        return token != null;
+        return token != null && recusa == null;
     }
 }
