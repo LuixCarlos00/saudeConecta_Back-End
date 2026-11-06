@@ -8,11 +8,14 @@ import br.com.saudeConecta.domain.pagamento.FormaPagamento;
 import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
 import br.com.saudeConecta.domain.prontuario.Prontuario;
 import br.com.saudeConecta.domain.prontuario.TermoAutorizacao;
+import br.com.saudeConecta.domain.profissional.TipoProfissional;
+import br.com.saudeConecta.presentation.dto.prontuario.ProntuarioCompletoResponse;
 import br.com.saudeConecta.infrastructure.persistence.repository.FormaPagamentoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.PlanejamentoTerapeuticoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProntuarioRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.TermoAutorizacaoRepository;
 import jakarta.persistence.EntityManager;
+import org.hibernate.Hibernate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -103,6 +106,69 @@ class IsolamentoTenantRepositoryTest {
         // Controle: a própria clínica continua enxergando.
         assertThat(prontuarioRepository.findIdMaisRecentePorConsulta(consultaB.getId(), ORG_B))
                 .contains(prontB.getProntCodigoProntuario());
+    }
+
+    @Test
+    @DisplayName("Buscas do prontuário com fetch montam o ProntuarioCompletoResponse fora da transação, sem lazy")
+    void prontuarioCompletoMontaDtoSemLazyInitialization() {
+        Profissional profissional = Profissional.builder()
+                .organizacao(em.getReference(Organizacao.class, ORG_A))
+                .tipoProfissional(em.getReference(TipoProfissional.class, 1L))
+                .nome("Dra. Lazy")
+                .registroConselho("CRM-LAZY")
+                .build();
+        em.persist(profissional);
+        Paciente paciente = Paciente.builder()
+                .organizacao(em.getReference(Organizacao.class, ORG_A))
+                .paciNome("Paciente Lazy").paciSexo("F").paciEmail("lazy@teste.com").paciStatus("ATIVO")
+                .build();
+        em.persist(paciente);
+        FormaPagamento pix = new FormaPagamento();
+        pix.setNome("Pix");
+        pix.setCodigo("PIX_LAZY");
+        em.persist(pix);
+        Consulta consulta = Consulta.builder()
+                .organizacao(em.getReference(Organizacao.class, ORG_A))
+                .profissional(profissional)
+                .paciente(paciente)
+                .formaPagamento(pix)
+                .dataHora(LocalDateTime.now())
+                .build();
+        em.persist(consulta);
+        Prontuario prontuario = Prontuario.builder()
+                .consulta(consulta)
+                .profissional(profissional)
+                .prontDataFinalizado(Date.valueOf(LocalDate.now()))
+                .build();
+        em.persist(prontuario);
+        PlanejamentoTerapeutico planejamento = planejamento("tok-lazy", "PENDENTE", LocalDateTime.now().plusDays(1));
+        planejamento.setProntuario(prontuario);
+        em.flush();
+        em.clear();
+
+        // Cada busca num contexto limpo (uma não pode aproveitar o que a outra carregou) e o DTO montado
+        // depois do clear: simula o controller com open-in-view desligado, fora da transação.
+        Prontuario porConsulta = prontuarioRepository.findByConsultaIdAndOrganizacaoIdWithFetch(consulta.getId(), ORG_A);
+        em.clear();
+        Prontuario porId = prontuarioRepository.findByIdWithFullFetch(prontuario.getProntCodigoProntuario()).orElseThrow();
+        em.clear();
+
+        for (Prontuario p : java.util.List.of(porConsulta, porId)) {
+            assertThat(Hibernate.isInitialized(p.getProfissional())).isTrue();
+            assertThat(Hibernate.isInitialized(p.getConsulta())).isTrue();
+            assertThat(Hibernate.isInitialized(p.getConsulta().getPaciente())).isTrue();
+            assertThat(Hibernate.isInitialized(p.getConsulta().getFormaPagamento())).isTrue();
+            assertThat(Hibernate.isInitialized(p.getPlanejamentos())).isTrue();
+
+            ProntuarioCompletoResponse dto = ProntuarioCompletoResponse.fromEntity(p);
+
+            assertThat(dto.getCodigoProntuario()).isEqualTo(prontuario.getProntCodigoProntuario());
+            assertThat(dto.getProfissional().getNome()).isEqualTo("Dra. Lazy");
+            assertThat(dto.getConsulta().getId()).isEqualTo(consulta.getId());
+            assertThat(dto.getConsulta().getPaciente().getNome()).isEqualTo("Paciente Lazy");
+            assertThat(dto.getConsulta().getFormaPagamentoNome()).isEqualTo("Pix");
+            assertThat(dto.getPlanejamentos()).hasSize(1);
+        }
     }
 
     @Test
