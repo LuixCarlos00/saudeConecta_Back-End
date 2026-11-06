@@ -15,6 +15,10 @@ import java.util.List;
  */
 public class ConsultaSpecification {
 
+    private ConsultaSpecification() {
+        // Classe utilitária: só métodos estáticos
+    }
+
     /**
      * Cria uma Specification dinâmica baseada nos filtros fornecidos
      * 

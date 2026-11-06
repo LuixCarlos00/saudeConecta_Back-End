@@ -1,5 +1,6 @@
 package br.com.saudeConecta.presentation.erro;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.time.LocalDateTime;
@@ -47,7 +48,7 @@ public record ErrorResponse(
      * @return resposta de erro
      */
     public static ErrorResponse of(int status, String code, String message, String path) {
-        return new ErrorResponse(LocalDateTime.now(), status, message, code, message, path, null);
+        return new ErrorResponse(LocalDateTime.now(FusoHorario.ZONA), status, message, code, message, path, null);
     }
 
     /**
@@ -62,6 +63,6 @@ public record ErrorResponse(
      */
     public static ErrorResponse ofValidation(int status, String code, String message, String path,
                                              Map<String, String> errors) {
-        return new ErrorResponse(LocalDateTime.now(), status, message, code, message, path, errors);
+        return new ErrorResponse(LocalDateTime.now(FusoHorario.ZONA), status, message, code, message, path, errors);
     }
 }

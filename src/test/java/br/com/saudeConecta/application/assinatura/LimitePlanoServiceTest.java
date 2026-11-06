@@ -298,7 +298,7 @@ class LimitePlanoServiceTest {
             assertThat(response.limiteAdminOrg()).isEqualTo(1);
             assertThat(response.limiteProfissional()).isEqualTo(3);
             assertThat(response.limiteSecretaria()).isEqualTo(2);
-            assertThat(response.usadoAdminOrg()).isEqualTo(0L);
+            assertThat(response.usadoAdminOrg()).isZero();
             assertThat(response.usadoProfissional()).isEqualTo(2L);
             assertThat(response.usadoSecretaria()).isEqualTo(1L);
         }

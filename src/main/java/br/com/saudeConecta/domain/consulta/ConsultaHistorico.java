@@ -1,5 +1,6 @@
 package br.com.saudeConecta.domain.consulta;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
@@ -49,6 +50,6 @@ public class ConsultaHistorico implements Serializable {
     
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now(FusoHorario.ZONA);
     }
 }

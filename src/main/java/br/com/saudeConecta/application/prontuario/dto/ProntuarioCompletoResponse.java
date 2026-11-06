@@ -1,6 +1,8 @@
 package br.com.saudeConecta.application.prontuario.dto;
 
 import br.com.saudeConecta.domain.consulta.Consulta;
+import br.com.saudeConecta.domain.paciente.Paciente;
+import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
 import br.com.saudeConecta.domain.prontuario.Prontuario;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -114,52 +116,6 @@ public class ProntuarioCompletoResponse {
             return null;
         }
         
-        // Converter profissional
-        ProfissionalResponse profissionalResponse = null;
-        if (prontuario.getProfissional() != null) {
-            profissionalResponse = ProfissionalResponse.builder()
-                    .id(prontuario.getProfissional().getId())
-                    .nome(prontuario.getProfissional().getNome())
-                    .conselho(prontuario.getProfissional().getRegistroConselho())
-                    .email(prontuario.getProfissional().getEmail())
-                    .telefone(prontuario.getProfissional().getTelefone())
-                    .build();
-        }
-        
-        // Converter consulta
-        ConsultaResponse consultaResponse = null;
-        if (prontuario.getConsulta() != null) {
-            Consulta consulta = prontuario.getConsulta();
-            
-            // Converter paciente
-            PacienteResponse pacienteResponse = null;
-            if (consulta.getPaciente() != null) {
-                pacienteResponse = PacienteResponse.builder()
-                        .id(consulta.getPaciente().getPaciCodigo())
-                        .nome(consulta.getPaciente().getPaciNome())
-                        .cpf(consulta.getPaciente().getPaciCpf())
-                        .email(consulta.getPaciente().getPaciEmail())
-                        .telefone(consulta.getPaciente().getPaciTelefone())
-                        .sexo(consulta.getPaciente().getPaciSexo())
-                        .dataNascimento(consulta.getPaciente().getPaciDataNacimento() != null ? 
-                        consulta.getPaciente().getPaciDataNacimento().toString() : null)
-                        .build();
-            }
-            
-            consultaResponse = ConsultaResponse.builder()
-                    .id(consulta.getId())
-                    .pacienteNome(consulta.getPaciente() != null ? consulta.getPaciente().getPaciNome() : null)
-                    .pacienteCpf(consulta.getPaciente() != null ? consulta.getPaciente().getPaciCpf() : null)
-                    .dataHora(consulta.getDataHora() != null ? consulta.getDataHora().toString() : null)
-                    .status(consulta.getStatus() != null ? consulta.getStatus().name() : null)
-                    .observacoes(consulta.getObservacoes())
-                    .valor(consulta.getValor() != null ? consulta.getValor().doubleValue() : null)
-                    .formaPagamentoNome(consulta.getFormaPagamento() != null ? 
-                            consulta.getFormaPagamento().getNome() : null)
-                    .paciente(pacienteResponse)
-                    .build();
-        }
-        
         return ProntuarioCompletoResponse.builder()
                 .codigoProntuario(prontuario.getProntCodigoProntuario())
                 .peso(prontuario.getProntPeso())
@@ -186,22 +142,87 @@ public class ProntuarioCompletoResponse {
                 .tussTexto(prontuario.getProntTussTexto())
                 .cidTexto(prontuario.getProntCidTexto())
                 .solicitacaoExameTexto(prontuario.getProntSolicitacaoExameTexto())
-                .profissional(profissionalResponse)
-                .consulta(consultaResponse)
-                .planejamentos(prontuario.getPlanejamentos() != null ? 
-                    prontuario.getPlanejamentos().stream()
-                        .map(p -> PlanejamentoTerapeuticoResponse.builder()
-                            .id(p.getId())
-                            .dataProcedimento(p.getDataProcedimento() != null ? p.getDataProcedimento().toString() : null)
-                            .procedimentoRealizado(p.getProcedimentoRealizado())
-                            .valor(p.getValor() != null ? p.getValor().doubleValue() : null)
-                            .statusAssinatura(p.getStatusAssinatura())
-                            .assinaturaBase64(p.getAssinaturaBase64())
-                            .dataAssinatura(p.getDataAssinatura() != null ? p.getDataAssinatura().toString() : null)
-                            .ipOrigem(p.getIpOrigem())
-                            .build())
-                        .collect(Collectors.toList()) : null)
+                .profissional(converterProfissional(prontuario.getProfissional()))
+                .consulta(converterConsulta(prontuario.getConsulta()))
+                .planejamentos(converterPlanejamentos(prontuario.getPlanejamentos()))
                 .build();
+    }
+
+    private static ProfissionalResponse converterProfissional(Profissional profissional) {
+        if (profissional == null) {
+            return null;
+        }
+        return ProfissionalResponse.builder()
+                .id(profissional.getId())
+                .nome(profissional.getNome())
+                .conselho(profissional.getRegistroConselho())
+                .email(profissional.getEmail())
+                .telefone(profissional.getTelefone())
+                .build();
+    }
+
+    private static PacienteResponse converterPaciente(Paciente paciente) {
+        if (paciente == null) {
+            return null;
+        }
+        return PacienteResponse.builder()
+                .id(paciente.getPaciCodigo())
+                .nome(paciente.getPaciNome())
+                .cpf(paciente.getPaciCpf())
+                .email(paciente.getPaciEmail())
+                .telefone(paciente.getPaciTelefone())
+                .sexo(paciente.getPaciSexo())
+                .dataNascimento(textoOuNulo(paciente.getPaciDataNacimento()))
+                .build();
+    }
+
+    private static ConsultaResponse converterConsulta(Consulta consulta) {
+        if (consulta == null) {
+            return null;
+        }
+        Paciente paciente = consulta.getPaciente();
+        return ConsultaResponse.builder()
+                .id(consulta.getId())
+                .pacienteNome(paciente != null ? paciente.getPaciNome() : null)
+                .pacienteCpf(paciente != null ? paciente.getPaciCpf() : null)
+                .dataHora(textoOuNulo(consulta.getDataHora()))
+                .status(consulta.getStatus() != null ? consulta.getStatus().name() : null)
+                .observacoes(consulta.getObservacoes())
+                .valor(doubleOuNulo(consulta.getValor()))
+                .formaPagamentoNome(consulta.getFormaPagamento() != null ?
+                        consulta.getFormaPagamento().getNome() : null)
+                .paciente(converterPaciente(paciente))
+                .build();
+    }
+
+    private static List<PlanejamentoTerapeuticoResponse> converterPlanejamentos(List<PlanejamentoTerapeutico> planejamentos) {
+        if (planejamentos == null) {
+            return null;
+        }
+        return planejamentos.stream()
+                .map(ProntuarioCompletoResponse::converterPlanejamento)
+                .collect(Collectors.toList());
+    }
+
+    private static PlanejamentoTerapeuticoResponse converterPlanejamento(PlanejamentoTerapeutico p) {
+        return PlanejamentoTerapeuticoResponse.builder()
+                .id(p.getId())
+                .dataProcedimento(textoOuNulo(p.getDataProcedimento()))
+                .procedimentoRealizado(p.getProcedimentoRealizado())
+                .valor(doubleOuNulo(p.getValor()))
+                .statusAssinatura(p.getStatusAssinatura())
+                .assinaturaBase64(p.getAssinaturaBase64())
+                .dataAssinatura(textoOuNulo(p.getDataAssinatura()))
+                .ipOrigem(p.getIpOrigem())
+                .build();
+    }
+
+    private static String textoOuNulo(Object valor) {
+        return valor != null ? valor.toString() : null;
+    }
+
+    private static Double doubleOuNulo(Number valor) {
+        return valor != null ? valor.doubleValue() : null;
     }
     
     /**

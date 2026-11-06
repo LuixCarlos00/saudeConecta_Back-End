@@ -1,5 +1,6 @@
 package br.com.saudeConecta;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.config.FusoHorarioConfig;
 import jakarta.annotation.PostConstruct;
 import org.springframework.boot.SpringApplication;
@@ -21,7 +22,7 @@ public class SaudeConectaApplication {
 
 	/**
 	 * Garante o fuso de Brasília mesmo onde o main não roda (testes @SpringBootTest) ou quando o
-	 * ambiente esquece o -Duser.timezone. Datas sem zona (LocalDate/LocalDateTime.now()) e as
+	 * ambiente esquece o -Duser.timezone. Datas sem zona (LocalDate/LocalDateTime.now(FusoHorario.ZONA)) e as
 	 * colunas DATETIME passam a refletir a hora que o usuário vê.
 	 */
 	@PostConstruct

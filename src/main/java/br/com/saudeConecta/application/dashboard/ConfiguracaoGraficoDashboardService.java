@@ -19,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -82,7 +81,7 @@ public class ConfiguracaoGraficoDashboardService {
                 .stream()
                 .filter(c -> tiposPermitidos.contains(c.getTipoGrafico()))
                 .map(this::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     /**
@@ -118,7 +117,7 @@ public class ConfiguracaoGraficoDashboardService {
         return apenasAtivos.stream()
                 .filter(c -> tiposPermitidos.contains(c.getTipoGrafico()))
                 .map(this::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     // ── Atualização ──────────────────────────────────────────────────────────
@@ -156,7 +155,7 @@ public class ConfiguracaoGraficoDashboardService {
                 config.setOrdemExibicao(request.ordemExibicao());
             }
             return toResponse(configuracaoRepository.save(config));
-        }).collect(Collectors.toList());
+        }).toList();
     }
 
     // ── Reset / inicialização ────────────────────────────────────────────────

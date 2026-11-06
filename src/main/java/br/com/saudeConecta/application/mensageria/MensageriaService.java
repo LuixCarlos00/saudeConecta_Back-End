@@ -200,22 +200,4 @@ public class MensageriaService {
                 mensageria.getId());
         return mensageria.getDestinatarioEmail();
     }
-
-    /**
-     * Converte o enum TipoMensagem para a String de tipo de usuário usada pelo EmailNotificacaoService.
-     *
-     * @param tipoMensagem tipo da mensagem armazenada
-     * @return String do tipo de usuário
-     */
-    private String resolverTipoUsuario(TipoMensagem tipoMensagem) {
-        return switch (tipoMensagem) {
-            case EMAIL_CREDENCIAIS_CLINICO -> "medico";
-            case EMAIL_CREDENCIAIS_SECRETARIA -> "secretaria";
-            case EMAIL_CREDENCIAIS_ADMINISTRADOR -> "administrador";
-            case EMAIL_CREDENCIAIS_PACIENTE -> "paciente";
-            case EMAIL_RECUPERACAO_SENHA -> "recuperacao";
-            case EMAIL_CHAMADO_SUPORTE -> "chamado";
-            case EMAIL_GENERICO -> "generico";
-        };
-    }
 }

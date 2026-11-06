@@ -1,5 +1,6 @@
 package br.com.saudeConecta.domain.profissional;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.config.tenant.TenantAware;
 import br.com.saudeConecta.domain.common.Sexo;
 import br.com.saudeConecta.domain.endereco.Endereco;
@@ -113,8 +114,8 @@ public class Profissional implements Serializable, TenantAware {
     
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now(FusoHorario.ZONA);
+        updatedAt = LocalDateTime.now(FusoHorario.ZONA);
     }
     
     @Override
@@ -124,6 +125,7 @@ public class Profissional implements Serializable, TenantAware {
     
     @Override
     public void setOrganizacaoId(Long organizacaoId) {
+        // Sem efeito: a organização é definida pela associação (campo "organizacao"); o setter existe só para cumprir a interface de tenant.
     }
 
 }

@@ -42,12 +42,7 @@ public class SnapshotUtil {
                 // Ignora campos estáticos (ex: serialVersionUID)
                 if (Modifier.isStatic(field.getModifiers())) continue;
 
-                field.setAccessible(true);
-                try {
-                    field.set(clone, field.get(original));
-                } catch (Exception e) {
-                    log.warn("snapshot.criar ignorado motivo=CAMPO_INACESSIVEL campo={} causa={}", field.getName(), e.getClass().getSimpleName());
-                }
+                copiarCampo(field, original, clone);
             }
 
             log.debug("snapshot.criar ok classe={}", clazz.getSimpleName());
@@ -55,6 +50,16 @@ public class SnapshotUtil {
         } catch (Exception e) {
             log.error("snapshot.criar falha classe={}", clazz.getSimpleName(), e);
             throw new RuntimeException("Falha ao criar snapshot de " + clazz.getSimpleName() + ": " + e.getMessage(), e);
+        }
+    }
+
+    /** Copia um campo; falha em um campo é só registrada, para não abortar o snapshot inteiro. */
+    private static <T> void copiarCampo(Field field, T original, T clone) {
+        try {
+            field.setAccessible(true);
+            field.set(clone, field.get(original));
+        } catch (Exception e) {
+            log.warn("snapshot.criar ignorado motivo=CAMPO_INACESSIVEL campo={} causa={}", field.getName(), e.getClass().getSimpleName());
         }
     }
 

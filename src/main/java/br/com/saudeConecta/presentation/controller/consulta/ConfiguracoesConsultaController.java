@@ -3,7 +3,6 @@ package br.com.saudeConecta.presentation.controller.consulta;
 import br.com.saudeConecta.application.consulta.ConfiguracoesConsultaService;
 import br.com.saudeConecta.application.consulta.dto.ConfiguracoesConsultaRequest;
 import br.com.saudeConecta.application.consulta.dto.ConfiguracoesConsultaResponse;
-import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.domain.consulta.ConfiguracoesConsulta;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +38,6 @@ public class ConfiguracoesConsultaController {
     @PutMapping("/atual")
     public ResponseEntity<ConfiguracoesConsultaResponse> atualizarConfiguracaoAtual(
             @Valid @RequestBody ConfiguracoesConsultaRequest request) {
-        Long organizacaoId = TenantContext.getCurrentTenant();
         ConfiguracoesConsulta config = configuracoesConsultaService.atualizarConfiguracaoAtual(
                 request.getPularParaConfirmado(),
                 request.getDescricao()

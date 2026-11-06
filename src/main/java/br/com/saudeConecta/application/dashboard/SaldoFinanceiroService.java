@@ -24,6 +24,7 @@ import java.util.*;
 @RequiredArgsConstructor
 @Slf4j
 public class SaldoFinanceiroService {
+    private static final String FORMATO_CHAVE_MES = "%04d-%02d";
 
     private final ConsultaRepository consultaRepository;
     private final PlanejamentoTerapeuticoRepository planejamentoRepository;
@@ -88,11 +89,11 @@ public class SaldoFinanceiroService {
         Map<String, BigDecimal> procsMap = new LinkedHashMap<>();
 
         for (Object[] row : consultasPorMes) {
-            String chave = String.format("%04d-%02d", toInt(row[0]), toInt(row[1]));
+            String chave = String.format(FORMATO_CHAVE_MES, toInt(row[0]), toInt(row[1]));
             consultasMap.put(chave, toBigDecimal(row[2]));
         }
         for (Object[] row : procsPorMes) {
-            String chave = String.format("%04d-%02d", toInt(row[0]), toInt(row[1]));
+            String chave = String.format(FORMATO_CHAVE_MES, toInt(row[0]), toInt(row[1]));
             procsMap.put(chave, toBigDecimal(row[2]));
         }
 
@@ -105,7 +106,7 @@ public class SaldoFinanceiroService {
         if (todasChaves.isEmpty()) {
             LocalDate cursor = inicio.withDayOfMonth(1);
             while (!cursor.isAfter(fim)) {
-                todasChaves.add(String.format("%04d-%02d", cursor.getYear(), cursor.getMonthValue()));
+                todasChaves.add(String.format(FORMATO_CHAVE_MES, cursor.getYear(), cursor.getMonthValue()));
                 cursor = cursor.plusMonths(1);
             }
         }

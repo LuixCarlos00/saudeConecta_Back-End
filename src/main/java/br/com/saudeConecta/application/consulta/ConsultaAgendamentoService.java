@@ -82,9 +82,7 @@ public class ConsultaAgendamentoService {
         Paciente paciente = pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(request.pacienteId(), orgId)
             .orElseThrow(() -> new IllegalArgumentException("Paciente não encontrado"));
 
-        int duracaoMinutos = request.duracaoMinutos() != null
-            ? request.duracaoMinutos()
-            : (profissional.getTempoConsultaMinutos() != null ? profissional.getTempoConsultaMinutos() : DURACAO_PADRAO_MINUTOS);
+        int duracaoMinutos = resolverDuracaoMinutos(request.duracaoMinutos(), profissional.getTempoConsultaMinutos());
 
         validarSemConflitoDeHorario(orgId, request.profissionalId(), request.dataHora(), duracaoMinutos, null);
         
@@ -260,14 +258,46 @@ public class ConsultaAgendamentoService {
                 }
                 break;
                 
-            case PAGO:
-            case CANCELADA:
+            case PAGO, CANCELADA:
                 throw new IllegalStateException(
                     "Consultas com status " + statusAtual + " não podem ter o status alterado");
                 
             default:
                 throw new IllegalStateException("Status atual não reconhecido: " + statusAtual);
         }
+    }
+
+    /**
+     * Duração efetiva: a informada na requisição, senão a já cadastrada, senão o padrão.
+     *
+     * @param solicitada duração enviada na requisição (pode ser nula)
+     * @param cadastrada duração do profissional ou da consulta (pode ser nula)
+     * @return duração em minutos
+     */
+    private int resolverDuracaoMinutos(Integer solicitada, Integer cadastrada) {
+        if (solicitada != null) {
+            return solicitada;
+        }
+        return cadastrada != null ? cadastrada : DURACAO_PADRAO_MINUTOS;
+    }
+
+    /**
+     * Status resultante da edição: o pedido passa pela regra de transição; ausente ou igual ao atual é no-op.
+     *
+     * @param consulta consulta sendo editada
+     * @param statusSolicitado status enviado na requisição (pode ser nulo ou em branco)
+     * @return status que a consulta terá após a edição
+     */
+    private StatusConsulta resolverNovoStatus(Consulta consulta, String statusSolicitado) {
+        if (statusSolicitado == null || statusSolicitado.isBlank()) {
+            return consulta.getStatus();
+        }
+        StatusConsulta solicitado = parseStatus(statusSolicitado);
+        if (solicitado == consulta.getStatus()) {
+            return consulta.getStatus();
+        }
+        validarTransicaoStatus(consulta.getStatus(), solicitado);
+        return solicitado;
     }
 
     /**
@@ -320,19 +350,10 @@ public class ConsultaAgendamentoService {
             .orElseThrow(() -> new IllegalArgumentException("Paciente não encontrado"));
 
         // Status pedido passa pela mesma regra de transição do PATCH /status; igual ao atual é no-op.
-        StatusConsulta novoStatus = consulta.getStatus();
-        if (request.status() != null && !request.status().isBlank()) {
-            StatusConsulta solicitado = parseStatus(request.status());
-            if (solicitado != consulta.getStatus()) {
-                validarTransicaoStatus(consulta.getStatus(), solicitado);
-                novoStatus = solicitado;
-            }
-        }
+        StatusConsulta novoStatus = resolverNovoStatus(consulta, request.status());
 
         if (StatusConsulta.AGENDADA.equals(novoStatus) || StatusConsulta.CONFIRMADA.equals(novoStatus)) {
-            int duracaoMinutos = request.duracaoMinutos() != null
-                ? request.duracaoMinutos()
-                : (consulta.getDuracaoMinutos() != null ? consulta.getDuracaoMinutos() : DURACAO_PADRAO_MINUTOS);
+            int duracaoMinutos = resolverDuracaoMinutos(request.duracaoMinutos(), consulta.getDuracaoMinutos());
             validarSemConflitoDeHorario(orgId, request.profissionalId(), request.dataHora(), duracaoMinutos, id);
         }
 

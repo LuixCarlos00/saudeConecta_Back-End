@@ -1,5 +1,6 @@
 package br.com.saudeConecta.domain.suporte;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
@@ -51,6 +52,6 @@ public class ChamadoAnexo implements Serializable {
 
     @PrePersist
     protected void onCreate() {
-        dataCriacao = LocalDateTime.now();
+        dataCriacao = LocalDateTime.now(FusoHorario.ZONA);
     }
 }

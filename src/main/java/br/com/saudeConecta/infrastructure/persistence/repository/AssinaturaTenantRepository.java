@@ -93,15 +93,15 @@ public interface AssinaturaTenantRepository extends JpaRepository<AssinaturaTena
     List<AssinaturaTenant> findComPreapprovalParaReconciliar();
 
     /**
-     * IDs das assinaturas com preapproval trocado cujo cancelamento no Mercado Pago ainda
-     * não foi confirmado (falhou depois do commit da troca). A reconciliação tenta de novo.
-     */
-    /**
      * Assinatura que ainda guarda o preapproval na coluna de substituído (cancelamento pendente).
      * Usada para ligar à clínica a pendência de fatura aprovada desse preapproval.
      */
     Optional<AssinaturaTenant> findFirstByMpPreapprovalSubstituidoId(String preapprovalId);
 
+    /**
+     * IDs das assinaturas com preapproval trocado cujo cancelamento no Mercado Pago ainda
+     * não foi confirmado (falhou depois do commit da troca). A reconciliação tenta de novo.
+     */
     @Query("SELECT a.id FROM AssinaturaTenant a WHERE a.mpPreapprovalSubstituidoId IS NOT NULL")
     List<Long> findIdsComPreapprovalSubstituidoPendente();
 

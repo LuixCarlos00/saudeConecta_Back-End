@@ -19,7 +19,14 @@ public class PlanoDescricaoParser {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final Pattern TITULO_PATTERN = Pattern.compile("titulo:\\s*(.+?)\\s*(?:Recursos:|$)");
-    private static final Pattern RECURSOS_PATTERN = Pattern.compile("Recursos:\\s*(\\[.*?\\])");
+    // Classe negada (em vez de ".*?") com quantificador possessivo: mesma semântica, sem backtracking.
+    // Os terminadores de linha excluídos replicam o que o "." não casa.
+    private static final Pattern RECURSOS_PATTERN = Pattern.compile("Recursos:\\s*(\\[[^\\]\\n\\r\\u0085\\u2028\\u2029]*+\\])");
+    private static final String PREFIXO_TITULO = "titulo: ";
+
+    private PlanoDescricaoParser() {
+        // Classe utilitária: não deve ser instanciada
+    }
 
     /**
      * Classe interna para representar a descrição parseada.
@@ -113,15 +120,15 @@ public class PlanoDescricaoParser {
         }
 
         if (recursos == null || recursos.isEmpty()) {
-            return "titulo: " + titulo.trim();
+            return PREFIXO_TITULO + titulo.trim();
         }
 
         try {
             String recursosJson = objectMapper.writeValueAsString(recursos);
-            return "titulo: " + titulo.trim() + "\nRecursos: " + recursosJson;
+            return PREFIXO_TITULO + titulo.trim() + "\nRecursos: " + recursosJson;
         } catch (JsonProcessingException e) {
             log.warn("plano.descricao formatar falha causa={}", e.getClass().getSimpleName());
-            return "titulo: " + titulo.trim();
+            return PREFIXO_TITULO + titulo.trim();
         }
     }
 

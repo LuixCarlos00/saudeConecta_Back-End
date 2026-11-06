@@ -1,7 +1,6 @@
 package br.com.saudeConecta.config.security;
 
 import br.com.saudeConecta.config.tenant.TenantFilter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,17 +27,12 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfigurations {
 
-    @Autowired
-    private FiltroAcesso filtroAcesso;
-
-    @Autowired
-    private TenantFilter tenantFilter;
-
     @Value("${app.cors.allowed-origins}")
     private String[] allowedOrigins;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, FiltroAcesso filtroAcesso,
+                                                   TenantFilter tenantFilter) throws Exception {
         return http.cors(cors -> cors.configurationSource(corsConfigurationSource())).csrf().disable()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and().authorizeHttpRequests()

@@ -198,7 +198,8 @@ class SecretariaServiceTest {
             when(secretariaRepository.findByIdAndOrganizacao_Id(999L, ORG_ID))
                     .thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> secretariaService.atualizarSecretariaIdByOrg(999L, new AtualizarSecretariaRequest(null, null, null)))
+            AtualizarSecretariaRequest semAlteracoes = new AtualizarSecretariaRequest(null, null, null);
+            assertThatThrownBy(() -> secretariaService.atualizarSecretariaIdByOrg(999L, semAlteracoes))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Secretaria nao encontrada");
         }

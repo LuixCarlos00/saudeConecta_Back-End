@@ -218,7 +218,7 @@ class EmailNotificacaoServiceTest {
             emailNotificacaoService.reenviarEmail(99L, "dest@email.com", "Assunto", "<html>corpo</html>");
 
             verify(emailRetryService).executarReenvioComRetry(
-                    eq(99L), eq("dest@email.com"), eq("Assunto"), eq("<html>corpo</html>"));
+                    99L, "dest@email.com", "Assunto", "<html>corpo</html>");
         }
 
         @Test

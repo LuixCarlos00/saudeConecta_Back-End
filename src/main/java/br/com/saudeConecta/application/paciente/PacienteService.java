@@ -32,6 +32,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Slf4j
 public class PacienteService  {
+    private static final String STATUS_ATIVO = "ATIVO";
 
      private final PacienteRepository pacienteRepository;
     private final EnderecoRepository enderecoRepository;
@@ -82,7 +83,7 @@ public class PacienteService  {
                 .paciEmail(request.email())
                 .paciTelefone(request.telefone())
                 .endereco(endereco)
-                .paciStatus("ATIVO")
+                .paciStatus(STATUS_ATIVO)
                 .build();
 
         enderecoRepository.save(endereco);
@@ -93,7 +94,7 @@ public class PacienteService  {
     }
 
     private String limparCpf(String cpf) {
-        return cpf != null ? cpf.replaceAll("[^0-9]", "") : null;
+        return cpf != null ? cpf.replaceAll("\\D", "") : null;
     }
 
     @RequiresTenant
@@ -120,47 +121,10 @@ public class PacienteService  {
         Paciente snapshot = SnapshotUtil.copiarSnapshot(antes);
 
         // Atualiza o endereço se existir
-        Endereco enderecoAtualizado = null;
-        if (antes .getEndereco() != null) {
-            enderecoAtualizado = Endereco.builder()
-                    .endCodigo(antes .getEndereco().getEndCodigo())
-                    .endNacionalidade(dados.nacionalidade() != null ?
-                            dados.nacionalidade() : antes .getEndereco().getEndNacionalidade())
-                    .endUF(dados.uf() != null ?
-                            dados.uf() : antes .getEndereco().getEndUF())
-                    .endMunicipio(dados.municipio() != null ?
-                            dados.municipio() : antes .getEndereco().getEndMunicipio())
-                    .endBairro(dados.bairro() != null ?
-                            dados.bairro() : antes .getEndereco().getEndBairro())
-                    .endCep(dados.cep() != null ?
-                            dados.cep() : antes .getEndereco().getEndCep())
-                    .endRua(dados.rua() != null ?
-                            dados.rua() : antes .getEndereco().getEndRua())
-                    .endNumero(dados.numero() != null ?
-                            dados.numero().longValue() : antes .getEndereco().getEndNumero())
-                    .endComplemento(dados.complemento() != null ?
-                            dados.complemento() : antes .getEndereco().getEndComplemento())
-                    .build();
-
-            // Salva o endereço atualizado
-            enderecoAtualizado = enderecoRepository.save(enderecoAtualizado);
-        }
+        Endereco enderecoAtualizado = atualizarEndereco(antes.getEndereco(), dados);
 
         // Reconstrói o paciente com os dados atualizados
-        Paciente pacienteAtualizado = Paciente.builder()
-                .paciCodigo(antes .getPaciCodigo())
-                .organizacao(antes .getOrganizacao())
-                .paciNome(dados.nome() != null ? dados.nome() : antes .getPaciNome())
-                .paciSexo(dados.sexo() != null ? dados.sexo() : antes .getPaciSexo())
-                .paciDataNacimento(dados.dataNascimento () != null ?
-                        Date.valueOf(dados.dataNascimento ()) : antes .getPaciDataNacimento())
-                .paciCpf(dados.cpf() != null ? limparCpf(dados.cpf()) : antes .getPaciCpf())
-                .paciRg(dados.rg() != null ? dados.rg() : antes .getPaciRg())
-                .paciEmail(dados.email() != null ? dados.email() : antes .getPaciEmail())
-                .paciTelefone(dados.telefone() != null ? dados.telefone() : antes .getPaciTelefone())
-                .endereco(enderecoAtualizado)
-                .paciStatus(antes .getPaciStatus())
-                .build();
+        Paciente pacienteAtualizado = reconstruirPaciente(antes, dados, enderecoAtualizado);
 
         // Salva o paciente atualizado
         Paciente resultado = pacienteRepository.save(pacienteAtualizado);
@@ -175,6 +139,56 @@ public class PacienteService  {
         );
 
         return resultado;
+    }
+
+    /**
+     * Aplica sobre o endereço atual apenas os campos informados e salva o resultado.
+     *
+     * @param atual endereço vigente do paciente (pode ser nulo)
+     * @param dados dados enviados na atualização
+     * @return endereço salvo, ou nulo quando o paciente não tem endereço
+     */
+    private Endereco atualizarEndereco(Endereco atual, AtualizarPacienteRequest dados) {
+        if (atual == null) {
+            return null;
+        }
+        Endereco atualizado = Endereco.builder()
+                .endCodigo(atual.getEndCodigo())
+                .endNacionalidade(valorOuAtual(dados.nacionalidade(), atual.getEndNacionalidade()))
+                .endUF(valorOuAtual(dados.uf(), atual.getEndUF()))
+                .endMunicipio(valorOuAtual(dados.municipio(), atual.getEndMunicipio()))
+                .endBairro(valorOuAtual(dados.bairro(), atual.getEndBairro()))
+                .endCep(valorOuAtual(dados.cep(), atual.getEndCep()))
+                .endRua(valorOuAtual(dados.rua(), atual.getEndRua()))
+                .endNumero(dados.numero() != null ?
+                        dados.numero().longValue() : atual.getEndNumero())
+                .endComplemento(valorOuAtual(dados.complemento(), atual.getEndComplemento()))
+                .build();
+
+        // Salva o endereço atualizado
+        return enderecoRepository.save(atualizado);
+    }
+
+    private Paciente reconstruirPaciente(Paciente antes, AtualizarPacienteRequest dados, Endereco endereco) {
+        return Paciente.builder()
+                .paciCodigo(antes.getPaciCodigo())
+                .organizacao(antes.getOrganizacao())
+                .paciNome(valorOuAtual(dados.nome(), antes.getPaciNome()))
+                .paciSexo(valorOuAtual(dados.sexo(), antes.getPaciSexo()))
+                .paciDataNacimento(dados.dataNascimento() != null ?
+                        Date.valueOf(dados.dataNascimento()) : antes.getPaciDataNacimento())
+                .paciCpf(valorOuAtual(limparCpf(dados.cpf()), antes.getPaciCpf()))
+                .paciRg(valorOuAtual(dados.rg(), antes.getPaciRg()))
+                .paciEmail(valorOuAtual(dados.email(), antes.getPaciEmail()))
+                .paciTelefone(valorOuAtual(dados.telefone(), antes.getPaciTelefone()))
+                .endereco(endereco)
+                .paciStatus(antes.getPaciStatus())
+                .build();
+    }
+
+    /** Atualização parcial: o valor enviado vence; ausente (nulo) preserva o atual. */
+    private <T> T valorOuAtual(T novo, T atual) {
+        return novo != null ? novo : atual;
     }
 
     @Caching(evict = {
@@ -215,7 +229,7 @@ public class PacienteService  {
         @CacheEvict(value = "pacientes-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ALL'")
     })
     public void bloquearPacientebyOrg(Long id, int status) {
-        log.info("paciente.status inicio pacienteId={} status={}", id, status == 0 ? "INATIVO" : "ATIVO");
+        log.info("paciente.status inicio pacienteId={} status={}", id, status == 0 ? "INATIVO" : STATUS_ATIVO);
 
         var pacienteOpt = buscarrPacientebyOrg(id);
         if (pacienteOpt.isEmpty()) {
@@ -224,7 +238,7 @@ public class PacienteService  {
         }
 
         var paciente = pacienteOpt.get();
-        paciente.setPaciStatus(status == 0 ? "INATIVO" : "ATIVO");
+        paciente.setPaciStatus(status == 0 ? "INATIVO" : STATUS_ATIVO);
         pacienteRepository.save(paciente);
 
         cacheEvictionService.evictUsuariosAgrupados(paciente.getOrganizacaoId());
@@ -244,8 +258,8 @@ public class PacienteService  {
         Long orgId = tenantHelper.getCurrentTenantId();
         log.debug("paciente.buscar nome organizacaoId={} filtro={}", orgId, filtro);
         
-        if ("ATIVO".equals(filtro)) {
-            return pacienteRepository.findByOrganizacaoIdAndNomeContainingWithFiltro(orgId, pesquisa, filtro, "ATIVO");
+        if (STATUS_ATIVO.equals(filtro)) {
+            return pacienteRepository.findByOrganizacaoIdAndNomeContainingWithFiltro(orgId, pesquisa, filtro, STATUS_ATIVO);
         } else {
             // ALL - usa consulta original
             return pacienteRepository.findByOrganizacaoIdAndNomeContaining(orgId, pesquisa);
@@ -260,8 +274,8 @@ public class PacienteService  {
         Long orgId = tenantHelper.getCurrentTenantId();
         log.debug("paciente.buscar cpf={} organizacaoId={} filtro={}", MascaraLog.cpf(pesquisa), orgId, filtro);
         
-        if ("ATIVO".equals(filtro)) {
-            return pacienteRepository.findByOrganizacaoIdAndCpfContainingWithFiltro(orgId, pesquisa, filtro, "ATIVO");
+        if (STATUS_ATIVO.equals(filtro)) {
+            return pacienteRepository.findByOrganizacaoIdAndCpfContainingWithFiltro(orgId, pesquisa, filtro, STATUS_ATIVO);
         } else {
             // ALL - usa consulta original
             return pacienteRepository.findByOrganizacaoIdAndCpfContaining(orgId, pesquisa);
@@ -276,8 +290,8 @@ public class PacienteService  {
         Long orgId = tenantHelper.getCurrentTenantId();
         log.debug("paciente.buscar rg organizacaoId={} filtro={}", orgId, filtro);
         
-        if ("ATIVO".equals(filtro)) {
-            return pacienteRepository.findByOrganizacaoIdAndRgContainingWithFiltro(orgId, pesquisa, filtro, "ATIVO");
+        if (STATUS_ATIVO.equals(filtro)) {
+            return pacienteRepository.findByOrganizacaoIdAndRgContainingWithFiltro(orgId, pesquisa, filtro, STATUS_ATIVO);
         } else {
             // ALL - usa consulta original
             return pacienteRepository.findByOrganizacaoIdAndRgContaining(orgId, pesquisa);
@@ -292,8 +306,8 @@ public class PacienteService  {
         Long orgId = tenantHelper.getCurrentTenantId();
         log.debug("paciente.buscar telefone organizacaoId={} filtro={}", orgId, filtro);
         
-        if ("ATIVO".equals(filtro)) {
-            return pacienteRepository.findByOrganizacaoIdAndTelefoneContainingWithFiltro(orgId, pesquisa, filtro, "ATIVO");
+        if (STATUS_ATIVO.equals(filtro)) {
+            return pacienteRepository.findByOrganizacaoIdAndTelefoneContainingWithFiltro(orgId, pesquisa, filtro, STATUS_ATIVO);
         } else {
             // ALL - usa consulta original
             return pacienteRepository.findByOrganizacaoIdAndTelefoneContaining(orgId, pesquisa);
@@ -307,8 +321,8 @@ public class PacienteService  {
         Long orgId = tenantHelper.getCurrentTenantId();
         log.debug("paciente.buscar todos organizacaoId={} filtro={}", orgId, filtro);
         
-        if ("ATIVO".equals(filtro)) {
-            return pacienteRepository.findByOrganizacao_IdWithFiltro(orgId, filtro, "ATIVO");
+        if (STATUS_ATIVO.equals(filtro)) {
+            return pacienteRepository.findByOrganizacao_IdWithFiltro(orgId, filtro, STATUS_ATIVO);
         } else {
             // ALL - usa consulta original
             return pacienteRepository.findByOrganizacao_Id(orgId);

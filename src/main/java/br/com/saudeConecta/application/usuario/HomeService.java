@@ -23,6 +23,9 @@ import java.util.Optional;
 @Slf4j
 public class HomeService {
 
+    /** Um gerador só por classe: criar um SecureRandom por senha gasta entropia à toa (S2119). */
+    private static final SecureRandom GERADOR_SENHA = new SecureRandom();
+
     private final ProfissionalRepository profissionalRepository;
     private final UsuarioRepository usuarioRepository;
     private final SecretariaRepository secretariaRepository;
@@ -50,34 +53,29 @@ public class HomeService {
         log.info("auth.senha.recuperar inicio email={}", MascaraLog.email(email));
 
         Usuario usuario = null;
-        String nome = null;
 
         // Busca em Profissional
         Optional<Profissional> profissionalOpt = profissionalRepository.findByEmail(email);
         if (profissionalOpt.isPresent()) {
             Profissional profissional = profissionalOpt.get();
             usuario = profissional.getUsuario();
-            nome = profissional.getNome();
         } else {
             // Busca em Secretaria
             Optional<Secretaria> secretariaOpt = secretariaRepository.findByEmail(email);
             if (secretariaOpt.isPresent()) {
                 Secretaria secretaria = secretariaOpt.get();
                 usuario = secretaria.getUsuario();
-                nome = secretaria.getNome();
             } else {
                 // Busca em AdminOrganizacao
                 Optional<AdminOrganizacao> adminOpt = adminOrganizacaoRepository.findByEmail(email);
                 if (adminOpt.isPresent()) {
                     AdminOrganizacao admin = adminOpt.get();
                     usuario = admin.getUsuario();
-                    nome = admin.getNome();
                 } else {
                     // Busca na tabela usuarios pelo campo email (para usuarios sem organizacao, ex: SUPER_ADMIN)
                     Optional<Usuario> usuarioOpt = usuarioRepository.findByEmailAndOrganizacaoIsNull(email);
                     if (usuarioOpt.isPresent()) {
                         usuario = usuarioOpt.get();
-                        nome = usuario.getLogin();
                         log.debug("auth.senha.recuperar usuario sem organizacao email={}", MascaraLog.email(email));
                     }
                 }
@@ -106,10 +104,9 @@ public class HomeService {
 
     private String gerarSenhaAleatoria() {
         String caracteres = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$%";
-        SecureRandom random = new SecureRandom();
         StringBuilder senha = new StringBuilder();
         for (int i = 0; i < 10; i++) {
-            senha.append(caracteres.charAt(random.nextInt(caracteres.length())));
+            senha.append(caracteres.charAt(GERADOR_SENHA.nextInt(caracteres.length())));
         }
         return senha.toString();
     }

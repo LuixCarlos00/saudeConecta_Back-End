@@ -165,7 +165,7 @@ class ConsultaFluxoE2ETest {
     @WithMockUser(roles = "ADMIN")
     @DisplayName("Passo 5 - Tentativa de cancelar consulta PAGA deve retornar 409 (Conflict)")
     void passo5_naoDeveCancelarConsultaPaga() throws Exception {
-        when(consultaAgendamentoService.atualizarStatus(eq(CONSULTA_ID), eq(StatusConsulta.CANCELADA), eq("Tentativa inválida")))
+        when(consultaAgendamentoService.atualizarStatus(CONSULTA_ID, StatusConsulta.CANCELADA, "Tentativa inválida"))
                 .thenThrow(new IllegalStateException("não podem ter o status alterado"));
 
         mockMvc.perform(patch("/consultas/{id}/status", CONSULTA_ID)

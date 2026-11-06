@@ -31,8 +31,8 @@ class SaldoFinanceiroServiceTest {
     @InjectMocks
     private SaldoFinanceiroService service;
 
-    private final LocalDate INICIO = LocalDate.of(2024, 1, 1);
-    private final LocalDate FIM = LocalDate.of(2024, 3, 31);
+    private final LocalDate inicio = LocalDate.of(2024, 1, 1);
+    private final LocalDate fim = LocalDate.of(2024, 3, 31);
 
     @SuppressWarnings("unchecked")
     private static List<Object[]> rows(Object[]... arrays) {
@@ -61,7 +61,7 @@ class SaldoFinanceiroServiceTest {
             when(planejamentoRepository.somarValorProcedimentosAgrupadosPorMes(eq(1L), any(), any()))
                     .thenReturn(mesProcs);
 
-            SaldoFinanceiroResponse response = service.calcularSaldo(1L, INICIO, FIM, "mes");
+            SaldoFinanceiroResponse response = service.calcularSaldo(1L, inicio, fim, "mes");
 
             assertThat(response).isNotNull();
             assertThat(response.totalConsultas()).isEqualByComparingTo(BigDecimal.valueOf(1500));
@@ -83,7 +83,7 @@ class SaldoFinanceiroServiceTest {
             when(planejamentoRepository.somarValorProcedimentosAgrupadosPorMes(eq(1L), any(), any()))
                     .thenReturn(Collections.emptyList());
 
-            SaldoFinanceiroResponse response = service.calcularSaldo(1L, INICIO, FIM, "mes");
+            SaldoFinanceiroResponse response = service.calcularSaldo(1L, inicio, fim, "mes");
 
             assertThat(response.totalConsultas()).isEqualByComparingTo(BigDecimal.ZERO);
             assertThat(response.totalProcedimentos()).isEqualByComparingTo(BigDecimal.ZERO);
@@ -104,7 +104,7 @@ class SaldoFinanceiroServiceTest {
             when(planejamentoRepository.somarValorProcedimentosAgrupadosPorMes(eq(1L), any(), any()))
                     .thenReturn(pMes);
 
-            SaldoFinanceiroResponse response = service.calcularSaldo(1L, INICIO, FIM, "mes");
+            SaldoFinanceiroResponse response = service.calcularSaldo(1L, inicio, fim, "mes");
 
             assertThat(response.detalhamento()).isNotEmpty();
             assertThat(response.detalhamento().get(0).valorTotal())
@@ -123,7 +123,7 @@ class SaldoFinanceiroServiceTest {
             when(planejamentoRepository.somarValorProcedimentosAgrupadosPorMes(eq(1L), any(), any()))
                     .thenReturn(Collections.emptyList());
 
-            SaldoFinanceiroResponse response = service.calcularSaldo(1L, INICIO, FIM, "mes");
+            SaldoFinanceiroResponse response = service.calcularSaldo(1L, inicio, fim, "mes");
 
             assertThat(response.detalhamento()).hasSize(3);
         }
@@ -151,7 +151,7 @@ class SaldoFinanceiroServiceTest {
             when(planejamentoRepository.somarValorProcedimentosAgrupadosPorSemana(eq(1L), any(), any()))
                     .thenReturn(pSemVazio);
 
-            SaldoFinanceiroResponse response = service.calcularSaldo(1L, INICIO, FIM, "semana");
+            SaldoFinanceiroResponse response = service.calcularSaldo(1L, inicio, fim, "semana");
 
             assertThat(response).isNotNull();
             assertThat(response.totalConsultas()).isEqualByComparingTo(BigDecimal.valueOf(800));
@@ -170,7 +170,7 @@ class SaldoFinanceiroServiceTest {
             when(planejamentoRepository.somarValorProcedimentosAgrupadosPorSemana(eq(1L), any(), any()))
                     .thenReturn(Collections.emptyList());
 
-            SaldoFinanceiroResponse response = service.calcularSaldo(1L, INICIO, FIM, "semana");
+            SaldoFinanceiroResponse response = service.calcularSaldo(1L, inicio, fim, "semana");
 
             assertThat(response.detalhamento()).isEmpty();
         }
@@ -189,7 +189,7 @@ class SaldoFinanceiroServiceTest {
             when(planejamentoRepository.somarValorProcedimentosAgrupadosPorSemana(eq(1L), any(), any()))
                     .thenReturn(pSem2);
 
-            SaldoFinanceiroResponse response = service.calcularSaldo(1L, INICIO, FIM, "semana");
+            SaldoFinanceiroResponse response = service.calcularSaldo(1L, inicio, fim, "semana");
 
             assertThat(response.detalhamento()).hasSize(2);
         }

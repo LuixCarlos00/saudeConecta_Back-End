@@ -9,23 +9,33 @@ public enum TipoUsuarioNovo {
     ROOT(0, "Super Administrador", List.of(
         new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"),
         new SimpleGrantedAuthority("ROLE_ADMIN"),
-        new SimpleGrantedAuthority("ROLE_PROFISSIONAL"),
-        new SimpleGrantedAuthority("ROLE_RECEPCIONISTA")
+        new SimpleGrantedAuthority(Papel.PROFISSIONAL),
+        new SimpleGrantedAuthority(Papel.RECEPCIONISTA)
     )),
 
     GESTOR(1, "Gestor", List.of(
         new SimpleGrantedAuthority("ROLE_ADMIN"),
-        new SimpleGrantedAuthority("ROLE_PROFISSIONAL"),
-        new SimpleGrantedAuthority("ROLE_RECEPCIONISTA")
+        new SimpleGrantedAuthority(Papel.PROFISSIONAL),
+        new SimpleGrantedAuthority(Papel.RECEPCIONISTA)
     )),
 
     CLINICO(2, "Clínico", List.of(
-        new SimpleGrantedAuthority("ROLE_PROFISSIONAL")
+        new SimpleGrantedAuthority(Papel.PROFISSIONAL)
     )),
 
     ASSISTENTE(3, "Assistente", List.of(
-        new SimpleGrantedAuthority("ROLE_RECEPCIONISTA")
+        new SimpleGrantedAuthority(Papel.RECEPCIONISTA)
     ));
+
+    /** Nomes dos papéis em classe aninhada: constantes do enum não podem referenciar campos estáticos declarados depois delas. */
+    private static final class Papel {
+        static final String PROFISSIONAL = "ROLE_PROFISSIONAL";
+        static final String RECEPCIONISTA = "ROLE_RECEPCIONISTA";
+
+        private Papel() {
+            // Apenas agrupa constantes
+        }
+    }
 
     private final int codigo;
     private final String descricao;

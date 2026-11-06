@@ -179,7 +179,8 @@ class PlanoAssinaturaServiceTest {
         void deveLancarExcecaoQuandoNaoEncontrado() {
             when(planoAssinaturaRepository.findById(99L)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> service.atualizarPlano(99L, criarRequest()))
+            var requisicao = criarRequest();
+            assertThatThrownBy(() -> service.atualizarPlano(99L, requisicao))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("Plano nao encontrado");
         }

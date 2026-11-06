@@ -1,5 +1,8 @@
 package br.com.saudeConecta.application.suporte;
 
+import br.com.saudeConecta.domain.FusoHorario;
+import br.com.saudeConecta.application.notificacao.DadosEmailAtualizacaoStatusChamado;
+import br.com.saudeConecta.application.notificacao.DadosEmailConfirmacaoChamado;
 import br.com.saudeConecta.application.notificacao.EmailNotificacaoService;
 import br.com.saudeConecta.application.suporte.dto.AtualizarStatusChamadoRequest;
 import br.com.saudeConecta.application.suporte.dto.ChamadoAnexoRequest;
@@ -88,7 +91,7 @@ public class ChamadoSuporteService {
                 .categoria(request.categoria())
                 .prioridade(request.prioridade())
                 .status(StatusChamado.EM_ANALISE)
-                .previsaoAtendimento(LocalDate.now().plusDays(request.prioridade().getPrazoPrevistoDias()))
+                .previsaoAtendimento(LocalDate.now(FusoHorario.ZONA).plusDays(request.prioridade().getPrazoPrevistoDias()))
                 .build();
 
         adicionarAnexos(chamado, request.anexos());
@@ -274,7 +277,7 @@ public class ChamadoSuporteService {
             return;
         }
 
-        emailNotificacaoService.enviarConfirmacaoChamadoSuporte(
+        emailNotificacaoService.enviarConfirmacaoChamadoSuporte(new DadosEmailConfirmacaoChamado(
                 chamado.getCriadorEmail(),
                 chamado.getCriadorNome(),
                 chamado.getProtocolo(),
@@ -287,7 +290,7 @@ public class ChamadoSuporteService {
                 chamado.getPrevisaoAtendimento().format(FORMATO_DATA),
                 chamado.getAnexos() != null ? chamado.getAnexos().size() : 0,
                 organizacaoId
-        );
+        ));
     }
 
     /**
@@ -303,7 +306,7 @@ public class ChamadoSuporteService {
             return;
         }
 
-        emailNotificacaoService.enviarAtualizacaoStatusChamado(
+        emailNotificacaoService.enviarAtualizacaoStatusChamado(new DadosEmailAtualizacaoStatusChamado(
                 chamado.getCriadorEmail(),
                 chamado.getCriadorNome(),
                 chamado.getProtocolo(),
@@ -312,7 +315,7 @@ public class ChamadoSuporteService {
                 chamado.getStatus().getDescricao(),
                 observacao,
                 chamado.getOrganizacaoId()
-        );
+        ));
     }
 
     /**

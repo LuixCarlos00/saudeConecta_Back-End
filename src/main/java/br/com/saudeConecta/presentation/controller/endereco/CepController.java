@@ -32,11 +32,10 @@ public class CepController {
      *         existir; 502 {@code CEP_INDISPONIVEL} se o serviço externo falhar
      */
     @GetMapping("/{cep}")
-    public ResponseEntity<?> buscarEnderecoPorCep(@PathVariable String cep) {
-        log.debug("cep.buscar inicio cep={}", MascaraLog.cep(cep));
-
+    public ResponseEntity<Object> buscarEnderecoPorCep(@PathVariable String cep) {
         // Remove caracteres não numéricos do CEP
-        String cepLimpo = cep.replaceAll("[^0-9]", "");
+        String cepLimpo = cep.replaceAll("\\D", "");
+        log.debug("cep.buscar inicio cep={}", MascaraLog.cep(cep));
 
         if (cepLimpo.length() != 8) {
             return ResponseEntity.badRequest()

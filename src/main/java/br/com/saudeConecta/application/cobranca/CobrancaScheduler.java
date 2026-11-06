@@ -37,6 +37,7 @@ import java.util.function.Predicate;
  */
 @Component
 public class CobrancaScheduler {
+    private static final String LOG_REGUA = "cobranca.regua";
 
     private static final Logger log = LoggerFactory.getLogger(CobrancaScheduler.class);
 
@@ -97,18 +98,18 @@ public class CobrancaScheduler {
     public void aplicarReguaDeCarencia() {
         LocalDate limiteInadimplencia = LocalDate.now(clock).minusDays(DIAS_CARENCIA_INADIMPLENCIA);
         List<AssinaturaTenant> vencidas = assinaturaTenantRepository.findVencidasNaoInadimplentes(limiteInadimplencia);
-        int marcadas = processarCadaUm(vencidas, "cobranca.regua", "marcar inadimplente",
+        int marcadas = processarCadaUm(vencidas, LOG_REGUA, "marcar inadimplente",
                 assinatura -> processador.marcarInadimplente(assinatura.getId(), limiteInadimplencia));
 
         LocalDate limiteSuspensao = LocalDate.now(clock).minusDays(DIAS_CARENCIA_SUSPENSAO);
         List<AssinaturaTenant> inadimplentes = assinaturaTenantRepository.findInadimplentesParaSuspender(limiteSuspensao);
-        int suspensas = processarCadaUm(inadimplentes, "cobranca.regua", "suspender", assinatura ->
+        int suspensas = processarCadaUm(inadimplentes, LOG_REGUA, "suspender", assinatura ->
                 !pagamentoAprovadoRecuperado(assinatura, true)
                         && processador.suspender(assinatura.getId(), limiteSuspensao));
 
         LocalDateTime limiteCancelamento = LocalDate.now(clock).minusDays(DIAS_CARENCIA_CANCELAMENTO).atStartOfDay();
         List<AssinaturaTenant> suspensasAntigas = assinaturaTenantRepository.findSuspensasParaCancelar(limiteCancelamento);
-        int canceladas = processarCadaUm(suspensasAntigas, "cobranca.regua", "cancelar", assinatura ->
+        int canceladas = processarCadaUm(suspensasAntigas, LOG_REGUA, "cancelar", assinatura ->
                 !pagamentoAprovadoRecuperado(assinatura, false)
                         && processador.cancelar(assinatura.getId(), limiteCancelamento));
 

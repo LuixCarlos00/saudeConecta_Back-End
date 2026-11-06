@@ -1,5 +1,6 @@
 package br.com.saudeConecta.domain.planos;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.infrastructure.persistence.listener.AssinaturaTenantCacheListener;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -135,13 +136,13 @@ public class AssinaturaTenant implements Serializable {
 
     @PrePersist
     protected void onCreate() {
-        criadoEm = LocalDateTime.now();
-        atualizadoEm = LocalDateTime.now();
+        criadoEm = LocalDateTime.now(FusoHorario.ZONA);
+        atualizadoEm = LocalDateTime.now(FusoHorario.ZONA);
     }
 
     @PreUpdate
     protected void onUpdate() {
-        atualizadoEm = LocalDateTime.now();
+        atualizadoEm = LocalDateTime.now(FusoHorario.ZONA);
     }
 
     /**
@@ -161,7 +162,7 @@ public class AssinaturaTenant implements Serializable {
      * @return true se a data de vencimento já passou
      */
     public boolean isVencida() {
-        return dataVencimento != null && LocalDate.now().isAfter(dataVencimento);
+        return dataVencimento != null && LocalDate.now(FusoHorario.ZONA).isAfter(dataVencimento);
     }
 
     /**

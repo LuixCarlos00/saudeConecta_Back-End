@@ -1,5 +1,6 @@
 package br.com.saudeConecta.application.auth;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.application.usuario.HomeService;
 import br.com.saudeConecta.application.usuario.dto.DadosLoginUsuario;
 import br.com.saudeConecta.config.logging.MascaraLog;
@@ -42,6 +43,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Slf4j
 public class AutenticacaoService {
+    private static final String NOME_PADRAO_PROFISSIONAL = "Profissional";
 
     private final AuthenticationManager authenticationManager;
     private final TokenService tokenService;
@@ -162,7 +164,7 @@ public class AutenticacaoService {
                     .alvoLogin(usuarioAlvo.getLogin())
                     .alvoOrganizacaoId(usuarioAlvo.getOrganizacaoId())
                     .ip(ip)
-                    .dataHora(LocalDateTime.now())
+                    .dataHora(LocalDateTime.now(FusoHorario.ZONA))
                     .build());
             log.info("auth.senhaMaster ok usuarioAlvoId={} auditado=true", usuarioAlvo.getId());
             return usuarioAlvo;
@@ -225,7 +227,7 @@ public class AutenticacaoService {
                 return admin.map(AdminOrganizacao::getNome).orElse("Administrador");
             } else if (usuario.isClinico()) {
                 Optional<Profissional> profissional = profissionalRepository.findByUsuario_Id(usuario.getId());
-                return profissional.map(Profissional::getNome).orElse("Profissional");
+                return profissional.map(Profissional::getNome).orElse(NOME_PADRAO_PROFISSIONAL);
             } else if (usuario.isAssistente()) {
                 Optional<Secretaria> secretaria = secretariaRepository.findByUsuario_Id(usuario.getId());
                 return secretaria.map(Secretaria::getNome).orElse("Secretária");
@@ -241,18 +243,7 @@ public class AutenticacaoService {
         try {
             if (usuario.isClinico()) {
                 Optional<Profissional> profissional = profissionalRepository.findByUsuarioIdWithRelations(usuario.getId());
-                return profissional.map(p -> {
-                    if (p.getTipoProfissional() != null) {
-                        if (p.getTipoProfissional().isMedico()) {
-                            return "MEDICO";
-                        } else if (p.getTipoProfissional().isDentista()) {
-                            return "DENTISTA";
-                        } else {
-                            return p.getTipoProfissional().getCodigo();
-                        }
-                    }
-                    return "Profissional";
-                }).orElse("Profissional");
+                return profissional.map(this::descreverTipoProfissional).orElse(NOME_PADRAO_PROFISSIONAL);
             }
             if (usuario.isGestor()) {
                 Optional<AdminOrganizacao> admin = adminOrganizacaoRepository.findByUsuario_Id(usuario.getId());
@@ -267,5 +258,19 @@ public class AutenticacaoService {
         }
 
         return "false"; // Default fallback
+    }
+
+    /** Tipo do profissional para o token: MEDICO, DENTISTA, o código do tipo ou o padrão se não houver tipo. */
+    private String descreverTipoProfissional(Profissional p) {
+        if (p.getTipoProfissional() == null) {
+            return NOME_PADRAO_PROFISSIONAL;
+        }
+        if (p.getTipoProfissional().isMedico()) {
+            return "MEDICO";
+        }
+        if (p.getTipoProfissional().isDentista()) {
+            return "DENTISTA";
+        }
+        return p.getTipoProfissional().getCodigo();
     }
 }

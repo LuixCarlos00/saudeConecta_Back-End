@@ -40,7 +40,7 @@ public class AdminOrganizacaoController {
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     @Description("Cadastra novo administrador de uma organização . Utilizado em: CadastroAdmComponent")
-    public ResponseEntity<?> cadastrarAdminByOrg(@RequestBody @Valid CadastrarAdminRequest request) {
+    public ResponseEntity<Object> cadastrarAdminByOrg(@RequestBody @Valid CadastrarAdminRequest request) {
         Long organizacaoId = TenantContext.getCurrentTenant();
 
         if (organizacaoId == null) {
@@ -62,7 +62,7 @@ public class AdminOrganizacaoController {
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     @Description("Atualiza nome e email do administrador. Utilizado em: VisualizarEditarUsuarioComponent")
-    public ResponseEntity<?> atualizarAdmByOrg(@PathVariable Long id, @RequestBody AtualizarAdminRequest request) {
+    public ResponseEntity<AdminOrganizacao> atualizarAdmByOrg(@PathVariable Long id, @RequestBody AtualizarAdminRequest request) {
         try {
             AdminOrganizacao admin = adminOrganizacaoService.atualizarAdmByOrg(id, request.nome(), request.email());
             return ResponseEntity.ok(admin);
@@ -77,7 +77,7 @@ public class AdminOrganizacaoController {
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Transactional
     @Description("Cadastra Admin de Organização completo (com organização e endereço). Exclusivo para SUPER_ADMIN.")
-    public ResponseEntity<?> cadastrarAdminOrgCompleto(@RequestBody @Valid CadastrarAdminOrgCompletoRequest request) {
+    public ResponseEntity<Object> cadastrarAdminOrgCompleto(@RequestBody @Valid CadastrarAdminOrgCompletoRequest request) {
         try {
             AdminOrganizacao admin = adminOrganizacaoService.cadastrarAdminOrgCompleto(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(admin);
@@ -105,7 +105,7 @@ public class AdminOrganizacaoController {
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Transactional
     @Description("Atualiza dados completos do AdminOrg (admin + organização + endereço). Exclusivo para SUPER_ADMIN.")
-    public ResponseEntity<?> atualizarAdminOrgCompleto(@PathVariable Long id, @RequestBody AtualizarAdminOrgCompletoRequest request) {
+    public ResponseEntity<AdminOrgCompletoResponse> atualizarAdminOrgCompleto(@PathVariable Long id, @RequestBody AtualizarAdminOrgCompletoRequest request) {
         try {
             AdminOrgCompletoResponse response = adminOrganizacaoService.atualizarAdminOrgCompleto(id, request);
             return ResponseEntity.ok(response);
@@ -118,7 +118,7 @@ public class AdminOrganizacaoController {
     @PutMapping("/atualizarMeusDados/{id}")
     @Transactional
     @Description("Atualiza dados pessoais do Admin Org logado + organização + endereço. Utilizado em: DadosPessoaisComponent")
-    public ResponseEntity<?> atualizarMeusDados(@PathVariable Long id, @RequestBody AtualizarAdminOrgCompletoRequest request) {
+    public ResponseEntity<Object> atualizarMeusDados(@PathVariable Long id, @RequestBody AtualizarAdminOrgCompletoRequest request) {
         try {
             adminOrganizacaoService.atualizarMeusDadosAdminOrg(id, request);
             return ResponseEntity.ok().build();
@@ -132,7 +132,7 @@ public class AdminOrganizacaoController {
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     @Description("Deleta administrador por ID")
-    public ResponseEntity<?> deletarAdmByOrg(@PathVariable Long id) {
+    public ResponseEntity<Void> deletarAdmByOrg(@PathVariable Long id) {
         try {
             adminOrganizacaoService.deletarAdmByOrg(id);
             return ResponseEntity.ok().build();

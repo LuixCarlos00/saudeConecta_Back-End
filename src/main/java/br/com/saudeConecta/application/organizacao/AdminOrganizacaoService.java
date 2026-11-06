@@ -40,7 +40,10 @@ import java.util.Optional;
 @Service
 @Slf4j
 public class AdminOrganizacaoService {
+    private static final String MSG_ADMIN_NAO_ENCONTRADO = "Administrador não encontrado";
 
+    /** Um gerador só por classe: criar um SecureRandom por senha gasta entropia à toa (S2119). */
+    private static final SecureRandom GERADOR_SENHA = new SecureRandom();
     private static final String CARACTERES_SENHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*";
     private static final int TAMANHO_SENHA = 10;
 
@@ -175,7 +178,7 @@ public class AdminOrganizacaoService {
         log.info("adminOrg.atualizarMeusDados inicio adminId={} organizacaoId={}", adminId, orgId);
 
         AdminOrganizacao admin = adminOrganizacaoRepository.findByIdWithOrgAndEndereco(adminId)
-                .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
+                .orElseThrow(() -> new IllegalArgumentException(MSG_ADMIN_NAO_ENCONTRADO));
 
         // Validação de tenant
         if (!admin.getOrganizacao().getId().equals(orgId)) {
@@ -261,7 +264,7 @@ public class AdminOrganizacaoService {
         // permitiria tomar a conta via "esqueci minha senha". Admin de outra org responde
         // igual a inexistente para não revelar quais IDs existem.
         AdminOrganizacao antes = adminOrganizacaoRepository.findByIdAndOrganizacao_Id(id, orgId)
-            .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
+            .orElseThrow(() -> new IllegalArgumentException(MSG_ADMIN_NAO_ENCONTRADO));
 
         // E-mail duplicado desvia o "esqueci minha senha" (que busca por e-mail) para a conta errada
         emailUnicoService.validarEmailLivreParaAtualizacao(email, antes.getEmail(),
@@ -303,7 +306,7 @@ public class AdminOrganizacaoService {
         if (orgId == null) {
             log.debug("adminOrg.deletar escopo=ROOT adminId={}", idAdmin);
             admin = adminOrganizacaoRepository.findById(idAdmin)
-                    .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
+                    .orElseThrow(() -> new IllegalArgumentException(MSG_ADMIN_NAO_ENCONTRADO));
         } else {
             admin = adminOrganizacaoRepository.findByIdAndOrganizacao_Id(idAdmin, orgId)
                     .orElseThrow(() -> new IllegalArgumentException("Administrador nao encontrado"));
@@ -350,7 +353,7 @@ public class AdminOrganizacaoService {
     public AdminOrgCompletoResponse buscarAdminOrgCompleto(Long id) {
         log.debug("adminOrg.buscar escopo=SUPER_ADMIN adminId={}", id);
         AdminOrganizacao admin = adminOrganizacaoRepository.findByIdWithOrgAndEndereco(id)
-                .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
+                .orElseThrow(() -> new IllegalArgumentException(MSG_ADMIN_NAO_ENCONTRADO));
         return AdminOrgCompletoResponse.fromEntity(admin);
     }
 
@@ -367,52 +370,21 @@ public class AdminOrganizacaoService {
         log.info("adminOrg.atualizar inicio escopo=SUPER_ADMIN adminId={}", id);
 
         AdminOrganizacao admin = adminOrganizacaoRepository.findByIdWithOrgAndEndereco(id)
-                .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
+                .orElseThrow(() -> new IllegalArgumentException(MSG_ADMIN_NAO_ENCONTRADO));
 
         // Atualiza dados do admin
-        if (request.nome() != null && !request.nome().isBlank()) {
-            admin.setNome(request.nome());
-        }
-        if (request.cargo() != null && !request.cargo().isBlank()) {
-            admin.setCargo(request.cargo());
-        }
-        if (request.email() != null && !request.email().isBlank()) {
-            admin.setEmail(request.email());
-        }
+        atualizarDadosAdmin(admin, request);
 
         // Atualiza dados da organização
         Organizacao org = admin.getOrganizacao();
         if (org != null) {
-            if (request.nomeClinica() != null && !request.nomeClinica().isBlank()) {
-                org.setNome(request.nomeClinica());
-            }
-            if (request.razaoSocial() != null) {
-                org.setRazaoSocial(request.razaoSocial());
-            }
-            if (request.cnpj() != null && !request.cnpj().isBlank()) {
-                org.setCnpj(limparCnpj(request.cnpj()));
-            }
-            if (request.tipoClinica() != null && !request.tipoClinica().isBlank()) {
-                org.setTipo(TipoOrganizacao.valueOf(request.tipoClinica()));
-            }
-            if (request.emailClinica() != null) {
-                org.setEmail(request.emailClinica());
-            }
-            if (request.telefone() != null) {
-                org.setTelefone(request.telefone());
-            }
+            atualizarDadosOrganizacao(org, request);
             organizacaoRepository.save(org);
 
             // Atualiza endereço
             Endereco end = org.getEndereco();
             if (end != null) {
-                if (request.cep() != null) end.setEndCep(request.cep());
-                if (request.uf() != null) end.setEndUF(request.uf());
-                if (request.municipio() != null) end.setEndMunicipio(request.municipio());
-                if (request.bairro() != null) end.setEndBairro(request.bairro());
-                if (request.rua() != null) end.setEndRua(request.rua());
-                if (request.numero() != null) end.setEndNumero(request.numero());
-                if (request.complemento() != null) end.setEndComplemento(request.complemento());
+                atualizarDadosEndereco(end, request);
                 enderecoRepository.save(end);
             }
         }
@@ -424,6 +396,55 @@ public class AdminOrganizacaoService {
         cacheEvictionService.evictPerfilEUsuariosAgrupados(salvo.getUsuario().getId(), orgIdAfetada);
 
         return AdminOrgCompletoResponse.fromEntity(salvo);
+    }
+
+    /** Atualização parcial do admin: nome, cargo e e-mail em branco ou nulos são ignorados. */
+    private void atualizarDadosAdmin(AdminOrganizacao admin, AtualizarAdminOrgCompletoRequest request) {
+        if (!isBlank(request.nome())) {
+            admin.setNome(request.nome());
+        }
+        if (!isBlank(request.cargo())) {
+            admin.setCargo(request.cargo());
+        }
+        if (!isBlank(request.email())) {
+            admin.setEmail(request.email());
+        }
+    }
+
+    /**
+     * Atualização parcial da organização. Nome, CNPJ e tipo ignoram nulo e branco;
+     * razão social, e-mail e telefone ignoram só nulo (texto vazio é aceito).
+     */
+    private void atualizarDadosOrganizacao(Organizacao org, AtualizarAdminOrgCompletoRequest request) {
+        if (!isBlank(request.nomeClinica())) {
+            org.setNome(request.nomeClinica());
+        }
+        if (request.razaoSocial() != null) {
+            org.setRazaoSocial(request.razaoSocial());
+        }
+        if (!isBlank(request.cnpj())) {
+            org.setCnpj(limparCnpj(request.cnpj()));
+        }
+        if (!isBlank(request.tipoClinica())) {
+            org.setTipo(TipoOrganizacao.valueOf(request.tipoClinica()));
+        }
+        if (request.emailClinica() != null) {
+            org.setEmail(request.emailClinica());
+        }
+        if (request.telefone() != null) {
+            org.setTelefone(request.telefone());
+        }
+    }
+
+    /** Atualização parcial do endereço: só os campos informados (não nulos) são alterados. */
+    private void atualizarDadosEndereco(Endereco end, AtualizarAdminOrgCompletoRequest request) {
+        if (request.cep() != null) end.setEndCep(request.cep());
+        if (request.uf() != null) end.setEndUF(request.uf());
+        if (request.municipio() != null) end.setEndMunicipio(request.municipio());
+        if (request.bairro() != null) end.setEndBairro(request.bairro());
+        if (request.rua() != null) end.setEndRua(request.rua());
+        if (request.numero() != null) end.setEndNumero(request.numero());
+        if (request.complemento() != null) end.setEndComplemento(request.complemento());
     }
 
     private static final String TIPO_PESSOA_JURIDICA = "JURIDICA";
@@ -478,7 +499,7 @@ public class AdminOrganizacaoService {
         }
 
         String login = determinarLogin(request, isJuridica);
-        validarUnicidadeLogin(login, isJuridica, request);
+        validarUnicidadeLogin(login, isJuridica);
 
         if (isJuridica) {
             validarUnicidadeCnpj(request.cnpj());
@@ -548,7 +569,7 @@ public class AdminOrganizacaoService {
         return isJuridica ? limparCnpj(request.cnpj()) : limparCpf(request.cpf());
     }
 
-    private void validarUnicidadeLogin(String login, boolean isJuridica, CadastrarAdminOrgCompletoRequest request) {
+    private void validarUnicidadeLogin(String login, boolean isJuridica) {
         if (usuarioRepository.existsByLogin(login)) {
             String documento = isJuridica ? "CNPJ" : "CPF";
             throw new IllegalStateException(documento + " já cadastrado como login no sistema");
@@ -632,20 +653,19 @@ public class AdminOrganizacaoService {
     }
 
     private String limparCnpj(String cnpj) {
-        return cnpj.replaceAll("[^0-9]", "");
+        return cnpj.replaceAll("\\D", "");
     }
 
     private String gerarSenhaAleatoria() {
-        SecureRandom random = new SecureRandom();
         StringBuilder senha = new StringBuilder(TAMANHO_SENHA);
         for (int i = 0; i < TAMANHO_SENHA; i++) {
-            int index = random.nextInt(CARACTERES_SENHA.length());
+            int index = GERADOR_SENHA.nextInt(CARACTERES_SENHA.length());
             senha.append(CARACTERES_SENHA.charAt(index));
         }
         return senha.toString();
     }
 
     private String limparCpf(String cpf) {
-        return cpf.replaceAll("[^0-9]", "");
+        return cpf.replaceAll("\\D", "");
     }
 }

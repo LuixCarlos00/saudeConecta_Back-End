@@ -5,6 +5,8 @@ import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.usuario.Usuario;
 
+import java.util.function.Function;
+
 /**
  * DTO de resposta com dados completos do AdminOrg + Organização + Endereço.
  * Usado pelo SUPER_ADMIN ao visualizar/editar um tenant.
@@ -38,12 +40,11 @@ public record AdminOrgCompletoResponse(
 ) {
     public static AdminOrgCompletoResponse fromEntity(AdminOrganizacao admin) {
         Organizacao org = admin.getOrganizacao();
-        Endereco end = org != null ? org.getEndereco() : null;
-        Usuario usuario = admin.getUsuario();
+        Endereco end = valorOuNulo(org, Organizacao::getEndereco);
 
         // Se CNPJ for null ou vazio, retorna o CPF do usuário (login)
-        String cnpj = org != null ? org.getCnpj() : null;
-        String cpf = (cnpj == null || cnpj.isBlank()) && usuario != null ? usuario.getLogin() : null;
+        String cnpj = valorOuNulo(org, Organizacao::getCnpj);
+        String cpf = (cnpj == null || cnpj.isBlank()) ? valorOuNulo(admin.getUsuario(), Usuario::getLogin) : null;
 
         return new AdminOrgCompletoResponse(
             admin.getId(),
@@ -51,25 +52,30 @@ public record AdminOrgCompletoResponse(
             admin.getCargo(),
             admin.getEmail(),
             admin.getIsOwner(),
-            admin.getStatus() != null ? admin.getStatus().name() : null,
+            valorOuNulo(admin.getStatus(), Enum::name),
             // Organização
-            org != null ? org.getId() : null,
-            org != null ? org.getNome() : null,
-            org != null ? org.getRazaoSocial() : null,
+            valorOuNulo(org, Organizacao::getId),
+            valorOuNulo(org, Organizacao::getNome),
+            valorOuNulo(org, Organizacao::getRazaoSocial),
             cnpj,
             cpf,
-            org != null && org.getTipo() != null ? org.getTipo().name() : null,
-            org != null ? org.getEmail() : null,
-            org != null ? org.getTelefone() : null,
+            valorOuNulo(valorOuNulo(org, Organizacao::getTipo), Enum::name),
+            valorOuNulo(org, Organizacao::getEmail),
+            valorOuNulo(org, Organizacao::getTelefone),
             // Endereço
-            end != null ? end.getEndCodigo() : null,
-            end != null ? end.getEndCep() : null,
-            end != null ? end.getEndUF() : null,
-            end != null ? end.getEndMunicipio() : null,
-            end != null ? end.getEndBairro() : null,
-            end != null ? end.getEndRua() : null,
-            end != null ? end.getEndNumero() : null,
-            end != null ? end.getEndComplemento() : null
+            valorOuNulo(end, Endereco::getEndCodigo),
+            valorOuNulo(end, Endereco::getEndCep),
+            valorOuNulo(end, Endereco::getEndUF),
+            valorOuNulo(end, Endereco::getEndMunicipio),
+            valorOuNulo(end, Endereco::getEndBairro),
+            valorOuNulo(end, Endereco::getEndRua),
+            valorOuNulo(end, Endereco::getEndNumero),
+            valorOuNulo(end, Endereco::getEndComplemento)
         );
+    }
+
+    /** Aplica o extrator ao objeto, ou devolve nulo quando o objeto é nulo. */
+    private static <T, R> R valorOuNulo(T origem, Function<T, R> extrator) {
+        return origem != null ? extrator.apply(origem) : null;
     }
 }

@@ -27,18 +27,13 @@ public class EmailMensageriaService {
     /**
      * Registra o sucesso de envio de email na mensageria.
      *
-     * @param organizacaoId  ID da organização
-     * @param entidadeId     ID da entidade destinatária (profissional, secretária, admin ou paciente)
-     * @param email          email do destinatário
-     * @param nome           nome do destinatário
-     * @param assunto        assunto do email
-     * @param corpo          corpo da mensagem
-     * @param tipo           tipo da mensagem
-     * @param tentativas     número de tentativas até o sucesso
+     * @param envio      dados do envio (organização, destinatário, assunto, corpo e tipo)
+     * @param tentativas número de tentativas até o sucesso
      */
-    public void registrarSucesso(Long organizacaoId, Long entidadeId, String email,
-                                  String nome, String assunto, String corpo,
-                                  TipoMensagem tipo, int tentativas) {
+    public void registrarSucesso(RegistroEnvioEmail envio, int tentativas) {
+        Long organizacaoId = envio.organizacaoId();
+        String email = envio.email();
+        TipoMensagem tipo = envio.tipo();
         if (organizacaoId == null) {
             log.debug("email.mensageria sucesso.registrar ignorado motivo=SEM_ORGANIZACAO email={}", MascaraLog.email(email));
             return;
@@ -50,11 +45,11 @@ public class EmailMensageriaService {
 
             Mensageria mensageria = Mensageria.builder()
                     .organizacao(organizacao)
-                    .destinatarioEntidadeId(entidadeId)
+                    .destinatarioEntidadeId(envio.entidadeId())
                     .destinatarioEmail(email)
-                    .destinatarioNome(nome)
-                    .assunto(assunto)
-                    .corpoMensagem(corpo)
+                    .destinatarioNome(envio.nome())
+                    .assunto(envio.assunto())
+                    .corpoMensagem(envio.corpo())
                     .tipoMensagem(tipo)
                     .status(StatusMensagem.ENVIADO)
                     .tentativas(tentativas)
@@ -71,19 +66,14 @@ public class EmailMensageriaService {
     /**
      * Registra a falha de envio de email na mensageria.
      *
-     * @param organizacaoId  ID da organização
-     * @param entidadeId     ID da entidade destinatária (profissional, secretária, admin ou paciente)
-     * @param email          email do destinatário
-     * @param nome           nome do destinatário
-     * @param assunto        assunto do email
-     * @param corpo          corpo da mensagem
-     * @param tipo           tipo da mensagem
-     * @param erroDetalhe    detalhe do erro
-     * @param tentativas     número de tentativas realizadas
+     * @param envio       dados do envio (organização, destinatário, assunto, corpo e tipo)
+     * @param erroDetalhe detalhe do erro
+     * @param tentativas  número de tentativas realizadas
      */
-    public void registrarFalha(Long organizacaoId, Long entidadeId, String email,
-                                String nome, String assunto, String corpo,
-                                TipoMensagem tipo, String erroDetalhe, int tentativas) {
+    public void registrarFalha(RegistroEnvioEmail envio, String erroDetalhe, int tentativas) {
+        Long organizacaoId = envio.organizacaoId();
+        String email = envio.email();
+        TipoMensagem tipo = envio.tipo();
         if (organizacaoId == null) {
             log.warn("email.mensageria falha.registrar negado motivo=SEM_ORGANIZACAO email={}", MascaraLog.email(email));
             return;
@@ -95,11 +85,11 @@ public class EmailMensageriaService {
 
             Mensageria mensageria = Mensageria.builder()
                     .organizacao(organizacao)
-                    .destinatarioEntidadeId(entidadeId)
+                    .destinatarioEntidadeId(envio.entidadeId())
                     .destinatarioEmail(email)
-                    .destinatarioNome(nome)
-                    .assunto(assunto)
-                    .corpoMensagem(corpo)
+                    .destinatarioNome(envio.nome())
+                    .assunto(envio.assunto())
+                    .corpoMensagem(envio.corpo())
                     .tipoMensagem(tipo)
                     .status(StatusMensagem.FALHOU)
                     .erroDetalhe(erroDetalhe)

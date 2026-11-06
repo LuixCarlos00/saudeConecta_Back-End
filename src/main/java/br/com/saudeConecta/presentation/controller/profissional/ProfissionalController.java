@@ -29,7 +29,7 @@ public class ProfissionalController {
 
     @PutMapping("/atualizarClinicoIdByOrg/{id}")
     @Description("Atualiza médico/clínico por ID dentro da organização. Gestor ou o próprio clínico (regra no service)")
-    public ResponseEntity<?> atualizarClinicoIdByOrg(@PathVariable Long id,
+    public ResponseEntity<ProfissionalResponse> atualizarClinicoIdByOrg(@PathVariable Long id,
                                                      @Valid @RequestBody AtualizarClinicoRequest request) {
         try {
             Profissional atualizado = profissionalService.atualizarClinicoIdByOrg(id, request);
@@ -43,7 +43,7 @@ public class ProfissionalController {
     @PostMapping("/cadastraClinicoByOrg")
     @PreAuthorize("hasRole('ADMIN')")
     @Description("Cadastra médico/clínico com CPF como login e envia credenciais por email. Utilizado em: CadastroMedicoComponent")
-    public ResponseEntity<?> cadastraClinicoByOrg(@Valid @RequestBody CadastrarClinicoRequest request) {
+    public ResponseEntity<ProfissionalResponse> cadastraClinicoByOrg(@Valid @RequestBody CadastrarClinicoRequest request) {
         Profissional profissional = profissionalService.cadastraClinicoByOrg(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ProfissionalResponse.fromEntity(profissional));
@@ -61,7 +61,7 @@ public class ProfissionalController {
     @DeleteMapping("/deletarClinicoIdByOrg/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     @Description("Deleta médico/clínico por ID")
-    public ResponseEntity<?> deletarClinicoIdByOrg(@PathVariable Long id) {
+    public ResponseEntity<Void> deletarClinicoIdByOrg(@PathVariable Long id) {
         try {
             profissionalService.deletarClinicoIdByOrg(id);
             return ResponseEntity.ok().build();

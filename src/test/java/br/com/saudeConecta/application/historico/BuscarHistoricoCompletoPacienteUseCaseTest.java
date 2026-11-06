@@ -103,7 +103,7 @@ class BuscarHistoricoCompletoPacienteUseCaseTest {
         @DisplayName("Deve filtrar por profissional quando informado")
         void deveFiltrarPorProfissional() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(1L);
-            when(consultaRepository.findHistoricoCompletoPaciente(eq(10L), eq(1L), eq(5L)))
+            when(consultaRepository.findHistoricoCompletoPaciente(10L, 1L, 5L))
                     .thenReturn(Collections.emptyList());
 
             useCase.executar(10L, 5L);
@@ -229,7 +229,7 @@ class BuscarHistoricoCompletoPacienteUseCaseTest {
         @DisplayName("Deve filtrar por profissional quando informado")
         void deveFiltrarPorProfissional() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(1L);
-            when(consultaRepository.findHistoricoCompletoPacienteMedico(eq(10L), eq(1L), eq(7L)))
+            when(consultaRepository.findHistoricoCompletoPacienteMedico(10L, 1L, 7L))
                     .thenReturn(Collections.emptyList());
 
             useCase.executar(10L, 7L);

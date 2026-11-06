@@ -25,7 +25,7 @@ public class PacienteApiController {
     private final PacienteService pacienteService;
 
     @PostMapping("/cadastrarPacientebyOrg")
-    public ResponseEntity<?> cadastrarPacientebyOrg(
+    public ResponseEntity<PacienteResponse> cadastrarPacientebyOrg(
             @Valid @RequestBody CadastrarPacienteCompletoRequest request) {
         // Conflito (IllegalStateException) vira 409 e erro inesperado vira 500 no GlobalExceptionHandler
         Paciente paciente = pacienteService.cadastrarPacientebyOrg(request);
@@ -40,7 +40,7 @@ public class PacienteApiController {
     }
 
     @PutMapping("/atualizarPacientebyOrg/{id}")
-    public ResponseEntity<PacienteResponse> buscarrPatualizarPacientebyOrgacientebyOrg(
+    public ResponseEntity<PacienteResponse> atualizarPacientebyOrg(
             @PathVariable Long id,
             @Valid @RequestBody AtualizarPacienteRequest request) {
 
@@ -93,7 +93,7 @@ public class PacienteApiController {
     }
 
     @GetMapping("/buscar-por-rg")
-    public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPor_RG(
+    public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPorRG(
             @RequestParam String rg,
             @RequestParam(required = false, defaultValue = "ALL") String filtro) {
         List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorRGComFiltro(rg, filtro)

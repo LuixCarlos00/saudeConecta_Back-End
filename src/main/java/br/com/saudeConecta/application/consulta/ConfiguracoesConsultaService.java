@@ -82,7 +82,7 @@ public class ConfiguracoesConsultaService {
 
         ConfiguracoesConsulta config = ConfiguracoesConsulta.builder()
                 .organizacao(organizacao)
-                .pularParaConfirmado(pularParaConfirmado != null ? pularParaConfirmado : false)
+                .pularParaConfirmado(Boolean.TRUE.equals(pularParaConfirmado))
                 .descricao(descricao != null ? descricao : "Configuração de fluxo de consulta")
                 .build();
 

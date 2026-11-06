@@ -29,6 +29,7 @@ import java.util.concurrent.Executor;
 @Service
 @Slf4j
 public class EmailNotificacaoService {
+    private static final String PERFIL_ADMINISTRADOR = "Administrador";
 
     private static final String TEMPLATE_CREDENCIAIS = "email-credenciais";
     private static final String TEMPLATE_RECUPERACAO = "email-recuperacao-senha";
@@ -74,8 +75,8 @@ public class EmailNotificacaoService {
     @Async
     public void enviarCredenciaisAdministrador(String email, String nome, String login,
                                                 String senha, Long organizacaoId, Long adminOrgId) {
-        enviarCredenciais(email, nome, login, senha, "Administrador",
-                COR_ADMINISTRADOR, null, organizacaoId, adminOrgId);
+        enviarCredenciais(new CredenciaisEmail(email, nome, login, senha, PERFIL_ADMINISTRADOR,
+                COR_ADMINISTRADOR, null, organizacaoId, adminOrgId));
     }
 
     /**
@@ -92,8 +93,8 @@ public class EmailNotificacaoService {
     @Async
     public void enviarCredenciaisClinico(String email, String nome, String login, String senha,
                                           String nomeOrganizacao, Long organizacaoId, Long profissionalId) {
-        enviarCredenciais(email, nome, login, senha, "Médico",
-                COR_MEDICO, nomeOrganizacao, organizacaoId, profissionalId);
+        enviarCredenciais(new CredenciaisEmail(email, nome, login, senha, "Médico",
+                COR_MEDICO, nomeOrganizacao, organizacaoId, profissionalId));
     }
 
     /**
@@ -109,8 +110,8 @@ public class EmailNotificacaoService {
     @Async
     public void enviarCredenciaisSecretaria(String email, String nome, String login, String senha,
                                              Long organizacaoId, Long secretariaId) {
-        enviarCredenciais(email, nome, login, senha, "Secretária",
-                COR_SECRETARIA, null, organizacaoId, secretariaId);
+        enviarCredenciais(new CredenciaisEmail(email, nome, login, senha, "Secretária",
+                COR_SECRETARIA, null, organizacaoId, secretariaId));
     }
 
     /**
@@ -153,24 +154,14 @@ public class EmailNotificacaoService {
     /**
      * Envia a confirmação de abertura de um chamado de suporte de forma assíncrona.
      *
-     * @param email               email do usuário que abriu o chamado
-     * @param nome                nome do usuário que abriu o chamado
-     * @param protocolo           protocolo legível do chamado
-     * @param titulo              título do chamado
-     * @param corpo               descrição do chamado
-     * @param categoria           descrição da categoria
-     * @param prioridade          descrição da prioridade
-     * @param status              descrição do status atual
-     * @param prazoDias           prazo previsto em dias
-     * @param previsaoAtendimento data prevista de atendimento formatada
-     * @param quantidadeAnexos    quantidade de imagens anexadas
-     * @param organizacaoId       ID da organização
+     * @param dados dados do chamado e do destinatário
      */
     @Async
-    public void enviarConfirmacaoChamadoSuporte(String email, String nome, String protocolo, String titulo,
-                                                 String corpo, String categoria, String prioridade, String status,
-                                                 int prazoDias, String previsaoAtendimento, int quantidadeAnexos,
-                                                 Long organizacaoId) {
+    public void enviarConfirmacaoChamadoSuporte(DadosEmailConfirmacaoChamado dados) {
+        String email = dados.email();
+        String nome = dados.nome();
+        String protocolo = dados.protocolo();
+        String previsaoAtendimento = dados.previsaoAtendimento();
         if (!emailHabilitado) {
             log.warn("email.chamado negado motivo=EMAIL_DESABILITADO email={}", MascaraLog.email(email));
             log.debug("email.chamado desabilitado protocolo={} previsao={}", protocolo, previsaoAtendimento);
@@ -182,21 +173,21 @@ public class EmailNotificacaoService {
                 Map<String, Object> variaveis = new HashMap<>();
                 variaveis.put("nome", nome);
                 variaveis.put("protocolo", protocolo);
-                variaveis.put("titulo", titulo);
-                variaveis.put("corpo", corpo);
-                variaveis.put("categoria", categoria);
-                variaveis.put("prioridade", prioridade);
-                variaveis.put("status", status);
-                variaveis.put("prazoDias", prazoDias);
+                variaveis.put("titulo", dados.titulo());
+                variaveis.put("corpo", dados.corpo());
+                variaveis.put("categoria", dados.categoria());
+                variaveis.put("prioridade", dados.prioridade());
+                variaveis.put("status", dados.status());
+                variaveis.put("prazoDias", dados.prazoDias());
                 variaveis.put("previsaoAtendimento", previsaoAtendimento);
-                variaveis.put("quantidadeAnexos", quantidadeAnexos);
+                variaveis.put("quantidadeAnexos", dados.quantidadeAnexos());
 
                 String corpoHtml = emailTemplateService.renderizar(TEMPLATE_CHAMADO, variaveis);
                 String assunto = "Saúde Conecta - Chamado " + protocolo + " registrado";
 
                 emailRetryService.executarComRetry(
                         email, nome, assunto, corpoHtml,
-                        "chamado", organizacaoId, null);
+                        "chamado", dados.organizacaoId(), null);
 
             } catch (Exception e) {
                 log.error("email.chamado falha protocolo={} email={}", protocolo, MascaraLog.email(email), e);
@@ -207,19 +198,15 @@ public class EmailNotificacaoService {
     /**
      * Notifica o autor do chamado sobre a atualização de status de forma assíncrona.
      *
-     * @param email          email do autor do chamado
-     * @param nome           nome do autor do chamado
-     * @param protocolo      protocolo legível do chamado
-     * @param titulo         título do chamado
-     * @param statusAnterior descrição do status anterior
-     * @param statusAtual    descrição do novo status
-     * @param observacao     mensagem opcional da equipe de suporte
-     * @param organizacaoId  ID da organização
+     * @param dados dados do chamado, da mudança de status e do destinatário
      */
     @Async
-    public void enviarAtualizacaoStatusChamado(String email, String nome, String protocolo, String titulo,
-                                                String statusAnterior, String statusAtual, String observacao,
-                                                Long organizacaoId) {
+    public void enviarAtualizacaoStatusChamado(DadosEmailAtualizacaoStatusChamado dados) {
+        String email = dados.email();
+        String nome = dados.nome();
+        String protocolo = dados.protocolo();
+        String statusAnterior = dados.statusAnterior();
+        String statusAtual = dados.statusAtual();
         if (!emailHabilitado) {
             log.warn("email.chamado.status negado motivo=EMAIL_DESABILITADO email={}", MascaraLog.email(email));
             log.debug("email.chamado.status desabilitado protocolo={} de={} para={}", protocolo, statusAnterior, statusAtual);
@@ -231,17 +218,17 @@ public class EmailNotificacaoService {
                 Map<String, Object> variaveis = new HashMap<>();
                 variaveis.put("nome", nome);
                 variaveis.put("protocolo", protocolo);
-                variaveis.put("titulo", titulo);
+                variaveis.put("titulo", dados.titulo());
                 variaveis.put("statusAnterior", statusAnterior);
                 variaveis.put("statusAtual", statusAtual);
-                variaveis.put("observacao", observacao);
+                variaveis.put("observacao", dados.observacao());
 
                 String corpoHtml = emailTemplateService.renderizar(TEMPLATE_CHAMADO_STATUS, variaveis);
                 String assunto = "Saúde Conecta - Chamado " + protocolo + ": " + statusAtual;
 
                 emailRetryService.executarComRetry(
                         email, nome, assunto, corpoHtml,
-                        "chamado", organizacaoId, null);
+                        "chamado", dados.organizacaoId(), null);
 
             } catch (Exception e) {
                 log.error("email.chamado.status falha protocolo={} email={}",
@@ -253,20 +240,15 @@ public class EmailNotificacaoService {
     /**
      * Envia o link do checkout hospedado do Mercado Pago antes do fim do trial.
      *
-     * @param email         email do administrador responsável
-     * @param nome          nome do administrador
-     * @param plano         nome do plano contratado
-     * @param valorMensal   valor que será cobrado mensalmente
-     * @param initPoint     URL do checkout do Mercado Pago
-     * @param payerEmail    e-mail que deve estar vinculado à conta Mercado Pago do pagador
-     * @param dataFimTrial  data em que o período gratuito termina
-     * @param organizacaoId ID da organização
-     * @param adminOrgId    ID do admin da organização
+     * @param dados dados da assinatura, do link de checkout e do destinatário
      */
     @Async
-    public void enviarLinkAtivacaoAssinatura(String email, String nome, String plano,
-                                              BigDecimal valorMensal, String initPoint, String payerEmail,
-                                              LocalDate dataFimTrial, Long organizacaoId, Long adminOrgId) {
+    public void enviarLinkAtivacaoAssinatura(DadosEmailAtivacaoAssinatura dados) {
+        String email = dados.email();
+        String nome = dados.nome();
+        String plano = dados.plano();
+        String initPoint = dados.initPoint();
+        LocalDate dataFimTrial = dados.dataFimTrial();
         if (!emailHabilitado) {
             log.warn("email.ativacao negado motivo=EMAIL_DESABILITADO email={}", MascaraLog.email(email));
             log.debug("email.ativacao desabilitado plano={} link={}", plano, MascaraLog.token(initPoint));
@@ -278,9 +260,9 @@ public class EmailNotificacaoService {
                 Map<String, Object> variaveis = new HashMap<>();
                 variaveis.put("nome", nome);
                 variaveis.put("plano", plano);
-                variaveis.put("valorMensal", formatarMoeda(valorMensal));
+                variaveis.put("valorMensal", formatarMoeda(dados.valorMensal()));
                 variaveis.put("initPoint", initPoint);
-                variaveis.put("payerEmail", payerEmail);
+                variaveis.put("payerEmail", dados.payerEmail());
                 variaveis.put("dataFimTrial", dataFimTrial != null
                         ? dataFimTrial.format(FORMATO_DATA) : "");
 
@@ -288,7 +270,7 @@ public class EmailNotificacaoService {
 
                 emailRetryService.executarComRetry(
                         email, nome, ASSUNTO_ATIVACAO_ASSINATURA, corpoHtml,
-                        "Administrador", organizacaoId, adminOrgId);
+                        PERFIL_ADMINISTRADOR, dados.organizacaoId(), dados.adminOrgId());
 
             } catch (Exception e) {
                 log.error("email.ativacao falha email={}", MascaraLog.email(email), e);
@@ -343,17 +325,20 @@ public class EmailNotificacaoService {
     @Async
     public void enviarCredenciaisPaciente(String email, String nome, String login, String senha,
                                            Long organizacaoId, Long pacienteId) {
-        enviarCredenciais(email, nome, login, senha, "Paciente",
-                COR_PACIENTE, null, organizacaoId, pacienteId);
+        enviarCredenciais(new CredenciaisEmail(email, nome, login, senha, "Paciente",
+                COR_PACIENTE, null, organizacaoId, pacienteId));
     }
 
     /**
      * Método interno que centraliza o envio de credenciais para qualquer tipo de usuário.
      * Renderiza o template unificado e delega ao retry service.
      */
-    private void enviarCredenciais(String email, String nome, String login, String senha,
-                                    String tipoUsuario, String corTema, String nomeOrganizacao,
-                                    Long organizacaoId, Long entidadeId) {
+    private void enviarCredenciais(CredenciaisEmail dados) {
+        String email = dados.email();
+        String nome = dados.nome();
+        String login = dados.login();
+        String senha = dados.senha();
+        String tipoUsuario = dados.tipoUsuario();
         if (!emailHabilitado) {
             log.warn("email.credenciais negado motivo=EMAIL_DESABILITADO tipo={} login={} email={}",
                     tipoUsuario, MascaraLog.cpf(login), MascaraLog.email(email));
@@ -367,15 +352,15 @@ public class EmailNotificacaoService {
                 variaveis.put("login", login);
                 variaveis.put("senha", senha);
                 variaveis.put("tipoUsuario", tipoUsuario);
-                variaveis.put("corTema", corTema);
-                variaveis.put("nomeOrganizacao", nomeOrganizacao);
+                variaveis.put("corTema", dados.corTema());
+                variaveis.put("nomeOrganizacao", dados.nomeOrganizacao());
 
                 String corpoHtml = emailTemplateService.renderizar(TEMPLATE_CREDENCIAIS, variaveis);
 
                 String tipoMensageria = resolverTipoMensageria(tipoUsuario);
                 emailRetryService.executarComRetry(
                         email, nome, ASSUNTO_CREDENCIAIS, corpoHtml,
-                        tipoMensageria, organizacaoId, entidadeId);
+                        tipoMensageria, dados.organizacaoId(), dados.entidadeId());
 
             } catch (Exception e) {
                 log.error("email.credenciais falha tipo={} email={}",
@@ -385,11 +370,29 @@ public class EmailNotificacaoService {
     }
 
     /**
+     * Dados internos de um email de credenciais, agrupados para o método unificado de envio.
+     *
+     * @param email           email do destinatário
+     * @param nome            nome do destinatário
+     * @param login           login de acesso
+     * @param senha           senha gerada
+     * @param tipoUsuario     label amigável do perfil (Administrador, Médico, Secretária, Paciente)
+     * @param corTema         cor do tema do email
+     * @param nomeOrganizacao nome da organização (pode ser nulo)
+     * @param organizacaoId   ID da organização
+     * @param entidadeId      ID da entidade destinatária
+     */
+    private record CredenciaisEmail(String email, String nome, String login, String senha,
+                                    String tipoUsuario, String corTema, String nomeOrganizacao,
+                                    Long organizacaoId, Long entidadeId) {
+    }
+
+    /**
      * Converte o label amigável do tipo de usuário para a chave usada na mensageria.
      */
     private String resolverTipoMensageria(String tipoUsuario) {
         return switch (tipoUsuario) {
-            case "Administrador" -> "administrador";
+            case PERFIL_ADMINISTRADOR -> "administrador";
             case "Médico" -> "medico";
             case "Secretária" -> "secretaria";
             case "Paciente" -> "paciente";

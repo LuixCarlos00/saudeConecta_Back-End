@@ -102,7 +102,8 @@ class AutenticacaoServiceTest {
         when(auditoriaAcessoMasterRepository.save(any())).thenThrow(new RuntimeException("banco fora"));
         when(authenticationManager.authenticate(any())).thenThrow(new BadCredentialsException("x"));
 
-        assertThatThrownBy(() -> service.autenticar(new DadosLoginUsuario("alvo", "senha-master", null), "ip"))
+        var dados = new DadosLoginUsuario("alvo", "senha-master", null);
+        assertThatThrownBy(() -> service.autenticar(dados, "ip"))
                 .isInstanceOf(BadCredentialsException.class);
         verify(tokenService, never()).gerarToken(any(Usuario.class), any(), any(), any(), any());
     }
@@ -263,7 +264,8 @@ class AutenticacaoServiceTest {
         when(passwordEncoder.matches("senha-master", "hash-root")).thenReturn(true);
         when(usuarioRepository.findUsuarioByLogin("11122233344")).thenReturn(alvo);
 
-        assertThatThrownBy(() -> service.autenticar(new DadosLoginUsuario("11122233344", "senha-master", null), "ip"))
+        var dados = new DadosLoginUsuario("11122233344", "senha-master", null);
+        assertThatThrownBy(() -> service.autenticar(dados, "ip"))
                 .isInstanceOf(org.springframework.security.authentication.DisabledException.class);
         verifyNoInteractions(auditoriaAcessoMasterRepository, tokenService, authenticationManager);
     }

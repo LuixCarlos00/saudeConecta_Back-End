@@ -1,5 +1,6 @@
 package br.com.saudeConecta.application.consulta;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.config.tenant.RequiresTenant;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.common.Periodo;
@@ -67,11 +68,11 @@ public class ConsultaBuscaService {
      * @return Lista de consultas do dia de referência
      */
     @RequiresTenant
-    @Cacheable(value = "consultas-hoje-org", key = "@tenantHelper.getCurrentTenantId() + '-' + (#profissionalId != null ? #profissionalId : 'all') + '-' + (#data != null ? #data : java.time.LocalDate.now())")
+    @Cacheable(value = "consultas-hoje-org", key = "@tenantHelper.getCurrentTenantId() + '-' + (#profissionalId != null ? #profissionalId : 'all') + '-' + (#data != null ? #data : java.time.LocalDate.now(FusoHorario.ZONA))")
     @Transactional(readOnly = true)
     public List<Consulta> buscarConsultasHoje(LocalDate data, Long profissionalId) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        LocalDate referencia = data != null ? data : LocalDate.now();
+        LocalDate referencia = data != null ? data : LocalDate.now(FusoHorario.ZONA);
         Periodo dia = Periodo.dia(referencia);
         return consultaRepository.findByOrganizacaoIdAndPeriodo(orgId, profissionalId, dia.inicio(), dia.fim());
     }
@@ -83,7 +84,7 @@ public class ConsultaBuscaService {
         return buscarConsultasHoje(data, profissionalId);
     }
 
-    @Cacheable(value = "consultas-hoje-org", key = "@tenantHelper.getCurrentTenantId() + '-' + (#data != null ? #data : java.time.LocalDate.now())")
+    @Cacheable(value = "consultas-hoje-org", key = "@tenantHelper.getCurrentTenantId() + '-' + (#data != null ? #data : java.time.LocalDate.now(FusoHorario.ZONA))")
     @Transactional(readOnly = true)
     public List<Consulta> buscarConsultasHoje(LocalDate data) {
         return buscarConsultasHoje(data, (Long) null);
@@ -96,11 +97,11 @@ public class ConsultaBuscaService {
      * @return Lista de consultas da semana de referência
      */
     @RequiresTenant
-    @Cacheable(value = "consultas-semana-org", key = "@tenantHelper.getCurrentTenantId() + '-' + (#profissionalId != null ? #profissionalId : 'all') + '-' + (#data != null ? #data : java.time.LocalDate.now())")
+    @Cacheable(value = "consultas-semana-org", key = "@tenantHelper.getCurrentTenantId() + '-' + (#profissionalId != null ? #profissionalId : 'all') + '-' + (#data != null ? #data : java.time.LocalDate.now(FusoHorario.ZONA))")
     @Transactional(readOnly = true)
     public List<Consulta> buscarConsultasDaSemanaAtual(LocalDate data, Long profissionalId) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        LocalDate referencia = data != null ? data : LocalDate.now();
+        LocalDate referencia = data != null ? data : LocalDate.now(FusoHorario.ZONA);
         Periodo semana = Periodo.semanaDe(referencia);
         return consultaRepository.findByOrganizacaoIdAndPeriodo(orgId, profissionalId, semana.inicio(), semana.fim());
     }
@@ -113,7 +114,7 @@ public class ConsultaBuscaService {
     }
 
     @RequiresTenant
-    @Cacheable(value = "consultas-semana-org", key = "@tenantHelper.getCurrentTenantId() + '-' + (#data != null ? #data : java.time.LocalDate.now())")
+    @Cacheable(value = "consultas-semana-org", key = "@tenantHelper.getCurrentTenantId() + '-' + (#data != null ? #data : java.time.LocalDate.now(FusoHorario.ZONA))")
     @Transactional(readOnly = true)
     public List<Consulta> buscarConsultasDaSemanaAtual(LocalDate data) {
         return buscarConsultasDaSemanaAtual(data, (Long) null);
@@ -126,11 +127,11 @@ public class ConsultaBuscaService {
      * @return Lista de consultas do mês de referência
      */
     @RequiresTenant
-    @Cacheable(value = "consultas-mes-org", key = "@tenantHelper.getCurrentTenantId() + '-' + (#profissionalId != null ? #profissionalId : 'all') + '-' + (#data != null ? #data : java.time.LocalDate.now())")
+    @Cacheable(value = "consultas-mes-org", key = "@tenantHelper.getCurrentTenantId() + '-' + (#profissionalId != null ? #profissionalId : 'all') + '-' + (#data != null ? #data : java.time.LocalDate.now(FusoHorario.ZONA))")
     @Transactional(readOnly = true)
     public List<Consulta> buscarConsultasDoMesAtual(LocalDate data, Long profissionalId) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        LocalDate referencia = data != null ? data : LocalDate.now();
+        LocalDate referencia = data != null ? data : LocalDate.now(FusoHorario.ZONA);
         Periodo mes = Periodo.mesDe(referencia);
         return consultaRepository.findByOrganizacaoIdAndPeriodo(orgId, profissionalId, mes.inicio(), mes.fim());
     }
@@ -143,7 +144,7 @@ public class ConsultaBuscaService {
     }
 
     @RequiresTenant
-    @Cacheable(value = "consultas-mes-org", key = "@tenantHelper.getCurrentTenantId() + '-' + (#data != null ? #data : java.time.LocalDate.now())")
+    @Cacheable(value = "consultas-mes-org", key = "@tenantHelper.getCurrentTenantId() + '-' + (#data != null ? #data : java.time.LocalDate.now(FusoHorario.ZONA))")
     @Transactional(readOnly = true)
     public List<Consulta> buscarConsultasDoMesAtual(LocalDate data) {
         return buscarConsultasDoMesAtual(data, (Long) null);
@@ -154,7 +155,7 @@ public class ConsultaBuscaService {
     @Transactional(readOnly = true)
     public List<Consulta> buscarConsultasDoAnoAtual() {
         Long orgId = tenantHelper.getCurrentTenantId();
-        Periodo ano = Periodo.anoDe(LocalDate.now());
+        Periodo ano = Periodo.anoDe(LocalDate.now(FusoHorario.ZONA));
         return consultaRepository.findByOrganizacaoIdAndPeriodo(orgId, ano.inicio(), ano.fim());
     }
 
@@ -277,7 +278,7 @@ public class ConsultaBuscaService {
         log.debug("consulta.buscar periodo usuarioId={} tipoPeriodo={}",
                 usuarioId, tipoPeriodo);
 
-        LocalDate hoje = LocalDate.now();
+        LocalDate hoje = LocalDate.now(FusoHorario.ZONA);
         Periodo periodo = switch (tipoPeriodo.toLowerCase()) {
             case "diario" -> Periodo.dia(hoje);
             case "semanal" -> Periodo.semanaDe(hoje);   // segunda a domingo

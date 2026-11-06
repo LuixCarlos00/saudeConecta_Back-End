@@ -31,6 +31,7 @@ import java.util.function.Predicate;
  */
 @Component
 public class ProcessadorReguaCobranca {
+    private static final String MSG_ASSINATURA_NAO_ENCONTRADA = "Assinatura não encontrada: ";
 
     private static final Logger log = LoggerFactory.getLogger(ProcessadorReguaCobranca.class);
 
@@ -120,10 +121,6 @@ public class ProcessadorReguaCobranca {
     }
 
     /**
-     * Relê a assinatura com PESSIMISTIC_WRITE (a linha fica travada até o fim da transação)
-     * e confere a condição do lote. Cortesia sempre tira a assinatura da régua.
-     */
-    /**
      * Cortesia antiga com preapproval vinculado: desvincula e agenda o cancelamento no MP para
      * depois do commit (com a regra de pendência manual para authorized ou pago). A linha é
      * relida travada para decidir sobre o estado atual.
@@ -135,7 +132,7 @@ public class ProcessadorReguaCobranca {
     public boolean limparPreapprovalDeCortesia(Long assinaturaId) {
         AssinaturaTenant atual = assinaturaTenantRepository.findByIdParaAtualizacao(assinaturaId)
                 .orElseThrow(() -> new BusinessException(
-                        "Assinatura não encontrada: " + assinaturaId, HttpStatus.NOT_FOUND));
+                        MSG_ASSINATURA_NAO_ENCONTRADA + assinaturaId, HttpStatus.NOT_FOUND));
         if (!atual.isCortesia() || !atual.temPreapproval()) {
             return false;
         }
@@ -144,10 +141,14 @@ public class ProcessadorReguaCobranca {
         return true;
     }
 
+    /**
+     * Relê a assinatura com PESSIMISTIC_WRITE (a linha fica travada até o fim da transação)
+     * e confere a condição do lote. Cortesia sempre tira a assinatura da régua.
+     */
     private boolean aindaValida(Long assinaturaId, String acao, Predicate<AssinaturaTenant> condicao) {
         AssinaturaTenant atual = assinaturaTenantRepository.findByIdParaAtualizacao(assinaturaId)
                 .orElseThrow(() -> new BusinessException(
-                        "Assinatura não encontrada: " + assinaturaId, HttpStatus.NOT_FOUND));
+                        MSG_ASSINATURA_NAO_ENCONTRADA + assinaturaId, HttpStatus.NOT_FOUND));
 
         if (atual.isCortesia() || !condicao.test(atual)) {
             log.debug("cobranca.regua ignorado motivo=ESTADO_MUDOU acao={} assinaturaId={} status={}",
@@ -165,6 +166,6 @@ public class ProcessadorReguaCobranca {
     private AssinaturaTenant buscar(Long assinaturaId) {
         return assinaturaTenantRepository.findById(assinaturaId)
                 .orElseThrow(() -> new BusinessException(
-                        "Assinatura não encontrada: " + assinaturaId, HttpStatus.NOT_FOUND));
+                        MSG_ASSINATURA_NAO_ENCONTRADA + assinaturaId, HttpStatus.NOT_FOUND));
     }
 }

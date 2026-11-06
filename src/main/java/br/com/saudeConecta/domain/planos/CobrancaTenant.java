@@ -1,5 +1,6 @@
 package br.com.saudeConecta.domain.planos;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
@@ -72,7 +73,7 @@ public class CobrancaTenant implements Serializable {
 
     @PrePersist
     protected void onCreate() {
-        criadaEm = LocalDateTime.now();
+        criadaEm = LocalDateTime.now(FusoHorario.ZONA);
     }
 
     /**

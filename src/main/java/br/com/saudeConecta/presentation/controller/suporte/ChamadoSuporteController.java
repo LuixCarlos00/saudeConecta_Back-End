@@ -37,7 +37,7 @@ public class ChamadoSuporteController {
      * @return chamado criado
      */
     @PostMapping
-    public ResponseEntity<?> cadastrar(@RequestBody @Valid ChamadoSuporteRequest request) {
+    public ResponseEntity<Object> cadastrar(@RequestBody @Valid ChamadoSuporteRequest request) {
         try {
             ChamadoSuporteResponse response = chamadoSuporteService.cadastrar(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -91,7 +91,7 @@ public class ChamadoSuporteController {
      * @return chamado atualizado
      */
     @PatchMapping("/{id}/status")
-    public ResponseEntity<?> atualizarStatus(@PathVariable String id,
+    public ResponseEntity<Object> atualizarStatus(@PathVariable String id,
                                              @RequestBody @Valid AtualizarStatusChamadoRequest request) {
         try {
             return ResponseEntity.ok(chamadoSuporteService.atualizarStatus(id, request));

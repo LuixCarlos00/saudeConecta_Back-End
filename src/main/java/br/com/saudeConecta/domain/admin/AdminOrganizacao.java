@@ -1,5 +1,6 @@
 package br.com.saudeConecta.domain.admin;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -65,7 +66,7 @@ public class AdminOrganizacao implements Serializable {
     
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now(FusoHorario.ZONA);
     }
     
     public boolean isAtivo() {

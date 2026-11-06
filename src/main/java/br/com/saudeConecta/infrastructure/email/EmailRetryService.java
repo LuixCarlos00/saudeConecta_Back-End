@@ -1,6 +1,7 @@
 package br.com.saudeConecta.infrastructure.email;
 
 import br.com.saudeConecta.application.notificacao.EmailMensageriaService;
+import br.com.saudeConecta.application.notificacao.RegistroEnvioEmail;
 import br.com.saudeConecta.config.logging.MascaraLog;
 
 import br.com.saudeConecta.domain.mensageria.TipoMensagem;
@@ -45,46 +46,55 @@ public class EmailRetryService {
     public void executarComRetry(String destinatario, String nome, String assunto,
                                   String corpoHtml, String tipoUsuario,
                                   Long organizacaoId, Long entidadeId) {
-        executarTentativa(destinatario, nome, assunto, corpoHtml, tipoUsuario,
-                organizacaoId, entidadeId, 1);
+        executarTentativa(new EnvioEmail(destinatario, nome, assunto, corpoHtml, tipoUsuario,
+                organizacaoId, entidadeId), 1);
     }
 
     /**
      * Executa uma tentativa de envio. Em caso de falha, agenda a próxima tentativa
      * com delay exponencial. Após esgotar tentativas, registra falha na mensageria.
      */
-    private void executarTentativa(String destinatario, String nome, String assunto,
-                                    String corpoHtml, String tipoUsuario,
-                                    Long organizacaoId, Long entidadeId, int tentativa) {
+    private void executarTentativa(EnvioEmail envio, int tentativa) {
+        String destinatario = envio.destinatario();
+        String tipoUsuario = envio.tipoUsuario();
         try {
             log.debug("email.enviar tentativa={}/{} email={} tipo={}", tentativa, MAX_TENTATIVAS, MascaraLog.email(destinatario), tipoUsuario);
-            emailRemetenteService.enviarHtml(destinatario, assunto, corpoHtml);
+            emailRemetenteService.enviarHtml(destinatario, envio.assunto(), envio.corpoHtml());
 
             log.info("email.enviar ok tentativa={} email={}", tentativa, MascaraLog.email(destinatario));
             TipoMensagem tipo = emailMensageriaService.resolverTipoMensagem(tipoUsuario);
-            emailMensageriaService.registrarSucesso(
-                    organizacaoId, entidadeId, destinatario, nome, assunto, corpoHtml, tipo, tentativa);
+            emailMensageriaService.registrarSucesso(paraRegistro(envio, tipo), tentativa);
 
         } catch (Exception e) {
 
             if (tentativa >= MAX_TENTATIVAS) {
                 log.error("email.enviar falha tentativas={} email={} tipo={}", MAX_TENTATIVAS, MascaraLog.email(destinatario), tipoUsuario, e);
                 TipoMensagem tipo = emailMensageriaService.resolverTipoMensagem(tipoUsuario);
-                emailMensageriaService.registrarFalha(
-                        organizacaoId, entidadeId, destinatario, nome, assunto, corpoHtml,
-                        tipo, "Falha no envio após " + MAX_TENTATIVAS + " tentativas: " + e.getMessage(),
+                emailMensageriaService.registrarFalha(paraRegistro(envio, tipo),
+                        "Falha no envio após " + MAX_TENTATIVAS + " tentativas: " + e.getMessage(),
                         MAX_TENTATIVAS);
                 return;
             }
 
-            long delayMs = DELAY_INICIAL_MS * (long) Math.pow(2, tentativa - 1);
+            long delayMs = DELAY_INICIAL_MS * (1L << (tentativa - 1));
             log.warn("email.enviar nova.tentativa tentativa={}/{} proximaEmMs={} email={} tipo={} causa={}",
                     tentativa, MAX_TENTATIVAS, delayMs, MascaraLog.email(destinatario), tipoUsuario, e.getClass().getSimpleName());
 
             CompletableFuture.delayedExecutor(delayMs, TimeUnit.MILLISECONDS).execute(comMdc(() ->
-                    executarTentativa(destinatario, nome, assunto, corpoHtml, tipoUsuario,
-                            organizacaoId, entidadeId, tentativa + 1)));
+                    executarTentativa(envio, tentativa + 1)));
         }
+    }
+
+    /**
+     * Converte os dados do envio no registro de mensageria correspondente.
+     *
+     * @param envio dados do envio
+     * @param tipo  tipo da mensagem já resolvido
+     * @return registro a ser gravado na mensageria
+     */
+    private static RegistroEnvioEmail paraRegistro(EnvioEmail envio, TipoMensagem tipo) {
+        return new RegistroEnvioEmail(envio.organizacaoId(), envio.entidadeId(), envio.destinatario(),
+                envio.nome(), envio.assunto(), envio.corpoHtml(), tipo);
     }
 
     // ==========================================
@@ -128,7 +138,7 @@ public class EmailRetryService {
                 return;
             }
 
-            long delayMs = DELAY_INICIAL_MS * (long) Math.pow(2, tentativa - 1);
+            long delayMs = DELAY_INICIAL_MS * (1L << (tentativa - 1));
             log.warn("email.reenviar nova.tentativa tentativa={}/{} proximaEmMs={} mensageriaId={} email={} causa={}",
                     tentativa, MAX_TENTATIVAS, delayMs, mensageriaId, MascaraLog.email(destinatario), e.getClass().getSimpleName());
 

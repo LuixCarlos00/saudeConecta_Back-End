@@ -1,5 +1,6 @@
 package br.com.saudeConecta.domain.planos;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -110,7 +111,7 @@ public class MpWebhookEvento implements Serializable {
     @PrePersist
     protected void onCreate() {
         if (recebidoEm == null) {
-            recebidoEm = LocalDateTime.now();
+            recebidoEm = LocalDateTime.now(FusoHorario.ZONA);
         }
     }
 

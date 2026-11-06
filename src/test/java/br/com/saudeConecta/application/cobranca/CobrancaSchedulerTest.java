@@ -293,8 +293,7 @@ class CobrancaSchedulerTest {
                 .filter(m -> m.isAnnotationPresent(org.springframework.scheduling.annotation.Scheduled.class))
                 .toList();
 
-        assertThat(agendados).isNotEmpty();
-        assertThat(agendados).allSatisfy(m -> assertThat(
+        assertThat(agendados).isNotEmpty().allSatisfy(m -> assertThat(
                 m.getAnnotation(org.springframework.scheduling.annotation.Scheduled.class).zone())
                 .isEqualTo("America/Sao_Paulo"));
     }

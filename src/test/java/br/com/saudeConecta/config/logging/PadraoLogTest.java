@@ -47,7 +47,8 @@ class PadraoLogTest {
     private static final Pattern VARIAVEL_DE_EXCECAO =
             Pattern.compile("e|ex|erro|exception|t");
     private static final Pattern PLACEHOLDER_SENSIVEL =
-            Pattern.compile("[A-Za-z0-9_]*(email|cpf|token|login|telefone|destinatario)[A-Za-z0-9_]*=\\{}",
+            // Usado com find(): o prefixo do nome não importa, e o sufixo possessivo evita backtracking (S8786)
+            Pattern.compile("(?:email|cpf|token|login|telefone|destinatario)\\w*+=\\{}",
                     Pattern.CASE_INSENSITIVE);
     private static final int JANELA_CHAVE = 40;
 

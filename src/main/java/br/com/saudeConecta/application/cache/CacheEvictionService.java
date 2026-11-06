@@ -5,7 +5,7 @@ import br.com.saudeConecta.application.assinatura.AcessoAssinaturaService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -20,7 +20,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * (nome antigo) exibidos após um update, sem sacrificar o ganho de
  * performance do cache para os registros não afetados.
  */
-@Component
+@Service
 @Slf4j
 public class CacheEvictionService {
 

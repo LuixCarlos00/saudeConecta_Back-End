@@ -1,5 +1,6 @@
 package br.com.saudeConecta.application.prontuario;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.config.logging.MascaraLog;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
@@ -66,7 +67,7 @@ public class PlanejamentoTerapeuticoService {
 
         // Gera um único token para todos os itens pendentes
         String token = UUID.randomUUID().toString();
-        LocalDateTime expiracao = LocalDateTime.now().plusDays(DIAS_EXPIRACAO_LINK);
+        LocalDateTime expiracao = LocalDateTime.now(FusoHorario.ZONA).plusDays(DIAS_EXPIRACAO_LINK);
 
         for (PlanejamentoTerapeutico p : planejamentos) {
             if (p.isPendente()) {
@@ -94,7 +95,7 @@ public class PlanejamentoTerapeuticoService {
         }
 
         // Expiração nula = link legado gerado antes da coluna existir (sem expiração).
-        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime agora = LocalDateTime.now(FusoHorario.ZONA);
         // A expiração só vale para itens ainda PENDENTES: um planejamento já assinado continua consultável.
         boolean expirado = lista.stream()
                 .anyMatch(p -> !p.isAssinado() && p.getTokenExpiracao() != null && !p.getTokenExpiracao().isAfter(agora));
@@ -117,7 +118,7 @@ public class PlanejamentoTerapeuticoService {
     public void assinarPorToken(String token, String assinaturaBase64, String ipOrigem) {
         log.info("planejamento.assinar inicio token={} ip={}", MascaraLog.token(token), ipOrigem);
 
-        int atualizados = planejamentoRepository.assinarPorToken(token, assinaturaBase64, ipOrigem, LocalDateTime.now());
+        int atualizados = planejamentoRepository.assinarPorToken(token, assinaturaBase64, ipOrigem, LocalDateTime.now(FusoHorario.ZONA));
         if (atualizados == 0) {
             throw new IllegalArgumentException("Nenhum planejamento encontrado para o token informado.");
         }
