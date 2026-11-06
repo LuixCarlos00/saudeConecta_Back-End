@@ -47,7 +47,7 @@ class CacheTenantIsolamentoIntegrationTest {
     @Autowired private TermoAutorizacaoService termoService;
     @Autowired private CacheEvictionService cacheEvictionService;
     @Autowired private CacheManager cacheManager;
-    @Autowired private br.com.saudeConecta.presentation.controller.UsuarioController usuarioController;
+    @Autowired private br.com.saudeConecta.presentation.controller.usuario.UsuarioController usuarioController;
 
     @BeforeEach
     void limparCaches() {
