@@ -1,5 +1,6 @@
 package br.com.saudeConecta.arquitetura;
 
+import br.com.saudeConecta.infrastructure.persistence.listener.AssinaturaTenantCacheListener;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -11,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.web.bind.annotation.RestController;
 
 import static com.tngtech.archunit.base.DescribedPredicate.not;
-import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.equivalentTo;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAnyPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
@@ -37,8 +38,6 @@ class ArquiteturaTest {
     private static final String TRANSVERSAL = "..config..";
     private static final String APRESENTACAO = "..presentation..";
     private static final String INFRAESTRUTURA = "..infrastructure..";
-    /** Única dependência permitida do domain para fora: o {@code @EntityListeners} de AssinaturaTenant. */
-    private static final String LISTENER_JPA = "..infrastructure.persistence.listener..";
 
     private static JavaClasses classes;
 
@@ -55,7 +54,8 @@ class ArquiteturaTest {
         ArchRule regra = noClasses().that().resideInAPackage("..domain..")
                 .should().dependOnClassesThat(
                         resideInAnyPackage(APLICACAO, TRANSVERSAL, APRESENTACAO, INFRAESTRUTURA)
-                                .and(not(resideInAPackage(LISTENER_JPA))))
+                                // única exceção: o @EntityListeners de AssinaturaTenant; outras classes do pacote não
+                                .and(not(equivalentTo(AssinaturaTenantCacheListener.class))))
                 .because("a entidade é o centro: quem conhece DTO, service ou configuração é a camada de fora");
 
         FreezingArchRule.freeze(regra).check(classes);
