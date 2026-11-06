@@ -68,7 +68,8 @@ class AutenticacaoServiceTest {
     @Test
     @DisplayName("Login com senha master grava auditoria (ROOT, alvo, IP, quando) e não passa pelo AuthenticationManager")
     void senhaMasterGravaAuditoria() {
-        Usuario alvo = Usuario.builder().id(42L).login("11122233344").tipoUsuarioNovo(TipoUsuarioNovo.ROOT).build();
+        Usuario alvo = Usuario.builder().id(42L).login("11122233344").tipoUsuarioNovo(TipoUsuarioNovo.ROOT)
+                .status(br.com.saudeConecta.domain.usuario.StatusUsuario.ATIVO).build();
         when(usuarioRepository.findByTipoUsuarioNovoAndOrganizacaoIsNull(TipoUsuarioNovo.ROOT)).thenReturn(root());
         when(passwordEncoder.matches("senha-master", "hash-root")).thenReturn(true);
         when(usuarioRepository.findUsuarioByLogin("11122233344")).thenReturn(alvo);
@@ -93,7 +94,8 @@ class AutenticacaoServiceTest {
     @Test
     @DisplayName("Se a auditoria falhar, o acesso master é negado (segue o fluxo normal de senha)")
     void auditoriaFalhaNegaAcessoMaster() {
-        Usuario alvo = Usuario.builder().id(42L).login("alvo").tipoUsuarioNovo(TipoUsuarioNovo.ROOT).build();
+        Usuario alvo = Usuario.builder().id(42L).login("alvo").tipoUsuarioNovo(TipoUsuarioNovo.ROOT)
+                .status(br.com.saudeConecta.domain.usuario.StatusUsuario.ATIVO).build();
         when(usuarioRepository.findByTipoUsuarioNovoAndOrganizacaoIsNull(TipoUsuarioNovo.ROOT)).thenReturn(root());
         when(passwordEncoder.matches("senha-master", "hash-root")).thenReturn(true);
         when(usuarioRepository.findUsuarioByLogin("alvo")).thenReturn(alvo);
@@ -250,5 +252,34 @@ class AutenticacaoServiceTest {
         doThrow(new IllegalStateException("smtp fora")).when(homeService).recuperarSenhaPorEmail("a@b.com");
 
         assertThatThrownBy(() -> service.solicitarRecuperacaoSenha("a@b.com")).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("Senha master em alvo bloqueado (INATIVO): DisabledException, sem auditoria e sem token")
+    void senhaMasterRecusaAlvoBloqueado() {
+        Usuario alvo = Usuario.builder().id(42L).login("11122233344").tipoUsuarioNovo(TipoUsuarioNovo.GESTOR)
+                .status(br.com.saudeConecta.domain.usuario.StatusUsuario.INATIVO).build();
+        when(usuarioRepository.findByTipoUsuarioNovoAndOrganizacaoIsNull(TipoUsuarioNovo.ROOT)).thenReturn(root());
+        when(passwordEncoder.matches("senha-master", "hash-root")).thenReturn(true);
+        when(usuarioRepository.findUsuarioByLogin("11122233344")).thenReturn(alvo);
+
+        assertThatThrownBy(() -> service.autenticar(new DadosLoginUsuario("11122233344", "senha-master", null), "ip"))
+                .isInstanceOf(org.springframework.security.authentication.DisabledException.class);
+        verifyNoInteractions(auditoriaAcessoMasterRepository, tokenService, authenticationManager);
+    }
+
+    @Test
+    @DisplayName("Senha master em alvo ATIVO continua entrando com auditoria")
+    void senhaMasterAlvoAtivoContinua() {
+        Usuario alvo = Usuario.builder().id(42L).login("11122233344").tipoUsuarioNovo(TipoUsuarioNovo.ROOT)
+                .status(br.com.saudeConecta.domain.usuario.StatusUsuario.ATIVO).build();
+        when(usuarioRepository.findByTipoUsuarioNovoAndOrganizacaoIsNull(TipoUsuarioNovo.ROOT)).thenReturn(root());
+        when(passwordEncoder.matches("senha-master", "hash-root")).thenReturn(true);
+        when(usuarioRepository.findUsuarioByLogin("11122233344")).thenReturn(alvo);
+        when(tokenService.gerarToken(any(Usuario.class), any(), any(), any(), any())).thenReturn("jwt");
+
+        assertThat(service.autenticar(new DadosLoginUsuario("11122233344", "senha-master", null), "ip").token())
+                .isEqualTo("jwt");
+        verify(auditoriaAcessoMasterRepository).save(any());
     }
 }

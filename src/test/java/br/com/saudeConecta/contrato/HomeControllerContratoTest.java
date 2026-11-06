@@ -204,7 +204,8 @@ class HomeControllerContratoTest {
             login("11122233344", SENHA_GESTOR, null)
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.code").value("NAO_AUTENTICADO"))
-                    .andExpect(jsonPath("$.message").value("Usuario bloqueado ou inativo"));
+                    .andExpect(jsonPath("$.message").value("Usuario bloqueado ou inativo"))
+                    .andExpect(jsonPath("$.error").value("Usuario bloqueado ou inativo"));
         }
 
         @Test
@@ -304,6 +305,20 @@ class HomeControllerContratoTest {
             assertThat(auditoria.getDataHora()).isNotNull();
             // a senha master não passa pelo AuthenticationManager (que buscaria pelo findByLogin)
             verify(usuarioRepository, never()).findByLogin(anyString());
+        }
+
+        @Test
+        @DisplayName("Senha master em alvo bloqueado (INATIVO): mesmo 401 do login normal, sem auditoria e sem token")
+        void senhaMasterAlvoBloqueado() throws Exception {
+            gestor.setStatus(StatusUsuario.INATIVO);
+
+            login("11122233344", SENHA_MASTER, null)
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value("NAO_AUTENTICADO"))
+                    .andExpect(jsonPath("$.message").value("Usuario bloqueado ou inativo"))
+                    .andExpect(jsonPath("$.error").value("Usuario bloqueado ou inativo"))
+                    .andExpect(jsonPath("$.token").doesNotExist());
+            verify(auditoriaAcessoMasterRepository, never()).save(any());
         }
 
         @Test

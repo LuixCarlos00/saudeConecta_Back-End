@@ -21,6 +21,7 @@ import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioReposito
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -115,11 +116,13 @@ public class AutenticacaoService {
      * Se nao, retorna null e o fluxo normal de autenticacao segue.
      * Recurso INTENCIONAL de suporte: todo uso fica registrado em auditoria_acesso_master; se a
      * auditoria nao puder ser gravada o acesso master e negado (sem rastro, sem acesso).
+     * Alvo bloqueado (INATIVO) e recusado como no fluxo normal, antes da auditoria e do token.
      *
      * @param loginAlvo      login do usuario que se deseja acessar
      * @param senhaInformada senha digitada no login
      * @param ip             IP do cliente (para a auditoria)
      * @return Usuario alvo se a senha master for valida, null caso contrario
+     * @throws DisabledException quando o alvo esta bloqueado (o handler global responde 401)
      */
     private Usuario autenticarComSenhaMaster(String loginAlvo, String senhaInformada, String ip) {
         try {
@@ -145,6 +148,13 @@ public class AutenticacaoService {
                 return null;
             }
 
+            // Mesmo bloqueio do fluxo normal (DisabledException -> 401 "Usuario bloqueado ou inativo"):
+            // sem auditoria e sem token para usuario INATIVO.
+            if (!usuarioAlvo.isEnabled()) {
+                log.warn("auth.senhaMaster negado motivo=USUARIO_BLOQUEADO usuarioAlvoId={}", usuarioAlvo.getId());
+                throw new DisabledException("Usuario bloqueado");
+            }
+
             auditoriaAcessoMasterRepository.save(AuditoriaAcessoMaster.builder()
                     .atorUsuarioId(root.getId())
                     .atorLogin(root.getLogin())
@@ -157,6 +167,8 @@ public class AutenticacaoService {
             log.info("auth.senhaMaster ok usuarioAlvoId={} auditado=true", usuarioAlvo.getId());
             return usuarioAlvo;
 
+        } catch (DisabledException e) {
+            throw e;
         } catch (Exception e) {
             log.error("auth.senhaMaster falha motivo=ERRO_AUDITORIA acao=ACESSO_NEGADO", e);
             return null;
