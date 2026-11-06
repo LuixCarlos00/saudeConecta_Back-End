@@ -2,13 +2,8 @@ package br.com.saudeConecta.presentation.controller.consulta;
 
 import br.com.saudeConecta.application.consulta.ConsultaAgendamentoService;
 import br.com.saudeConecta.application.consulta.ConsultaBuscaService;
-import br.com.saudeConecta.application.consulta.ConsultaEstatisticaService;
 import br.com.saudeConecta.application.consulta.dto.*;
-import br.com.saudeConecta.application.dashboard.SaldoFinanceiroService;
-import br.com.saudeConecta.application.dashboard.dto.SaldoFinanceiroResponse;
 import br.com.saudeConecta.application.historico.BuscarHistoricoPacientePorPerfilUseCase;
-import br.com.saudeConecta.config.tenant.TenantAccessDeniedException;
-import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.common.Periodo;
 import br.com.saudeConecta.domain.consulta.Consulta;
@@ -20,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -37,8 +31,6 @@ public class ConsultaController {
     
     private final ConsultaAgendamentoService consultaAgendamentoService;
     private final ConsultaBuscaService consultaBuscaService;
-    private final ConsultaEstatisticaService consultaEstatisticaService;
-    private final SaldoFinanceiroService saldoFinanceiroService;
     private final BuscarHistoricoPacientePorPerfilUseCase buscarHistoricoPacientePorPerfilUseCase;
     private final TenantHelper tenantHelper;
 
@@ -316,72 +308,6 @@ public class ConsultaController {
         return ResponseEntity.ok(response);
     }
 
-    // ===============================================================
-    // BUSCAS DE ESTATISTICAS - Dashboard - Gestor
-    // ===============================================================
-
-    /**
-     * Endpoint único que retorna todas as estatísticas do dashboard para AdminOrg.
-     * Realiza uma única query ao banco agrupando por status e período (hoje vs semana).
-     *
-     * @param organizacaoId ID da organização
-     * @return DTO com consultasHoje, consultasAguardando, consultasAtendidas,
-     *         consultasSemana, canceladosSemana e confirmadosSemana
-     */
-    @GetMapping("/estatisticas/organizacao/{organizacaoId}/dashboard")
-    public ResponseEntity<EstatisticasDashboardAdminOrgResponse> getEstatisticasDashboardAdminOrg(
-            @PathVariable Long organizacaoId) {
-        // Validado antes do service: o @Cacheable usa o orgId como chave e responderia do cache sem checar.
-        tenantHelper.validateTenant(organizacaoId);
-
-        EstatisticasDashboardAdminOrgResponse response =
-            consultaEstatisticaService.getEstatisticasDashboardAdminOrg(organizacaoId);
-
-        return ResponseEntity.ok(response);
-    }
-
-    // ===============================================================
-    // BUSCAS DE ESTATISTICAS - Dashboard - PROFISSIONAL
-    // ===============================================================
-
-    /**
-     * Endpoint único que retorna todas as estatísticas do dashboard para o Profissional.
-     * Filtra por usuario.id via JOIN — o profissional vê apenas seus próprios dados.
-     *
-     * @param usuarioId ID do usuário logado
-     * @return DTO com consultasHoje, consultasAguardando, consultasAtendidas,
-     *         consultasSemana, canceladosSemana e confirmadosSemana
-     */
-    @GetMapping("/estatisticas/dashboard/profissional")
-    public ResponseEntity<EstatisticasDashboardAdminOrgResponse> getEstatisticasDashboardProfissional(
-            @RequestParam Long usuarioId) {
-        // A query do dashboard filtra só por usuário (sem organização): restringe ao próprio usuário do token,
-        // o que também torna a chave de cache (#usuarioId) a do usuário validado.
-        if (!usuarioId.equals(tenantHelper.getCurrentUserId())) {
-            throw new TenantAccessDeniedException("Acesso negado: dashboard de outro usuário");
-        }
-        return ResponseEntity.ok(consultaEstatisticaService.getEstatisticasDashboardProfissional(usuarioId));
-    }
-
-    // ===============================================================
-    // BUSCAS DE ESTATISTICAS - Dashboard - SUPER_ADMIN (global)
-    // ===============================================================
-
-    /**
-     * Endpoint único que retorna todas as estatísticas do dashboard para SuperAdmin.
-     * Sem filtro de organização — cobre todas as consultas do sistema.
-     *
-     * @return DTO com consultasHoje, consultasAguardando, consultasAtendidas,
-     *         consultasSemana, canceladosSemana e confirmadosSemana
-     */
-    @GetMapping("/estatisticas/dashboard/super-admin")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ResponseEntity<EstatisticasDashboardAdminOrgResponse> getEstatisticasDashboardSuperAdmin() {
-        return ResponseEntity.ok(consultaEstatisticaService.getEstatisticasDashboardSuperAdmin());
-    }
-
-    //==================================FIM=============================================
-
     @GetMapping("/organizacao/{organizacaoId}/intervalo")
     public ResponseEntity<List<ConsultaResponse>> buscarPorOrganizacaoEIntervalo(
             @PathVariable Long organizacaoId,
@@ -394,87 +320,6 @@ public class ConsultaController {
             .toList();
         return ResponseEntity.ok(response);
     }
-
-    // ==========================================
-    // ESTATÍSTICAS POR MÉDICO E INTERVALO
-    // ==========================================
-
-    /**
-     * Busca estatísticas de consultas por médico e intervalo de datas
-     * Retorna contagem de consultas agrupadas por status
-     * 
-     * Exemplo de resposta:
-     * [
-     *   [0, 5],  // 5 consultas AGENDADAS
-     *   [1, 3],  // 3 consultas REALIZADAS
-     *   [2, 1]   // 1 consulta CANCELADA
-     * ]
-     * 
-     * @param medicoId ID do usuário do médico (será usado para buscar o profissional via JOIN)
-     * @param dataInicial Data inicial do período (formato: yyyy-MM-dd)
-     * @param dataFinal Data final do período (formato: yyyy-MM-dd)
-     * @return Lista de arrays com [statusOrdinal, quantidade]
-     */
-    @GetMapping("/estatisticas/medico/{medicoId}")
-    public ResponseEntity<List<Object[]>> buscarEstatisticasPorMedicoEIntervalo(
-            @PathVariable Long medicoId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal) {
-        
-        
-        Long organizacaoId = TenantContext.getCurrentTenant();
-        
-        if (organizacaoId == null) {
-            log.warn("consulta.estatisticas negado motivo=SEM_ORGANIZACAO");
-            return ResponseEntity.badRequest().build();
-        }
-        
-        List<Object[]> estatisticas = consultaEstatisticaService.buscarEstatisticasPorMedicoEIntervalo(
-            organizacaoId, 
-            medicoId, 
-            dataInicial, 
-            dataFinal
-        );
-        
-        return ResponseEntity.ok(estatisticas);
-    }
-
-    /**
-     * Busca durações de consultas realizadas por médico e intervalo
-     * Retorna lista bruta de durações para cálculo no frontend
-     * 
-     * Exemplo de resposta: [30, 45, 25, 60, 35, 40, 50]
-     * 
-     * @param medicoId ID do usuário do médico (será usado para buscar o profissional via JOIN)
-     * @param dataInicial Data inicial do período (formato: yyyy-MM-dd)
-     * @param dataFinal Data final do período (formato: yyyy-MM-dd)
-     * @return Lista de durações em minutos
-     */
-    @GetMapping("/estatisticas/medico/{medicoId}/duracoes")
-    public ResponseEntity<List<Integer>> buscarDuracoesConsultas(
-            @PathVariable Long medicoId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal) {
-        
-        
-        Long organizacaoId = TenantContext.getCurrentTenant();
-        
-        if (organizacaoId == null) {
-            log.warn("consulta.estatisticas negado motivo=SEM_ORGANIZACAO");
-            return ResponseEntity.badRequest().build();
-        }
-        
-        List<Integer> duracoes = consultaEstatisticaService.buscarDuracoesConsultas(
-            organizacaoId, 
-            medicoId, 
-            dataInicial, 
-            dataFinal
-        );
-        
-        return ResponseEntity.ok(duracoes);
-    }
-
-    // ========== ENDPOINT PARA BUSCAR HORÁRIOS OCUPADOS ==========
 
     /**
      * Busca histórico completo de consultas de um paciente, aplicando as
@@ -495,34 +340,5 @@ public class ConsultaController {
         return buscarHistoricoPacientePorPerfilUseCase.executar(pacienteId, usuarioLogado)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
-    }
-
-    // ==========================================
-    // SALDO FINANCEIRO (DASHBOARD)
-    // ==========================================
-
-    /**
-     * Retorna estatísticas financeiras: consultas realizadas + procedimentos terapêuticos.
-     *
-     * @param inicio    data de início (ISO: yyyy-MM-dd)
-     * @param fim       data de fim (ISO: yyyy-MM-dd)
-     * @param agruparPor "mes" (padrão) ou "semana"
-     * @return SaldoFinanceiroResponse com totais e detalhamento
-     */
-    @GetMapping("/estatisticas/saldo-financeiro")
-    public ResponseEntity<SaldoFinanceiroResponse> getSaldoFinanceiro(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim,
-            @RequestParam(defaultValue = "mes") String agruparPor) {
-
-        Long organizacaoId = TenantContext.getCurrentTenant();
-        if (organizacaoId == null) {
-            log.warn("consulta.saldoFinanceiro negado motivo=SEM_ORGANIZACAO");
-            return ResponseEntity.badRequest().build();
-        }
-
-        SaldoFinanceiroResponse response = saldoFinanceiroService
-                .calcularSaldo(organizacaoId, inicio, fim, agruparPor);
-        return ResponseEntity.ok(response);
     }
 }
