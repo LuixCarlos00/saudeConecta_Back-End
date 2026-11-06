@@ -1,0 +1,75 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ================================================================ -->
+    <!-- COBRANCA (FASE 2 - POS-REVISAO)                                  -->
+    <!-- Retrocompativel: a versao anterior da aplicacao nao le nem       -->
+    <!-- escreve estas colunas; todas tem DEFAULT ou sao nullable.        -->
+    <!-- ================================================================ -->
+
+    <!-- Lock otimista: o JPA passa a incluir "WHERE versao = ?" no UPDATE. A versao anterior -->
+    <!-- da aplicacao ignora a coluna (o DEFAULT 0 cobre os INSERTs dela).                    -->
+    <changeSet id="062-001-assinatura-tenant-versao" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="assinatura_tenant" columnName="versao"/></not>
+        </preConditions>
+        <comment>Versao para lock otimista da assinatura (evita lost update entre webhook, regua e reconciliacao)</comment>
+
+        <addColumn tableName="assinatura_tenant">
+            <column name="versao" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="assinatura_tenant" columnName="versao"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Reprocessamento de webhooks com erro: contador, backoff e expiracao -->
+    <changeSet id="062-002-mp-webhook-evento-reprocessamento" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="mp_webhook_evento" columnName="tentativas"/></not>
+        </preConditions>
+        <comment>Controle de reprocessamento de eventos do Mercado Pago que falharam (tentativas, backoff, expiracao)</comment>
+
+        <addColumn tableName="mp_webhook_evento">
+            <column name="tentativas" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="proxima_tentativa_em" type="DATETIME">
+                <constraints nullable="true"/>
+            </column>
+            <column name="expirado_em" type="DATETIME">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="mp_webhook_evento" columnName="expirado_em"/>
+            <dropColumn tableName="mp_webhook_evento" columnName="proxima_tentativa_em"/>
+            <dropColumn tableName="mp_webhook_evento" columnName="tentativas"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Indice da busca do job de reprocessamento (processado=0 com erro, por idade) -->
+    <changeSet id="062-003-mp-webhook-evento-idx-reprocessamento" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="mp_webhook_evento" indexName="idx_mp_webhook_reprocessamento"/></not>
+        </preConditions>
+        <comment>Indice para o job de reprocessamento de eventos com erro</comment>
+
+        <createIndex tableName="mp_webhook_evento" indexName="idx_mp_webhook_reprocessamento">
+            <column name="processado"/>
+            <column name="recebido_em"/>
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="mp_webhook_evento" indexName="idx_mp_webhook_reprocessamento"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

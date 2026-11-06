@@ -5,10 +5,13 @@ import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.profissional.StatusProfissional;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.domain.secretaria.StatusSecretaria;
+import br.com.saudeConecta.domain.usuario.MotivoBloqueio;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.domain.usuario.StatusUsuario;
+import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.presentation.dto.usuario.*;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +34,8 @@ public class UsuarioService   {
     private final PacienteRepository pacienteRepository;
     private final SecretariaRepository secretariaRepository;
     private final CacheEvictionService cacheEvictionService;
+    private final TenantHelper tenantHelper;
+    private final LimitePlanoService limitePlanoService;
 
     public UsuarioService(
              PasswordEncoder passwordEncoder,
@@ -39,7 +44,9 @@ public class UsuarioService   {
             PacienteRepository pacienteRepository,
             SecretariaRepository secretariaRepository,
             UsuarioRepository usuarioRepository,
-            CacheEvictionService cacheEvictionService) {
+            CacheEvictionService cacheEvictionService,
+            TenantHelper tenantHelper,
+            LimitePlanoService limitePlanoService) {
          this.passwordEncoder = passwordEncoder;
          this.profissionalRepository = profissionalRepository;
         this.adminOrganizacaoRepository = adminOrganizacaoRepository;
@@ -47,21 +54,20 @@ public class UsuarioService   {
         this.secretariaRepository = secretariaRepository;
         this.usuarioRepository = usuarioRepository;
         this.cacheEvictionService = cacheEvictionService;
+        this.tenantHelper = tenantHelper;
+        this.limitePlanoService = limitePlanoService;
     }
-
-
-
 
     @Transactional
     public void bloquearUsuariobyOrg(BloquearUsuarioRequest request) {
-        Long organizacaoId = TenantContext.getCurrentTenant();
+        // Falha fechada: sem tenant só passa quem tem ROLE_SUPER_ADMIN; os demais recebem 403.
+        Long organizacaoId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
         boolean isSuperAdmin = (organizacaoId == null);
 
-        log.info("Bloqueando usuario ID: {} (registro ID: {}) para {} | orgId: {} | SUPER_ADMIN: {}",
+        log.info("usuario.bloquear inicio usuarioId={} perfilId={} status={} superAdmin={}",
                 request.codigoUsuario(),
                 request.codigo(),
                 request.status() == 0 ? "INATIVO" : "ATIVO",
-                organizacaoId,
                 isSuperAdmin);
 
         // 1. Busca o Usuario principal
@@ -69,14 +75,14 @@ public class UsuarioService   {
         if (isSuperAdmin) {
             usuario = usuarioRepository.findById(request.codigoUsuario())
                     .orElseThrow(() -> {
-                        log.warn("Usuario {} nao encontrado", request.codigoUsuario());
+                        log.warn("usuario.bloquear negado motivo=NAO_ENCONTRADO usuarioId={}", request.codigoUsuario());
                         return new IllegalArgumentException("usuario nao encontrado");
                     });
         } else {
             usuario = usuarioRepository.findById(request.codigoUsuario())
                     .filter(u -> organizacaoId.equals(u.getOrganizacaoId()))
                     .orElseThrow(() -> {
-                        log.warn("Usuario {} nao encontrado ou nao pertence a organizacao {}",
+                        log.warn("usuario.bloquear negado motivo=NAO_ENCONTRADO_OU_OUTRA_CLINICA usuarioId={} organizacaoId={}",
                                 request.codigoUsuario(), organizacaoId);
                         return new IllegalArgumentException("Usuario nao encontrado ou sem permissao");
                     });
@@ -96,17 +102,24 @@ public class UsuarioService   {
             bloquearTenantEmCascata(usuario, request.codigo(), novoStatus);
         } else {
             // Bloqueio individual
+            Long orgIdPerfil = isSuperAdmin ? usuario.getOrganizacaoId() : organizacaoId;
+
+            // Reativar ocupa uma vaga do plano, igual a um cadastro novo
+            if (novoStatus == StatusUsuario.ATIVO && !usuario.isEnabled()) {
+                validarLimiteParaReativar(usuario.getTipoUsuarioNovo(), orgIdPerfil);
+            }
+
             usuario.setStatus(novoStatus);
+            usuario.setMotivoBloqueio(novoStatus == StatusUsuario.INATIVO ? MotivoBloqueio.INDIVIDUAL : null);
             usuarioRepository.save(usuario);
 
-            Long orgIdPerfil = isSuperAdmin ? usuario.getOrganizacaoId() : organizacaoId;
             atualizarStatusPerfil(request.codigo(), orgIdPerfil, usuario.getTipoUsuarioNovo(), novoStatus);
         }
 
         Long orgIdAfetada = isSuperAdmin ? usuario.getOrganizacaoId() : organizacaoId;
         cacheEvictionService.evictPerfilEUsuariosAgrupados(request.codigoUsuario(), orgIdAfetada);
 
-        log.info("usuario ID: {} bloqueado com sucesso (cascata: {})", request.codigoUsuario(),
+        log.info("usuario.bloquear ok usuarioId={} status={} cascata={}", request.codigoUsuario(), novoStatus,
                 isSuperAdmin && usuario.getTipoUsuarioNovo() == TipoUsuarioNovo.GESTOR);
     }
 
@@ -116,10 +129,13 @@ public class UsuarioService   {
      */
     private void bloquearTenantEmCascata(Usuario adminUsuario, Long adminPerfilId, StatusUsuario novoStatus) {
         Long orgId = adminUsuario.getOrganizacaoId();
-        log.info("Bloqueio em cascata da organizacao ID: {} para status: {}", orgId, novoStatus);
+        log.info("usuario.bloquear cascata inicio organizacaoId={} status={}", orgId, novoStatus);
+
+        boolean bloqueando = novoStatus == StatusUsuario.INATIVO;
 
         // 1. Bloqueia o AdminOrg principal
         adminUsuario.setStatus(novoStatus);
+        adminUsuario.setMotivoBloqueio(bloqueando ? MotivoBloqueio.CASCATA : null);
         usuarioRepository.save(adminUsuario);
 
         // Atualiza perfil do AdminOrg
@@ -133,20 +149,50 @@ public class UsuarioService   {
 
         cacheEvictionService.evictPerfilUsuario(adminUsuario.getId());
 
-        // 2. Bloqueia/desbloqueia TODOS os outros usuarios da organizacao
+        // 2. Bloqueia/desbloqueia os outros usuarios da organizacao. Quem ja estava bloqueado
+        //    individualmente fica de fora nos dois sentidos: o bloqueio nao sobrescreve o motivo
+        //    e o desbloqueio so reativa quem a propria cascata bloqueou. Bloqueios anteriores a
+        //    coluna motivo_bloqueio (null) nao sao reativados: o gestor reativa um a um.
         if (orgId != null) {
             List<Usuario> usuariosOrg = usuarioRepository.findByOrganizacao_Id(orgId);
             int count = 0;
             for (Usuario u : usuariosOrg) {
-                if (!u.getId().equals(adminUsuario.getId()) && !u.isRoot()) {
+                if (u.getId().equals(adminUsuario.getId()) || u.isRoot()) {
+                    continue;
+                }
+                boolean afetado = bloqueando
+                        ? u.isEnabled()
+                        : !u.isEnabled() && u.getMotivoBloqueio() == MotivoBloqueio.CASCATA;
+                if (afetado) {
                     u.setStatus(novoStatus);
+                    u.setMotivoBloqueio(bloqueando ? MotivoBloqueio.CASCATA : null);
                     usuarioRepository.save(u);
                     cacheEvictionService.evictPerfilUsuario(u.getId());
                     count++;
                 }
             }
-            log.info("Bloqueio em cascata: {} usuarios adicionais da organizacao {} atualizados para {}",
-                    count, orgId, novoStatus);
+            log.info("usuario.bloquear cascata ok organizacaoId={} usuariosAdicionais={} status={}",
+                    orgId, count, novoStatus);
+        }
+    }
+
+    /**
+     * Reativar um usuário consome uma vaga do plano; sem esta checagem o gestor contornava o
+     * limite bloqueando e desbloqueando usuários.
+     *
+     * @param tipoUsuario   tipo do usuário reativado
+     * @param organizacaoId organização dona da vaga
+     * @throws br.com.saudeConecta.infra.exceptions.LimitePlanoException se o limite estiver cheio
+     */
+    private void validarLimiteParaReativar(TipoUsuarioNovo tipoUsuario, Long organizacaoId) {
+        if (tipoUsuario == null || organizacaoId == null) {
+            return;
+        }
+        switch (tipoUsuario) {
+            case GESTOR -> limitePlanoService.validarLimiteAdminOrg(organizacaoId);
+            case CLINICO -> limitePlanoService.validarLimiteProfissional(organizacaoId);
+            case ASSISTENTE -> limitePlanoService.validarLimiteSecretaria(organizacaoId);
+            default -> { }
         }
     }
 
@@ -162,9 +208,9 @@ public class UsuarioService   {
                                             ? AdminOrganizacao.StatusAdmin.ATIVO
                                             : AdminOrganizacao.StatusAdmin.INATIVO);
                                     adminOrganizacaoRepository.save(admin);
-                                    log.debug("Status atualizado em AdminOrganizacao ID: {}", codigoPerfil);
+                                    log.debug("usuario.bloquear perfil tipo=ADMIN perfilId={}", codigoPerfil);
                                 },
-                                () -> log.warn("AdminOrganizacao ID {} nao encontrado na org {}",
+                                () -> log.warn("usuario.bloquear negado motivo=PERFIL_NAO_ENCONTRADO tipo=ADMIN perfilId={} organizacaoId={}",
                                         codigoPerfil, organizacaoId)
                         );
             }
@@ -177,9 +223,9 @@ public class UsuarioService   {
                                             ? StatusSecretaria.ATIVO
                                             : StatusSecretaria.INATIVO);
                                     secretariaRepository.save(secretaria);
-                                    log.debug("Status atualizado em Secretaria ID: {}", codigoPerfil);
+                                    log.debug("usuario.bloquear perfil tipo=SECRETARIA perfilId={}", codigoPerfil);
                                 },
-                                () -> log.warn("Secretaria ID {} nao encontrada na org {}",
+                                () -> log.warn("usuario.bloquear negado motivo=PERFIL_NAO_ENCONTRADO tipo=SECRETARIA perfilId={} organizacaoId={}",
                                         codigoPerfil, organizacaoId)
                         );
             }
@@ -192,22 +238,21 @@ public class UsuarioService   {
                                             ? StatusProfissional.ATIVO
                                             : StatusProfissional.INATIVO);
                                     profissionalRepository.save(profissional);
-                                    log.debug("Status atualizado em Profissional ID: {}", codigoPerfil);
+                                    log.debug("usuario.bloquear perfil tipo=PROFISSIONAL perfilId={}", codigoPerfil);
                                 },
-                                () -> log.warn("Profissional ID {} nao encontrado na org {}",
+                                () -> log.warn("usuario.bloquear negado motivo=PERFIL_NAO_ENCONTRADO tipo=PROFISSIONAL perfilId={} organizacaoId={}",
                                         codigoPerfil, organizacaoId)
                         );
             }
 
-            default -> log.warn("Tipo de usuario {} nao possui perfil especifico para bloquear",
-                    tipoUsuario);
+            default -> log.warn("usuario.bloquear negado motivo=TIPO_SEM_PERFIL tipo={}", tipoUsuario);
         }
     }
 
     @Cacheable(value = "usuarios-agrupados", key = "'super-admin'")
     @Transactional(readOnly = true)
     public TodosUsuariosAgrupadosResponse buscarTodosAdminOrgsSuperAdmin() {
-        log.debug("SUPER_ADMIN: buscando todos os AdminOrgs do sistema");
+        log.debug("usuario.agrupados buscar escopo=SUPER_ADMIN");
         var administradores = adminOrganizacaoRepository.findAllWithRelations().stream()
                 .map(TodosUsuariosAgrupadosResponse.AdminResumo::fromEntity)
                 .toList();
@@ -218,7 +263,7 @@ public class UsuarioService   {
     @Cacheable(value = "usuarios-agrupados", key = "#organizacaoId")
     @Transactional(readOnly = true)
     public TodosUsuariosAgrupadosResponse buscarTodosAgrupados(Long organizacaoId) {
-        log.debug("Buscando todos os usuarios agrupados para organizacao ID: {}", organizacaoId);
+        log.debug("usuario.agrupados buscar organizacaoId={}", organizacaoId);
 
         var pacientes = pacienteRepository.findByOrganizacao_Id(organizacaoId).stream()
                 .map(TodosUsuariosAgrupadosResponse.PacienteResumo::fromEntity)
@@ -244,41 +289,88 @@ public class UsuarioService   {
         return new TodosUsuariosAgrupadosResponse(pacientes, medicos, secretarias, administradores);
     }
 
-
-
-
-
+    /**
+     * Troca a senha de um usuário, aplicando a regra de autorização do produto:
+     * qualquer usuário troca a própria senha; o gestor (admin da organização)
+     * troca a senha dos usuários da mesma organização, exceto a do ROOT.
+     *
+     * @param id        ID do usuário que terá a senha alterada
+     * @param novaSenha nova senha em texto puro (é criptografada antes de salvar)
+     * @throws IllegalArgumentException    se o usuário alvo não existir
+     * @throws TenantAccessDeniedException se o usuário logado não puder trocar a senha do alvo
+     */
+    @Transactional
     public void trocarSenharUsuariobyOrg(Long id, String novaSenha) {
 
         var usuarioOpt = buscarPorId(id);
         if (usuarioOpt.isEmpty()) {
-            log.warn("usuario nao encontrado para troca de senha: {}", id);
+            log.warn("usuario.senha negado motivo=NAO_ENCONTRADO usuarioId={}", id);
             throw new IllegalArgumentException("usuario nao encontrado");
         }
 
         var usuario = usuarioOpt.get();
+        validarPermissaoTrocaSenha(usuario);
         String senhaCriptografada = passwordEncoder.encode(novaSenha);
         usuario.setSenha(senhaCriptografada);
         usuarioRepository.save(usuario);
         cacheEvictionService.evictPerfilUsuario(id);
-        log.info("Senha do usuario ID: {} alterada com sucesso", id);
+        log.info("usuario.senha ok usuarioId={}", id);
     }
 
+    /**
+     * Garante que o usuário logado (vindo do JWT, via TenantContext) pode trocar a senha do alvo.
+     * A organização do logado vem do token, não do banco, pelo mesmo motivo do resto do sistema:
+     * o token é a fonte do tenant da requisição. O ROOT só troca a própria senha por aqui;
+     * para agir em nome de uma clínica ele usa a senha master (login como o usuário escolhido).
+     *
+     * @param alvo usuário que terá a senha alterada
+     * @throws TenantAccessDeniedException quando a troca não é permitida
+     */
+    private void validarPermissaoTrocaSenha(Usuario alvo) {
+        Long usuarioLogadoId = TenantContext.getCurrentUser();
+        if (usuarioLogadoId == null) {
+            throw negarTrocaSenha(alvo.getId(), "SEM_USUARIO_LOGADO");
+        }
+
+        if (usuarioLogadoId.equals(alvo.getId())) {
+            return;
+        }
+
+        if (alvo.getTipoUsuarioNovo() != null && alvo.getTipoUsuarioNovo().isRoot()) {
+            throw negarTrocaSenha(alvo.getId(), "ALVO_ROOT");
+        }
+
+        var usuarioLogado = usuarioRepository.findById(usuarioLogadoId)
+                .orElseThrow(() -> negarTrocaSenha(alvo.getId(), "LOGADO_INEXISTENTE"));
+
+        boolean isGestor = usuarioLogado.getTipoUsuarioNovo() != null
+                && usuarioLogado.getTipoUsuarioNovo().isGestor();
+        Long organizacaoLogado = TenantContext.getCurrentTenant();
+        Long organizacaoAlvo = alvo.getOrganizacao() != null ? alvo.getOrganizacao().getId() : null;
+
+        if (!isGestor || organizacaoLogado == null || !organizacaoLogado.equals(organizacaoAlvo)) {
+            throw negarTrocaSenha(alvo.getId(), "SEM_PERMISSAO");
+        }
+    }
+
+    private TenantAccessDeniedException negarTrocaSenha(Long alvoId, String motivo) {
+        log.warn("usuario.senha negado motivo={} alvoId={}", motivo, alvoId);
+        return new TenantAccessDeniedException("Acesso negado: sem permissao para trocar a senha deste usuario");
+    }
 
     public Optional<Usuario> buscarPorId(Long id) {
-        log.debug("Buscando usuario por ID: {}", id);
+        log.debug("usuario.buscar usuarioId={}", id);
         return usuarioRepository.findById(id);
     }
-
 
     @Cacheable(value = "perfil-usuario", key = "#usuarioId")
     @Transactional(readOnly = true)
     public Optional<UsuarioPerfilCompletoResponse> buscarPerfilCompleto(Long usuarioId) {
-        log.debug("Buscando perfil completo do usuario ID: {}", usuarioId);
+        log.debug("usuario.perfil buscar usuarioId={}", usuarioId);
 
         Optional<Usuario> usuarioOpt = usuarioRepository.findByIdWithOrganizacao(usuarioId);
         if (usuarioOpt.isEmpty()) {
-            log.warn("Usuario nao encontrado: {}", usuarioId);
+            log.warn("usuario.perfil negado motivo=NAO_ENCONTRADO usuarioId={}", usuarioId);
             return Optional.empty();
         }
 
@@ -286,11 +378,11 @@ public class UsuarioService   {
         TipoUsuarioNovo tipoUsuario = usuario.getTipoUsuarioNovo();
         
         if (tipoUsuario == null) {
-            log.warn("usuario ID: {} nao possui tipo_usuario_novo definido", usuarioId);
+            log.warn("usuario.perfil negado motivo=SEM_TIPO_USUARIO usuarioId={}", usuarioId);
             return Optional.empty();
         }
 
-        log.debug("Tipo de usuario identificado: {}", tipoUsuario);
+        log.debug("usuario.perfil tipo={}", tipoUsuario);
 
         Profissional profissional = null;
         AdminOrganizacao admin = null;
@@ -300,33 +392,32 @@ public class UsuarioService   {
             case CLINICO -> {
                 profissional = profissionalRepository.findByUsuarioIdWithRelations(usuarioId).orElse(null);
                 if (profissional != null) {
-                    log.debug("Profissional encontrado ID: {} com endereço: {}",
-                        profissional.getId(),
-                        profissional.getEndereco() != null ? "Sim" : "nao");
+                    log.debug("usuario.perfil profissional profissionalId={} comEndereco={}",
+                            profissional.getId(),
+                            profissional.getEndereco() != null);
                 }
             }
             
             case GESTOR -> {
                 admin = adminOrganizacaoRepository.findByUsuarioIdWithRelations(usuarioId).orElse(null);
                 if (admin != null) {
-                    log.debug("AdminOrganizacao encontrado ID: {}", admin.getId());
+                    log.debug("usuario.perfil admin adminId={}", admin.getId());
                 }
             }
             
             case ASSISTENTE -> {
                 secretaria = secretariaRepository.findByUsuario_Id(usuarioId).orElse(null);
                 if (secretaria != null) {
-                    log.debug("Secretaria encontrada ID: {}", secretaria.getId());
+                    log.debug("usuario.perfil secretaria secretariaId={}", secretaria.getId());
                 } else {
-                    log.warn("Secretaria nao encontrada para usuario ID: {}", usuarioId);
+                    log.warn("usuario.perfil negado motivo=SECRETARIA_NAO_ENCONTRADA usuarioId={}", usuarioId);
                 }
             }
             
-            default -> log.warn("Tipo de usuario {} nao possui perfil especifico implementado", tipoUsuario);
+            default -> log.warn("usuario.perfil negado motivo=TIPO_SEM_PERFIL_IMPLEMENTADO tipo={}", tipoUsuario);
         }
 
         return Optional.of(UsuarioPerfilCompletoResponse.fromEntities(usuario, profissional, admin, secretaria));
     }
-
 
 }

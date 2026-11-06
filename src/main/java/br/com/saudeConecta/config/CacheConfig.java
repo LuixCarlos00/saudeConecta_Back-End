@@ -34,6 +34,7 @@ public class CacheConfig {
             buildCache("dashboard-admin-org",    5,  200),
             buildCache("dashboard-profissional", 5,  200),
             buildCache("dashboard-super-admin",  5,   50),
+            buildCache("plataforma-dashboard",   5,   24),
             buildCache("mensageria-contagem",    5,  500),
             buildCache("profissionais-org",      5,  500),
             buildCache("pacientes-org",          5,  500),
@@ -45,7 +46,6 @@ public class CacheConfig {
             buildCache("consultas-mes-org",   10,  300),
             buildCache("consultas-ano-org",   15,  300),
             buildCache("horarios-ocupados-org",   2, 1000),
-            buildCache("disponibilidade-consulta", 2, 1000),
             buildCache("mensageria-lista", 1, 200),
             buildCache("configuracoes-graficos", 30, 500),
             buildCache("configuracoes-cards",    30, 500),
@@ -54,7 +54,10 @@ public class CacheConfig {
             buildCache("especialidades",         30, 200),
             buildCache("disponibilidade-consulta",  2, 2000),
             buildCache("questionario-saude",     60, 500),
-            buildCache("prontuario-recente",     30, 500)
+            buildCache("prontuario-recente",     30, 500),
+            // Consultado pelo FiltroAcesso em toda requisição autenticada: TTL curto limita a janela
+            // em que uma clínica suspensa ainda navega caso alguma invalidação se perca.
+            buildCache("acesso-assinatura",       1, 2000)
         ));
         return manager;
     }

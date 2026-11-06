@@ -92,15 +92,12 @@ public class CadastrarProntuarioRequest {
     @JsonProperty("responsavel")
     private String responsavel;
 
-
-
     // ── Exames ────────────────────────────────────────────────────────────
     @JsonProperty("modeloExame")
     private String modeloExame;
 
     @JsonProperty("tituloExame")
     private String tituloExame;
-
 
     @JsonProperty("exame")
     private String exame;
@@ -138,6 +135,10 @@ public class CadastrarProntuarioRequest {
     @Setter
     @NoArgsConstructor
     public static class PlanejamentoItem {
+
+        /** Id do planejamento já gravado (só na edição); null = item novo. */
+        @JsonProperty("id")
+        private Long id;
 
         @JsonProperty("dataProcedimento")
         private String dataProcedimento;

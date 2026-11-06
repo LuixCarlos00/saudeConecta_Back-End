@@ -1,11 +1,9 @@
 package br.com.saudeConecta.presentation.controller;
 
 import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
-import br.com.saudeConecta.presentation.dto.prontuario.PlanejamentoTerapeuticoRequest;
 import br.com.saudeConecta.service.PlanejamentoTerapeuticoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,47 +24,11 @@ public class PlanejamentoTerapeuticoController {
     private final PlanejamentoTerapeuticoService planejamentoService;
 
     /**
-     * Lista planejamentos de um prontuário.
-     * GET /planejamento-terapeutico/prontuario/{prontuarioId}
-     */
-    @GetMapping("/prontuario/{prontuarioId}")
-    public ResponseEntity<List<Map<String, Object>>> listar(@PathVariable Long prontuarioId) {
-        log.info("GET /planejamento-terapeutico/prontuario/{}", prontuarioId);
-
-        List<PlanejamentoTerapeutico> lista = planejamentoService.listarPorProntuario(prontuarioId);
-        return ResponseEntity.ok(converterParaResponse(lista));
-    }
-
-    /**
-     * Adiciona um item ao planejamento.
-     * POST /planejamento-terapeutico/profissional/{profissionalId}
-     */
-    @PostMapping("/profissional/{profissionalId}")
-    public ResponseEntity<Map<String, Object>> adicionar(
-            @PathVariable Long profissionalId,
-            @RequestBody PlanejamentoTerapeuticoRequest request) {
-
-        log.info("POST /planejamento-terapeutico/profissional/{}", profissionalId);
-
-        PlanejamentoTerapeutico criado = planejamentoService.adicionar(profissionalId, request);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("id", criado.getId());
-        response.put("dataProcedimento", criado.getDataProcedimento());
-        response.put("procedimentoRealizado", criado.getProcedimentoRealizado());
-        response.put("valor", criado.getValor());
-        response.put("statusAssinatura", criado.getStatusAssinatura());
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    /**
      * Remove um item do planejamento.
      * DELETE /planejamento-terapeutico/{id}
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> remover(@PathVariable Long id) {
-        log.info("DELETE /planejamento-terapeutico/{}", id);
         planejamentoService.remover(id);
         return ResponseEntity.noContent().build();
     }
@@ -82,7 +44,6 @@ public class PlanejamentoTerapeuticoController {
     public ResponseEntity<Map<String, String>> gerarLink(
             @PathVariable Long prontuarioId,
             @RequestParam(defaultValue = "DENTISTA") String tipo) {
-        log.info("POST /planejamento-terapeutico/gerar-link/{} tipo={}", prontuarioId, tipo);
 
         String token = planejamentoService.gerarLinkAssinatura(prontuarioId, tipo);
 

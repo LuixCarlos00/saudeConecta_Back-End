@@ -25,6 +25,13 @@ public record AssinaturaTenantResponse(
         Integer qtdProfissionalExtra,
         Integer qtdSecretariaExtra,
         BigDecimal valorAdicionalPerfis,
+        String mpPreapprovalId,
+        String mpStatus,
+        String mpInitPoint,
+        String mpPayerEmail,
+        Boolean cortesia,
+        LocalDateTime dataCancelamento,
+        String canceladoPor,
         LocalDateTime criadoEm
 ) {
 
@@ -54,6 +61,13 @@ public record AssinaturaTenantResponse(
                 entity.getQtdProfissionalExtra(),
                 entity.getQtdSecretariaExtra(),
                 entity.getValorAdicionalPerfis(),
+                entity.getMpPreapprovalId(),
+                entity.getMpStatus(),
+                entity.getMpInitPoint(),
+                entity.getMpPayerEmail(),
+                entity.getCortesia(),
+                entity.getDataCancelamento(),
+                entity.getCanceladoPor() != null ? entity.getCanceladoPor().name() : null,
                 entity.getCriadoEm()
         );
     }

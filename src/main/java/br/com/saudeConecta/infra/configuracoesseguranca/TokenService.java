@@ -4,7 +4,6 @@ import br.com.saudeConecta.domain.usuario.Usuario;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
-import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -12,8 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 
 @Service
 @Slf4j
@@ -70,11 +68,18 @@ public class TokenService {
     }
 
     private Instant calcularDataExpiracao() {
-        return LocalDateTime.now()
-                .plusHours(TOKEN_EXPIRATION_HOURS)
-                .toInstant(ZoneOffset.of("-03:00"));
+        // Instant é absoluto: não depende do fuso do servidor (antes, em UTC, o token valia 27h)
+        return Instant.now().plus(TOKEN_EXPIRATION_HOURS, ChronoUnit.HOURS);
     }
 
+    /**
+     * Valida o token e devolve o subject (login).
+     *
+     * @param tokenJwt token recebido no header Authorization
+     * @return login do usuário
+     * @throws JWTVerificationException token expirado, adulterado, malformado ou vazio. Toda falha de
+     *         validação sai com esse tipo para o FiltroAcesso responder 401 (antes virava RuntimeException → 500)
+     */
     public String getSubject(String tokenJwt) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
@@ -83,10 +88,10 @@ public class TokenService {
                     .build()
                     .verify(tokenJwt)
                     .getSubject();
-        } catch (TokenExpiredException expiredException) {
-            throw expiredException;
-        } catch (Exception exception) {
-            throw new RuntimeException("Token invalido", exception);
+        } catch (JWTVerificationException verificacao) {
+            throw verificacao;
+        } catch (RuntimeException exception) {
+            throw new JWTVerificationException("Token invalido", exception);
         }
     }
 
@@ -95,7 +100,7 @@ public class TokenService {
             DecodedJWT jwt = decodeToken(token);
             return jwt.getClaim(CLAIM_ORGANIZACAO_ID).asLong();
         } catch (Exception e) {
-            log.warn("Erro ao extrair organizacaoId do token: {}", e.getMessage());
+            log.warn("auth.token negado motivo=CLAIM_INVALIDA claim=organizacaoId causa={}", e.getClass().getSimpleName());
             return null;
         }
     }
@@ -105,43 +110,7 @@ public class TokenService {
             DecodedJWT jwt = decodeToken(token);
             return jwt.getClaim(CLAIM_USER_ID).asLong();
         } catch (Exception e) {
-            log.warn("Erro ao extrair userId do token: {}", e.getMessage());
-            return null;
-        }
-    }
-
-    public Integer getTipoUsuarioFromToken(String token) {
-        try {
-            DecodedJWT jwt = decodeToken(token);
-            return jwt.getClaim(CLAIM_TIPO_USUARIO).asInt();
-        } catch (Exception e) {
-            log.warn("Erro ao extrair tipoUsuario do token: {}", e.getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * Extrai a especializacao do profissional (MEDICO/DENTISTA) do token.
-     *
-     * @param token token JWT
-     * @return tipo do profissional ou null quando ausente
-     */
-    public String getTipoProfissionalFromToken(String token) {
-        try {
-            DecodedJWT jwt = decodeToken(token);
-            return jwt.getClaim(CLAIM_TIPO_PROFISSIONAL).asString();
-        } catch (Exception e) {
-            log.warn("Erro ao extrair tipoProfissional do token: {}", e.getMessage());
-            return null;
-        }
-    }
-
-    public String getNomeFromToken(String token) {
-        try {
-            DecodedJWT jwt = decodeToken(token);
-            return jwt.getClaim(CLAIM_NOME).asString();
-        } catch (Exception e) {
-            log.warn("Erro ao extrair nome do token: {}", e.getMessage());
+            log.warn("auth.token negado motivo=CLAIM_INVALIDA claim=userId causa={}", e.getClass().getSimpleName());
             return null;
         }
     }

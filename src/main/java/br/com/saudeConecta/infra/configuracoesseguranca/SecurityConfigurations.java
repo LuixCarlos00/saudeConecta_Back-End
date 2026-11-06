@@ -2,25 +2,31 @@ package br.com.saudeConecta.infra.configuracoesseguranca;
 
 import br.com.saudeConecta.infra.configuracoesseguranca.filtroSeguranca.FiltroAcesso;
 import br.com.saudeConecta.infra.tenant.TenantFilter;
-import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfigurations {
 
     @Autowired
@@ -29,34 +35,26 @@ public class SecurityConfigurations {
     @Autowired
     private TenantFilter tenantFilter;
 
-
+    @Value("${app.cors.allowed-origins}")
+    private String[] allowedOrigins;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http.cors(cors -> cors.configurationSource(request -> {
-                    org.springframework.web.cors.CorsConfiguration config = new org.springframework.web.cors.CorsConfiguration();
-                    config.setAllowedOrigins(java.util.List.of("http://localhost:4200", "https://saude-conecta-frontend.vercel.app"));
-                    config.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-                    config.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "ngrok-skip-browser-warning"));
-                    config.setExposedHeaders(java.util.List.of("Authorization"));
-                    config.setAllowCredentials(true);
-                    return config;
-                })).csrf().disable()
+        return http.cors(cors -> cors.configurationSource(corsConfigurationSource())).csrf().disable()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and().authorizeHttpRequests()
                 .requestMatchers(HttpMethod.POST, "/Home/esqueciMinhaSenha").permitAll()
                 .requestMatchers(HttpMethod.POST, "/Home/login").permitAll()
-                .requestMatchers(HttpMethod.POST, "/Home/cadastralogin").permitAll()
-                .requestMatchers(HttpMethod.GET, "/cep/{cep}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/cep/**").permitAll()
-                .requestMatchers(HttpMethod.GET,"/Home/buscarUsuarioExistente/{login}").permitAll()
-                .requestMatchers(HttpMethod.GET, "/paciente/buscarPorEmail/{email}").permitAll()
-                .requestMatchers(HttpMethod.GET, "/medico/buscarPorEmail/{email}").permitAll()
-                .requestMatchers(HttpMethod.GET, "/paciente/InserirCodigo/{codigo}").permitAll()
-                .requestMatchers(HttpMethod.PUT, "/Home/trocaDeSenha/{Id}").permitAll()
-                .requestMatchers(HttpMethod.GET, "/Home/recuperaLogin={Id}&dados={tipoUsuario}").permitAll()
-                .requestMatchers(HttpMethod.GET, "/publico/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/publico/**").permitAll()
+                // Endpoints públicos explícitos — evita expor novos /publico/** por engano
+                .requestMatchers(HttpMethod.GET, "/publico/questionario/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/publico/questionario/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/publico/planejamento/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/publico/planejamento/**").permitAll()
+                // Webhook do Mercado Pago: autenticado por assinatura HMAC, não por JWT
+                .requestMatchers(HttpMethod.POST, "/publico/webhooks/mercadopago").permitAll()
+                // Auto-cadastro SaaS a partir da landing page
+                .requestMatchers(HttpMethod.POST, "/publico/cadastro").permitAll()
                 .requestMatchers(HttpMethod.GET, "/planos").permitAll()
                 .requestMatchers(HttpMethod.GET, "/planos/**").permitAll()
                 .anyRequest().authenticated()
@@ -76,18 +74,27 @@ public class SecurityConfigurations {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Única configuração de CORS da aplicação (antes havia uma aqui e outra num WebMvcConfigurer,
+     * além de @CrossOrigin nos controllers). As origens vêm de {@code app.cors.allowed-origins},
+     * lista separada por vírgula: em dev o front local, em produção a env CORS_ALLOWED_ORIGINS.
+     *
+     * @return fonte de configuração CORS aplicada a todas as rotas
+     */
     @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(@NotNull CorsRegistry registry) {
-                registry.addMapping("/**")
-                        .allowedOrigins("http://localhost:4200", "https://saude-conecta-frontend.vercel.app")
-                        .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-                        .allowedHeaders("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "ngrok-skip-browser-warning")
-                        .exposedHeaders("Authorization")
-                        .allowCredentials(true);
-            }
-        };
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(Arrays.stream(allowedOrigins)
+                .map(String::trim)
+                .filter(origem -> !origem.isEmpty())
+                .toList());
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "ngrok-skip-browser-warning"));
+        config.setExposedHeaders(List.of("Authorization"));
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 }

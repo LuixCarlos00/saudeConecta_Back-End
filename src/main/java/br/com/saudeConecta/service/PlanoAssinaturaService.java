@@ -84,6 +84,7 @@ public class PlanoAssinaturaService {
     @CacheEvict(value = "planos", allEntries = true)
     @Transactional
     public PlanoAssinaturaResponse atualizarPlano(Long id, PlanoAssinaturaRequest request) {
+        log.info("plano.atualizar inicio planoId={}", id);
         PlanoAssinatura plano = planoAssinaturaRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(
                         "Plano nao encontrado: " + id,
@@ -100,7 +101,7 @@ public class PlanoAssinaturaService {
         plano.setValorAdicionalSecretaria(request.valorAdicionalSecretaria());
 
         PlanoAssinatura salvo = planoAssinaturaRepository.save(plano);
-        log.info("Plano atualizado: {} ({})", salvo.getNome(), salvo.getTipo());
+        log.info("plano.atualizar ok planoId={} nome={} tipo={}", salvo.getId(), salvo.getNome(), salvo.getTipo());
         return PlanoAssinaturaResponse.fromEntity(salvo);
     }
 
@@ -112,6 +113,7 @@ public class PlanoAssinaturaService {
     @CacheEvict(value = "planos", allEntries = true)
     @Transactional
     public void desativarPlano(Long id) {
+        log.info("plano.desativar inicio planoId={}", id);
         PlanoAssinatura plano = planoAssinaturaRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(
                         "Plano nao encontrado: " + id,
@@ -119,7 +121,7 @@ public class PlanoAssinaturaService {
 
         plano.setAtivo(false);
         planoAssinaturaRepository.save(plano);
-        log.info("Plano desativado: {} ({})", plano.getNome(), plano.getTipo());
+        log.info("plano.desativar ok planoId={} nome={} tipo={}", plano.getId(), plano.getNome(), plano.getTipo());
     }
 
     /**

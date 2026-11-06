@@ -16,7 +16,6 @@ import java.util.List;
 @RequestMapping("/historico-dados-pessoais")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 @Description("Endpoints para consulta de histórico de alterações de dados pessoais. Exclusivo para SUPER_ADMIN.")
 public class HistoricoDadosPessoaisController {
 
@@ -32,12 +31,11 @@ public class HistoricoDadosPessoaisController {
     @Transactional(readOnly = true)
     @Description("Busca os 10 registros mais recentes. Exclusivo para SUPER_ADMIN.")
     public ResponseEntity<List<HistoricoDadosPessoais>> buscarHistoricoRecentes() {
-        log.info("SUPER_ADMIN: buscando 10 registros mais recentes de histórico");
         try {
             List<HistoricoDadosPessoais> historico = historicoDadosPessoaisService.buscarHistoricoRecentes();
             return ResponseEntity.ok(historico);
         } catch (IllegalStateException e) {
-            log.warn("Acesso negado ao buscar histórico recente: {}", e.getMessage());
+            log.warn("historico.buscar negado motivo=ACESSO_NEGADO escopo=RECENTES");
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
     }
@@ -53,12 +51,11 @@ public class HistoricoDadosPessoaisController {
     @Transactional(readOnly = true)
     @Description("Busca histórico de alterações por usuário. Exclusivo para SUPER_ADMIN.")
     public ResponseEntity<List<HistoricoDadosPessoais>> buscarHistoricoPorUsuario(@PathVariable Long idUsuario) {
-        log.info("SUPER_ADMIN: buscando histórico por usuário ID: {}", idUsuario);
         try {
             List<HistoricoDadosPessoais> historico = historicoDadosPessoaisService.buscarHistoricoByUsuario(idUsuario);
             return ResponseEntity.ok(historico);
         } catch (IllegalStateException e) {
-            log.warn("Acesso negado ao buscar histórico por usuário: {}", e.getMessage());
+            log.warn("historico.buscar negado motivo=ACESSO_NEGADO escopo=USUARIO usuarioId={}", idUsuario);
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
     }
@@ -77,12 +74,11 @@ public class HistoricoDadosPessoaisController {
     public ResponseEntity<List<HistoricoDadosPessoais>> buscarHistoricoPorEntidade(
             @PathVariable String entidade,
             @PathVariable Long idEntidade) {
-        log.info("SUPER_ADMIN: buscando histórico por entidade: {}, ID: {}", entidade, idEntidade);
         try {
             List<HistoricoDadosPessoais> historico = historicoDadosPessoaisService.buscarHistoricoByEntidade(entidade, idEntidade);
             return ResponseEntity.ok(historico);
         } catch (IllegalStateException e) {
-            log.warn("Acesso negado ao buscar histórico por entidade: {}", e.getMessage());
+            log.warn("historico.buscar negado motivo=ACESSO_NEGADO escopo=ENTIDADE entidade={} entidadeId={}", entidade, idEntidade);
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
     }

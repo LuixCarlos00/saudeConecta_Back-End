@@ -17,10 +17,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
+import br.com.saudeConecta.infra.tenant.TenantHelper;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,6 +49,9 @@ class LimitePlanoServiceTest {
 
     @Mock
     private SecretariaRepository secretariaRepository;
+
+    @Spy
+    private TenantHelper tenantHelper = new TenantHelper();
 
     @InjectMocks
     private LimitePlanoService limitePlanoService;
@@ -103,13 +112,14 @@ class LimitePlanoServiceTest {
         }
 
         @Test
-        @DisplayName("Deve permitir quando não há assinatura ativa (sem plano)")
-        void devePermitirQuandoSemAssinatura() {
+        @DisplayName("4.4 - Deve negar quando não há assinatura com acesso (antes liberava)")
+        void deveNegarQuandoSemAssinatura() {
             when(assinaturaTenantRepository.findAssinaturaAtivaByOrganizacaoId(1L))
                     .thenReturn(Optional.empty());
 
-            assertThatCode(() -> limitePlanoService.validarLimiteAdminOrg(1L))
-                    .doesNotThrowAnyException();
+            assertThatThrownBy(() -> limitePlanoService.validarLimiteAdminOrg(1L))
+                    .isInstanceOf(LimitePlanoException.class)
+                    .hasMessageContaining("assinatura");
 
             verify(adminOrganizacaoRepository, never()).countAtivosByOrganizacaoId(any());
         }
@@ -186,15 +196,41 @@ class LimitePlanoServiceTest {
         }
 
         @Test
-        @DisplayName("Deve permitir quando não há assinatura ativa (sem plano)")
-        void devePermitirSemAssinaturaParaProfissional() {
+        @DisplayName("4.4 - Deve negar profissional quando não há assinatura com acesso")
+        void deveNegarSemAssinaturaParaProfissional() {
             when(assinaturaTenantRepository.findAssinaturaAtivaByOrganizacaoId(1L))
                     .thenReturn(Optional.empty());
 
-            assertThatCode(() -> limitePlanoService.validarLimiteProfissional(1L))
-                    .doesNotThrowAnyException();
+            assertThatThrownBy(() -> limitePlanoService.validarLimiteProfissional(1L))
+                    .isInstanceOf(LimitePlanoException.class);
 
             verify(profissionalRepository, never()).countAtivosByOrganizacaoId(any());
+        }
+
+        @Test
+        @DisplayName("4.4 - Deve negar secretária quando não há assinatura com acesso")
+        void deveNegarSemAssinaturaParaSecretaria() {
+            when(assinaturaTenantRepository.findAssinaturaAtivaByOrganizacaoId(1L))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> limitePlanoService.validarLimiteSecretaria(1L))
+                    .isInstanceOf(LimitePlanoException.class);
+        }
+
+        @Test
+        @DisplayName("4.4 - ROOT (SUPER_ADMIN) continua podendo criar sem assinatura")
+        void rootPodeCriarSemAssinatura() {
+            when(assinaturaTenantRepository.findAssinaturaAtivaByOrganizacaoId(1L))
+                    .thenReturn(Optional.empty());
+            SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                    "root", "n/a", List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))));
+            try {
+                assertThatCode(() -> limitePlanoService.validarLimiteProfissional(1L)).doesNotThrowAnyException();
+                assertThatCode(() -> limitePlanoService.validarLimiteSecretaria(1L)).doesNotThrowAnyException();
+                assertThatCode(() -> limitePlanoService.validarLimiteAdminOrg(1L)).doesNotThrowAnyException();
+            } finally {
+                SecurityContextHolder.clearContext();
+            }
         }
     }
 

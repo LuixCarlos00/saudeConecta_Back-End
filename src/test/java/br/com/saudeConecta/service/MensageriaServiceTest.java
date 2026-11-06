@@ -7,6 +7,7 @@ import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
+import br.com.saudeConecta.infra.tenant.TenantNotDefinedException;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.presentation.dto.mensageria.MensageriaResponse;
 import org.junit.jupiter.api.*;
@@ -78,7 +79,7 @@ class MensageriaServiceTest {
             Pageable pageable = PageRequest.of(0, 10);
             Page<Mensageria> page = new PageImpl<>(List.of(mensageria));
 
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
             when(mensageriaRepository.findByOrganizacaoIdWithFilters(ORG_ID, null, null, pageable))
                     .thenReturn(page);
 
@@ -95,7 +96,7 @@ class MensageriaServiceTest {
             Pageable pageable = PageRequest.of(0, 10);
             Page<Mensageria> page = new PageImpl<>(List.of(mensageria));
 
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(null);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(null);
             when(mensageriaRepository.findAllWithFilters(null, null, pageable)).thenReturn(page);
 
             Page<MensageriaResponse> resultado = mensageriaService.listarMensagens(null, null, pageable);
@@ -110,45 +111,13 @@ class MensageriaServiceTest {
             Pageable pageable = PageRequest.of(0, 10);
             Page<Mensageria> page = new PageImpl<>(List.of(mensageria));
 
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
             when(mensageriaRepository.findByOrganizacaoIdWithFilters(ORG_ID, StatusMensagem.FALHOU, null, pageable))
                     .thenReturn(page);
 
             Page<MensageriaResponse> resultado = mensageriaService.listarMensagens(StatusMensagem.FALHOU, null, pageable);
 
             assertThat(resultado.getContent()).hasSize(1);
-        }
-    }
-
-    // ========== listarFalhasPendentesNotificacao ==========
-
-    @Nested
-    @DisplayName("listarFalhasPendentesNotificacao")
-    class ListarFalhasPendentes {
-
-        @Test
-        @DisplayName("Admin Org deve listar falhas da sua organização")
-        void adminOrgDeveListarFalhasDaSuaOrg() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(ORG_ID);
-            when(mensageriaRepository.findByOrganizacao_IdAndAdminNotificadoFalseAndStatus(ORG_ID, StatusMensagem.FALHOU))
-                    .thenReturn(List.of(mensageria));
-
-            List<MensageriaResponse> resultado = mensageriaService.listarFalhasPendentesNotificacao();
-
-            assertThat(resultado).hasSize(1);
-        }
-
-        @Test
-        @DisplayName("Super Admin deve listar falhas globais")
-        void superAdminDeveListarFalhasGlobais() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(null);
-            when(mensageriaRepository.findByAdminNotificadoFalseAndStatus(StatusMensagem.FALHOU))
-                    .thenReturn(List.of(mensageria));
-
-            List<MensageriaResponse> resultado = mensageriaService.listarFalhasPendentesNotificacao();
-
-            assertThat(resultado).hasSize(1);
-            verify(mensageriaRepository).findByAdminNotificadoFalseAndStatus(StatusMensagem.FALHOU);
         }
     }
 
@@ -161,7 +130,7 @@ class MensageriaServiceTest {
         @Test
         @DisplayName("Deve marcar mensagem como notificada com sucesso")
         void deveMarcarComoNotificadoComSucesso() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
             when(mensageriaRepository.findById(MSG_ID)).thenReturn(Optional.of(mensageria));
 
             mensageriaService.marcarComoNotificado(MSG_ID);
@@ -174,7 +143,7 @@ class MensageriaServiceTest {
         @Test
         @DisplayName("Deve lançar exceção quando mensagem não existir")
         void deveLancarExcecaoQuandoMensagemNaoExistir() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
             when(mensageriaRepository.findById(999L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> mensageriaService.marcarComoNotificado(999L))
@@ -189,7 +158,7 @@ class MensageriaServiceTest {
             outraOrg.setId(99L);
             mensageria.setOrganizacao(outraOrg);
 
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
             when(mensageriaRepository.findById(MSG_ID)).thenReturn(Optional.of(mensageria));
 
             assertThatThrownBy(() -> mensageriaService.marcarComoNotificado(MSG_ID))
@@ -200,56 +169,12 @@ class MensageriaServiceTest {
         @Test
         @DisplayName("Super Admin deve marcar mensagem de qualquer organização")
         void superAdminDeveMarcarQualquerMensagem() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(null);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(null);
             when(mensageriaRepository.findById(MSG_ID)).thenReturn(Optional.of(mensageria));
 
             mensageriaService.marcarComoNotificado(MSG_ID);
 
             assertThat(mensageria.getAdminNotificado()).isTrue();
-        }
-    }
-
-    // ========== buscarPorId ==========
-
-    @Nested
-    @DisplayName("buscarPorId")
-    class BuscarPorId {
-
-        @Test
-        @DisplayName("Deve retornar mensagem quando encontrada na organização")
-        void deveRetornarMensagemQuandoEncontrada() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(ORG_ID);
-            when(mensageriaRepository.findById(MSG_ID)).thenReturn(Optional.of(mensageria));
-
-            MensageriaResponse resultado = mensageriaService.buscarPorId(MSG_ID);
-
-            assertThat(resultado).isNotNull();
-        }
-
-        @Test
-        @DisplayName("Deve lançar exceção quando mensagem não existir")
-        void deveLancarExcecaoQuandoNaoExistir() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(ORG_ID);
-            when(mensageriaRepository.findById(999L)).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> mensageriaService.buscarPorId(999L))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Mensagem não encontrada");
-        }
-
-        @Test
-        @DisplayName("Deve lançar exceção de acesso negado para outra organização")
-        void deveLancarExcecaoDeAcessoNegado() {
-            Organizacao outraOrg = Organizacao.builder().nome("Outra Org").build();
-            outraOrg.setId(99L);
-            mensageria.setOrganizacao(outraOrg);
-
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(ORG_ID);
-            when(mensageriaRepository.findById(MSG_ID)).thenReturn(Optional.of(mensageria));
-
-            assertThatThrownBy(() -> mensageriaService.buscarPorId(MSG_ID))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Acesso negado");
         }
     }
 
@@ -262,7 +187,7 @@ class MensageriaServiceTest {
         @Test
         @DisplayName("Deve retornar contagem de falhas da organização")
         void deveRetornarContagemDaOrg() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
             when(mensageriaRepository.countByOrganizacao_IdAndAdminNotificadoFalseAndStatus(ORG_ID, StatusMensagem.FALHOU))
                     .thenReturn(3L);
 
@@ -274,7 +199,7 @@ class MensageriaServiceTest {
         @Test
         @DisplayName("Super Admin deve retornar contagem global")
         void superAdminDeveRetornarContagemGlobal() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(null);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(null);
             when(mensageriaRepository.countByAdminNotificadoFalseAndStatus(StatusMensagem.FALHOU)).thenReturn(10L);
 
             long resultado = mensageriaService.contarFalhasPendentes();
@@ -294,7 +219,7 @@ class MensageriaServiceTest {
         void deveReenviarMensagemClinicoComSucesso() {
             Profissional profissional = Profissional.builder().email("prof@teste.com").build();
 
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
             when(mensageriaRepository.findById(MSG_ID)).thenReturn(Optional.of(mensageria));
             when(profissionalRepository.findById(ENTIDADE_ID)).thenReturn(Optional.of(profissional));
             doNothing().when(emailNotificacaoService).reenviarEmail(any(), any(), any(), any());
@@ -312,7 +237,7 @@ class MensageriaServiceTest {
         @Test
         @DisplayName("Deve lançar exceção quando profissional não encontrado ao reenviar")
         void deveLancarExcecaoQuandoProfissionalNaoEncontrado() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
             when(mensageriaRepository.findById(MSG_ID)).thenReturn(Optional.of(mensageria));
             when(profissionalRepository.findById(ENTIDADE_ID)).thenReturn(Optional.empty());
 
@@ -324,12 +249,42 @@ class MensageriaServiceTest {
         @Test
         @DisplayName("Deve lançar exceção quando mensagem não existir")
         void deveLancarExcecaoQuandoMensagemNaoExistir() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
             when(mensageriaRepository.findById(999L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> mensageriaService.reenviarMensagem(999L))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Mensagem não encontrada");
         }
+    }
+
+    // ========== Falha fechada sem tenant ==========
+
+    @Nested
+    @DisplayName("Sem tenant e sem papel SUPER_ADMIN")
+    class SemTenantNaoSuperAdmin {
+
+        @BeforeEach
+        void semTenant() {
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin())
+                    .thenThrow(new TenantNotDefinedException("Tenant não definido"));
+        }
+
+        @Test
+        @DisplayName("listarMensagens nega e não consulta a visão global")
+        void listarNega() {
+            assertThatThrownBy(() -> mensageriaService.listarMensagens(null, null, PageRequest.of(0, 10)))
+                    .isInstanceOf(TenantNotDefinedException.class);
+            verify(mensageriaRepository, never()).findAllWithFilters(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("contarFalhasPendentes nega e não conta globalmente")
+        void contarNega() {
+            assertThatThrownBy(() -> mensageriaService.contarFalhasPendentes())
+                    .isInstanceOf(TenantNotDefinedException.class);
+            verify(mensageriaRepository, never()).countByAdminNotificadoFalseAndStatus(any());
+        }
+
     }
 }

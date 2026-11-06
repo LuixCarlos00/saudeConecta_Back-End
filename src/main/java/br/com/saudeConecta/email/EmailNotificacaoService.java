@@ -1,12 +1,18 @@
 package br.com.saudeConecta.email;
 
+import br.com.saudeConecta.util.MascaraLog;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -26,8 +32,12 @@ public class EmailNotificacaoService {
     private static final String TEMPLATE_RECUPERACAO = "email-recuperacao-senha";
     private static final String TEMPLATE_CHAMADO = "email-chamado-suporte";
     private static final String TEMPLATE_CHAMADO_STATUS = "email-chamado-status";
+    private static final String TEMPLATE_ATIVACAO_ASSINATURA = "email-ativacao-assinatura";
+    private static final String ASSUNTO_ATIVACAO_ASSINATURA = "Saúde Conecta - Ative sua assinatura";
     private static final String ASSUNTO_CREDENCIAIS = "Bem-vindo ao Saúde Conecta - Suas credenciais de acesso";
     private static final String ASSUNTO_RECUPERACAO = "Saúde Conecta - Recuperação de Senha";
+
+    private static final DateTimeFormatter FORMATO_DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private static final String COR_ADMINISTRADOR = "#1976D2";
     private static final String COR_MEDICO = "#4CAF50";
@@ -47,15 +57,6 @@ public class EmailNotificacaoService {
         this.emailTemplateService = emailTemplateService;
         this.emailRetryService = emailRetryService;
         this.emailTaskExecutor = emailTaskExecutor;
-    }
-
-    /**
-     * Verifica se o envio de email está habilitado na configuração.
-     *
-     * @return true se o envio está habilitado
-     */
-    public boolean isEmailHabilitado() {
-        return emailHabilitado;
     }
 
     /**
@@ -123,8 +124,8 @@ public class EmailNotificacaoService {
     public void enviarRecuperacaoSenha(String email, String nome, String login,
                                         String novaSenha, Long organizacaoId) {
         if (!emailHabilitado) {
-            log.warn("Email desabilitado. Recuperação não enviada para: {}", email);
-            log.info("RECUPERAÇÃO SENHA - Login: {}, Senha: {}", login, novaSenha);
+            log.warn("email.recuperacao negado motivo=EMAIL_DESABILITADO login={} email={}",
+                    MascaraLog.cpf(login), MascaraLog.email(email));
             return;
         }
 
@@ -142,7 +143,7 @@ public class EmailNotificacaoService {
                         "recuperacao", organizacaoId, null);
 
             } catch (Exception e) {
-                log.error("Erro ao preparar email de recuperação para {}: {}", email, e.getMessage());
+                log.error("email.recuperacao falha email={}", MascaraLog.email(email), e);
             }
         }, emailTaskExecutor);
     }
@@ -169,8 +170,8 @@ public class EmailNotificacaoService {
                                                  int prazoDias, String previsaoAtendimento, int quantidadeAnexos,
                                                  Long organizacaoId) {
         if (!emailHabilitado) {
-            log.warn("Email desabilitado. Confirmacao de chamado nao enviada para: {}", email);
-            log.info("CHAMADO {} - Titulo: {}, Previsao: {}", protocolo, titulo, previsaoAtendimento);
+            log.warn("email.chamado negado motivo=EMAIL_DESABILITADO email={}", MascaraLog.email(email));
+            log.debug("email.chamado desabilitado protocolo={} previsao={}", protocolo, previsaoAtendimento);
             return;
         }
 
@@ -196,7 +197,7 @@ public class EmailNotificacaoService {
                         "chamado", organizacaoId, null);
 
             } catch (Exception e) {
-                log.error("Erro ao preparar email de chamado {} para {}: {}", protocolo, email, e.getMessage());
+                log.error("email.chamado falha protocolo={} email={}", protocolo, MascaraLog.email(email), e);
             }
         }, emailTaskExecutor);
     }
@@ -218,8 +219,8 @@ public class EmailNotificacaoService {
                                                 String statusAnterior, String statusAtual, String observacao,
                                                 Long organizacaoId) {
         if (!emailHabilitado) {
-            log.warn("Email desabilitado. Atualizacao de status nao enviada para: {}", email);
-            log.info("CHAMADO {} - Status: {} -> {}", protocolo, statusAnterior, statusAtual);
+            log.warn("email.chamado.status negado motivo=EMAIL_DESABILITADO email={}", MascaraLog.email(email));
+            log.debug("email.chamado.status desabilitado protocolo={} de={} para={}", protocolo, statusAnterior, statusAtual);
             return;
         }
 
@@ -241,10 +242,66 @@ public class EmailNotificacaoService {
                         "chamado", organizacaoId, null);
 
             } catch (Exception e) {
-                log.error("Erro ao preparar email de atualizacao do chamado {} para {}: {}",
-                        protocolo, email, e.getMessage());
+                log.error("email.chamado.status falha protocolo={} email={}",
+                        protocolo, MascaraLog.email(email), e);
             }
         }, emailTaskExecutor);
+    }
+
+    /**
+     * Envia o link do checkout hospedado do Mercado Pago antes do fim do trial.
+     *
+     * @param email         email do administrador responsável
+     * @param nome          nome do administrador
+     * @param plano         nome do plano contratado
+     * @param valorMensal   valor que será cobrado mensalmente
+     * @param initPoint     URL do checkout do Mercado Pago
+     * @param payerEmail    e-mail que deve estar vinculado à conta Mercado Pago do pagador
+     * @param dataFimTrial  data em que o período gratuito termina
+     * @param organizacaoId ID da organização
+     * @param adminOrgId    ID do admin da organização
+     */
+    @Async
+    public void enviarLinkAtivacaoAssinatura(String email, String nome, String plano,
+                                              BigDecimal valorMensal, String initPoint, String payerEmail,
+                                              LocalDate dataFimTrial, Long organizacaoId, Long adminOrgId) {
+        if (!emailHabilitado) {
+            log.warn("email.ativacao negado motivo=EMAIL_DESABILITADO email={}", MascaraLog.email(email));
+            log.debug("email.ativacao desabilitado plano={} link={}", plano, MascaraLog.token(initPoint));
+            return;
+        }
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                Map<String, Object> variaveis = new HashMap<>();
+                variaveis.put("nome", nome);
+                variaveis.put("plano", plano);
+                variaveis.put("valorMensal", formatarMoeda(valorMensal));
+                variaveis.put("initPoint", initPoint);
+                variaveis.put("payerEmail", payerEmail);
+                variaveis.put("dataFimTrial", dataFimTrial != null
+                        ? dataFimTrial.format(FORMATO_DATA) : "");
+
+                String corpoHtml = emailTemplateService.renderizar(TEMPLATE_ATIVACAO_ASSINATURA, variaveis);
+
+                emailRetryService.executarComRetry(
+                        email, nome, ASSUNTO_ATIVACAO_ASSINATURA, corpoHtml,
+                        "Administrador", organizacaoId, adminOrgId);
+
+            } catch (Exception e) {
+                log.error("email.ativacao falha email={}", MascaraLog.email(email), e);
+            }
+        }, emailTaskExecutor);
+    }
+
+    /**
+     * Formata um valor monetário no padrão brasileiro para exibição no email.
+     */
+    private String formatarMoeda(BigDecimal valor) {
+        if (valor == null) {
+            return "R$ 0,00";
+        }
+        return NumberFormat.getCurrencyInstance(new Locale("pt", "BR")).format(valor);
     }
 
     /**
@@ -258,7 +315,7 @@ public class EmailNotificacaoService {
     @Async
     public void reenviarEmail(Long mensageriaId, String destinatario, String assunto, String corpoHtml) {
         if (!emailHabilitado) {
-            log.warn("Email desabilitado. Reenvio não realizado para: {}", destinatario);
+            log.warn("email.reenviar negado motivo=EMAIL_DESABILITADO email={}", MascaraLog.email(destinatario));
             return;
         }
 
@@ -266,7 +323,7 @@ public class EmailNotificacaoService {
             try {
                 emailRetryService.executarReenvioComRetry(mensageriaId, destinatario, assunto, corpoHtml);
             } catch (Exception e) {
-                log.error("Erro ao reenviar email para {}: {}", destinatario, e.getMessage());
+                log.error("email.reenviar falha email={}", MascaraLog.email(destinatario), e);
             }
         }, emailTaskExecutor);
     }
@@ -296,8 +353,8 @@ public class EmailNotificacaoService {
                                     String tipoUsuario, String corTema, String nomeOrganizacao,
                                     Long organizacaoId, Long entidadeId) {
         if (!emailHabilitado) {
-            log.warn("Email desabilitado. Credenciais não enviadas para {}: {}", tipoUsuario, email);
-            log.info("CREDENCIAIS {} - Login: {}, Senha: {}", tipoUsuario.toUpperCase(), login, senha);
+            log.warn("email.credenciais negado motivo=EMAIL_DESABILITADO tipo={} login={} email={}",
+                    tipoUsuario, MascaraLog.cpf(login), MascaraLog.email(email));
             return;
         }
 
@@ -319,8 +376,8 @@ public class EmailNotificacaoService {
                         tipoMensageria, organizacaoId, entidadeId);
 
             } catch (Exception e) {
-                log.error("Erro ao preparar email de credenciais {} para {}: {}",
-                        tipoUsuario, email, e.getMessage());
+                log.error("email.credenciais falha tipo={} email={}",
+                        tipoUsuario, MascaraLog.email(email), e);
             }
         }, emailTaskExecutor);
     }

@@ -5,11 +5,16 @@ import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infra.configuracoesseguranca.TokenService;
+import com.auth0.jwt.JWT;
 import com.auth0.jwt.exceptions.TokenExpiredException;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.TimeZone;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -105,16 +110,16 @@ class TokenServiceTest {
         @DisplayName("Deve gerar token com tipoUsuario embutido")
         void deveGerarTokenComTipoUsuario() {
             String token = tokenService.gerarToken(usuario, 1L, "Dr. Teste", "CLINICO", "MEDICO");
-            Integer tipo = tokenService.getTipoUsuarioFromToken(token);
+            Integer tipo = JWT.decode(token).getClaim("tipoUsuario").asInt();
 
-            assertThat(tipo).isEqualTo(3);
+            assertThat(tipo).isEqualTo(TipoUsuarioNovo.CLINICO.getCodigo());
         }
 
         @Test
         @DisplayName("Deve gerar token com nome embutido")
         void deveGerarTokenComNome() {
             String token = tokenService.gerarToken(usuario, 1L, "Dr. Teste", "CLINICO", "MEDICO");
-            String nome = tokenService.getNomeFromToken(token);
+            String nome = JWT.decode(token).getClaim("nome").asString();
 
             assertThat(nome).isEqualTo("Dr. Teste");
         }
@@ -129,9 +134,9 @@ class TokenServiceTest {
         @Test
         @DisplayName("Deve lançar exceção com token inválido")
         void deveLancarExcecaoComTokenInvalido() {
+            // Fase 5.4: precisa ser JWTVerificationException para o FiltroAcesso responder 401 (antes virava 500)
             assertThatThrownBy(() -> tokenService.getSubject("token.invalido.aqui"))
-                    .isInstanceOf(RuntimeException.class)
-                    .hasMessageContaining("Token invalido");
+                    .isInstanceOf(com.auth0.jwt.exceptions.JWTVerificationException.class);
         }
 
         @Test
@@ -142,14 +147,14 @@ class TokenServiceTest {
             String tokenDeOutroService = outroService.gerarToken(usuario);
 
             assertThatThrownBy(() -> tokenService.getSubject(tokenDeOutroService))
-                    .isInstanceOf(RuntimeException.class);
+                    .isInstanceOf(com.auth0.jwt.exceptions.JWTVerificationException.class);
         }
 
         @Test
         @DisplayName("Deve lançar exceção com string vazia")
         void deveLancarExcecaoComTokenVazio() {
             assertThatThrownBy(() -> tokenService.getSubject(""))
-                    .isInstanceOf(RuntimeException.class);
+                    .isInstanceOf(com.auth0.jwt.exceptions.JWTVerificationException.class);
         }
     }
 
@@ -175,20 +180,31 @@ class TokenServiceTest {
             assertThat(resultado).isNull();
         }
 
+
+    }
+
+    // ========== expiração ==========
+
+    @Nested
+    @DisplayName("4.3 - expiração do token independe do fuso do servidor")
+    class Expiracao {
+
         @Test
-        @DisplayName("getTipoUsuarioFromToken deve retornar null com token inválido")
-        void deveRetornarNullParaTipoComTokenInvalido() {
-            Integer resultado = tokenService.getTipoUsuarioFromToken("token.invalido");
+        @DisplayName("Em servidor UTC o token expira em 24h (antes: 27h por causa do offset fixo -03:00)")
+        void deveExpirarEm24HorasEmServidorUtc() {
+            TimeZone original = TimeZone.getDefault();
+            try {
+                TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+                Instant antes = Instant.now();
 
-            assertThat(resultado).isNull();
-        }
+                String token = tokenService.gerarToken(usuario, 1L, "Nome", "CLINICO", null);
 
-        @Test
-        @DisplayName("getNomeFromToken deve retornar null com token inválido")
-        void deveRetornarNullParaNomeComTokenInvalido() {
-            String resultado = tokenService.getNomeFromToken("token.invalido");
-
-            assertThat(resultado).isNull();
+                Instant expiracao = JWT.decode(token).getExpiresAtAsInstant();
+                assertThat(Duration.between(antes, expiracao))
+                        .isBetween(Duration.ofHours(24).minusMinutes(1), Duration.ofHours(24).plusMinutes(1));
+            } finally {
+                TimeZone.setDefault(original);
+            }
         }
     }
 }

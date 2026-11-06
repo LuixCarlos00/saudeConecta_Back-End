@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,7 +18,6 @@ import java.util.List;
 @RequestMapping("/planos")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class PlanoAssinaturaController {
 
     private final PlanoAssinaturaService planoAssinaturaService;
@@ -52,10 +52,10 @@ public class PlanoAssinaturaController {
      * Apenas os 3 planos fixos (STARTER, PROFISSIONAL, BUSINESS) podem ser editados.
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<PlanoAssinaturaResponse> atualizarPlano(
             @PathVariable Long id,
             @RequestBody @Valid PlanoAssinaturaRequest request) {
-        log.info("Atualizando plano ID: {}", id);
         return ResponseEntity.ok(planoAssinaturaService.atualizarPlano(id, request));
     }
 
@@ -63,8 +63,8 @@ public class PlanoAssinaturaController {
      * Desativa um plano (soft delete) (SUPER_ADMIN).
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Void> desativarPlano(@PathVariable Long id) {
-        log.info("Desativando plano ID: {}", id);
         planoAssinaturaService.desativarPlano(id);
         return ResponseEntity.noContent().build();
     }

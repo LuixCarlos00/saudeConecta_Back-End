@@ -1,5 +1,7 @@
 package br.com.saudeConecta.infrastructure.persistence.repository;
 
+import br.com.saudeConecta.domain.usuario.StatusUsuario;
+import br.com.saudeConecta.infrastructure.persistence.projection.PlataformaProjecoes;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -50,4 +52,13 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
      */
     Usuario findByTipoUsuarioNovoAndOrganizacaoIsNull(TipoUsuarioNovo tipoUsuarioNovo);
 
+    /** Usuários com o status informado por perfil, sem o ROOT (que não pertence a clínica). */
+    @Query("SELECT u.tipoUsuarioNovo AS perfil, COUNT(u) AS quantidade FROM Usuario u " +
+           "WHERE u.status = :status AND u.tipoUsuarioNovo <> 'ROOT' GROUP BY u.tipoUsuarioNovo")
+    List<PlataformaProjecoes.ContagemPorPerfil> contarPorPerfilEStatus(@Param("status") StatusUsuario status);
+
+    /** Usuários ativos (não bloqueados) por perfil, sem o ROOT. */
+    default List<PlataformaProjecoes.ContagemPorPerfil> contarAtivosPorPerfil() {
+        return contarPorPerfilEStatus(StatusUsuario.ATIVO);
+    }
 }

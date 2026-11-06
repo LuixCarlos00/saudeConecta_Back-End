@@ -42,7 +42,6 @@ public class SecretariaService {
     private final LimitePlanoService limitePlanoService;
     private final CacheEvictionService cacheEvictionService;
 
-
     public SecretariaService(
             SecretariaRepository secretariaRepository,
             UsuarioRepository usuarioRepository,
@@ -66,8 +65,6 @@ public class SecretariaService {
         this.cacheEvictionService = cacheEvictionService;
     }
 
-
-
     @RequiresTenant
     @Transactional(readOnly = true)
     public Optional<Secretaria> buscarSecretariaIdByOrg(Long idSecretaria) {
@@ -83,8 +80,14 @@ public class SecretariaService {
         Secretaria antes = secretariaRepository.findByIdAndOrganizacao_Id(id, orgId)
             .orElseThrow(() -> new IllegalArgumentException("Secretaria nao encontrada"));
 
-        Secretaria snapshot = SnapshotUtil.copiarSnapshot(antes);
+        // Trocar o e-mail de outro usuário permite tomar a conta pelo "esqueci minha senha"
+        tenantHelper.validarGestorOuDono(antes.getUsuario() != null ? antes.getUsuario().getId() : null);
 
+        // E-mail duplicado desvia o "esqueci minha senha" (que busca por e-mail) para a conta errada
+        emailUnicoService.validarEmailLivreParaAtualizacao(dadosAtualizados.getEmail(), antes.getEmail(),
+                antes.getUsuario() != null ? antes.getUsuario().getId() : null);
+
+        Secretaria snapshot = SnapshotUtil.copiarSnapshot(antes);
 
         // Atualiza campos permitidos (nome, email e telefone)
         if (dadosAtualizados.getNome() != null) {
@@ -97,7 +100,7 @@ public class SecretariaService {
             antes.setTelefone(dadosAtualizados.getTelefone());
         }
        Secretaria resultado = secretariaRepository.save(antes);
-        log.info("Secretaria atualizada com sucesso. ID: {}", antes.getId());
+        log.info("secretaria.atualizar ok secretariaId={}", antes.getId());
 
         historicoDadosPessoaisService.registrarAlteracoesDeObjeto(
                 EntidadeTipo.SECRETARIA,
@@ -116,12 +119,11 @@ public class SecretariaService {
     @Transactional
     public Secretaria cadastrarSecretariaByOrg(CadastrarSecretariaRequest request) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Cadastrando Secretaria: {} na Organizacao: {}", request.nome(), orgId);
+        log.info("secretaria.cadastrar inicio organizacaoId={}", orgId);
 
         limitePlanoService.validarLimiteSecretaria(orgId);
 
         String cpfLimpo = limparCpf(request.cpf());
-
 
         if (usuarioRepository.existsByLogin(cpfLimpo)) {
             throw new IllegalStateException("CPF já cadastrado no sistema");
@@ -159,7 +161,7 @@ public class SecretariaService {
 
         usuarioRepository.save(usuario);
         Secretaria salva = secretariaRepository.save(secretaria);
-        log.info("Secretaria cadastrada com sucesso. ID: {}", salva.getId());
+        log.info("secretaria.cadastrar ok secretariaId={}", salva.getId());
 
         cacheEvictionService.evictPerfilEUsuariosAgrupados(usuario.getId(), orgId);
 
@@ -179,7 +181,7 @@ public class SecretariaService {
     @Transactional
     public void deletarSecretariaIdByOrg(Long idSecretaria) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Deletando Secretaria ID: {} da Organizacao: {}", idSecretaria, orgId);
+        log.info("secretaria.deletar inicio secretariaId={} organizacaoId={}", idSecretaria, orgId);
 
         // 1. Buscar a Secretaria na tabela secretaria
         Secretaria secretaria = secretariaRepository.findByIdAndOrganizacao_Id(idSecretaria, orgId)
@@ -201,14 +203,15 @@ public class SecretariaService {
 
             cacheEvictionService.evictPerfilEUsuariosAgrupados(usuarioId, orgId);
 
-            log.info("Secretaria e Usuario deletados com sucesso. ID Secretaria: {}, ID Usuario: {}", 
+            log.info("secretaria.deletar ok secretariaId={} usuarioId={}",
                     idSecretaria, usuario.getId());
                     
         } catch (Exception e) {
             // 4. Caso haja relacionamento que impeça o delete, cancelar e avisar
-            String errorMessage = "Não foi possível deletar a Secretaria devido a relacionamentos existentes: " + e.getMessage();
-            log.error(errorMessage);
-            throw new IllegalStateException(errorMessage);
+            // Mensagem do banco (tabela/constraint) fica só no log; a causa segue encadeada
+            String errorMessage = "Não foi possível deletar a Secretaria devido a relacionamentos existentes";
+            log.warn("secretaria.deletar negado motivo=RELACIONAMENTOS_EXISTENTES secretariaId={}", idSecretaria, e);
+            throw new IllegalStateException(errorMessage, e);
         }
     }
 

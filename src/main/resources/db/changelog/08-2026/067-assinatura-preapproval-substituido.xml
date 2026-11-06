@@ -1,0 +1,37 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ================================================================ -->
+    <!-- PREAPPROVAL SUBSTITUIDO (troca de link em duas fases)            -->
+    <!-- Guarda o preapproval antigo do Mercado Pago depois que um novo   -->
+    <!-- foi vinculado; ele e cancelado no MP apos o commit e a coluna    -->
+    <!-- volta a NULL. Preenchida = cancelamento pendente (a              -->
+    <!-- reconciliacao tenta de novo).                                    -->
+    <!-- Retrocompativel: coluna nova e nullable; a versao anterior da    -->
+    <!-- aplicacao a ignora. Sem impacto em dados existentes.             -->
+    <!-- ================================================================ -->
+    <changeSet id="067-001-assinatura-preapproval-substituido" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="assinatura_tenant"/>
+            <not><columnExists tableName="assinatura_tenant" columnName="mp_preapproval_substituido_id"/></not>
+        </preConditions>
+        <comment>Preapproval antigo aguardando cancelamento no Mercado Pago apos a troca de link</comment>
+
+        <addColumn tableName="assinatura_tenant">
+            <column name="mp_preapproval_substituido_id" type="VARCHAR(50)" afterColumn="mp_ultima_sincronizacao"/>
+        </addColumn>
+
+        <!-- A reconciliacao busca as linhas com cancelamento pendente a cada 4h -->
+        <createIndex tableName="assinatura_tenant" indexName="idx_assinatura_tenant_mp_substituido">
+            <column name="mp_preapproval_substituido_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="assinatura_tenant" indexName="idx_assinatura_tenant_mp_substituido"/>
+            <dropColumn tableName="assinatura_tenant" columnName="mp_preapproval_substituido_id"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

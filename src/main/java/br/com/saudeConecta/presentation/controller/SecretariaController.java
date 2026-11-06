@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,17 +23,12 @@ public class SecretariaController {
 
 
     @PostMapping("/cadastrarSecretariaByOrg")
+    @PreAuthorize("hasRole('ADMIN')")
     @Description("Cadastra nova secretária. Utilizado em: CadastroSecretariaComponent")
     public ResponseEntity<?> cadastrarSecretariaByOrg(@RequestBody @Valid CadastrarSecretariaRequest request) {
-        log.info("Cadastrando secretaria: {}", request.nome());
-        try {
-            Secretaria secretaria = secretariaService.cadastrarSecretariaByOrg(request);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(SecretariaResponse.fromEntity(secretaria));
-        } catch (IllegalStateException e) {
-            log.warn("Erro ao cadastrar secretaria: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        }
+        Secretaria secretaria = secretariaService.cadastrarSecretariaByOrg(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(SecretariaResponse.fromEntity(secretaria));
     }
 
     @GetMapping("/buscarSecretariaIdByOrg/{idSecretaria}")
@@ -46,29 +42,27 @@ public class SecretariaController {
 
 
     @PutMapping("/atualizarSecretariaIdByOrg/{id}")
-    @Description("Atualiza secretária por ID")
-    public ResponseEntity<SecretariaResponse> atualizarSecretariaIdByOrg(@PathVariable Long id, @RequestBody Secretaria secretaria) {
+    @Description("Atualiza secretária por ID. Gestor ou a própria secretária (regra no service)")
+    public ResponseEntity<?> atualizarSecretariaIdByOrg(@PathVariable Long id, @RequestBody Secretaria secretaria) {
         try {
             Secretaria atualizada = secretariaService.atualizarSecretariaIdByOrg(id, secretaria);
             return ResponseEntity.ok(SecretariaResponse.fromEntity(atualizada));
         } catch (IllegalArgumentException e) {
-            log.warn("Erro ao atualizar secretaria: {}", e.getMessage());
+            log.warn("secretaria.atualizar negado motivo=NAO_ENCONTRADA secretariaId={}", id);
             return ResponseEntity.notFound().build();
         }
     }
 
 
     @DeleteMapping("/deletarSecretariaIdByOrg/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Description("Deleta secretária por ID")
     public ResponseEntity<?> deletarSecretariaIdByOrg(@PathVariable Long id) {
         try {
             secretariaService.deletarSecretariaIdByOrg(id);
             return ResponseEntity.ok().build();
-        } catch (IllegalStateException e) {
-            log.warn("Erro ao deletar secretaria: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         } catch (IllegalArgumentException e) {
-            log.warn("Secretaria nao encontrada: {}", e.getMessage());
+            log.warn("secretaria.deletar negado motivo=NAO_ENCONTRADA secretariaId={}", id);
             return ResponseEntity.notFound().build();
         }
     }

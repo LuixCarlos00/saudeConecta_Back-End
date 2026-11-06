@@ -2,7 +2,6 @@ package br.com.saudeConecta.domain.usuario;
 
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.infra.tenant.TenantAware;
-import br.com.saudeConecta.presentation.dto.usuario.CadastrarUsuarioRequest;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
@@ -39,7 +38,7 @@ public class Usuario implements Serializable, UserDetails, TenantAware {
     @JsonIgnore
     private Organizacao organizacao;
 
-    @Column(nullable = false, name = "login")
+    @Column(nullable = false, name = "login", unique = true)
     private String login;
 
     @Column(nullable = false, name = "senha")
@@ -56,26 +55,10 @@ public class Usuario implements Serializable, UserDetails, TenantAware {
     @Column(name = "email", nullable = true)
     private String email;
 
-    private StatusUsuario converterByteParaStatus(Byte statusByte) {
-        return statusByte != null && statusByte == 1 ? StatusUsuario.ATIVO : StatusUsuario.INATIVO;
-    }
-
-    public Usuario(CadastrarUsuarioRequest dados, String senhaCriptografada, TipoUsuarioNovo tipoNovo) {
-        this.login = dados.login();
-        this.senha = senhaCriptografada;
-        this.tipoUsuarioNovo = tipoNovo;
-        this.status = converterByteParaStatus(dados.status());
-    }
-    
-    public Usuario(CadastrarUsuarioRequest dados, String senhaCriptografada, 
-                   Organizacao organizacao, TipoUsuarioNovo tipoNovo) {
-        this.login = dados.login();
-        this.senha = senhaCriptografada;
-        this.tipoUsuarioNovo = tipoNovo;
-        this.status = converterByteParaStatus(dados.status());
-        this.organizacao = organizacao;
-    }
-
+    /** Origem do bloqueio atual; null quando ativo ou bloqueado antes da coluna existir. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "motivo_bloqueio", length = 20)
+    private MotivoBloqueio motivoBloqueio;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -117,7 +100,6 @@ public class Usuario implements Serializable, UserDetails, TenantAware {
         return StatusUsuario.ATIVO.equals(this.status);
     }
 
-
     @Override
     public Long getOrganizacaoId() {
         return this.organizacao != null ? this.organizacao.getId() : null;
@@ -141,9 +123,5 @@ public class Usuario implements Serializable, UserDetails, TenantAware {
 
     public boolean isAssistente() {
         return TipoUsuarioNovo.ASSISTENTE.equals(this.tipoUsuarioNovo);
-    }
-
-    public boolean hasOrganization() {
-        return this.organizacao != null;
     }
 }

@@ -47,6 +47,9 @@ class PacienteServiceTest {
     @Mock
     private HistoricoDadosPessoaisService historicoDadosPessoaisService;
 
+    @Mock
+    private br.com.saudeConecta.service.CacheEvictionService cacheEvictionService;
+
     @InjectMocks
     private PacienteService pacienteService;
 
@@ -431,6 +434,27 @@ class PacienteServiceTest {
 
             assertThat(resultado).isNotNull();
             verify(enderecoRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("4.5c - Atualização grava o CPF do paciente só com dígitos")
+        void atualizacaoNormalizaCpf() {
+            pacienteMock.setEndereco(null);
+            AtualizarPacienteRequest dados = new AtualizarPacienteRequest(
+                    null, null, null,
+                    "123.456.789-00", null, null, null,
+                    null, null, null, null, null, null, null, null
+            );
+
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentUserId()).thenReturn(99L);
+            when(pacienteRepository.findByPaciCodigoAndOrganizacao_IdWithEndereco(PACIENTE_ID, ORG_ID))
+                    .thenReturn(Optional.of(pacienteMock));
+            when(pacienteRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            Paciente resultado = pacienteService.atualizarPacientebyOrg(PACIENTE_ID, dados);
+
+            assertThat(resultado.getPaciCpf()).isEqualTo("12345678900");
         }
 
         @Test

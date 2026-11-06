@@ -1,5 +1,8 @@
 package br.com.saudeConecta.service;
 
+import org.springframework.http.HttpStatus;
+import br.com.saudeConecta.infra.exceptions.BusinessException;
+import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
@@ -8,7 +11,8 @@ import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
 import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
 import br.com.saudeConecta.domain.prontuario.ProntuarioDentistaDente;
-import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.infra.tenant.TenantHelper;
+import br.com.saudeConecta.infrastructure.persistence.repository.AtendimentoRascunhoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
@@ -30,11 +34,16 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProntuarioDentistaService {
 
+    /** Código do 409 quando a consulta já tem prontuário (ver docs do ErrorResponse). */
+    public static final String CODE_PRONTUARIO_JA_FINALIZADO = "PRONTUARIO_JA_FINALIZADO";
+
     private final ProntuarioDentistaRepository prontuarioDentistaRepository;
     private final ProfissionalRepository profissionalRepository;
     private final ConsultaRepository consultaRepository;
+    private final AtendimentoRascunhoRepository atendimentoRascunhoRepository;
     private final PacienteRepository pacienteRepository;
     private final EntityManager entityManager;
+    private final TenantHelper tenantHelper;
 
     // =========================================================================
     // CADASTRO
@@ -42,17 +51,30 @@ public class ProntuarioDentistaService {
 
     @Transactional
     public ProntuarioDentista cadastrarProntuarioByOrg(CadastrarProntuarioDentistaRequest request) {
-        log.info("Cadastrando prontuario odontologico — consulta={}", request.getConsulta());
+        log.info("prontuario.dentista.cadastrar inicio consultaId={} profissionalId={}", request.getConsulta(), request.getCodigoMedico());
+        Long orgId = tenantHelper.getCurrentTenantId();
 
+        // Profissional e consulta precisam ser da clínica do token; de outra clínica = "não encontrado".
         Profissional profissional = profissionalRepository
-                .findById(request.getCodigoMedico())
+                .findByIdAndOrganizacao_Id(request.getCodigoMedico(), orgId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Profissional nao encontrado: " + request.getCodigoMedico()));
 
+        // Lock da consulta antes de qualquer INSERT: mesma ordem de locks do PUT do rascunho (sem deadlock
+        // pela FK do prontuario) e duplo clique em "Finalizar" fica serializado. Tenant continua no filtro.
         Consulta consulta = consultaRepository
-                .findById(request.getConsulta())
+                .buscarComLock(request.getConsulta(), orgId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Consulta nao encontrada: " + request.getConsulta()));
+
+        // Regra: um prontuário por consulta. Com o lock acima, o segundo "Finalizar" (duplo clique,
+        // duas abas) espera o primeiro terminar e cai aqui em vez de gravar um prontuário duplicado.
+        if (prontuarioDentistaRepository.existsByConsulta_Id(consulta.getId())) {
+            log.warn("prontuario.dentista.cadastrar negado motivo=PRONTUARIO_JA_FINALIZADO consultaId={}", consulta.getId());
+            throw new BusinessException(
+                    "Esta consulta já foi finalizada. Para corrigir o prontuário, use a edição.",
+                    HttpStatus.CONFLICT, CODE_PRONTUARIO_JA_FINALIZADO);
+        }
 
         // ── Monta Prontuario principal ────────────────────────────────────────
         ProntuarioDentista prontuario = ProntuarioDentista.builder()
@@ -129,19 +151,20 @@ public class ProntuarioDentistaService {
         }
 
         ProntuarioDentista salvo = prontuarioDentistaRepository.save(prontuario);
-        log.info("Prontuario odontologico salvo — id={}, dentes={}",
+        log.info("prontuario.dentista.cadastrar ok prontuarioId={} dentes={}",
                 salvo.getCodigo(), salvo.getDentes().size());
 
         // ── Adiciona planejamentos terapêuticos ─────────────────────────────────
         if (!CollectionUtils.isEmpty(request.getPlanejamentos())) {
-            Long orgId = TenantContext.getCurrentTenant();
             Organizacao organizacao = new Organizacao();
             organizacao.setId(orgId);
 
             for (CadastrarProntuarioDentistaRequest.PlanejamentoItem item : request.getPlanejamentos()) {
                 Paciente paciente = null;
                 if (item.getPacienteId() != null) {
-                    paciente = pacienteRepository.findById(item.getPacienteId()).orElse(null);
+                    paciente = pacienteRepository
+                            .findByPaciCodigoAndOrganizacao_IdWithEndereco(item.getPacienteId(), orgId)
+                            .orElse(null);
                 }
 
                 PlanejamentoTerapeutico planejamento = PlanejamentoTerapeutico.builder()
@@ -158,12 +181,16 @@ public class ProntuarioDentistaService {
                 salvo.addPlanejamento(planejamento);
             }
             prontuarioDentistaRepository.save(salvo);
-            log.info("Planejamentos salvos — total={}", request.getPlanejamentos().size());
+            log.debug("prontuario.dentista.cadastrar planejamentos total={}", request.getPlanejamentos().size());
         }
 
         consulta.setStatus(StatusConsulta.REALIZADA);
         consultaRepository.save(consulta);
-        log.info("Status da consulta ID: {} atualizado para REALIZADA", consulta.getId());
+        log.info("prontuario.dentista.cadastrar consulta consultaId={} status=REALIZADA", consulta.getId());
+
+        // Prontuário oficial gravado: o rascunho sai na mesma transação (falhou acima = rascunho continua).
+        int rascunhos = atendimentoRascunhoRepository.apagarPorConsulta(consulta.getId());
+        log.info("prontuario.dentista.cadastrar rascunho consultaId={} removidos={}", consulta.getId(), rascunhos);
 
         return salvo;
     }
@@ -180,11 +207,17 @@ public class ProntuarioDentistaService {
      */
     @Transactional
     public void atualizarProntuario(Long id, CadastrarProntuarioDentistaRequest request) {
-        log.info("Atualizando prontuario odontologico — id={}", id);
+        log.info("prontuario.dentista.atualizar inicio prontuarioId={}", id);
+        Long orgId = tenantHelper.getCurrentTenantId();
 
-        ProntuarioDentista prontuario = prontuarioDentistaRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Prontuario odontologico nao encontrado: " + id));
+        // Dado clínico é do profissional que atendeu: nem o gestor edita. Outro usuário da clínica recebe
+        // o mesmo 404 de prontuário inexistente (padrão IDOR do rascunho: não revela que ele existe).
+        ProntuarioDentista prontuario = prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(id, orgId)
+                .filter(p -> ehDonoDaConsulta(p.getConsulta()))
+                .orElseThrow(() -> {
+                    log.warn("prontuario.dentista.atualizar negado motivo=NAO_ENCONTRADO prontuarioId={}", id);
+                    return new ResourceNotFoundException("Prontuario odontologico nao encontrado: " + id);
+                });
 
         // ── Anamnese ──
         prontuario.setQueixaPrincipal(request.getQueixaPrincipal());
@@ -261,43 +294,49 @@ public class ProntuarioDentistaService {
             }
         }
 
-        // ── Atualiza planejamentos terapêuticos (limpa e recria) ──
-        prontuario.getPlanejamentos().clear();
-        prontuarioDentistaRepository.saveAndFlush(prontuario);
-
-        if (!CollectionUtils.isEmpty(request.getPlanejamentos())) {
-            Long orgId = TenantContext.getCurrentTenant();
-            Organizacao organizacao = new Organizacao();
-            organizacao.setId(orgId);
-
-            // Busca consulta e profissional apenas uma vez
-            Consulta consulta = prontuario.getConsulta();
-            Profissional profissional = prontuario.getProfissional();
-
-            for (CadastrarProntuarioDentistaRequest.PlanejamentoItem item : request.getPlanejamentos()) {
-                Paciente paciente = null;
-                if (item.getPacienteId() != null) {
-                    paciente = pacienteRepository.findById(item.getPacienteId()).orElse(null);
-                }
-
-                PlanejamentoTerapeutico planejamento = PlanejamentoTerapeutico.builder()
+        // ── Planejamentos: atualiza por id e preserva os assinados (ver EdicaoPlanejamentos). O paciente é
+        //    sempre o da consulta: o pacienteId do payload não troca o paciente do planejamento. ──
+        Organizacao organizacao = new Organizacao();
+        organizacao.setId(orgId);
+        Consulta consulta = prontuario.getConsulta();
+        Profissional profissional = prontuario.getProfissional();
+        List<EdicaoPlanejamentos.Item> itens = request.getPlanejamentos() == null ? null
+                : request.getPlanejamentos().stream()
+                        .map(i -> new EdicaoPlanejamentos.Item(i.getId(), parseData(i.getDataProcedimento()),
+                                i.getProcedimentoRealizado(), i.getValor()))
+                        .toList();
+        EdicaoPlanejamentos.sincronizar(prontuario.getPlanejamentos(), itens,
+                item -> PlanejamentoTerapeutico.builder()
                         .prontuarioDentista(prontuario)
                         .consulta(consulta)
-                        .paciente(paciente)
+                        .paciente(consulta.getPaciente())
                         .profissional(profissional)
                         .organizacao(organizacao)
-                        .dataProcedimento(parseData(item.getDataProcedimento()))
-                        .procedimentoRealizado(item.getProcedimentoRealizado())
-                        .valor(item.getValor())
+                        .dataProcedimento(item.dataProcedimento())
+                        .procedimentoRealizado(item.procedimentoRealizado())
+                        .valor(item.valor())
                         .statusAssinatura("PENDENTE")
-                        .build();
-                prontuario.addPlanejamento(planejamento);
-            }
-            log.info("Planejamentos atualizados — total={}", request.getPlanejamentos().size());
-        }
+                        .build(),
+                (gravado, item) -> {
+                    gravado.setDataProcedimento(item.dataProcedimento());
+                    gravado.setProcedimentoRealizado(item.procedimentoRealizado());
+                    gravado.setValor(item.valor());
+                },
+                id);
 
         prontuarioDentistaRepository.save(prontuario);
-        log.info("Prontuario odontologico atualizado — id={}", id);
+        log.info("prontuario.dentista.atualizar ok prontuarioId={}", id);
+    }
+
+    /**
+     * Indica se o usuário do token é o profissional da consulta ({@code consulta.profissional.usuario}).
+     * Consulta, profissional e tenant do prontuário nunca vêm do payload da edição.
+     */
+    private boolean ehDonoDaConsulta(Consulta consulta) {
+        Long usuarioId = tenantHelper.getCurrentUserId();
+        return usuarioId != null && consulta != null && consulta.getProfissional() != null
+                && consulta.getProfissional().getUsuario() != null
+                && usuarioId.equals(consulta.getProfissional().getUsuario().getId());
     }
 
     // =========================================================================
@@ -305,21 +344,9 @@ public class ProntuarioDentistaService {
     // =========================================================================
 
     @Transactional(readOnly = true)
-    public ProntuarioDentista buscarPorId(Long id) {
-        return prontuarioDentistaRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Prontuario odontologico nao encontrado: " + id));
-    }
-
-    @Transactional(readOnly = true)
-    public List<ProntuarioDentista> listarPorConsulta(Long consultaId) {
-        return prontuarioDentistaRepository.findByConsultaId(consultaId);
-    }
-
-    @Transactional(readOnly = true)
     public ProntuarioDentista buscarMaisRecentePorConsulta(Long consultaId) {
         Long id = prontuarioDentistaRepository
-                .findIdMaisRecentePorConsulta(consultaId)
+                .findIdMaisRecentePorConsulta(consultaId, tenantHelper.getCurrentTenantId())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Nenhum Prontuario odontologico encontrado para consulta: " + consultaId));
 
@@ -334,28 +361,6 @@ public class ProntuarioDentistaService {
         return pd;
     }
 
-
-
-
-    @Transactional(readOnly = true)
-    public List<ProntuarioDentista> listarPorProfissional(Long profissionalId) {
-        return prontuarioDentistaRepository.findByProfissionalId(profissionalId);
-    }
-
-    /**
-     * Lista prontuários de um paciente (histórico).
-     *
-     * @param pacienteId ID do paciente
-     * @return lista de prontuários do paciente
-     */
-    @Transactional(readOnly = true)
-    public List<ProntuarioDentista> listarPorPaciente(Long pacienteId) {
-        List<ProntuarioDentista> lista = prontuarioDentistaRepository.findByPacienteId(pacienteId);
-        // Inicializa planejamentos em query separada para evitar cartesian product com dentes
-        lista.forEach(pd -> Hibernate.initialize(pd.getPlanejamentos()));
-        return lista;
-    }
-
     // =========================================================================
     // UTILITÁRIO
     // =========================================================================
@@ -365,7 +370,7 @@ public class ProntuarioDentistaService {
         try {
             return LocalDate.parse(data);
         } catch (Exception e) {
-            log.warn("Data inválida '{}', usando data atual.", data);
+            log.warn("prontuario.dentista.data negado motivo=DATA_INVALIDA data={} acao=USA_DATA_ATUAL", data);
             return LocalDate.now();
         }
     }

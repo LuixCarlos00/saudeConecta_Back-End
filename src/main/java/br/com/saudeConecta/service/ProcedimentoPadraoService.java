@@ -47,10 +47,10 @@ public class ProcedimentoPadraoService {
     @CacheEvict(value = "procedimentos-padrao", allEntries = true)
     @Transactional
     public ProcedimentoPadrao criar(Long profissionalId, ProcedimentoPadraoRequest request) {
-        Long orgId = TenantContext.getCurrentTenant();
-        log.info("Criando procedimento padrão — profissional={}, nome={}", profissionalId, request.getNomeProcedimento());
+        Long orgId = TenantContext.getCurrentTenantOrThrow();
+        log.info("procedimento.criar inicio profissionalId={}", profissionalId);
 
-        Profissional profissional = profissionalRepository.findById(profissionalId)
+        Profissional profissional = profissionalRepository.findByIdAndOrganizacao_Id(profissionalId, orgId)
                 .orElseThrow(() -> new IllegalArgumentException("Profissional nao encontrado: " + profissionalId));
 
         Organizacao organizacao = new Organizacao();
@@ -90,12 +90,11 @@ public class ProcedimentoPadraoService {
     @CacheEvict(value = "procedimentos-padrao", allEntries = true)
     @Transactional
     public ProcedimentoPadrao toggleAtivo(Long id) {
-        ProcedimentoPadrao procedimento = procedimentoRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Procedimento nao encontrado: " + id));
+        ProcedimentoPadrao procedimento = buscarDaOrganizacao(id);
 
         procedimento.setAtivo(!procedimento.getAtivo());
         ProcedimentoPadrao salvo = procedimentoRepository.save(procedimento);
-        log.info("Procedimento {} — id={}", salvo.getAtivo() ? "ativado" : "bloqueado", id);
+        log.info("procedimento.toggle ok procedimentoId={} status={}", id, salvo.getAtivo() ? "ATIVO" : "BLOQUEADO");
         return salvo;
     }
 
@@ -109,8 +108,7 @@ public class ProcedimentoPadraoService {
     @CacheEvict(value = "procedimentos-padrao", allEntries = true)
     @Transactional
     public ProcedimentoPadrao atualizar(Long id, ProcedimentoPadraoRequest request) {
-        ProcedimentoPadrao procedimento = procedimentoRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Procedimento nao encontrado: " + id));
+        ProcedimentoPadrao procedimento = buscarDaOrganizacao(id);
 
         procedimento.setNomeProcedimento(request.getNomeProcedimento());
         procedimento.setValorPadrao(request.getValorPadrao());
@@ -119,18 +117,13 @@ public class ProcedimentoPadraoService {
     }
 
     /**
-     * Desativa um procedimento (soft delete).
+     * Busca o procedimento restrito à organização do token; de outra clínica responde "não encontrado".
      *
      * @param id ID do procedimento
+     * @return procedimento da organização atual
      */
-    @CacheEvict(value = "procedimentos-padrao", allEntries = true)
-    @Transactional
-    public void desativar(Long id) {
-        ProcedimentoPadrao procedimento = procedimentoRepository.findById(id)
+    private ProcedimentoPadrao buscarDaOrganizacao(Long id) {
+        return procedimentoRepository.findByIdAndOrganizacao_Id(id, TenantContext.getCurrentTenantOrThrow())
                 .orElseThrow(() -> new IllegalArgumentException("Procedimento nao encontrado: " + id));
-
-        procedimento.setAtivo(false);
-        procedimentoRepository.save(procedimento);
-        log.info("Procedimento desativado — id={}", id);
     }
 }

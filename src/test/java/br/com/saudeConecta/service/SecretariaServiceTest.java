@@ -114,6 +114,22 @@ class SecretariaServiceTest {
     class AtualizarSecretariaIdByOrg {
 
         @Test
+        @DisplayName("Sem ser gestor nem a dona, a atualização é negada antes de qualquer alteração")
+        void naoGestorNemDonaEhNegado() {
+            Secretaria dadosAtualizados = Secretaria.builder().email("invasor@email.com").build();
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(secretariaRepository.findByIdAndOrganizacao_Id(SEC_ID, ORG_ID))
+                    .thenReturn(Optional.of(secretaria));
+            doThrow(new br.com.saudeConecta.infra.tenant.TenantAccessDeniedException("negado"))
+                    .when(tenantHelper).validarGestorOuDono(USUARIO_ID);
+
+            assertThatThrownBy(() -> secretariaService.atualizarSecretariaIdByOrg(SEC_ID, dadosAtualizados))
+                    .isInstanceOf(br.com.saudeConecta.infra.tenant.TenantAccessDeniedException.class);
+            assertThat(secretaria.getEmail()).isNotEqualTo("invasor@email.com");
+            verify(secretariaRepository, never()).save(any());
+        }
+
+        @Test
         @DisplayName("Deve atualizar nome, email e telefone com sucesso")
         void deveAtualizarDadosComSucesso() {
             Secretaria dadosAtualizados = Secretaria.builder()
@@ -133,6 +149,24 @@ class SecretariaServiceTest {
             assertThat(secretaria.getEmail()).isEqualTo("novo@email.com");
             assertThat(secretaria.getTelefone()).isEqualTo("11888888888");
             verify(secretariaRepository).save(secretaria);
+        }
+
+        @Test
+        @DisplayName("4.5d - Trocar para e-mail de outro usuário é rejeitado")
+        void deveRejeitarEmailDeOutroUsuario() {
+            Secretaria dadosAtualizados = Secretaria.builder().email("gestor@outra.com").build();
+
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(secretariaRepository.findByIdAndOrganizacao_Id(SEC_ID, ORG_ID))
+                    .thenReturn(Optional.of(secretaria));
+            doThrow(new IllegalStateException("Email ja cadastrado no sistema para outro usuario"))
+                    .when(emailUnicoService)
+                    .validarEmailLivreParaAtualizacao("gestor@outra.com", "sec@teste.com", USUARIO_ID);
+
+            assertThatThrownBy(() -> secretariaService.atualizarSecretariaIdByOrg(SEC_ID, dadosAtualizados))
+                    .isInstanceOf(IllegalStateException.class);
+            assertThat(secretaria.getEmail()).isEqualTo("sec@teste.com");
+            verify(secretariaRepository, never()).save(any());
         }
 
         @Test
@@ -299,9 +333,12 @@ class SecretariaServiceTest {
             doThrow(new RuntimeException("FK constraint violation"))
                     .when(secretariaRepository).delete(secretaria);
 
+            // Fase 5.3: a causa original fica encadeada e a mensagem do banco não vaza para o cliente
             assertThatThrownBy(() -> secretariaService.deletarSecretariaIdByOrg(SEC_ID))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("relacionamentos existentes");
+                    .hasMessageContaining("relacionamentos existentes")
+                    .hasMessageNotContaining("FK constraint")
+                    .hasCauseInstanceOf(RuntimeException.class);
         }
     }
 }

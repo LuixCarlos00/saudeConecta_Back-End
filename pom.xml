@@ -63,6 +63,13 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- Regras de dependência entre camadas (ArquiteturaTest); só teste, sem efeito em runtime -->
+		<dependency>
+			<groupId>com.tngtech.archunit</groupId>
+			<artifactId>archunit-junit5</artifactId>
+			<version>1.3.0</version>
+			<scope>test</scope>
+		</dependency>
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
@@ -71,7 +78,7 @@
         <dependency>
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
-            <version>RELEASE</version>
+            <version>26.0.2-1</version>
             <scope>compile</scope>
         </dependency>
 
@@ -104,28 +111,11 @@
 			<artifactId>spring-boot-starter-thymeleaf</artifactId>
 			<version>3.0.5</version>
 		</dependency>
-		<dependency>
-			<groupId>com.twilio.sdk</groupId>
-			<artifactId>twilio</artifactId>
-			<version>8.17.0</version>
-		</dependency>
 
 		<!-- Liquibase para gerenciamento de migrações de banco de dados -->
 		<dependency>
 			<groupId>org.liquibase</groupId>
 			<artifactId>liquibase-core</artifactId>
-		</dependency>
-
-		<!-- ZXing para geração de QR Code Pix -->
-		<dependency>
-			<groupId>com.google.zxing</groupId>
-			<artifactId>core</artifactId>
-			<version>3.5.2</version>
-		</dependency>
-		<dependency>
-			<groupId>com.google.zxing</groupId>
-			<artifactId>javase</artifactId>
-			<version>3.5.2</version>
 		</dependency>
 
 	</dependencies>
@@ -165,14 +155,15 @@
 						<exclude>br/com/saudeConecta/email/EmailTemplateService*</exclude>
 						<exclude>br/com/saudeConecta/email/EmailMensageriaService*</exclude>
 						<exclude>br/com/saudeConecta/email/EmailConfig*</exclude>
-						<!-- Gateway de pagamento Pix (integração externa) -->
-						<exclude>br/com/saudeConecta/service/pix/**/*</exclude>
+						<!-- Gateway de pagamento Mercado Pago (integração externa) -->
+						<exclude>br/com/saudeConecta/service/mercadopago/MercadoPagoClient*</exclude>
+						<exclude>br/com/saudeConecta/service/mercadopago/MercadoPagoProperties*</exclude>
+						<exclude>br/com/saudeConecta/service/mercadopago/dto/**/*</exclude>
 						<!-- Validação de anotação customizada -->
 						<exclude>br/com/saudeConecta/util/validation/**/*</exclude>
 						<!-- Utilitários com dependências de repositório/infraestrutura -->
 						<exclude>br/com/saudeConecta/util/EmailUnicoService*</exclude>
 						<exclude>br/com/saudeConecta/util/SnapshotUtil*</exclude>
-						<exclude>br/com/saudeConecta/util/RecuperaSenha*</exclude>
 						<!-- Controllers: cobertos por testes de integração (MockMvc não gera cobertura de instrução JaCoCo) -->
 						<exclude>br/com/saudeConecta/presentation/controller/**/*</exclude>
 						<!-- Services de IA (requer modelo externo) -->

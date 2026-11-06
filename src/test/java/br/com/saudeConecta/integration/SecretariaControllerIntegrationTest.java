@@ -93,7 +93,7 @@ class SecretariaControllerIntegrationTest {
     class CadastrarSecretaria {
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
         @DisplayName("Deve retornar 201 ao cadastrar com sucesso")
         void deveRetornar201AoCadastrar() throws Exception {
             Secretaria secretaria = criarSecretaria(1L);
@@ -111,7 +111,7 @@ class SecretariaControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
         @DisplayName("Deve retornar 409 quando email já cadastrado")
         void deveRetornar409EmConflito() throws Exception {
             when(secretariaService.cadastrarSecretariaByOrg(any()))
@@ -136,7 +136,7 @@ class SecretariaControllerIntegrationTest {
     class DeletarSecretaria {
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
         @DisplayName("Deve retornar 200 ao deletar com sucesso")
         void deveRetornar200AoDeletar() throws Exception {
             doNothing().when(secretariaService).deletarSecretariaIdByOrg(1L);
@@ -146,7 +146,7 @@ class SecretariaControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
         @DisplayName("Deve retornar 404 quando secretária não encontrada")
         void deveRetornar404QuandoNaoEncontrada() throws Exception {
             doThrow(new IllegalArgumentException("não encontrada"))
@@ -157,7 +157,7 @@ class SecretariaControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
         @DisplayName("Deve retornar 409 em conflito ao deletar")
         void deveRetornar409EmConflito() throws Exception {
             doThrow(new IllegalStateException("conflito"))
@@ -165,6 +165,99 @@ class SecretariaControllerIntegrationTest {
 
             mockMvc.perform(delete("/secretaria/deletarSecretariaIdByOrg/2").with(csrf()))
                     .andExpect(status().isConflict());
+        }
+    }
+
+    // ========== 4.5d - e-mail duplicado na atualização ==========
+
+    @Nested
+    @DisplayName("PUT /secretaria/atualizarSecretariaIdByOrg/{id} - e-mail duplicado")
+    class AtualizarSecretariaEmailDuplicado {
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("4.5d - e-mail de outro usuário responde 409 com a mensagem")
+        void emailDuplicadoResponde409() throws Exception {
+            when(secretariaService.atualizarSecretariaIdByOrg(eq(5L), any()))
+                    .thenThrow(new IllegalStateException("Email ja cadastrado no sistema para outro usuario"));
+
+            mockMvc.perform(put("/secretaria/atualizarSecretariaIdByOrg/5")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"email\":\"outro@email.com\"}"))
+                    .andExpect(status().isConflict());
+        }
+    }
+
+    // ========== Item 2 - rotas de gestão exigem ROLE_ADMIN ==========
+
+    @Nested
+    @DisplayName("Rotas de gestão de secretária - papel")
+    class GestaoSecretariaPorPapel {
+
+        private String corpoCadastro() throws Exception {
+            return objectMapper.writeValueAsString(new CadastrarSecretariaRequest(
+                    "Ana Silva", "11122233344", "ana@clinica.com", "(11) 99999-0000"));
+        }
+
+        @Test
+        @WithMockUser(roles = "RECEPCIONISTA")
+        @DisplayName("ASSISTENTE não cadastra secretária (403)")
+        void assistenteNaoCadastra() throws Exception {
+            mockMvc.perform(post("/secretaria/cadastrarSecretariaByOrg").with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content(corpoCadastro()))
+                    .andExpect(status().isForbidden());
+            verify(secretariaService, never()).cadastrarSecretariaByOrg(any());
+        }
+
+        @Test
+        @WithMockUser(roles = "PROFISSIONAL")
+        @DisplayName("CLINICO não cadastra secretária (403)")
+        void clinicoNaoCadastra() throws Exception {
+            mockMvc.perform(post("/secretaria/cadastrarSecretariaByOrg").with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content(corpoCadastro()))
+                    .andExpect(status().isForbidden());
+            verify(secretariaService, never()).cadastrarSecretariaByOrg(any());
+        }
+
+        @Test
+        @WithMockUser(roles = "RECEPCIONISTA")
+        @DisplayName("ASSISTENTE não deleta secretária (403)")
+        void assistenteNaoDeleta() throws Exception {
+            mockMvc.perform(delete("/secretaria/deletarSecretariaIdByOrg/1").with(csrf()))
+                    .andExpect(status().isForbidden());
+            verify(secretariaService, never()).deletarSecretariaIdByOrg(anyLong());
+        }
+
+        @Test
+        @WithMockUser(roles = {"SUPER_ADMIN", "ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("ROOT passa nas rotas de gestão (tem ROLE_ADMIN)")
+        void rootDeleta() throws Exception {
+            mockMvc.perform(delete("/secretaria/deletarSecretariaIdByOrg/1").with(csrf()))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @WithMockUser(roles = "RECEPCIONISTA")
+        @DisplayName("ASSISTENTE edita o próprio cadastro (Meus Dados): a rota não bloqueia por papel")
+        void assistenteEditaASiMesma() throws Exception {
+            when(secretariaService.atualizarSecretariaIdByOrg(eq(5L), any())).thenReturn(criarSecretaria(5L));
+
+            mockMvc.perform(put("/secretaria/atualizarSecretariaIdByOrg/5").with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"nome\":\"Ana\"}"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @WithMockUser(roles = "RECEPCIONISTA")
+        @DisplayName("ASSISTENTE editando cadastro de outra pessoa recebe 403")
+        void assistenteEditandoOutraRecebe403() throws Exception {
+            when(secretariaService.atualizarSecretariaIdByOrg(eq(6L), any()))
+                    .thenThrow(new br.com.saudeConecta.infra.tenant.TenantAccessDeniedException("negado"));
+
+            mockMvc.perform(put("/secretaria/atualizarSecretariaIdByOrg/6").with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"x@x.com\"}"))
+                    .andExpect(status().isForbidden());
         }
     }
 }

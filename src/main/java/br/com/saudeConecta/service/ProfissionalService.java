@@ -4,6 +4,7 @@ import br.com.saudeConecta.domain.common.Sexo;
 import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.historicodadospessoais.EntidadeTipo;
 import br.com.saudeConecta.domain.mensageria.Mensageria;
+import br.com.saudeConecta.domain.mensageria.TipoMensagem;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.profissional.Especialidade;
 import br.com.saudeConecta.domain.profissional.Profissional;
@@ -54,7 +55,6 @@ public class ProfissionalService {
     private final MensageriaRepository mensageriaRepository;
     private final CacheEvictionService cacheEvictionService;
 
-
     private static final String CARACTERES_SENHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*";
 
     public ProfissionalService(
@@ -89,9 +89,6 @@ public class ProfissionalService {
         this.cacheEvictionService = cacheEvictionService;
     }
 
-
-
-
     @Caching(evict = {
         @CacheEvict(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull()"),
         @CacheEvict(value = "profissionais-org", key = "'count-org-' + @tenantHelper.getCurrentTenantIdOrNull()"),
@@ -102,13 +99,14 @@ public class ProfissionalService {
     @Transactional
     public Profissional cadastraClinicoByOrg(CadastrarClinicoRequest request) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Cadastrando clinico: {} na organizacao: {}", request.nome(), orgId);
+        log.info("profissional.cadastrar inicio organizacaoId={} tipo={}", orgId, request.tipoProfissional());
 
         limitePlanoService.validarLimiteProfissional(orgId);
 
         String cpfLimpo = limparCpf(request.cpf());
 
-        if (usuarioRepository.existsByLogin(request.cpf())) {
+        // O login gravado é o CPF limpo: checar o bruto (com máscara) deixava passar duplicado
+        if (usuarioRepository.existsByLogin(cpfLimpo)) {
             throw new IllegalStateException("CPF ja cadastrado no sistema");
         }
 
@@ -137,7 +135,6 @@ public class ProfissionalService {
                 .status(StatusUsuario.ATIVO)
                 .build();
 
-
         Endereco endereco = Endereco.builder()
                 .endNacionalidade(request.nacionalidade())
                 .endUF(request.uf())
@@ -164,7 +161,7 @@ public class ProfissionalService {
                     especialidades::add,
                     () -> {
                         // Se nao encontrar, cria nova especialidade
-                        log.info("Criando nova especialidade: {} para tipo: {}", nomeEspecialidade, tipoProfissional.getCodigo());
+                        log.info("profissional.especialidade criar nome={} tipo={}", nomeEspecialidade, tipoProfissional.getCodigo());
                         Especialidade novaEspecialidade = Especialidade.builder()
                             .tipoProfissional(tipoProfissional)
                             .nome(nomeEspecialidade)
@@ -199,7 +196,7 @@ public class ProfissionalService {
             .build();
 
         Profissional salvo = profissionalRepository.save(profissional);
-        log.info("Clinico cadastrado com sucesso. ID: {}", salvo.getId());
+        log.info("profissional.cadastrar ok profissionalId={}", salvo.getId());
 
         cacheEvictionService.evictPerfilEUsuariosAgrupados(usuarioSalvo.getId(), orgId);
 
@@ -215,7 +212,6 @@ public class ProfissionalService {
 
         return salvo;
     }
-
 
     
     @RequiresTenant
@@ -239,11 +235,18 @@ public class ProfissionalService {
         Profissional antes = profissionalRepository.buscarClinicoIdByOrg(id, orgId)
                 .orElseThrow(() -> new IllegalArgumentException("Profissional nao encontrado"));
 
+        // Trocar o e-mail de outro usuário permite tomar a conta pelo "esqueci minha senha"
+        tenantHelper.validarGestorOuDono(antes.getUsuario() != null ? antes.getUsuario().getId() : null);
+
+        // E-mail duplicado desvia o "esqueci minha senha" (que busca por e-mail) para a conta errada
+        emailUnicoService.validarEmailLivreParaAtualizacao(dadosAtualizados.email(), antes.getEmail(),
+                antes.getUsuario() != null ? antes.getUsuario().getId() : null);
+
         Profissional snapshot = SnapshotUtil.copiarSnapshot(antes);
 
         // Atualiza campos básicos
         antes.setNome(dadosAtualizados.nome());
-        antes.setCpf(dadosAtualizados.cpf());
+        antes.setCpf(limparCpf(dadosAtualizados.cpf()));
         antes.setRg(dadosAtualizados.rg());
         antes.setRegistroConselho(dadosAtualizados.registroConselho());
         antes.setTelefone(dadosAtualizados.telefone());
@@ -277,7 +280,7 @@ public class ProfissionalService {
                     },
                     () -> {
                         // Se nao encontrar, cria nova especialidade
-                        log.info("Criando nova especialidade: {} para tipo: {}", nomeEspecialidade, tipoProfissional.getCodigo());
+                        log.info("profissional.especialidade criar nome={} tipo={}", nomeEspecialidade, tipoProfissional.getCodigo());
                         Especialidade novaEspecialidade = Especialidade.builder()
                             .tipoProfissional(tipoProfissional)
                             .nome(nomeEspecialidade)
@@ -309,9 +312,8 @@ public class ProfissionalService {
             antes.setEndereco(endereco);
         }
 
-
         Profissional resultado =  profissionalRepository.save(antes);
-        log.info("Profissional atualizado: {}", resultado);
+        log.info("profissional.atualizar ok profissionalId={}", resultado.getId());
 
         historicoDadosPessoaisService.registrarAlteracoesDeObjeto(
                 EntidadeTipo.PROFISSIONAL,
@@ -326,8 +328,6 @@ public class ProfissionalService {
 return resultado ;
     }
 
-
-
     @Caching(evict = {
         @CacheEvict(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull()"),
         @CacheEvict(value = "profissionais-org", key = "'count-org-' + @tenantHelper.getCurrentTenantIdOrNull()"),
@@ -339,7 +339,7 @@ return resultado ;
     @Transactional
     public void deletarClinicoIdByOrg(Long idProfissional) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Deletando profissional ID: {} da organização: {}", idProfissional, orgId);
+        log.info("profissional.deletar inicio profissionalId={} organizacaoId={}", idProfissional, orgId);
 
         // 1. Buscar o profissional na tabela profissional
         Profissional profissional = profissionalRepository.buscarClinicoIdByOrg(idProfissional, orgId)
@@ -353,10 +353,12 @@ return resultado ;
         try {
             Long usuarioId = usuario.getId();
 
-            // 2. Deletar registros relacionados na tabela mensageria primeiro
-            List<Mensageria> mensagens = mensageriaRepository.findByDestinatarioEntidadeId(profissional.getId());
+            // 2. Deletar a mensageria deste profissional primeiro. O ID sozinho colide com
+            //    secretária/admin/paciente e com outras clínicas: filtra tipo e organização.
+            List<Mensageria> mensagens = mensageriaRepository.findByDestinatarioEntidadeIdAndTipoMensagemAndOrganizacao_Id(
+                    profissional.getId(), TipoMensagem.EMAIL_CREDENCIAIS_CLINICO, orgId);
             if (!mensagens.isEmpty()) {
-                log.info("Deletando {} registros de mensageria do profissional ID: {}", mensagens.size(), idProfissional);
+                log.info("profissional.deletar mensageria removidas={} profissionalId={}", mensagens.size(), idProfissional);
                 mensageriaRepository.deleteAll(mensagens);
             }
 
@@ -368,14 +370,15 @@ return resultado ;
 
             cacheEvictionService.evictPerfilEUsuariosAgrupados(usuarioId, orgId);
 
-            log.info("Profissional e usuario deletados com sucesso. ID Profissional: {}, ID usuario: {}", 
+            log.info("profissional.deletar ok profissionalId={} usuarioId={}",
                     idProfissional, usuario.getId());
                     
         } catch (Exception e) {
             // 5. Caso haja relacionamento que impeça o delete, cancelar e avisar
-            String errorMessage = "nao foi possível deletar o profissional devido a relacionamentos existentes: " + e.getMessage();
-            log.error(errorMessage);
-            throw new IllegalStateException(errorMessage);
+            // Mensagem do banco (tabela/constraint) fica só no log; a causa segue encadeada
+            String errorMessage = "nao foi possível deletar o profissional devido a relacionamentos existentes";
+            log.warn("profissional.deletar negado motivo=RELACIONAMENTOS_EXISTENTES profissionalId={}", idProfissional, e);
+            throw new IllegalStateException(errorMessage, e);
         }
     }
 
@@ -405,11 +408,10 @@ return resultado ;
         };
     }
 
-
-
-    @Cacheable(value = "profissionais-org", key = "'count-org-' + #organizacaoId")
+    @Cacheable(value = "profissionais-org", key = "'count-org-' + @tenantHelper.getCurrentTenantIdOrNull()")
     @Transactional(readOnly = true)
     public Long contarAtivosPorOrganizacao(Long organizacaoId) {
+        tenantHelper.validateTenant(organizacaoId);
         return profissionalRepository.countAtivosByOrganizacaoId(organizacaoId);
     }
 
@@ -424,55 +426,20 @@ return resultado ;
         return profissionalRepository.countTodosAtivos();
     }
 
-
-    @Cacheable(value = "profissionais-org", key = "'org-' + #organizacaoId")
+    @Cacheable(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull()")
     @Transactional(readOnly = true)
     public List<Profissional> buscarPorOrganizacao(Long organizacaoId) {
+        tenantHelper.validateTenant(organizacaoId);
         return profissionalRepository.findByOrganizacaoIdAndStatusWithRelations(organizacaoId, StatusProfissional.ATIVO);
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     // ========== MÉTODOS DE BUSCA PARA AUTOCOMPLETE COM FILTRO ==========
-
 
     @RequiresTenant
     @Transactional(readOnly = true)
     public List<Profissional> buscarPorNomeComFiltro(String nome, String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando profissionais por nome: {} na organização: {} com filtro: {}", nome, orgId, filtro);
+        log.debug("profissional.buscar nome={} organizacaoId={} filtro={}", nome, orgId, filtro);
         
         if ("ATIVO".equals(filtro)) {
             return profissionalRepository.findByOrganizacaoIdAndNomeContainingWithFiltro(orgId, nome, filtro, StatusProfissional.ATIVO);
@@ -486,7 +453,7 @@ return resultado ;
     @Transactional(readOnly = true)
     public List<Profissional> buscarPorCRMComFiltro(String crm, String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando profissionais por CRM: {} na organização: {} com filtro: {}", crm, orgId, filtro);
+        log.debug("profissional.buscar crm={} organizacaoId={} filtro={}", crm, orgId, filtro);
         
         if ("ATIVO".equals(filtro)) {
             return profissionalRepository.findByOrganizacaoIdAndCrmContainingWithFiltro(orgId, crm, filtro, StatusProfissional.ATIVO);
@@ -496,12 +463,11 @@ return resultado ;
         }
     }
 
-
     @RequiresTenant
     @Transactional(readOnly = true)
     public List<Profissional> buscarPorCidadeComFiltro(String cidade, String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando profissionais por cidade: {} na organização: {} com filtro: {}", cidade, orgId, filtro);
+        log.debug("profissional.buscar cidade={} organizacaoId={} filtro={}", cidade, orgId, filtro);
         
         if ("ATIVO".equals(filtro)) {
             return profissionalRepository.findByOrganizacaoIdAndCidadeContainingWithFiltro(orgId, cidade, filtro, StatusProfissional.ATIVO);
@@ -511,12 +477,11 @@ return resultado ;
         }
     }
 
-
     @RequiresTenant
     @Transactional(readOnly = true)
     public List<Profissional> buscarPorEspecialidadeComFiltro(String especialidade, String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando profissionais por especialidade: {} na organização: {} com filtro: {}", especialidade, orgId, filtro);
+        log.debug("profissional.buscar especialidade={} organizacaoId={} filtro={}", especialidade, orgId, filtro);
         
         if ("ATIVO".equals(filtro)) {
             return profissionalRepository.findByOrganizacaoIdAndEspecialidadeContainingWithFiltro(orgId, especialidade, filtro, StatusProfissional.ATIVO);
@@ -526,13 +491,12 @@ return resultado ;
         }
     }
 
-
     @Cacheable(value = "profissionais-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-' + #filtro")
     @RequiresTenant
     @Transactional(readOnly = true)
     public List<Profissional> buscarTodosComFiltro(String filtro) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.debug("Buscando todos os profissionais na organização: {} com filtro: {}", orgId, filtro);
+        log.debug("profissional.buscar todos organizacaoId={} filtro={}", orgId, filtro);
         
         if ("ATIVO".equals(filtro)) {
             return profissionalRepository.findByOrganizacao_IdWithUsuarioWithFiltro(orgId, filtro, StatusProfissional.ATIVO);
@@ -541,8 +505,5 @@ return resultado ;
             return profissionalRepository.findByOrganizacao_IdWithUsuario(orgId);
         }
     }
-
-
-
 
 }

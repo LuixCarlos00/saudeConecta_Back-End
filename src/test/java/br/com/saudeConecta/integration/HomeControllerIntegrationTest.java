@@ -50,7 +50,7 @@ class HomeControllerIntegrationTest {
     class Login {
 
         @Test
-        @DisplayName("Deve retornar erro (5xx) quando credenciais inválidas disparam BadCredentialsException")
+        @DisplayName("Deve retornar 401 com error legível quando credenciais inválidas disparam BadCredentialsException")
         void deveRetornarErroQuandoCredenciaisInvalidas() throws Exception {
             DadosLoginUsuario dados = new DadosLoginUsuario("cpf_errado", "senha_errada", "GESTOR");
 
@@ -61,16 +61,17 @@ class HomeControllerIntegrationTest {
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(dados)))
-                    .andExpect(status().is5xxServerError());
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.error").value("Credenciais invalidas"));
         }
 
         @Test
-        @DisplayName("Deve retornar erro de servidor quando body está ausente no login")
-        void deveRetornarErroDeServidorQuandoBodyAusente() throws Exception {
+        @DisplayName("Deve retornar 400 quando body está ausente no login")
+        void deveRetornar400QuandoBodyAusente() throws Exception {
             mockMvc.perform(post("/Home/login")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(status().is5xxServerError());
+                    .andExpect(status().isBadRequest());
         }
     }
 

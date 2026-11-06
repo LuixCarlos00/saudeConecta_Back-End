@@ -7,11 +7,12 @@ import lombok.*;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "cobranca_tenant")
+// Uma fatura do Mercado Pago gera no máximo uma cobrança local (changeset 064)
+@Table(name = "cobranca_tenant", uniqueConstraints = @UniqueConstraint(
+        name = "uk_cobranca_mp_authorized_payment", columnNames = "mp_authorized_payment_id"))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -42,17 +43,26 @@ public class CobrancaTenant implements Serializable {
     @Column(nullable = false, length = 20)
     private StatusCobranca status = StatusCobranca.PENDENTE;
 
-    @Column(name = "pix_copia_cola", columnDefinition = "TEXT")
-    private String pixCopiaECola;
-
-    @Column(name = "pix_qrcode_base64", columnDefinition = "LONGTEXT")
-    private String pixQrcodeBase64;
-
+    /**
+     * Identificador da transação Pix. Mantido apenas para leitura do histórico
+     * das cobranças anteriores à migração para o Mercado Pago.
+     */
     @Column(length = 100, unique = true)
     private String txid;
 
-    @Column(name = "data_vencimento_pix")
-    private LocalDate dataVencimentoPix;
+    @Column(name = "mp_payment_id", length = 50)
+    private String mpPaymentId;
+
+    @Column(name = "mp_authorized_payment_id", length = 50)
+    private String mpAuthorizedPaymentId;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "forma_pagamento", length = 20)
+    private FormaPagamentoCobranca formaPagamento = FormaPagamentoCobranca.MERCADO_PAGO;
+
+    @Column(name = "motivo_recusa", length = 255)
+    private String motivoRecusa;
 
     @Column(name = "data_pagamento")
     private LocalDateTime dataPagamento;
@@ -72,14 +82,5 @@ public class CobrancaTenant implements Serializable {
      */
     public boolean isPago() {
         return StatusCobranca.PAGO.equals(this.status);
-    }
-
-    /**
-     * Verifica se o Pix da cobrança expirou.
-     *
-     * @return true se a data de vencimento do Pix já passou
-     */
-    public boolean isPixExpirado() {
-        return dataVencimentoPix != null && LocalDate.now().isAfter(dataVencimentoPix);
     }
 }

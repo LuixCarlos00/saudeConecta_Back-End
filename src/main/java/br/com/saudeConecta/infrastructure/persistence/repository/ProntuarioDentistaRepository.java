@@ -25,8 +25,14 @@ public interface ProntuarioDentistaRepository extends JpaRepository<ProntuarioDe
     """)
     List<ProntuarioDentista> findByConsultaId(@Param("consultaId") Long consultaId);
 
-
-
+    /**
+     * Busca um prontuário odontológico somente se a consulta pertencer à organização informada.
+     *
+     * @param codigo ID do prontuário
+     * @param orgId  ID da organização do token
+     * @return prontuário, ou vazio se não existir ou for de outra clínica
+     */
+    Optional<ProntuarioDentista> findByCodigoAndConsulta_Organizacao_Id(Long codigo, Long orgId);
 
     /**
      * PASSO 1 — busca apenas o ID do prontuário mais recente (sem fetch de coleção).
@@ -34,12 +40,11 @@ public interface ProntuarioDentistaRepository extends JpaRepository<ProntuarioDe
      */
     @Query("""
         SELECT pd.id FROM ProntuarioDentista pd
-        WHERE pd.consulta.id = :consultaId
+        WHERE pd.consulta.id = :consultaId AND pd.consulta.organizacao.id = :orgId
         ORDER BY pd.dataFinalizado DESC
         LIMIT 1
     """)
-    Optional<Long> findIdMaisRecentePorConsulta(@Param("consultaId") Long consultaId);
-
+    Optional<Long> findIdMaisRecentePorConsulta(@Param("consultaId") Long consultaId, @Param("orgId") Long orgId);
 
     @Query("""
     SELECT DISTINCT pd FROM ProntuarioDentista pd
@@ -55,61 +60,18 @@ public interface ProntuarioDentistaRepository extends JpaRepository<ProntuarioDe
 """)
     Optional<ProntuarioDentista> findByIdComDentes(@Param("id") Long id);
 
-
-
-
-    /**
-     * Lista prontuários de um profissional.
-     */
-    @Query("""
-        SELECT DISTINCT pd FROM ProntuarioDentista pd
-        LEFT JOIN FETCH pd.dentes
-        JOIN FETCH pd.consulta
-        WHERE pd.profissional.id = :profissionalId
-        ORDER BY pd.dataFinalizado DESC
-    """)
-    List<ProntuarioDentista> findByProfissionalId(@Param("profissionalId") Long profissionalId);
-
-
-    /**
-     * Lista prontuários de um paciente (via consulta → paciente).
-     *
-     * @param pacienteId ID do paciente
-     * @return lista de prontuários do paciente ordenados por data
-     */
-    @Query("""
-        SELECT DISTINCT pd FROM ProntuarioDentista pd
-        LEFT JOIN FETCH pd.dentes
-        JOIN FETCH pd.consulta c
-        LEFT JOIN FETCH c.paciente
-        LEFT JOIN FETCH c.especialidade
-        LEFT JOIN FETCH c.formaPagamento
-        JOIN FETCH pd.profissional prof
-        LEFT JOIN FETCH prof.tipoProfissional
-        LEFT JOIN FETCH prof.especialidades
-        WHERE c.paciente.id = :pacienteId
-        ORDER BY pd.dataFinalizado DESC
-    """)
-    List<ProntuarioDentista> findByPacienteId(@Param("pacienteId") Long pacienteId);
-
-    /**
-     * Exclui todos os dentes (odontograma) dos prontuários vinculados a uma consulta.
-     */
-    @Modifying
-    @Query("DELETE FROM ProntuarioDentistaDente d WHERE d.prontuarioDentista.codigo IN (SELECT pd.codigo FROM ProntuarioDentista pd WHERE pd.consulta.id = :consultaId)")
-    void deleteDentesByConsultaId(@Param("consultaId") Long consultaId);
-
-    /**
-     * Exclui todos os planejamentos terapêuticos vinculados aos prontuários de uma consulta.
-     */
-    @Modifying
-    @Query("DELETE FROM PlanejamentoTerapeutico p WHERE p.prontuarioDentista.codigo IN (SELECT pd.codigo FROM ProntuarioDentista pd WHERE pd.consulta.id = :consultaId)")
-    void deletePlanejamentosByConsultaId(@Param("consultaId") Long consultaId);
-
     /**
      * Exclui todos os prontuários dentista vinculados a uma consulta.
      */
     @Modifying
     @Query("DELETE FROM ProntuarioDentista pd WHERE pd.consulta.id = :consultaId")
     void deleteByConsultaId(@Param("consultaId") Long consultaId);
+
+    /**
+     * Indica se a consulta já tem prontuário finalizado (regra: um prontuário por consulta).
+     *
+     * @param consultaId ID da consulta
+     * @return true se já existe prontuário para a consulta
+     */
+    boolean existsByConsulta_Id(Long consultaId);
 }

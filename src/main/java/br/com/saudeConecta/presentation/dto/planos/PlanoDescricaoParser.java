@@ -67,17 +67,17 @@ public class PlanoDescricaoParser {
 
         PlanoDescricao result = new PlanoDescricao();
 
-        log.debug("Parseando descrição: {}", descricao);
+        log.debug("plano.descricao parse descricao={}", descricao);
 
         // Extrair título
         Matcher tituloMatcher = TITULO_PATTERN.matcher(descricao);
         if (tituloMatcher.find()) {
             result.setTitulo(tituloMatcher.group(1).trim());
-            log.debug("Título encontrado: {}", tituloMatcher.group(1).trim());
+            log.debug("plano.descricao titulo={}", tituloMatcher.group(1).trim());
         } else {
             // Se não encontrar o padrão, usa a descrição inteira como título
             result.setTitulo(descricao.trim());
-            log.debug("Padrão de título não encontrado, usando descrição completa");
+            log.debug("plano.descricao titulo nao encontrado acao=USA_DESCRICAO_COMPLETA");
         }
 
         // Extrair recursos (JSON array)
@@ -85,16 +85,16 @@ public class PlanoDescricaoParser {
         if (recursosMatcher.find()) {
             try {
                 String recursosJson = recursosMatcher.group(1);
-                log.debug("Recursos JSON encontrado: {}", recursosJson);
+                log.debug("plano.descricao recursos json={}", recursosJson);
                 List<String> recursos = objectMapper.readValue(recursosJson, new TypeReference<List<String>>() {});
                 result.setRecursos(recursos);
-                log.debug("Recursos parseados: {}", recursos);
+                log.debug("plano.descricao recursos parseados={}", recursos);
             } catch (JsonProcessingException e) {
-                log.warn("Erro ao fazer parse de recursos JSON: {}", e.getMessage());
+                log.warn("plano.descricao parse falha motivo=RECURSOS_JSON_INVALIDO causa={}", e.getClass().getSimpleName());
                 result.setRecursos(new ArrayList<>());
             }
         } else {
-            log.debug("Padrão de recursos não encontrado");
+            log.debug("plano.descricao recursos nao encontrados");
         }
 
         return result;
@@ -120,7 +120,7 @@ public class PlanoDescricaoParser {
             String recursosJson = objectMapper.writeValueAsString(recursos);
             return "titulo: " + titulo.trim() + "\nRecursos: " + recursosJson;
         } catch (JsonProcessingException e) {
-            log.error("Erro ao converter recursos para JSON: {}", e.getMessage());
+            log.warn("plano.descricao formatar falha causa={}", e.getClass().getSimpleName());
             return "titulo: " + titulo.trim();
         }
     }

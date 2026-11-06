@@ -38,12 +38,11 @@ public class ChamadoSuporteController {
      */
     @PostMapping
     public ResponseEntity<?> cadastrar(@RequestBody @Valid ChamadoSuporteRequest request) {
-        log.info("Cadastrando chamado de suporte: {}", request.titulo());
         try {
             ChamadoSuporteResponse response = chamadoSuporteService.cadastrar(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException | IllegalStateException e) {
-            log.warn("Erro ao cadastrar chamado: {}", e.getMessage());
+            log.warn("chamado.cadastrar negado motivo=VALIDACAO detalhe={}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
@@ -63,7 +62,6 @@ public class ChamadoSuporteController {
             @RequestParam(required = false) PrioridadeChamado prioridade,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        log.info("Listando chamados de suporte - status: {}, prioridade: {}, page: {}", status, prioridade, page);
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "dataCriacao"));
         return ResponseEntity.ok(chamadoSuporteService.listarPorTenant(status, prioridade, pageable));
     }
@@ -76,11 +74,10 @@ public class ChamadoSuporteController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<ChamadoSuporteResponse> buscarPorId(@PathVariable String id) {
-        log.info("Buscando chamado de suporte ID: {}", id);
         try {
             return ResponseEntity.ok(chamadoSuporteService.buscarPorId(id));
         } catch (IllegalArgumentException e) {
-            log.warn("Chamado nao encontrado: {}", id);
+            log.warn("chamado.buscar negado motivo=NAO_ENCONTRADO chamadoId={}", id);
             return ResponseEntity.notFound().build();
         }
     }
@@ -96,14 +93,13 @@ public class ChamadoSuporteController {
     @PatchMapping("/{id}/status")
     public ResponseEntity<?> atualizarStatus(@PathVariable String id,
                                              @RequestBody @Valid AtualizarStatusChamadoRequest request) {
-        log.info("Atualizando status do chamado {} para {}", id, request.status());
         try {
             return ResponseEntity.ok(chamadoSuporteService.atualizarStatus(id, request));
         } catch (IllegalStateException e) {
-            log.warn("Acesso negado na atualizacao de status: {}", e.getMessage());
+            log.warn("chamado.status negado motivo=ACESSO_NEGADO chamadoId={}", id);
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
         } catch (IllegalArgumentException e) {
-            log.warn("Chamado nao encontrado para atualizacao: {}", e.getMessage());
+            log.warn("chamado.status negado motivo=NAO_ENCONTRADO chamadoId={}", id);
             return ResponseEntity.notFound().build();
         }
     }
@@ -116,12 +112,11 @@ public class ChamadoSuporteController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletar(@PathVariable String id) {
-        log.info("Excluindo chamado de suporte ID: {}", id);
         try {
             chamadoSuporteService.deletar(id);
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException e) {
-            log.warn("Erro ao excluir chamado: {}", e.getMessage());
+            log.warn("chamado.excluir negado motivo=NAO_ENCONTRADO chamadoId={}", id);
             return ResponseEntity.notFound().build();
         }
     }

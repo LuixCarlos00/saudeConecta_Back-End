@@ -1,0 +1,119 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ================================================================ -->
+    <!-- FASE 4 - AUTENTICACAO, USUARIOS E CADASTRO                       -->
+    <!-- Retrocompativel com a versao anterior da aplicacao:              -->
+    <!--  - motivo_bloqueio e nullable e ignorado pela versao anterior;   -->
+    <!--  - o UNIQUE (organizacao_id, cpf) e mais fraco que o UNIQUE      -->
+    <!--    global que substitui, entao nenhum dado existente o viola;    -->
+    <!--  - o UNIQUE de usuarios.login so e criado se nao houver login    -->
+    <!--    duplicado (a versao anterior ja checava existsByLogin).       -->
+    <!-- ================================================================ -->
+
+    <!-- 4.4 - Origem do bloqueio: o desbloqueio em cascata so reativa quem a cascata bloqueou -->
+    <changeSet id="063-001-usuarios-motivo-bloqueio" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="usuarios" columnName="motivo_bloqueio"/></not>
+        </preConditions>
+        <comment>Origem do bloqueio do usuario (INDIVIDUAL ou CASCATA); null = ativo ou bloqueio legado</comment>
+
+        <addColumn tableName="usuarios">
+            <column name="motivo_bloqueio" type="VARCHAR(20)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="usuarios" columnName="motivo_bloqueio"/>
+        </rollback>
+    </changeSet>
+
+    <!-- 4.5a - CPF de profissional unico por clinica (antes: global). Cria o novo antes de     -->
+    <!-- remover o antigo para nao haver janela sem unicidade.                                  -->
+    <changeSet id="063-002-profissional-uk-organizacao-cpf" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="profissional" indexName="uk_profissional_org_cpf"/></not>
+        </preConditions>
+        <comment>UNIQUE (organizacao_id, cpf) em profissional</comment>
+
+        <addUniqueConstraint tableName="profissional" columnNames="organizacao_id, cpf"
+                             constraintName="uk_profissional_org_cpf"/>
+
+        <rollback>
+            <dropUniqueConstraint tableName="profissional" constraintName="uk_profissional_org_cpf"/>
+        </rollback>
+    </changeSet>
+
+    <!-- O UNIQUE global veio de unique="true" sem nome no 014: no MySQL o indice recebe o nome -->
+    <!-- da coluna ("cpf"). Se o nome real for outro, o changeset e marcado como rodado sem     -->
+    <!-- efeito: conferir com SHOW INDEX FROM profissional antes do deploy.                      -->
+    <changeSet id="063-003-profissional-drop-uk-cpf-global" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN" onFailMessage="Indice unico global 'cpf' nao encontrado em profissional; nada a remover">
+            <!-- O UNIQUE (organizacao_id, cpf) ja existe: criado (ou encontrado) no changeset anterior -->
+            <indexExists tableName="profissional" indexName="cpf"/>
+        </preConditions>
+        <comment>Remove o UNIQUE global de profissional.cpf (substituido por organizacao_id + cpf)</comment>
+
+        <dropIndex tableName="profissional" indexName="cpf"/>
+
+        <!-- Rollback falha se ja existir o mesmo CPF em duas clinicas: e exatamente o que a mudanca permite -->
+        <rollback>
+            <addUniqueConstraint tableName="profissional" columnNames="cpf" constraintName="cpf"/>
+        </rollback>
+    </changeSet>
+
+    <!-- 4.5a - CPF de secretaria unico por clinica (antes: global, 018) -->
+    <changeSet id="063-004-secretaria-uk-organizacao-cpf" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="secretaria" indexName="uk_secretaria_org_cpf"/></not>
+        </preConditions>
+        <comment>UNIQUE (organizacao_id, cpf) em secretaria</comment>
+
+        <addUniqueConstraint tableName="secretaria" columnNames="organizacao_id, cpf"
+                             constraintName="uk_secretaria_org_cpf"/>
+
+        <rollback>
+            <dropUniqueConstraint tableName="secretaria" constraintName="uk_secretaria_org_cpf"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Mesmo caso do profissional; o idx_secretaria_cpf (nao unico, do 018) e mantido para buscas -->
+    <changeSet id="063-005-secretaria-drop-uk-cpf-global" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN" onFailMessage="Indice unico global 'cpf' nao encontrado em secretaria; nada a remover">
+            <!-- O UNIQUE (organizacao_id, cpf) ja existe: criado (ou encontrado) no changeset anterior -->
+            <indexExists tableName="secretaria" indexName="cpf"/>
+        </preConditions>
+        <comment>Remove o UNIQUE global de secretaria.cpf (substituido por organizacao_id + cpf)</comment>
+
+        <dropIndex tableName="secretaria" indexName="cpf"/>
+
+        <rollback>
+            <addUniqueConstraint tableName="secretaria" columnNames="cpf" constraintName="cpf"/>
+        </rollback>
+    </changeSet>
+
+    <!-- 4.5b - login unico. Login duplicado quebra o findByLogin (o login dos dois usuarios). -->
+    <!-- So aplica se nao houver duplicados; havendo, e marcado como rodado sem efeito e os    -->
+    <!-- duplicados precisam ser saneados antes de um novo changeset recriar a constraint.     -->
+    <changeSet id="063-006-usuarios-uk-login" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN"
+                       onFailMessage="usuarios.login possui duplicados (ou o indice ja existe): UNIQUE NAO criado. Sanear com SELECT login, COUNT(*) FROM usuarios GROUP BY login HAVING COUNT(*) &gt; 1">
+            <not><indexExists tableName="usuarios" indexName="uk_usuarios_login"/></not>
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM (SELECT login FROM usuarios GROUP BY login HAVING COUNT(*) &gt; 1) duplicados
+            </sqlCheck>
+        </preConditions>
+        <comment>UNIQUE em usuarios.login</comment>
+
+        <addUniqueConstraint tableName="usuarios" columnNames="login" constraintName="uk_usuarios_login"/>
+
+        <rollback>
+            <dropUniqueConstraint tableName="usuarios" constraintName="uk_usuarios_login"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,12 +1,14 @@
 package br.com.saudeConecta.infra.tenant;
 
 import br.com.saudeConecta.infra.configuracoesseguranca.TokenService;
+import br.com.saudeConecta.infra.logging.MdcChaves;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -23,23 +25,13 @@ public class TenantFilter extends OncePerRequestFilter {
     
     private final TokenService tokenService;
     
+    // Espelha as rotas permitAll de SecurityConfigurations; só entram paths com handler real
     private static final List<String> PUBLIC_PATHS = Arrays.asList(
         "/Home/login",
-        "/Home/cadastralogin",
         "/Home/esqueciMinhaSenha",
-        "/Home/trocaDeSenha",
-        "/Home/buscarUsuarioExistente",
-        "/Home/recuperaLogin",
         "/cep",
-        "/paciente/buscarPorEmail",
-        "/paciente/InserirCodigo",
-        "/medico/buscarPorEmail",
-        "/public",
         "/publico",
-        "/planos",
-        "/swagger-ui",
-        "/v3/api-docs",
-        "/actuator"
+        "/planos"
     );
     
     @Override
@@ -52,7 +44,7 @@ public class TenantFilter extends OncePerRequestFilter {
             String path = request.getRequestURI();
             
             if (isPublicPath(path)) {
-                log.debug("Path público, pulando filtro de tenant: {}", path);
+                log.debug("tenant.filtro ignorado motivo=PATH_PUBLICO path={}", path);
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -66,14 +58,16 @@ public class TenantFilter extends OncePerRequestFilter {
                     
                     if (organizacaoId != null) {
                         TenantContext.setCurrentTenant(organizacaoId);
-                        log.debug("Tenant definido: {} para usuário: {}", organizacaoId, userId);
+                        MDC.put(MdcChaves.TENANT_ID, String.valueOf(organizacaoId));
+                        log.debug("tenant.filtro definido organizacaoId={} usuarioId={}", organizacaoId, userId);
                     }
                     
                     if (userId != null) {
                         TenantContext.setCurrentUser(userId);
+                        MDC.put(MdcChaves.USER_ID, String.valueOf(userId));
                     }
                 } catch (Exception e) {
-                    log.warn("Erro ao extrair tenant do token: {}", e.getMessage());
+                    log.warn("tenant.filtro falha motivo=ERRO_EXTRAIR_TENANT", e);
                 }
             }
             
@@ -81,6 +75,8 @@ public class TenantFilter extends OncePerRequestFilter {
             
         } finally {
             TenantContext.clear();
+            MDC.remove(MdcChaves.TENANT_ID);
+            MDC.remove(MdcChaves.USER_ID);
         }
     }
     

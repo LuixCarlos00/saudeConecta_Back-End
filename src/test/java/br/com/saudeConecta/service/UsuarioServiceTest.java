@@ -6,10 +6,18 @@ import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.profissional.StatusProfissional;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.domain.secretaria.StatusSecretaria;
+import br.com.saudeConecta.domain.usuario.MotivoBloqueio;
 import br.com.saudeConecta.domain.usuario.StatusUsuario;
+import br.com.saudeConecta.infra.exceptions.LimitePlanoException;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
+import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.infra.tenant.TenantHelper;
+import br.com.saudeConecta.infra.tenant.TenantNotDefinedException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.presentation.dto.usuario.BloquearUsuarioRequest;
 import br.com.saudeConecta.presentation.dto.usuario.TodosUsuariosAgrupadosResponse;
@@ -18,6 +26,7 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -40,6 +49,8 @@ class UsuarioServiceTest {
     @Mock private PacienteRepository pacienteRepository;
     @Mock private SecretariaRepository secretariaRepository;
     @Mock private CacheEvictionService cacheEvictionService;
+    @Mock private LimitePlanoService limitePlanoService;
+    @Spy private TenantHelper tenantHelper = new TenantHelper();
 
     @InjectMocks
     private UsuarioService usuarioService;
@@ -98,10 +109,51 @@ class UsuarioServiceTest {
     @DisplayName("trocarSenharUsuariobyOrg")
     class TrocarSenha {
 
+        private static final Long GESTOR_ID = 30L;
+        private static final Long OUTRA_ORG_ID = 2L;
+
+        private Usuario criarUsuario(Long id, TipoUsuarioNovo tipo, Organizacao org) {
+            Usuario u = Usuario.builder()
+                    .login("login" + id).senha("encodedPass")
+                    .tipoUsuarioNovo(tipo)
+                    .status(StatusUsuario.ATIVO).organizacao(org)
+                    .build();
+            u.setId(id);
+            return u;
+        }
+
+        /** Simula o que o TenantFilter faz a partir do JWT do usuário logado. */
+        private void logarComo(Long usuarioId, Long organizacaoId) {
+            TenantContext.setCurrentUser(usuarioId);
+            TenantContext.setCurrentTenant(organizacaoId);
+        }
+
+        @AfterEach
+        void limparTenantContext() {
+            TenantContext.clear();
+        }
+
         @Test
-        @DisplayName("Deve trocar senha com sucesso")
-        void deveTrocarSenhaComSucesso() {
+        @DisplayName("Usuário comum troca a própria senha")
+        void deveTrocarPropriaSenha() {
+            logarComo(USUARIO_ID, ORG_ID);
             when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+            when(passwordEncoder.encode("novaSenha123")).thenReturn("encodedNovaSenha");
+
+            usuarioService.trocarSenharUsuariobyOrg(USUARIO_ID, "novaSenha123");
+
+            assertThat(usuario.getSenha()).isEqualTo("encodedNovaSenha");
+            verify(usuarioRepository).save(usuario);
+            verify(cacheEvictionService).evictPerfilUsuario(USUARIO_ID);
+        }
+
+        @Test
+        @DisplayName("Gestor troca a senha de um usuário da própria organização")
+        void gestorDeveTrocarSenhaDeUsuarioDaMesmaOrganizacao() {
+            Usuario gestor = criarUsuario(GESTOR_ID, TipoUsuarioNovo.GESTOR, organizacao);
+            logarComo(GESTOR_ID, ORG_ID);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+            when(usuarioRepository.findById(GESTOR_ID)).thenReturn(Optional.of(gestor));
             when(passwordEncoder.encode("novaSenha123")).thenReturn("encodedNovaSenha");
 
             usuarioService.trocarSenharUsuariobyOrg(USUARIO_ID, "novaSenha123");
@@ -111,8 +163,139 @@ class UsuarioServiceTest {
         }
 
         @Test
+        @DisplayName("Gestor NÃO troca a senha de usuário de outra organização")
+        void gestorNaoDeveTrocarSenhaDeOutraOrganizacao() {
+            Organizacao outraOrg = Organizacao.builder().nome("Outra Clínica").build();
+            outraOrg.setId(OUTRA_ORG_ID);
+            Usuario gestorOutraOrg = criarUsuario(GESTOR_ID, TipoUsuarioNovo.GESTOR, outraOrg);
+            logarComo(GESTOR_ID, OUTRA_ORG_ID);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+            when(usuarioRepository.findById(GESTOR_ID)).thenReturn(Optional.of(gestorOutraOrg));
+
+            assertThatThrownBy(() -> usuarioService.trocarSenharUsuariobyOrg(USUARIO_ID, "novaSenha123"))
+                    .isInstanceOf(TenantAccessDeniedException.class);
+            verify(usuarioRepository, never()).save(any());
+            assertThat(usuario.getSenha()).isEqualTo("encodedPass");
+        }
+
+        @Test
+        @DisplayName("Clínico NÃO troca a senha de outro usuário, mesmo da mesma organização")
+        void clinicoNaoDeveTrocarSenhaDeOutroUsuario() {
+            Usuario outroClinico = criarUsuario(40L, TipoUsuarioNovo.CLINICO, organizacao);
+            logarComo(40L, ORG_ID);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+            when(usuarioRepository.findById(40L)).thenReturn(Optional.of(outroClinico));
+
+            assertThatThrownBy(() -> usuarioService.trocarSenharUsuariobyOrg(USUARIO_ID, "novaSenha123"))
+                    .isInstanceOf(TenantAccessDeniedException.class);
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Assistente NÃO troca a senha de outro usuário, mesmo da mesma organização")
+        void assistenteNaoDeveTrocarSenhaDeOutroUsuario() {
+            Usuario assistente = criarUsuario(50L, TipoUsuarioNovo.ASSISTENTE, organizacao);
+            logarComo(50L, ORG_ID);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+            when(usuarioRepository.findById(50L)).thenReturn(Optional.of(assistente));
+
+            assertThatThrownBy(() -> usuarioService.trocarSenharUsuariobyOrg(USUARIO_ID, "novaSenha123"))
+                    .isInstanceOf(TenantAccessDeniedException.class);
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Gestor NÃO troca a senha do ROOT, mesmo que esteja na mesma organização")
+        void gestorNaoDeveTrocarSenhaDoRoot() {
+            Usuario root = criarUsuario(1L, TipoUsuarioNovo.ROOT, organizacao);
+            logarComo(GESTOR_ID, ORG_ID);
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.of(root));
+
+            assertThatThrownBy(() -> usuarioService.trocarSenharUsuariobyOrg(1L, "novaSenha123"))
+                    .isInstanceOf(TenantAccessDeniedException.class);
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("ROOT troca a própria senha")
+        void rootDeveTrocarPropriaSenha() {
+            Usuario root = criarUsuario(1L, TipoUsuarioNovo.ROOT, null);
+            TenantContext.setCurrentUser(1L);
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.of(root));
+            when(passwordEncoder.encode("novaSenha123")).thenReturn("encodedNovaSenha");
+
+            usuarioService.trocarSenharUsuariobyOrg(1L, "novaSenha123");
+
+            assertThat(root.getSenha()).isEqualTo("encodedNovaSenha");
+            verify(usuarioRepository).save(root);
+        }
+
+        @Test
+        @DisplayName("ROOT logado direto NÃO troca a senha de outro usuário (usa a senha master como o admin)")
+        void rootNaoDeveTrocarSenhaDeOutroUsuarioDiretamente() {
+            Usuario root = criarUsuario(1L, TipoUsuarioNovo.ROOT, null);
+            TenantContext.setCurrentUser(1L);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.of(root));
+
+            assertThatThrownBy(() -> usuarioService.trocarSenharUsuariobyOrg(USUARIO_ID, "novaSenha123"))
+                    .isInstanceOf(TenantAccessDeniedException.class);
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Gestor com token sem organização NÃO troca a senha de outro usuário")
+        void gestorSemOrganizacaoNoTokenNaoDeveTrocarSenha() {
+            Usuario gestor = criarUsuario(GESTOR_ID, TipoUsuarioNovo.GESTOR, organizacao);
+            TenantContext.setCurrentUser(GESTOR_ID);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+            when(usuarioRepository.findById(GESTOR_ID)).thenReturn(Optional.of(gestor));
+
+            assertThatThrownBy(() -> usuarioService.trocarSenharUsuariobyOrg(USUARIO_ID, "novaSenha123"))
+                    .isInstanceOf(TenantAccessDeniedException.class);
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Gestor NÃO troca a senha de usuário sem organização")
+        void gestorNaoDeveTrocarSenhaDeUsuarioSemOrganizacao() {
+            Usuario semOrg = criarUsuario(60L, TipoUsuarioNovo.CLINICO, null);
+            Usuario gestor = criarUsuario(GESTOR_ID, TipoUsuarioNovo.GESTOR, organizacao);
+            logarComo(GESTOR_ID, ORG_ID);
+            when(usuarioRepository.findById(60L)).thenReturn(Optional.of(semOrg));
+            when(usuarioRepository.findById(GESTOR_ID)).thenReturn(Optional.of(gestor));
+
+            assertThatThrownBy(() -> usuarioService.trocarSenharUsuariobyOrg(60L, "novaSenha123"))
+                    .isInstanceOf(TenantAccessDeniedException.class);
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Nega a troca quando não há usuário logado no contexto")
+        void deveNegarSemUsuarioLogado() {
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+
+            assertThatThrownBy(() -> usuarioService.trocarSenharUsuariobyOrg(USUARIO_ID, "novaSenha123"))
+                    .isInstanceOf(TenantAccessDeniedException.class);
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Nega a troca quando o usuário logado não existe mais no banco")
+        void deveNegarQuandoUsuarioLogadoNaoExiste() {
+            logarComo(GESTOR_ID, ORG_ID);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+            when(usuarioRepository.findById(GESTOR_ID)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> usuarioService.trocarSenharUsuariobyOrg(USUARIO_ID, "novaSenha123"))
+                    .isInstanceOf(TenantAccessDeniedException.class);
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
         @DisplayName("Deve lançar exceção quando usuário não for encontrado")
         void deveLancarExcecaoQuandoUsuarioNaoEncontrado() {
+            logarComo(GESTOR_ID, ORG_ID);
             when(usuarioRepository.findById(999L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> usuarioService.trocarSenharUsuariobyOrg(999L, "novaSenha"))
@@ -165,6 +348,62 @@ class UsuarioServiceTest {
         }
 
         @Test
+        @DisplayName("4.4 - Reativar usuário valida o limite do plano; estourado, não reativa")
+        void reativarDeveValidarLimiteDoPlano() {
+            TenantContext.setCurrentTenant(ORG_ID);
+            usuario.setStatus(StatusUsuario.INATIVO);
+            usuario.setMotivoBloqueio(MotivoBloqueio.INDIVIDUAL);
+            BloquearUsuarioRequest request = new BloquearUsuarioRequest(PERFIL_ID, USUARIO_ID, 1);
+
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+            doThrow(new LimitePlanoException("PROFISSIONAL", 3, 3L))
+                    .when(limitePlanoService).validarLimiteProfissional(ORG_ID);
+
+            assertThatThrownBy(() -> usuarioService.bloquearUsuariobyOrg(request))
+                    .isInstanceOf(LimitePlanoException.class);
+
+            assertThat(usuario.getStatus()).isEqualTo(StatusUsuario.INATIVO);
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("4.4 - Reativação valida o limite do tipo certo (secretária e gestor)")
+        void reativarValidaLimiteConformeTipo() {
+            TenantContext.setCurrentTenant(ORG_ID);
+            usuario.setStatus(StatusUsuario.INATIVO);
+            usuario.setTipoUsuarioNovo(TipoUsuarioNovo.ASSISTENTE);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+
+            usuarioService.bloquearUsuariobyOrg(new BloquearUsuarioRequest(PERFIL_ID, USUARIO_ID, 1));
+
+            verify(limitePlanoService).validarLimiteSecretaria(ORG_ID);
+            assertThat(usuario.getStatus()).isEqualTo(StatusUsuario.ATIVO);
+            assertThat(usuario.getMotivoBloqueio()).isNull();
+        }
+
+        @Test
+        @DisplayName("Usuário já ativo recebendo status ATIVO não consome limite")
+        void ativoParaAtivoNaoValidaLimite() {
+            TenantContext.setCurrentTenant(ORG_ID);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+
+            usuarioService.bloquearUsuariobyOrg(new BloquearUsuarioRequest(PERFIL_ID, USUARIO_ID, 1));
+
+            verifyNoInteractions(limitePlanoService);
+        }
+
+        @Test
+        @DisplayName("4.4 - Bloqueio individual marca o motivo INDIVIDUAL")
+        void bloqueioIndividualMarcaMotivo() {
+            TenantContext.setCurrentTenant(ORG_ID);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(usuario));
+
+            usuarioService.bloquearUsuariobyOrg(new BloquearUsuarioRequest(PERFIL_ID, USUARIO_ID, 0));
+
+            assertThat(usuario.getMotivoBloqueio()).isEqualTo(MotivoBloqueio.INDIVIDUAL);
+        }
+
+        @Test
         @DisplayName("Deve lançar exceção ao tentar bloquear Super Admin")
         void deveLancarExcecaoAoBloquearSuperAdmin() {
             TenantContext.setCurrentTenant(ORG_ID);
@@ -183,7 +422,7 @@ class UsuarioServiceTest {
 
             assertThatThrownBy(() -> usuarioService.bloquearUsuariobyOrg(request))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Super Admin");
+                    .hasMessageContaining("Root");
         }
 
         @Test
@@ -209,13 +448,28 @@ class UsuarioServiceTest {
         @AfterEach
         void limparTenantContext() {
             TenantContext.clear();
+            SecurityContextHolder.clearContext();
+        }
+
+        @Test
+        @DisplayName("Sem tenant e sem ROLE_SUPER_ADMIN deve negar (403) em vez de agir como super admin")
+        void deveNegarSemTenantESemPapelSuperAdmin() {
+            TenantContext.clear();
+            SecurityContextHolder.clearContext();
+            BloquearUsuarioRequest request = new BloquearUsuarioRequest(PERFIL_ID, USUARIO_ID, 0);
+
+            assertThatThrownBy(() -> usuarioService.bloquearUsuariobyOrg(request))
+                    .isInstanceOf(TenantNotDefinedException.class);
+            verifyNoInteractions(usuarioRepository);
         }
 
         @Test
         @DisplayName("Deve bloquear todos os usuários da organização em cascata")
         void deveBloquearTodosUsuariosEmCascata() {
-            // SUPER_ADMIN: TenantContext sem tenant definido (null)
+            // SUPER_ADMIN: sem tenant no contexto, mas com o papel explícito
             TenantContext.clear();
+            SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                    "root", "n/a", List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))));
 
             Usuario adminOrgUsuario = Usuario.builder()
                     .login("cnpj")
@@ -242,6 +496,71 @@ class UsuarioServiceTest {
             assertThat(adminOrgUsuario.getStatus()).isEqualTo(StatusUsuario.INATIVO);
             assertThat(outroUsuario.getStatus()).isEqualTo(StatusUsuario.INATIVO);
             verify(usuarioRepository, atLeast(2)).save(any(Usuario.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("4.4 - cascata preserva bloqueios individuais")
+    class CascataPreservaBloqueioIndividual {
+
+        private Usuario adminOrgUsuario;
+
+        @BeforeEach
+        void comoSuperAdmin() {
+            TenantContext.clear();
+            SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                    "root", "n/a", List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))));
+            adminOrgUsuario = Usuario.builder().login("gestor").tipoUsuarioNovo(TipoUsuarioNovo.GESTOR)
+                    .status(StatusUsuario.ATIVO).organizacao(organizacao).build();
+            adminOrgUsuario.setId(USUARIO_ID);
+            when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.of(adminOrgUsuario));
+            when(adminOrganizacaoRepository.findById(PERFIL_ID)).thenReturn(Optional.empty());
+        }
+
+        @AfterEach
+        void limpar() {
+            SecurityContextHolder.clearContext();
+            TenantContext.clear();
+        }
+
+        private Usuario usuarioDaOrg(long id, StatusUsuario status, MotivoBloqueio motivo) {
+            Usuario u = Usuario.builder().login("u" + id).tipoUsuarioNovo(TipoUsuarioNovo.CLINICO)
+                    .status(status).motivoBloqueio(motivo).organizacao(organizacao).build();
+            u.setId(id);
+            return u;
+        }
+
+        @Test
+        @DisplayName("Bloqueio em cascata marca CASCATA só em quem estava ativo")
+        void bloqueioCascataNaoSobrescreveIndividual() {
+            Usuario ativo = usuarioDaOrg(50L, StatusUsuario.ATIVO, null);
+            Usuario jaBloqueado = usuarioDaOrg(51L, StatusUsuario.INATIVO, MotivoBloqueio.INDIVIDUAL);
+            when(usuarioRepository.findByOrganizacao_Id(ORG_ID)).thenReturn(List.of(ativo, jaBloqueado));
+
+            usuarioService.bloquearUsuariobyOrg(new BloquearUsuarioRequest(PERFIL_ID, USUARIO_ID, 0));
+
+            assertThat(ativo.getStatus()).isEqualTo(StatusUsuario.INATIVO);
+            assertThat(ativo.getMotivoBloqueio()).isEqualTo(MotivoBloqueio.CASCATA);
+            assertThat(jaBloqueado.getMotivoBloqueio()).isEqualTo(MotivoBloqueio.INDIVIDUAL);
+        }
+
+        @Test
+        @DisplayName("Desbloqueio em cascata reativa só quem foi bloqueado pela cascata")
+        void desbloqueioCascataSoReativaCascata() {
+            adminOrgUsuario.setStatus(StatusUsuario.INATIVO);
+            adminOrgUsuario.setMotivoBloqueio(MotivoBloqueio.CASCATA);
+            Usuario daCascata = usuarioDaOrg(50L, StatusUsuario.INATIVO, MotivoBloqueio.CASCATA);
+            Usuario individual = usuarioDaOrg(51L, StatusUsuario.INATIVO, MotivoBloqueio.INDIVIDUAL);
+            Usuario legado = usuarioDaOrg(52L, StatusUsuario.INATIVO, null);
+            when(usuarioRepository.findByOrganizacao_Id(ORG_ID)).thenReturn(List.of(daCascata, individual, legado));
+
+            usuarioService.bloquearUsuariobyOrg(new BloquearUsuarioRequest(PERFIL_ID, USUARIO_ID, 1));
+
+            assertThat(adminOrgUsuario.getStatus()).isEqualTo(StatusUsuario.ATIVO);
+            assertThat(daCascata.getStatus()).isEqualTo(StatusUsuario.ATIVO);
+            assertThat(daCascata.getMotivoBloqueio()).isNull();
+            assertThat(individual.getStatus()).isEqualTo(StatusUsuario.INATIVO);
+            assertThat(legado.getStatus()).isEqualTo(StatusUsuario.INATIVO);
         }
     }
 

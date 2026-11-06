@@ -27,36 +27,22 @@ public class PacienteApiController {
     @PostMapping("/cadastrarPacientebyOrg")
     public ResponseEntity<?> cadastrarPacientebyOrg(
             @Valid @RequestBody CadastrarPacienteCompletoRequest request) {
-        log.info("Cadastrando paciente: {} - Data Nascimento: {}",
-                request.nome(), request.dataNacimento());
-        try {
-            Paciente paciente = pacienteService.cadastrarPacientebyOrg(request);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(new PacienteResponse(paciente));
-        } catch (IllegalStateException e) {
-            log.warn("Erro ao cadastrar paciente: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        } catch (Exception e) {
-            log.error("Erro inesperado ao cadastrar paciente", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erro ao processar requisição: " + e.getMessage());
-        }
+        // Conflito (IllegalStateException) vira 409 e erro inesperado vira 500 no GlobalExceptionHandler
+        Paciente paciente = pacienteService.cadastrarPacientebyOrg(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new PacienteResponse(paciente));
     }
 
     @GetMapping("/buscarrPacientebyOrg/{id}")
     public ResponseEntity<PacienteResponse> buscarrPacientebyOrg(@PathVariable Long id) {
-        log.debug("Buscando paciente por ID: {} no tenant", id);
         return pacienteService.buscarrPacientebyOrg(id)
                 .map(p -> ResponseEntity.ok(new PacienteResponse(p)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
-
     @PutMapping("/atualizarPacientebyOrg/{id}")
     public ResponseEntity<PacienteResponse> buscarrPatualizarPacientebyOrgacientebyOrg(
             @PathVariable Long id,
             @Valid @RequestBody AtualizarPacienteRequest request) {
-        log.info("Atualizando paciente ID: {} no tenant", id);
 
         // Verifica se paciente pertence ao tenant
         if (pacienteService.buscarrPacientebyOrg(id).isEmpty()) {
@@ -67,38 +53,27 @@ public class PacienteApiController {
         return ResponseEntity.ok(new PacienteResponse(paciente));
     }
 
-
     @DeleteMapping("/deletarPacientebyOrg/{id}")
     public ResponseEntity<Void> deletarPacientebyOrg(@PathVariable Long id) {
-        log.info("Deletando paciente ID: {} do tenant", id);
 
         // Verifica se paciente pertence ao tenant
         if (pacienteService.buscarrPacientebyOrg(id).isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
-        try {
-            pacienteService.deletarPacientebyOrg(id);
-            return ResponseEntity.noContent().build();
-        } catch (Exception e) {
-            log.error("Erro ao deletar paciente: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        pacienteService.deletarPacientebyOrg(id);
+        return ResponseEntity.noContent().build();
     }
-
 
     // ==========CRUD============================
 
-
 // ============================= Pesquisas com filtros  ========================================
-
 
     // Métodos de busca para autocomplete com filtro opcional
     @GetMapping("/buscar-por-nome")
     public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPorNome(
             @RequestParam String nome,
             @RequestParam(required = false, defaultValue = "ALL") String filtro) {
-        log.debug("Buscando pacientes por nome: {} no tenant com filtro: {}", nome, filtro);
         List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorNomeComFiltro(nome, filtro)
                 .stream()
                 .map(PacienteResponse::new)
@@ -110,7 +85,6 @@ public class PacienteApiController {
     public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPorCPF(
             @RequestParam String cpf,
             @RequestParam(required = false, defaultValue = "ALL") String filtro) {
-        log.debug("Buscando pacientes por CPF: {} no tenant com filtro: {}", cpf, filtro);
         List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorCPFComFiltro(cpf, filtro)
                 .stream()
                 .map(PacienteResponse::new)
@@ -122,7 +96,6 @@ public class PacienteApiController {
     public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPor_RG(
             @RequestParam String rg,
             @RequestParam(required = false, defaultValue = "ALL") String filtro) {
-        log.debug("Buscando pacientes por RG: {} no tenant com filtro: {}", rg, filtro);
         List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorRGComFiltro(rg, filtro)
                 .stream()
                 .map(PacienteResponse::new)
@@ -134,7 +107,6 @@ public class PacienteApiController {
     public ResponseEntity<List<PacienteResponse>> buscarListaPacientesPorTelefone(
             @RequestParam String telefone,
             @RequestParam(required = false, defaultValue = "ALL") String filtro) {
-        log.debug("Buscando pacientes por telefone: {} no tenant com filtro: {}", telefone, filtro);
         List<PacienteResponse> pacientes = pacienteService.buscarListaPacientesPorTelefoneComFiltro(telefone, filtro)
                 .stream()
                 .map(PacienteResponse::new)
@@ -145,7 +117,6 @@ public class PacienteApiController {
     @GetMapping("/buscar-todos")
     public ResponseEntity<List<PacienteResponse>> buscarTodosPacientes(
             @RequestParam(required = false, defaultValue = "ALL") String filtro) {
-        log.debug("Buscando todos os pacientes do tenant com filtro: {}", filtro);
         List<PacienteResponse> pacientes = pacienteService.buscarTodosPacientesComFiltro(filtro)
                 .stream()
                 .map(PacienteResponse::new)
@@ -155,11 +126,9 @@ public class PacienteApiController {
 
 // ============================= Pesquisas com filtros  ========================================
 
-
     @PutMapping("/bloquearPacientebyOrg")
     public ResponseEntity<Void> bloquearPacientebyOrg(
             @RequestBody @Valid @NotNull BloquearUsuarioRequest request) {
-        log.info("Alterando status do paciente ID: {} para {}", request.codigo(), request.status());
 
         // Verifica se paciente pertence ao tenant
         if (pacienteService.buscarrPacientebyOrg(request.codigo()).isEmpty()) {
@@ -169,11 +138,5 @@ public class PacienteApiController {
         pacienteService.bloquearPacientebyOrg(request.codigo(), request.status());
         return ResponseEntity.ok().build();
     }
-
-
-
-
-
-
 
 }

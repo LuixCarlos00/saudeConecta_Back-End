@@ -95,6 +95,7 @@ class BuscarHistoricoCompletoPacienteUseCaseTest {
 
             assertThat(resultado).hasSize(1);
             assertThat(resultado.get(0).getProntuarioId()).isEqualTo(50L);
+            assertThat(resultado.get(0).getProfissionalUsuarioId()).isEqualTo(77L);
             verify(prontuarioDentistaRepository).findByConsultaId(100L);
         }
 
@@ -195,6 +196,33 @@ class BuscarHistoricoCompletoPacienteUseCaseTest {
 
             assertThat(resultado).hasSize(1);
             assertThat(resultado.get(0).getProntuarioId()).isEqualTo(99L);
+            assertThat(resultado.get(0).getProfissionalUsuarioId()).isEqualTo(77L);
+        }
+
+        @Test
+        @DisplayName("Deve levar ao histórico pulso, responsável, CID, TUSS e exames solicitados do prontuário")
+        void deveMapearCamposClinicosQueFaltavam() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(1L);
+
+            Consulta consulta = criarConsultaCompleta(200L);
+            Prontuario prontuario = criarProntuarioMedico(99L);
+            prontuario.setProntPulso("95");
+            prontuario.setProntResponsavel("Mãe");
+            prontuario.setProntCidTexto("Z01.4 - Exame ginecológico (geral) (de rotina)");
+            prontuario.setProntTussTexto("10101012 - Consulta em consultório");
+            prontuario.setProntSolicitacaoExameTexto("Colpocitologia oncótica; Mamografia.");
+
+            when(consultaRepository.findHistoricoCompletoPacienteMedico(eq(10L), eq(1L), isNull()))
+                    .thenReturn(List.of(consulta));
+            when(prontuarioRepository.findByConsulta_Id(200L)).thenReturn(prontuario);
+
+            HistoricoConsultaPacienteResponse item = useCase.executar(10L, null).get(0);
+
+            assertThat(item.getPulso()).isEqualTo("95");
+            assertThat(item.getResponsavel()).isEqualTo("Mãe");
+            assertThat(item.getCidTexto()).isEqualTo("Z01.4 - Exame ginecológico (geral) (de rotina)");
+            assertThat(item.getTussTexto()).isEqualTo("10101012 - Consulta em consultório");
+            assertThat(item.getSolicitacaoExameTexto()).isEqualTo("Colpocitologia oncótica; Mamografia.");
         }
 
         @Test
@@ -233,6 +261,9 @@ class BuscarHistoricoCompletoPacienteUseCaseTest {
         profissional.setId(1L);
         profissional.setNome("Dr. Silva");
         profissional.setRegistroConselho("CRM-12345");
+        br.com.saudeConecta.domain.usuario.Usuario usuario = new br.com.saudeConecta.domain.usuario.Usuario();
+        usuario.setId(77L);
+        profissional.setUsuario(usuario);
         consulta.setProfissional(profissional);
 
         Especialidade especialidade = new Especialidade();

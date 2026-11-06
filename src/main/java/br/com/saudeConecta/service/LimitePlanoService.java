@@ -3,6 +3,7 @@ package br.com.saudeConecta.service;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
 import br.com.saudeConecta.domain.planos.PlanoAssinatura;
 import br.com.saudeConecta.infra.exceptions.LimitePlanoException;
+import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
@@ -24,16 +25,19 @@ public class LimitePlanoService {
     private final AdminOrganizacaoRepository adminOrganizacaoRepository;
     private final ProfissionalRepository profissionalRepository;
     private final SecretariaRepository secretariaRepository;
+    private final TenantHelper tenantHelper;
 
     public LimitePlanoService(
             AssinaturaTenantRepository assinaturaTenantRepository,
             AdminOrganizacaoRepository adminOrganizacaoRepository,
             ProfissionalRepository profissionalRepository,
-            SecretariaRepository secretariaRepository) {
+            SecretariaRepository secretariaRepository,
+            TenantHelper tenantHelper) {
         this.assinaturaTenantRepository = assinaturaTenantRepository;
         this.adminOrganizacaoRepository = adminOrganizacaoRepository;
         this.profissionalRepository = profissionalRepository;
         this.secretariaRepository = secretariaRepository;
+        this.tenantHelper = tenantHelper;
     }
 
     /**
@@ -46,7 +50,7 @@ public class LimitePlanoService {
     public void validarLimiteAdminOrg(Long organizacaoId) {
         Optional<AssinaturaTenant> assinaturaOpt = buscarAssinaturaAtiva(organizacaoId);
         if (assinaturaOpt.isEmpty()) {
-            log.warn("Organização {} sem assinatura ativa. Permitindo criacao (sem plano).", organizacaoId);
+            negarSemAssinaturaExcetoRoot(organizacaoId);
             return;
         }
 
@@ -61,7 +65,7 @@ public class LimitePlanoService {
 
         Long usado = adminOrganizacaoRepository.countAtivosByOrganizacaoId(organizacaoId);
         if (usado >= limite) {
-            log.info("Limite de GESTOR atingido para org {}: {}/{}", organizacaoId, usado, limite);
+            log.warn("assinatura.limite negado motivo=LIMITE_GESTOR organizacaoId={} usado={} limite={}", organizacaoId, usado, limite);
             throw new LimitePlanoException("GESTOR", limite, usado);
         }
     }
@@ -76,7 +80,7 @@ public class LimitePlanoService {
     public void validarLimiteProfissional(Long organizacaoId) {
         Optional<AssinaturaTenant> assinaturaOpt = buscarAssinaturaAtiva(organizacaoId);
         if (assinaturaOpt.isEmpty()) {
-            log.warn("Organização {} sem assinatura ativa. Permitindo criacao (sem plano).", organizacaoId);
+            negarSemAssinaturaExcetoRoot(organizacaoId);
             return;
         }
 
@@ -91,7 +95,7 @@ public class LimitePlanoService {
 
         Long usado = profissionalRepository.countAtivosByOrganizacaoId(organizacaoId);
         if (usado >= limite) {
-            log.info("Limite de PROFISSIONAL atingido para org {}: {}/{}", organizacaoId, usado, limite);
+            log.warn("assinatura.limite negado motivo=LIMITE_PROFISSIONAL organizacaoId={} usado={} limite={}", organizacaoId, usado, limite);
             throw new LimitePlanoException("PROFISSIONAL", limite, usado);
         }
     }
@@ -106,7 +110,7 @@ public class LimitePlanoService {
     public void validarLimiteSecretaria(Long organizacaoId) {
         Optional<AssinaturaTenant> assinaturaOpt = buscarAssinaturaAtiva(organizacaoId);
         if (assinaturaOpt.isEmpty()) {
-            log.warn("Organização {} sem assinatura ativa. Permitindo criacao (sem plano).", organizacaoId);
+            negarSemAssinaturaExcetoRoot(organizacaoId);
             return;
         }
 
@@ -121,7 +125,7 @@ public class LimitePlanoService {
 
         Long usado = secretariaRepository.countAtivasByOrganizacaoId(organizacaoId);
         if (usado >= limite) {
-            log.info("Limite de SECRETARIA atingido para org {}: {}/{}", organizacaoId, usado, limite);
+            log.warn("assinatura.limite negado motivo=LIMITE_SECRETARIA organizacaoId={} usado={} limite={}", organizacaoId, usado, limite);
             throw new LimitePlanoException("SECRETARIA", limite, usado);
         }
     }
@@ -159,6 +163,24 @@ public class LimitePlanoService {
                 profissionalRepository.countAtivosByOrganizacaoId(organizacaoId),
                 secretariaRepository.countAtivasByOrganizacaoId(organizacaoId)
         );
+    }
+
+    /**
+     * Sem assinatura com acesso não há plano para medir o limite: antes a criação era liberada,
+     * o que permitia cadastrar usuários sem pagar. Só o ROOT (SUPER_ADMIN) segue podendo, para
+     * montar a organização antes de associar o plano.
+     *
+     * @param organizacaoId ID da organização
+     * @throws LimitePlanoException quando o usuário atual não é SUPER_ADMIN
+     */
+    private void negarSemAssinaturaExcetoRoot(Long organizacaoId) {
+        if (tenantHelper.isSuperAdmin()) {
+            log.warn("assinatura.limite liberado motivo=SUPER_ADMIN_SEM_ASSINATURA organizacaoId={}", organizacaoId);
+            return;
+        }
+        log.warn("assinatura.limite negado motivo=SEM_ASSINATURA_COM_ACESSO organizacaoId={}", organizacaoId);
+        throw new LimitePlanoException(
+                "Sua organizacao nao possui uma assinatura ativa. Regularize o plano para cadastrar novos usuarios.");
     }
 
     /**

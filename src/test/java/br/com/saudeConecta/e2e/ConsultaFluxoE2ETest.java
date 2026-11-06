@@ -3,7 +3,10 @@ package br.com.saudeConecta.e2e;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
 import br.com.saudeConecta.presentation.dto.consulta.AgendarConsultaRequest;
+import br.com.saudeConecta.domain.prontuario.Prontuario;
+import br.com.saudeConecta.presentation.dto.prontuario.CadastrarProntuarioRequest;
 import br.com.saudeConecta.service.ConsultaService;
+import br.com.saudeConecta.service.ProntuarioService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.*;
@@ -17,6 +20,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.sql.Date;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -27,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Testes ponta a ponta do fluxo completo de uma consulta:
- * Agendar → Confirmar → Realizar → Pagar
+ * Agendar → Confirmar → Realizar (finalizar o prontuário) → Pagar
  *
  * Simula o ciclo de vida completo de uma consulta no sistema,
  * validando as transições de status e respostas HTTP de cada etapa.
@@ -44,6 +49,9 @@ class ConsultaFluxoE2ETest {
 
     @MockBean
     private ConsultaService consultaService;
+
+    @MockBean
+    private ProntuarioService prontuarioService;
 
     private ObjectMapper objectMapper;
 
@@ -105,17 +113,28 @@ class ConsultaFluxoE2ETest {
     @Test
     @Order(3)
     @WithMockUser(roles = "PROFISSIONAL")
-    @DisplayName("Passo 3 - Realizar (concluir) consulta confirmada")
-    void passo3_realizarConsulta() throws Exception {
-        when(consultaService.concluirConsultabyOrg(CONSULTA_ID))
-                .thenReturn(buildConsultaMock(StatusConsulta.REALIZADA));
+    @DisplayName("Passo 3 - Realizar: finalizar o prontuário marca a consulta como REALIZADA")
+    void passo3_finalizarProntuario() throws Exception {
+        // REALIZADA não se define pelo PATCH de status: é o cadastro do prontuário que conclui a consulta
+        Consulta realizada = buildConsultaMock(StatusConsulta.REALIZADA);
+        Prontuario prontuario = Prontuario.builder().prontCodigoProntuario(10L).consulta(realizada).build();
+        when(prontuarioService.cadastrarProntuarioMedico(any())).thenReturn(prontuario);
 
-        mockMvc.perform(put("/consultas/concluirConsultabyOrg/{id}", CONSULTA_ID)
-                        .with(csrf()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("REALIZADA"));
+        CadastrarProntuarioRequest request = new CadastrarProntuarioRequest();
+        request.setConsulta(CONSULTA_ID);
+        request.setCodigoMedico(1L);
+        request.setDataFinalizado(Date.valueOf(LocalDate.now()));
+        request.setDiagnostico("Consulta de rotina sem alterações");
 
-        verify(consultaService).concluirConsultabyOrg(CONSULTA_ID);
+        mockMvc.perform(post("/prontuario/cadastrarProntuarioMedico")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.prontCodigoProntuario").value(10))
+                .andExpect(jsonPath("$.consultaId").value(CONSULTA_ID));
+
+        verify(prontuarioService).cadastrarProntuarioMedico(argThat(r -> CONSULTA_ID.equals(r.getConsulta())));
     }
 
     @Test
@@ -136,7 +155,7 @@ class ConsultaFluxoE2ETest {
     @Test
     @Order(5)
     @WithMockUser(roles = "ADMIN")
-    @DisplayName("Passo 5 - Tentativa de cancelar consulta PAGA deve retornar 422 (Unprocessable Entity)")
+    @DisplayName("Passo 5 - Tentativa de cancelar consulta PAGA deve retornar 409 (Conflict)")
     void passo5_naoDeveCancelarConsultaPaga() throws Exception {
         when(consultaService.atualizarStatus(eq(CONSULTA_ID), eq(StatusConsulta.CANCELADA), eq("Tentativa inválida")))
                 .thenThrow(new IllegalStateException("não podem ter o status alterado"));
@@ -145,6 +164,6 @@ class ConsultaFluxoE2ETest {
                         .with(csrf())
                         .param("status", "CANCELADA")
                         .param("motivo", "Tentativa inválida"))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isConflict());
     }
 }

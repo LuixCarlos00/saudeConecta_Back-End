@@ -18,7 +18,6 @@ public interface PacienteRepository extends JpaRepository<Paciente, Long> {
     List<Paciente> findByOrganizacao_Id(@Param("orgId") Long organizacaoId);
     
 
-
     @Query("SELECT p FROM Paciente p " +
             "LEFT JOIN FETCH p.endereco " +
             "WHERE p.paciCodigo = :id AND p.organizacao.id = :orgId")
@@ -27,39 +26,28 @@ public interface PacienteRepository extends JpaRepository<Paciente, Long> {
             @Param("orgId") Long orgId
     );
 
-
     @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
            "AND LOWER(p.paciNome) LIKE LOWER(CONCAT('%', :nome, '%'))")
     List<Paciente> findByOrganizacaoIdAndNomeContaining(
         @Param("orgId") Long orgId, @Param("nome") String nome);
-
-
 
     @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
            "AND LOWER(p.paciCpf) LIKE LOWER(CONCAT('%', :cpf, '%'))")
     List<Paciente> findByOrganizacaoIdAndCpfContaining(
         @Param("orgId") Long orgId, @Param("cpf") String cpf);
 
-
-
     @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
            "AND LOWER(p.paciRg) LIKE LOWER(CONCAT('%', :rg, '%'))")
     List<Paciente> findByOrganizacaoIdAndRgContaining(
         @Param("orgId") Long orgId, @Param("rg") String rg);
-
-
 
     @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
            "AND LOWER(p.paciTelefone) LIKE LOWER(CONCAT('%', :telefone, '%'))")
     List<Paciente> findByOrganizacaoIdAndTelefoneContaining(
         @Param("orgId") Long orgId, @Param("telefone") String telefone);
 
-
-
     boolean existsByPaciCpfAndOrganizacao_Id(String cpf, Long orgId);
     
-
-
 
     // Métodos com filtro de status
     @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
@@ -68,8 +56,6 @@ public interface PacienteRepository extends JpaRepository<Paciente, Long> {
         @Param("orgId") Long orgId, 
         @Param("filtro") String filtro,
         @Param("status") String status);
-
-
 
     @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
            "AND LOWER(p.paciNome) LIKE LOWER(CONCAT('%', :nome, '%')) " +
@@ -80,8 +66,6 @@ public interface PacienteRepository extends JpaRepository<Paciente, Long> {
         @Param("filtro") String filtro,
         @Param("status") String status);
 
-
-
     @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
            "AND LOWER(p.paciCpf) LIKE LOWER(CONCAT('%', :cpf, '%')) " +
            "AND (:filtro = 'ALL' OR p.paciStatus = :status)")
@@ -91,8 +75,6 @@ public interface PacienteRepository extends JpaRepository<Paciente, Long> {
         @Param("filtro") String filtro,
         @Param("status") String status);
 
-
-
     @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
            "AND LOWER(p.paciRg) LIKE LOWER(CONCAT('%', :rg, '%')) " +
            "AND (:filtro = 'ALL' OR p.paciStatus = :status)")
@@ -101,8 +83,6 @@ public interface PacienteRepository extends JpaRepository<Paciente, Long> {
         @Param("rg") String rg,
         @Param("filtro") String filtro,
         @Param("status") String status);
-
-
 
     @Query("SELECT p FROM Paciente p LEFT JOIN FETCH p.endereco WHERE p.organizacao.id = :orgId " +
            "AND LOWER(p.paciTelefone) LIKE LOWER(CONCAT('%', :telefone, '%')) " +

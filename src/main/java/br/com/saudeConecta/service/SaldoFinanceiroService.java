@@ -1,5 +1,6 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.domain.common.Periodo;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.PlanejamentoTerapeuticoRepository;
 import br.com.saudeConecta.presentation.dto.dashboard.SaldoFinanceiroResponse;
@@ -12,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.format.TextStyle;
 import java.util.*;
 
@@ -41,8 +41,9 @@ public class SaldoFinanceiroService {
      */
     @Transactional(readOnly = true)
     public SaldoFinanceiroResponse calcularSaldo(Long organizacaoId, LocalDate inicio, LocalDate fim, String agruparPor) {
-        LocalDateTime inicioDateTime = inicio.atStartOfDay();
-        LocalDateTime fimDateTime = fim.atTime(LocalTime.MAX);
+        Periodo periodo = Periodo.entre(inicio, fim);
+        LocalDateTime inicioDateTime = periodo.inicio();
+        LocalDateTime fimDateTime = periodo.ultimoInstante();
 
         // Totais gerais
         List<Object[]> totalConsultas = consultaRepository

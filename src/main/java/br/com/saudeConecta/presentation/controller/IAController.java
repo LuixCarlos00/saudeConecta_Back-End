@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/ia")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(originPatterns = "*", allowCredentials = "true")
 public class IAController {
 
     private final IALocalService iaLocalService;
@@ -25,18 +24,10 @@ public class IAController {
      */
     @PostMapping("/resumir-historico")
     public ResponseEntity<String> resumirHistorico(@RequestBody ResumirHistoricoRequest request) {
-        log.info("=== Requisição recebida: POST /ia/resumir-historico (IA Local) ===");
-        log.debug("Paciente ID: {}, Tipo: {}", request.getPacienteId(), request.getTipo());
         
-        try {
-            // Usar IA local - gratuito e sem configuração
-            String resumo = iaLocalService.gerarResumoHistorico(request.getPacienteId(), request.getTipo());
-            log.info("Resumo gerado com sucesso usando IA local para paciente ID: {}", request.getPacienteId());
-            return ResponseEntity.ok(resumo);
-        } catch (Exception e) {
-            log.error("Erro ao gerar resumo com IA local: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError().body("Erro ao gerar resumo do histórico");
-        }
+        // Usar IA local - gratuito e sem configuração
+        String resumo = iaLocalService.gerarResumoHistorico(request.getPacienteId(), request.getTipo());
+        return ResponseEntity.ok(resumo);
     }
 
     /**

@@ -1,10 +1,13 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.domain.common.Periodo;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.usuario.Usuario;
+import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.presentation.dto.consulta.*;
 import br.com.saudeConecta.presentation.dto.dashboard.SaldoFinanceiroResponse;
@@ -16,16 +19,16 @@ import br.com.saudeConecta.service.SaldoFinanceiroService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import br.com.saudeConecta.util.MascaraLog;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,13 +44,13 @@ public class ConsultaController {
     private final BuscarHistoricoCompletoPacienteMedicoUseCase buscarHistoricoCompletoPacienteMedicoUseCase;
     private final BuscarHistoricoCompletoPacienteAdminUseCase buscarHistoricoCompletoPacienteAdminUseCase;
     private final ProfissionalRepository profissionalRepository;
+    private final TenantHelper tenantHelper;
 
 //=================Tela de /gerenciamento =================
     @GetMapping("/hoje")
     public ResponseEntity<List<ConsultaResponse>> listarConsultasHoje(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data,
             @AuthenticationPrincipal Usuario usuarioLogado) {
-        log.debug("- Iniciando busca de consultas de hoje - listarConsultasHoje usuario={}", usuarioLogado.getId());
 
         List<ConsultaResponse> response = consultaService.buscarConsultasHoje(data, usuarioLogado).stream()
                 .map(ConsultaResponse::fromEntity)
@@ -59,7 +62,6 @@ public class ConsultaController {
     public ResponseEntity<List<ConsultaResponse>> buscarDaSemanaAtual(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data,
             @AuthenticationPrincipal Usuario usuarioLogado) {
-        log.debug("- Iniciando busca de consultas da semana atual - buscarDaSemanaAtual usuario={}", usuarioLogado.getId());
 
         List<ConsultaResponse> response =
                 consultaService.buscarConsultasDaSemanaAtual(data, usuarioLogado).stream()
@@ -72,7 +74,6 @@ public class ConsultaController {
     public ResponseEntity<List<ConsultaResponse>> buscarDoMesAtual(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data,
             @AuthenticationPrincipal Usuario usuarioLogado) {
-        log.debug("- Iniciando busca de consultas do mês atual - buscarDoMesAtual usuario={}", usuarioLogado.getId());
 
         List<ConsultaResponse> response =
                 consultaService.buscarConsultasDoMesAtual(data, usuarioLogado).stream()
@@ -83,7 +84,6 @@ public class ConsultaController {
     
     @GetMapping("/ano-atual")
     public ResponseEntity<List<ConsultaResponse>> buscarDoAnoAtual() {
-        log.debug("- Iniciando busca de consultas do ano atual - buscarDoAnoAtual" );
         List<ConsultaResponse> response =
                 consultaService.buscarConsultasDoAnoAtual().stream()
                 .map(ConsultaResponse::fromEntity)
@@ -94,10 +94,8 @@ public class ConsultaController {
     //=========================================Tela de /gerenciamento =========================================
 //=================================================CRUD =========================================
 
-
     @PostMapping("/cadastrarConsultaByOrg")
     public ResponseEntity<ConsultaResponse> cadastrarConsultaByOrg(@Valid @RequestBody AgendarConsultaRequest request) {
-        log.info("- Iniciando cadastro de consulta - cadastrarConsultaByOrg");
         Consulta consulta = consultaService.cadastrarConsultaByOrg(request);
         return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
     }
@@ -106,18 +104,9 @@ public class ConsultaController {
     public ResponseEntity<ConsultaResponse> atualizarConsultabyOrg(
             @PathVariable Long id,
             @Valid @RequestBody AtualizarConsultaRequest request) {
-        log.info("- Iniciando atualizacao de consulta - atualizarConsultabyOrg");
         Consulta consulta = consultaService.atualizarConsultaByOrg(id, request);
         return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
     }
-
-    @PutMapping("/concluirConsultabyOrg/{id}")
-    public ResponseEntity<ConsultaResponse> concluirConsultabyOrg(@PathVariable Long id) {
-        log.info("- Iniciando conclusao de consulta - concluirConsultabyOrg");
-        Consulta consulta = consultaService.concluirConsultabyOrg(id);
-        return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
-    }
-
 
     /**
      * Exclui uma consulta e registros associados (questionário, planejamentos, histórico).
@@ -128,25 +117,18 @@ public class ConsultaController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deletarConsulta(@PathVariable Long id) {
-        log.info("Solicitacao de exclusao da consulta {}", id);
+        // Exclusão bloqueada (IllegalStateException) vira 409 com mensagem no GlobalExceptionHandler
         try {
             consultaService.deletarConsulta(id);
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException e) {
-            log.warn("Consulta nao encontrada para exclusao: {}", e.getMessage());
+            log.warn("consulta.excluir negado motivo=NAO_ENCONTRADA consultaId={}", id);
             return ResponseEntity.notFound().build();
-        } catch (IllegalStateException e) {
-            log.warn("Exclusao bloqueada para consulta {}: {}", id, e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        } catch (Exception e) {
-            log.error("Erro ao excluir consulta {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     //===============================================CRUD ==================================================
     //=======================Atualizar  Status ==========================
-
 
     /**
      * Altera o status de uma consulta seguindo as regras de transição:
@@ -154,7 +136,7 @@ public class ConsultaController {
      * - CONFIRMADA → AGENDADA, CANCELADA
      * - REALIZADA → PAGO (AdminOrg pode marcar como pago após médico concluir)
      * 
-     * IMPORTANTE: Status REALIZADA só pode ser definido pelo médico através do endpoint PUT /concluirConsultabyOrg/{id}
+     * IMPORTANTE: Status REALIZADA só é definido quando o profissional finaliza o prontuário (médico ou odontológico)
      *
      * @param id     ID da consulta
      * @param status Novo status (AGENDADA, CONFIRMADA, CANCELADA, PAGO)
@@ -166,17 +148,14 @@ public class ConsultaController {
             @PathVariable Long id,
             @RequestParam String status,
             @RequestParam(required = false) String motivo) {
-        log.info("Atualizando status da consulta {} para {}", id, status);
         try {
             StatusConsulta novoStatus = StatusConsulta.valueOf(status.toUpperCase());
             Consulta consulta = consultaService.atualizarStatus(id, novoStatus, motivo);
             return ResponseEntity.ok(ConsultaResponse.fromEntity(consulta));
         } catch (IllegalArgumentException e) {
-            log.warn("Status invalido ou consulta nao encontrada: {}", e.getMessage());
+            log.warn("consulta.status negado motivo=STATUS_INVALIDO_OU_NAO_ENCONTRADA consultaId={} status={} detalhe={}",
+                    id, MascaraLog.seguro(status), MascaraLog.seguro(e.getMessage(), 120));
             return ResponseEntity.badRequest().build();
-        } catch (IllegalStateException e) {
-            log.warn("Transicao de status invalida: {}", e.getMessage());
-            return ResponseEntity.unprocessableEntity().build();
         }
     }
     //=======================Atualizar  Status ==========================
@@ -194,9 +173,23 @@ public class ConsultaController {
     public ResponseEntity<List<String>> buscarHorariosOcupados(
             @RequestParam Long medicoId,
             @RequestParam String data) {
-        log.info("- Iniciando busca de horarios ocupados - buscarHorariosOcupados");
         List<String> horariosOcupados = consultaService.buscarHorariosOcupados(medicoId, data);
         return ResponseEntity.ok(horariosOcupados);
+    }
+
+    /**
+     * Versão detalhada de /horarios-ocupados: devolve início e duração de cada consulta ocupando a agenda,
+     * para o front bloquear o intervalo inteiro (e não só o horário de início).
+     *
+     * @param medicoId ID do médico/profissional
+     * @param data     Data no formato yyyy-MM-dd
+     * @return Lista de {inicio (HH:mm:ss), duracaoMinutos}
+     */
+    @GetMapping("/horarios-ocupados-detalhado")
+    public ResponseEntity<List<HorarioOcupadoResponse>> buscarHorariosOcupadosDetalhado(
+            @RequestParam Long medicoId,
+            @RequestParam String data) {
+        return ResponseEntity.ok(consultaService.buscarHorariosOcupadosDetalhado(medicoId, data));
     }
 
     /**
@@ -213,11 +206,9 @@ public class ConsultaController {
             @RequestParam String data,
             @RequestParam String horario,
             @RequestParam Long medicoId) {
-        log.info("- Iniciando verificacao de disponibilidade - verificarDisponibilidade");
         boolean existeConsulta = consultaService.verificarDisponibilidade(data, horario, medicoId);
         return ResponseEntity.ok(existeConsulta);
     }
-
 
     /**    //======================= Filtros  de pesquisas Dinamico ==========================
 
@@ -239,12 +230,10 @@ public class ConsultaController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal,
             @RequestParam(required = false) String status) {
         
-        log.info("Endpoint /buscar - profissionalId: {}, especialidade: {}, periodo: {} a {}, status: {}",
-                profissionalId, especialidade, dataInicial, dataFinal, status);
         
         // Converter datas para LocalDateTime
-        LocalDateTime inicio = dataInicial != null ? dataInicial.atStartOfDay() : null;
-        LocalDateTime fim = dataFinal != null ? dataFinal.atTime(23, 59, 59) : null;
+        LocalDateTime inicio = dataInicial != null ? Periodo.dia(dataInicial).inicio() : null;
+        LocalDateTime fim = dataFinal != null ? Periodo.dia(dataFinal).fim() : null;
         
         // Converter string de status para lista de StatusConsulta
         List<StatusConsulta> statusList = null;
@@ -265,36 +254,20 @@ public class ConsultaController {
                 .map(ConsultaResponse::fromEntity)
                 .toList();
         
-        log.info("Retornando {} consultas", response.size());
         return ResponseEntity.ok(response);
     }
     //======================= Filtros  de pesquisas Dinamico ==========================
-
-
 
     @GetMapping("/intervalo")
     public ResponseEntity<List<ConsultaResponse>> buscarTodasPorIntervalo(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal,
             @RequestParam(required = false) String status) {
-        log.debug("- Iniciando busca de consultas por intervalo - buscarTodasPorIntervalo" );
         List<ConsultaResponse> response = consultaService.buscarConsultasPorIntervalo(dataInicial, dataFinal, status).stream()
                 .map(ConsultaResponse::fromEntity)
                 .toList();
         return ResponseEntity.ok(response);
     }
-
-
-
-    @GetMapping("/profissional/{profissionalId}")
-    public ResponseEntity<List<ConsultaResponse>> listarPorProfissional(@PathVariable Long profissionalId) {
-        log.debug("- Iniciando busca de consultas por profissional - listarPorProfissional" );
-        List<ConsultaResponse> response = consultaService.buscarPorProfissional(profissionalId).stream()
-                .map(ConsultaResponse::fromEntity)
-                .toList();
-        return ResponseEntity.ok(response);
-    }
-// TODO verificar quais metodo estao sendo usados no front e com back , altera a url dels com o nome do metodo no front e back para vinculação
 
     /**
      * Busca consultas por médico e intervalo de datas
@@ -311,8 +284,6 @@ public class ConsultaController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal,
             @RequestParam(required = false) String status) {
-        log.debug("Buscando consultas para usuario {} entre {} e {} com status {}", 
-                  profissionalId, dataInicial, dataFinal, status);
         List<ConsultaResponse> response = consultaService.pesquisarClinicasEmIntervaloDeDatas(
                         profissionalId, dataInicial, dataFinal, status).stream()
                 .map(ConsultaResponse::fromEntity)
@@ -320,167 +291,14 @@ public class ConsultaController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/profissional/{profissionalId}/especialidade/intervalo")
-    public ResponseEntity<List<ConsultaResponse>> pesquisarMedicoEspecialidadeEmIntervaloDeDatas(
-            @PathVariable Long profissionalId,
-            @RequestParam String especialidade,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal,
-            @RequestParam(required = false) String status) {
-        log.debug("- Iniciando pesquisa de medico e especialidade em intervalo de datas - pesquisarMedicoEspecialidadeEmIntervaloDeDatas" );
-        List<ConsultaResponse> response = consultaService.pesquisarMedicoEspecialidadeEmIntervaloDeDatas(
-                        profissionalId, especialidade, dataInicial, dataFinal, status).stream()
-                .map(ConsultaResponse::fromEntity)
-                .toList();
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/profissional/{profissionalId}/especialidade")
-    public ResponseEntity<List<ConsultaResponse>> pesquisarPorProfissionalEEspecialidade(
-            @PathVariable Long profissionalId,
-            @RequestParam String especialidade,
-            @RequestParam(required = false) String status) {
-        log.debug("- Iniciando pesquisa de profissional e especialidade - pesquisarPorProfissionalEEspecialidade" );
-        List<ConsultaResponse> response = consultaService.pesquisarPorProfissionalEEspecialidade(
-                        profissionalId, especialidade, status).stream()
-                .map(ConsultaResponse::fromEntity)
-                .toList();
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/especialidade/intervalo")
-    public ResponseEntity<List<ConsultaResponse>> pesquisarEspecialidadeEmIntervaloDeDatas(
-            @RequestParam String especialidade,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal,
-            @RequestParam(required = false) String status) {
-        log.debug("- Iniciando pesquisa de especialidade em intervalo de datas - pesquisarEspecialidadeEmIntervaloDeDatas" );
-        List<ConsultaResponse> response = consultaService.pesquisarEspecialidadeEmIntervaloDeDatas(
-                        especialidade, dataInicial, dataFinal, status).stream()
-                .map(ConsultaResponse::fromEntity)
-                .toList();
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/especialidade/{especialidade}")
-    public ResponseEntity<List<ConsultaResponse>> pesquisarPorEspecialidade(
-            @PathVariable String especialidade,
-            @RequestParam(required = false) String status) {
-        log.debug("- Iniciando pesquisa de especialidade - pesquisarPorEspecialidade" );
-        List<ConsultaResponse> response = consultaService.pesquisarPorEspecialidade(especialidade, status).stream()
-                .map(ConsultaResponse::fromEntity)
-                .toList();
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/organizacao/{organizacaoId}/especialidade/{especialidade}")
-    public ResponseEntity<List<ConsultaResponse>> pesquisarPorEspecialidadeEOrganizacao(
-            @PathVariable Long organizacaoId,
-            @PathVariable String especialidade,
-            @RequestParam(required = false) String status) {
-        log.debug("- Iniciando pesquisa de especialidade e organizacao - pesquisarPorEspecialidadeEOrganizacao" );
-        List<ConsultaResponse> response = consultaService.pesquisarPorEspecialidadeEOrganizacao(
-                        organizacaoId, especialidade, status).stream()
-                .map(ConsultaResponse::fromEntity)
-                .toList();
-        return ResponseEntity.ok(response);
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 //============================================================
 
-
-
-
-
-    @GetMapping("/paginado")
-    public ResponseEntity<Page<ConsultaResponse>> listarTodasPaginado(Pageable pageable) {
-        Page<ConsultaResponse> response = consultaService.buscarTodas(pageable)
-            .map(ConsultaResponse::fromEntity);
-        return ResponseEntity.ok(response);
-    }
-    
     @GetMapping("/{id}")
     public ResponseEntity<ConsultaResponse> buscarPorId(@PathVariable Long id) {
-        return consultaService.buscarPorId(id)
+        return consultaService.buscarPorIdComRelacoes(id)
             .map(ConsultaResponse::fromEntity)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
-    }
-    
-
-
-    
-    @GetMapping("/profissional/{profissionalId}/agenda")
-    public ResponseEntity<List<ConsultaResponse>> buscarAgendaDia(
-            @PathVariable Long profissionalId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
-        List<ConsultaResponse> response = consultaService.buscarAgendaDia(profissionalId, data).stream()
-            .map(ConsultaResponse::fromEntity)
-            .toList();
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/periodo")
-    public ResponseEntity<List<ConsultaResponse>> buscarPorPeriodo(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fim) {
-        List<ConsultaResponse> response = consultaService.buscarPorPeriodo(inicio, fim).stream()
-            .map(ConsultaResponse::fromEntity)
-            .toList();
-        return ResponseEntity.ok(response);
-    }
-    
-    @GetMapping("/paciente/{pacienteId}")
-    public ResponseEntity<List<ConsultaResponse>> listarPorPaciente(@PathVariable Long pacienteId) {
-        List<ConsultaResponse> response = consultaService.buscarPorPaciente(pacienteId).stream()
-            .map(ConsultaResponse::fromEntity)
-            .toList();
-        return ResponseEntity.ok(response);
-    }
-
-    
-
-
-
-
-
-    @GetMapping("/count/hoje")
-    public ResponseEntity<Long> contarAgendadasHoje() {
-        return ResponseEntity.ok(consultaService.contarAgendadasHoje());
     }
 
     /**
@@ -495,7 +313,6 @@ public class ConsultaController {
     public ResponseEntity<List<ConsultaResponse>> buscarAgendaMedicoPorPeriodo(
             @PathVariable Long usuarioId,
             @RequestParam(defaultValue = "diario") String tipoPeriodo) {
-        log.debug("Buscando consultas para usuario {} com periodo {}", usuarioId, tipoPeriodo);
         List<ConsultaResponse> response = consultaService.buscarConsultasPorMedicoEPeriodo(usuarioId, tipoPeriodo)
                 .stream()
                 .map(ConsultaResponse::fromEntity)
@@ -518,8 +335,8 @@ public class ConsultaController {
     @GetMapping("/estatisticas/organizacao/{organizacaoId}/dashboard")
     public ResponseEntity<EstatisticasDashboardAdminOrgResponse> getEstatisticasDashboardAdminOrg(
             @PathVariable Long organizacaoId) {
-
-        log.debug("Buscando estatisticas de dashboard para organizacao {}", organizacaoId);
+        // Validado antes do service: o @Cacheable usa o orgId como chave e responderia do cache sem checar.
+        tenantHelper.validateTenant(organizacaoId);
 
         EstatisticasDashboardAdminOrgResponse response =
             consultaService.getEstatisticasDashboardAdminOrg(organizacaoId);
@@ -542,7 +359,11 @@ public class ConsultaController {
     @GetMapping("/estatisticas/dashboard/profissional")
     public ResponseEntity<EstatisticasDashboardAdminOrgResponse> getEstatisticasDashboardProfissional(
             @RequestParam Long usuarioId) {
-        log.debug("Buscando estatisticas de dashboard para profissional usuarioId={}", usuarioId);
+        // A query do dashboard filtra só por usuário (sem organização): restringe ao próprio usuário do token,
+        // o que também torna a chave de cache (#usuarioId) a do usuário validado.
+        if (!usuarioId.equals(tenantHelper.getCurrentUserId())) {
+            throw new TenantAccessDeniedException("Acesso negado: dashboard de outro usuário");
+        }
         return ResponseEntity.ok(consultaService.getEstatisticasDashboardProfissional(usuarioId));
     }
 
@@ -558,127 +379,24 @@ public class ConsultaController {
      *         consultasSemana, canceladosSemana e confirmadosSemana
      */
     @GetMapping("/estatisticas/dashboard/super-admin")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<EstatisticasDashboardAdminOrgResponse> getEstatisticasDashboardSuperAdmin() {
-        log.debug("Buscando estatisticas de dashboard global para SuperAdmin");
         return ResponseEntity.ok(consultaService.getEstatisticasDashboardSuperAdmin());
     }
 
-    @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-hoje")
-    public ResponseEntity<Long> getEstatisticaConsultasHojeByAdmiOrg(@PathVariable Long organizacaoId) {
-        return ResponseEntity.ok(consultaService.getEstatisticaConsultasHojeByAdmiOrg(organizacaoId));
-    }
-
-
-    @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-atendidas-hoje")
-    public ResponseEntity<Long> getEstatisticaConsultasAtendidasByAdmiOrg(@PathVariable Long organizacaoId) {
-        return ResponseEntity.ok(consultaService.getEstatisticaConsultasAtendidasByAdmiOrg(organizacaoId));
-    }
-
-    @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-agendadas-hoje")
-    public ResponseEntity<Long> getEstatisticasConsultaAgendadasHojeByOrd(@PathVariable Long organizacaoId) {
-        return ResponseEntity.ok(consultaService.getEstatisticasConsultaAgendadasHojeByOrd(organizacaoId));
-    }
-
-
-    @GetMapping("/estatisticas/organizacao/{organizacaoId}/consultas-semana")
-    public ResponseEntity<Long> getEstatisticasSemanaPorOrganizacao(
-            @PathVariable Long organizacaoId) {
-
-        log.debug("Contando consultas da semana para organizacao {}", organizacaoId);
-
-        Long quantidade = consultaService.getEstatisticasSemanaPorOrganizacao(organizacaoId);
-
-        return ResponseEntity.ok(quantidade);
-    }
-
-
     //==================================FIM=============================================
-
 
     @GetMapping("/organizacao/{organizacaoId}/intervalo")
     public ResponseEntity<List<ConsultaResponse>> buscarPorOrganizacaoEIntervalo(
             @PathVariable Long organizacaoId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal) {
+        tenantHelper.validateTenant(organizacaoId);
         List<ConsultaResponse> response = consultaService.buscarConsultasPorOrganizacaoEIntervalo(
                 organizacaoId, dataInicial, dataFinal).stream()
             .map(ConsultaResponse::fromEntity)
             .toList();
         return ResponseEntity.ok(response);
-    }
-
-    // ==========================================
-    // ESTATÍSTICAS POR PROFISSIONAL (usuarioId + orgId) - HOJE
-    // ==========================================
-
-    /**
-     * Conta todas as consultas de hoje do profissional logado
-     * Filtra por usuarioId (via JOIN com profissional) + organizacaoId do TenantContext
-     *
-     * @param usuarioId ID do usuário logado (profissional)
-     * @return Quantidade de consultas hoje
-     */
-    @GetMapping("/estatisticas/profissional/{usuarioId}/consultas-hoje")
-    public ResponseEntity<Long> contarConsultasHojePorProfissional(@PathVariable Long usuarioId) {
-        Long organizacaoId = TenantContext.getCurrentTenant();
-        if (organizacaoId == null) {
-            log.error("Organizacao nao identificada no contexto");
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok(consultaService.contarConsultasHojePorUsuarioEOrg(organizacaoId, usuarioId));
-    }
-
-    /**
-     * Conta consultas REALIZADAS hoje do profissional logado
-     * Filtra por usuarioId (via JOIN com profissional) + organizacaoId do TenantContext
-     *
-     * @param usuarioId ID do usuário logado (profissional)
-     * @return Quantidade de consultas realizadas hoje
-     */
-    @GetMapping("/estatisticas/profissional/{usuarioId}/consultas-realizadas-hoje")
-    public ResponseEntity<Long> contarConsultasRealizadasHojePorProfissional(@PathVariable Long usuarioId) {
-        Long organizacaoId = TenantContext.getCurrentTenant();
-        if (organizacaoId == null) {
-            log.error("Organizacao nao identificada no contexto");
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok(consultaService.contarConsultasRealizadasHojePorUsuarioEOrg(organizacaoId, usuarioId));
-    }
-
-    /**
-     * Conta consultas AGENDADAS hoje do profissional logado
-     * Filtra por usuarioId (via JOIN com profissional) + organizacaoId do TenantContext
-     *
-     * @param usuarioId ID do usuário logado (profissional)
-     * @return Quantidade de consultas agendadas hoje
-     */
-    @GetMapping("/estatisticas/profissional/{usuarioId}/consultas-agendadas-hoje")
-    public ResponseEntity<Long> contarConsultasAgendadasHojePorProfissional(@PathVariable Long usuarioId) {
-        Long organizacaoId = TenantContext.getCurrentTenant();
-        if (organizacaoId == null) {
-            log.error("Organizacao nao identificada no contexto");
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok(consultaService.contarConsultasAgendadasHojePorUsuarioEOrg(organizacaoId, usuarioId));
-    }
-
-    // ==========================================
-    // ESTATÍSTICAS GLOBAIS (SUPER ADMIN)
-    // ==========================================
-
-    @GetMapping("/estatisticas/consultas-hoje")
-    public ResponseEntity<Long> contarTodasConsultasHoje() {
-        return ResponseEntity.ok(consultaService.contarTodasConsultasHoje());
-    }
-
-    @GetMapping("/estatisticas/consultas-realizadas-hoje")
-    public ResponseEntity<Long> contarTodasRealizadasHoje() {
-        return ResponseEntity.ok(consultaService.contarTodasConsultasRealizadasHoje());
-    }
-
-    @GetMapping("/estatisticas/consultas-agendadas-hoje")
-    public ResponseEntity<Long> contarTodasAgendadasHoje() {
-        return ResponseEntity.ok(consultaService.contarTodasConsultasAgendadasHoje());
     }
 
     // ==========================================
@@ -707,12 +425,11 @@ public class ConsultaController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal) {
         
-        log.debug("Buscando estatisticas para usuario {} entre {} e {}", medicoId, dataInicial, dataFinal);
         
         Long organizacaoId = TenantContext.getCurrentTenant();
         
         if (organizacaoId == null) {
-            log.error("Organizacao nao identificada no contexto");
+            log.warn("consulta.estatisticas negado motivo=SEM_ORGANIZACAO");
             return ResponseEntity.badRequest().build();
         }
         
@@ -724,57 +441,6 @@ public class ConsultaController {
         );
         
         return ResponseEntity.ok(estatisticas);
-    }
-
-    /**
-     * Conta consultas da semana atual para o profissional logado (filtra por orgId + medicoId)
-     * Se medicoId for fornecido, conta apenas consultas desse médico
-     * Caso contrário, conta todas as consultas da organização
-     *
-     * @param medicoId ID do médico/profissional (opcional)
-     * @return Quantidade de consultas da semana
-     */
-    @GetMapping("/estatisticas/consultas-semana")
-    public ResponseEntity<Long> contarConsultasSemana(
-            @RequestParam(required = false) Long medicoId) {
-
-        log.debug("Contando consultas da semana - MedicoId: {}", medicoId);
-
-        Long organizacaoId = TenantContext.getCurrentTenant();
-
-        if (organizacaoId == null) {
-            log.error("Organizacao nao identificada no contexto");
-            return ResponseEntity.badRequest().build();
-        }
-
-        Long quantidade = consultaService.contarConsultasSemana(organizacaoId, medicoId);
-
-        return ResponseEntity.ok(quantidade);
-    }
-
-    /**
-     * Conta consultas da semana atual de uma organização específica (AdminOrg)
-     * Retorna total de consultas da organização na semana de segunda a domingo
-     *
-     * @param organizacaoId ID da organização
-     * @return Quantidade de consultas da semana
-     */
-
-
-    /**
-     * Conta consultas da semana atual de todas as organizações (SuperAdmin)
-     * Retorna total global de consultas na semana de segunda a domingo
-     *
-     * @return Quantidade total de consultas da semana
-     */
-    @GetMapping("/estatisticas/consultas-semana-global")
-    public ResponseEntity<Long> contarConsultasSemanaGlobal() {
-
-        log.debug("Contando consultas da semana globalmente");
-
-        Long quantidade = consultaService.contarConsultasSemanaGlobal();
-
-        return ResponseEntity.ok(quantidade);
     }
 
     /**
@@ -794,12 +460,11 @@ public class ConsultaController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal) {
         
-        log.debug("Buscando duracoes de consultas para usuario {} entre {} e {}", medicoId, dataInicial, dataFinal);
         
         Long organizacaoId = TenantContext.getCurrentTenant();
         
         if (organizacaoId == null) {
-            log.error("Organizacao nao identificada no contexto");
+            log.warn("consulta.estatisticas negado motivo=SEM_ORGANIZACAO");
             return ResponseEntity.badRequest().build();
         }
         
@@ -814,7 +479,6 @@ public class ConsultaController {
     }
 
     // ========== ENDPOINT PARA BUSCAR HORÁRIOS OCUPADOS ==========
-
 
     /**
      * Busca histórico completo de consultas de um paciente, aplicando as
@@ -832,38 +496,29 @@ public class ConsultaController {
             @PathVariable Long pacienteId,
             @AuthenticationPrincipal Usuario usuarioLogado) {
 
-        log.info("=== Requisição: GET /consultas/BuscandoHistoricoDeConsultasDoPaciente/{} usuario={} ===", pacienteId, usuarioLogado.getId());
+        List<HistoricoConsultaPacienteResponse> historico;
 
-        try {
-            List<HistoricoConsultaPacienteResponse> historico;
+        if (usuarioLogado.isClinico()) {
+            Optional<Profissional> profissionalLogado = profissionalRepository.findByUsuarioIdWithRelations(usuarioLogado.getId());
 
-            if (usuarioLogado.isClinico()) {
-                Optional<Profissional> profissionalLogado = profissionalRepository.findByUsuarioIdWithRelations(usuarioLogado.getId());
-
-                if (profissionalLogado.isEmpty()) {
-                    log.warn("Profissional não encontrado para o usuario {}", usuarioLogado.getId());
-                    return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-                }
-
-                Profissional profissional = profissionalLogado.get();
-                Long profissionalId = profissional.getId();
-
-                if (profissional.getTipoProfissional() != null && profissional.getTipoProfissional().isDentista()) {
-                    historico = buscarHistoricoCompletoPacienteDentistaUseCase.executar(pacienteId, profissionalId);
-                } else {
-                    historico = buscarHistoricoCompletoPacienteMedicoUseCase.executar(pacienteId, profissionalId);
-                }
-            } else {
-                historico = buscarHistoricoCompletoPacienteAdminUseCase.executar(pacienteId);
+            if (profissionalLogado.isEmpty()) {
+                log.warn("consulta.historico negado motivo=PROFISSIONAL_NAO_ENCONTRADO usuarioId={}", usuarioLogado.getId());
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
 
-            log.info("Historico retornado com sucesso - {} registros", historico.size());
-            return ResponseEntity.ok(historico);
+            Profissional profissional = profissionalLogado.get();
+            Long profissionalId = profissional.getId();
 
-        } catch (Exception e) {
-            log.error("Erro ao buscar historico do paciente {}: {}", pacienteId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            if (profissional.getTipoProfissional() != null && profissional.getTipoProfissional().isDentista()) {
+                historico = buscarHistoricoCompletoPacienteDentistaUseCase.executar(pacienteId, profissionalId);
+            } else {
+                historico = buscarHistoricoCompletoPacienteMedicoUseCase.executar(pacienteId, profissionalId);
+            }
+        } else {
+            historico = buscarHistoricoCompletoPacienteAdminUseCase.executar(pacienteId);
         }
+
+        return ResponseEntity.ok(historico);
     }
 
     // ==========================================
@@ -886,12 +541,9 @@ public class ConsultaController {
 
         Long organizacaoId = TenantContext.getCurrentTenant();
         if (organizacaoId == null) {
-            log.warn("Saldo financeiro solicitado sem organização no contexto");
+            log.warn("consulta.saldoFinanceiro negado motivo=SEM_ORGANIZACAO");
             return ResponseEntity.badRequest().build();
         }
-
-        log.info("Saldo financeiro: orgId={}, periodo={} a {}, agrupamento={}",
-                organizacaoId, inicio, fim, agruparPor);
 
         SaldoFinanceiroResponse response = saldoFinanceiroService
                 .calcularSaldo(organizacaoId, inicio, fim, agruparPor);

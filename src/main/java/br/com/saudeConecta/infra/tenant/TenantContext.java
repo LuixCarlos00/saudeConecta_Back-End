@@ -12,7 +12,7 @@ public class TenantContext {
     }
     
     public static void setCurrentTenant(Long organizacaoId) {
-        log.debug("Definindo tenant atual: {}", organizacaoId);
+        log.debug("tenant.contexto definir organizacaoId={}", organizacaoId);
         CURRENT_TENANT.set(organizacaoId);
     }
     
@@ -29,7 +29,7 @@ public class TenantContext {
     }
     
     public static void setCurrentUser(Long userId) {
-        log.debug("Definindo usuário atual: {}", userId);
+        log.debug("tenant.contexto definir usuarioId={}", userId);
         CURRENT_USER.set(userId);
     }
     
@@ -38,7 +38,7 @@ public class TenantContext {
     }
     
     public static void clear() {
-        log.debug("Limpando contexto do tenant");
+        log.debug("tenant.contexto limpar");
         CURRENT_TENANT.remove();
         CURRENT_USER.remove();
     }

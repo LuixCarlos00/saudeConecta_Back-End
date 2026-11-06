@@ -3,7 +3,6 @@ package br.com.saudeConecta.domain.paciente;
 import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.infra.tenant.TenantAware;
-import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteRequest;
  import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  import jakarta.persistence.*;
@@ -63,19 +62,6 @@ public class Paciente implements Serializable, TenantAware {
 
     @Column(name = "PaciStatus", nullable = false)
     private String paciStatus;
-
-    public Paciente(CadastrarPacienteRequest dados, Endereco endereco) {
-        this.paciNome = dados.paciNome();
-        this.paciSexo = dados.paciSexo();
-        this.paciDataNacimento = dados.paciDataNacimento() != null ? 
-            Date.valueOf(dados.paciDataNacimento()) : null;
-        this.paciCpf = dados.paciCpf();
-        this.paciRg = dados.paciRg();
-        this.paciEmail = dados.paciEmail();
-        this.paciTelefone = dados.paciTelefone();
-        this.endereco = endereco;
-        this.paciStatus = dados.paciStatus();
-    }
 
     @Override
     public Long getOrganizacaoId() {

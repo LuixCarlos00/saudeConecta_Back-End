@@ -4,6 +4,7 @@ import br.com.saudeConecta.domain.consulta.ConfiguracoesConsulta;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConfiguracoesConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
 import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.infra.tenant.TenantHelper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +20,7 @@ public class ConfiguracoesConsultaService {
 
     private final ConfiguracoesConsultaRepository configuracoesConsultaRepository;
     private final OrganizacaoRepository organizacaoRepository;
+    private final TenantHelper tenantHelper;
 
     /**
      * Busca a configuração de fluxo de consulta da organização atual.
@@ -28,10 +30,11 @@ public class ConfiguracoesConsultaService {
      */
     @Transactional(readOnly = true)
     public ConfiguracoesConsulta buscarConfiguracaoPorOrganizacao(Long organizacaoId) {
+        tenantHelper.validateTenant(organizacaoId);
         Optional<ConfiguracoesConsulta> config = configuracoesConsultaRepository.findByOrganizacaoId(organizacaoId);
         
         if (config.isEmpty()) {
-            log.info("Configuracao de fluxo nao encontrada para organizacao {}, retornando padrao", organizacaoId);
+            log.debug("consulta.configuracao buscar organizacaoId={} resultado=PADRAO", organizacaoId);
             return ConfiguracoesConsulta.builder()
                     .pularParaConfirmado(false)
                     .descricao("Configuração padrão - fluxo normal")
@@ -50,7 +53,7 @@ public class ConfiguracoesConsultaService {
     public ConfiguracoesConsulta buscarConfiguracaoAtual() {
         Long organizacaoId = TenantContext.getCurrentTenant();
         if (organizacaoId == null) {
-            log.warn("Organizacao nao identificada no contexto, retornando configuracao padrao");
+            log.warn("consulta.configuracao negado motivo=SEM_ORGANIZACAO acao=USA_PADRAO");
             return ConfiguracoesConsulta.builder()
                     .pularParaConfirmado(false)
                     .descricao("Configuração padrão - fluxo normal")
@@ -69,6 +72,7 @@ public class ConfiguracoesConsultaService {
      */
     @Transactional
     public ConfiguracoesConsulta criarConfiguracao(Long organizacaoId, Boolean pularParaConfirmado, String descricao) {
+        tenantHelper.validateTenant(organizacaoId);
         if (configuracoesConsultaRepository.existsByOrganizacaoId(organizacaoId)) {
             throw new IllegalStateException("Já existe uma configuração de fluxo para esta organização");
         }
@@ -81,29 +85,6 @@ public class ConfiguracoesConsultaService {
                 .pularParaConfirmado(pularParaConfirmado != null ? pularParaConfirmado : false)
                 .descricao(descricao != null ? descricao : "Configuração de fluxo de consulta")
                 .build();
-
-        return configuracoesConsultaRepository.save(config);
-    }
-
-    /**
-     * Atualiza uma configuração de fluxo de consulta existente.
-     *
-     * @param id ID da configuração
-     * @param pularParaConfirmado Se deve pular para status CONFIRMADA
-     * @param descricao Descrição da configuração
-     * @return ConfiguracoesConsulta atualizada
-     */
-    @Transactional
-    public ConfiguracoesConsulta atualizarConfiguracao(Long id, Boolean pularParaConfirmado, String descricao) {
-        ConfiguracoesConsulta config = configuracoesConsultaRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Configuração de fluxo não encontrada"));
-
-        if (pularParaConfirmado != null) {
-            config.setPularParaConfirmado(pularParaConfirmado);
-        }
-        if (descricao != null) {
-            config.setDescricao(descricao);
-        }
 
         return configuracoesConsultaRepository.save(config);
     }

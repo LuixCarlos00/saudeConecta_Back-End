@@ -18,6 +18,6 @@ public class TenantAspect {
                 "Operação requer tenant definido: " + joinPoint.getSignature().getName()
             );
         }
-        log.debug("Tenant validado para operação: {}", joinPoint.getSignature().getName());
+        log.debug("tenant.validar ok operacao={}", joinPoint.getSignature().getName());
     }
 }

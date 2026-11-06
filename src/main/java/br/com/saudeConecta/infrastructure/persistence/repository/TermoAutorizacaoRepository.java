@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Repository
@@ -17,6 +18,40 @@ public interface TermoAutorizacaoRepository extends JpaRepository<TermoAutorizac
     Optional<TermoAutorizacao> findByToken(String token);
 
     Optional<TermoAutorizacao> findByConsultaId(Long consultaId);
+
+    /**
+     * Busca o termo de uma consulta somente se a consulta pertencer à organização informada.
+     *
+     * @param consultaId ID da consulta
+     * @param orgId      ID da organização do token
+     * @return termo, ou vazio se não existir ou for de outra clínica
+     */
+    @Query("SELECT t FROM TermoAutorizacao t WHERE t.consulta.id = :consultaId AND t.consulta.organizacao.id = :orgId")
+    Optional<TermoAutorizacao> findByConsultaIdAndOrganizacaoId(@Param("consultaId") Long consultaId,
+                                                                @Param("orgId") Long orgId);
+
+    /**
+     * Grava as respostas e a assinatura apenas se o termo ainda estiver PENDENTE e dentro da validade.
+     * O UPDATE condicional é atômico no banco: duas submissões simultâneas do mesmo link não
+     * conseguem assinar duas vezes (a segunda afeta 0 linhas).
+     *
+     * @param token      token público do questionário
+     * @param respostas  respostas do questionário (JSON)
+     * @param assinatura assinatura digital em base64
+     * @param ipOrigem   IP de origem resolvido pelo servidor
+     * @param agora      instante da assinatura (também usado para checar a expiração)
+     * @return quantidade de linhas atualizadas (0 ou 1)
+     */
+    @Modifying
+    @Query("UPDATE TermoAutorizacao t SET t.respostasQuestionario = :respostas, " +
+           "t.assinaturaBase64 = :assinatura, t.ipOrigem = :ipOrigem, t.dataAssinatura = :agora, " +
+           "t.status = 'ASSINADO' " +
+           "WHERE t.token = :token AND t.status = 'PENDENTE' AND t.dataExpiracao > :agora")
+    int responderSePendente(@Param("token") String token,
+                            @Param("respostas") String respostas,
+                            @Param("assinatura") String assinatura,
+                            @Param("ipOrigem") String ipOrigem,
+                            @Param("agora") LocalDateTime agora);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT t FROM TermoAutorizacao t WHERE t.consulta.id = :consultaId")

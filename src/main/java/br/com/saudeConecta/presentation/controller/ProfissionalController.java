@@ -1,5 +1,6 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.service.ProfissionalService;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.presentation.dto.profissional.AtualizarClinicoRequest;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,80 +25,64 @@ import java.util.Map;
 public class ProfissionalController {
     
     private final ProfissionalService profissionalService;
-
+    private final TenantHelper tenantHelper;
 
     @PutMapping("/atualizarClinicoIdByOrg/{id}")
-    @Description("Atualiza médico/clínico por ID dentro da organização")
-    public ResponseEntity<ProfissionalResponse> atualizarClinicoIdByOrg(@PathVariable Long id,
-                                                                     @Valid @RequestBody AtualizarClinicoRequest request) {
+    @Description("Atualiza médico/clínico por ID dentro da organização. Gestor ou o próprio clínico (regra no service)")
+    public ResponseEntity<?> atualizarClinicoIdByOrg(@PathVariable Long id,
+                                                     @Valid @RequestBody AtualizarClinicoRequest request) {
         try {
-            log.info("Atualizando clinico: {}", request.nome());
             Profissional atualizado = profissionalService.atualizarClinicoIdByOrg(id, request);
             return ResponseEntity.ok(ProfissionalResponse.fromEntity(atualizado));
         } catch (IllegalArgumentException e) {
-            log.warn("Erro ao atualizar profissional: {}", e.getMessage());
+            log.warn("profissional.atualizar negado motivo=NAO_ENCONTRADO profissionalId={}", id);
             return ResponseEntity.notFound().build();
         }
     }
 
     @PostMapping("/cadastraClinicoByOrg")
+    @PreAuthorize("hasRole('ADMIN')")
     @Description("Cadastra médico/clínico com CPF como login e envia credenciais por email. Utilizado em: CadastroMedicoComponent")
     public ResponseEntity<?> cadastraClinicoByOrg(@Valid @RequestBody CadastrarClinicoRequest request) {
-        log.info("Cadastrando clinico: {}", request.nome());
-        try {
-            Profissional profissional = profissionalService.cadastraClinicoByOrg(request);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ProfissionalResponse.fromEntity(profissional));
-        } catch (IllegalStateException e) {
-            log.warn("Erro ao cadastrar clinico: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        }
+        Profissional profissional = profissionalService.cadastraClinicoByOrg(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ProfissionalResponse.fromEntity(profissional));
     }
-
-
 
     @GetMapping("/buscarClinicoIdByOrg/{id}")
     @Description("Busca médico/clínico por ID dentro da organização")
     public ResponseEntity<ProfissionalResponse> buscarClinicoIdByOrg(@PathVariable Long id) {
-        log.info("Buscando clinico por ID: {}", id);
         return profissionalService.buscarClinicoIdByOrg(id)
                 .map(ProfissionalResponse::fromEntity)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-
-@DeleteMapping("/deletarClinicoIdByOrg/{id}")
+    @DeleteMapping("/deletarClinicoIdByOrg/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Description("Deleta médico/clínico por ID")
     public ResponseEntity<?> deletarClinicoIdByOrg(@PathVariable Long id) {
-        log.info("Deletando clinico ID: {}", id);
         try {
             profissionalService.deletarClinicoIdByOrg(id);
             return ResponseEntity.ok().build();
-        } catch (IllegalStateException e) {
-            log.warn("Erro ao deletar clinico: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         } catch (IllegalArgumentException e) {
-            log.warn("Clinico nao encontrado: {}", e.getMessage());
+            log.warn("profissional.deletar negado motivo=NAO_ENCONTRADO profissionalId={}", id);
             return ResponseEntity.notFound().build();
         }
     }
 
-
-
-
     @GetMapping("/estatisticas/organizacao/{organizacaoId}/medicos-ativos")
     public ResponseEntity<Long> contarAtivosPorOrganizacao(@PathVariable Long organizacaoId) {
+        // Validado antes do service: o @Cacheable usa o orgId como chave e responderia do cache sem checar.
+        tenantHelper.validateTenant(organizacaoId);
         return ResponseEntity.ok(profissionalService.contarAtivosPorOrganizacao(organizacaoId));
     }
 
-
     @GetMapping("/estatisticas/medicos-ativos")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Long> getEstatisticasMedicosAtivosByOrg() {
         return ResponseEntity.ok(profissionalService.getEstatisticasMedicosAtivosByOrg());
     }
-
-
 
     // ==========================================
     // ESTATÍSTICAS POR ORGANIZAÇÃO
@@ -104,6 +90,8 @@ public class ProfissionalController {
 
     @GetMapping("/organizacao/{organizacaoId}")
     public ResponseEntity<List<ProfissionalResponse>> listarPorOrganizacao(@PathVariable Long organizacaoId) {
+        // A resposta traz CPF/RG/e-mail: só a própria clínica pode listar (validado antes do cache do service).
+        tenantHelper.validateTenant(organizacaoId);
         List<Profissional> profissionais = profissionalService.buscarPorOrganizacao(organizacaoId);
         List<ProfissionalResponse> response = profissionais.stream()
                 .map(ProfissionalResponse::fromEntity)
@@ -111,126 +99,11 @@ public class ProfissionalController {
         return ResponseEntity.ok(response);
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//
-//
-//    @GetMapping
-//    public ResponseEntity<List<ProfissionalResponse>> listarTodos() {
-//        List<Profissional> profissionais = profissionalService.buscarTodos();
-//        List<ProfissionalResponse> response = profissionais.stream()
-//            .map(ProfissionalResponse::fromEntity)
-//            .toList();
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    @GetMapping("/paginado")
-//    public ResponseEntity<Page<ProfissionalResponse>> listarTodosPaginado(Pageable pageable) {
-//        Page<Profissional> page = profissionalService.buscarTodos(pageable);
-//        Page<ProfissionalResponse> response = page.map(ProfissionalResponse::fromEntity);
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    @GetMapping("/{id}")
-//    public ResponseEntity<ProfissionalResponse> buscarPorId(@PathVariable Long id) {
-//        return profissionalService.buscarPorId(id)
-//            .map(ProfissionalResponse::fromEntity)
-//            .map(ResponseEntity::ok)
-//            .orElse(ResponseEntity.notFound().build());
-//    }
-//
-//    @GetMapping("/medicos")
-//    public ResponseEntity<List<ProfissionalResponse>> listarMedicos() {
-//        List<Profissional> medicos = profissionalService.buscarMedicos();
-//        List<ProfissionalResponse> response = medicos.stream()
-//            .map(ProfissionalResponse::fromEntity)
-//            .toList();
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    @GetMapping("/dentistas")
-//    public ResponseEntity<List<ProfissionalResponse>> listarDentistas() {
-//        List<Profissional> dentistas = profissionalService.buscarDentistas();
-//        List<ProfissionalResponse> response = dentistas.stream()
-//            .map(ProfissionalResponse::fromEntity)
-//            .toList();
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    @GetMapping("/tipo/{tipoCodigo}")
-//    public ResponseEntity<List<ProfissionalResponse>> listarPorTipo(@PathVariable String tipoCodigo) {
-//        List<Profissional> profissionais = profissionalService.buscarPorTipo(tipoCodigo.toUpperCase());
-//        List<ProfissionalResponse> response = profissionais.stream()
-//            .map(ProfissionalResponse::fromEntity)
-//            .toList();
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    @GetMapping("/buscar")
-//    public ResponseEntity<List<ProfissionalResponse>> buscarPorNome(@RequestParam String nome) {
-//        List<Profissional> profissionais = profissionalService.buscarPorNome(nome);
-//        List<ProfissionalResponse> response = profissionais.stream()
-//            .map(ProfissionalResponse::fromEntity)
-//            .toList();
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    @PostMapping
-//    public ResponseEntity<ProfissionalResponse> cadastrar(
-//            @Valid @RequestBody CadastrarProfissionalRequest request) {
-//        Profissional profissional = profissionalService.cadastrar(request);
-//        return ResponseEntity.status(HttpStatus.CREATED)
-//            .body(ProfissionalResponse.fromEntity(profissional));
-//    }
-//
-//
-//
-//
-//    @GetMapping("/count")
-//    public ResponseEntity<Long> contarAtivos() {
-//        return ResponseEntity.ok(profissionalService.contarAtivos());
-//    }
-//
-
-
-//    // ==========================================
-//    // ESTATÍSTICAS GLOBAIS (SUPER ADMIN)
-//    // ==========================================
-//
-//    @GetMapping("/estatisticas/medicos-ativos")
-//    public ResponseEntity<Long> contarTodosAtivos() {
-//        return ResponseEntity.ok(profissionalService.contarTodosAtivos());
-//    }
-//
-//    @GetMapping("/todos-ativos")
-//    public ResponseEntity<List<ProfissionalResponse>> listarTodosAtivos() {
-//        List<Profissional> profissionais = profissionalService.buscarTodosAtivos();
-//        List<ProfissionalResponse> response = profissionais.stream()
-//            .map(ProfissionalResponse::fromEntity)
-//            .toList();
-//        return ResponseEntity.ok(response);
-//    }
-
     // ========== MÉTODOS DE BUSCA PARA AUTOCOMPLETE COM FILTRO OPCIONAL ==========
     
     @GetMapping
     public ResponseEntity<List<ProfissionalResponse>> buscarTodos(
             @RequestParam(required = false, defaultValue = "ALL") String filtro) {
-        log.debug("Buscando todos os profissionais do tenant com filtro: {}", filtro);
         List<ProfissionalResponse> profissionais = profissionalService.buscarTodosComFiltro(filtro)
                 .stream()
                 .map(ProfissionalResponse::fromEntity)
@@ -242,7 +115,6 @@ public class ProfissionalController {
     public ResponseEntity<List<ProfissionalResponse>> buscarPorNome(
             @RequestParam String nome, 
             @RequestParam(required = false, defaultValue = "ALL") String filtro) {
-        log.debug("Buscando profissionais por nome: {} no tenant com filtro: {}", nome, filtro);
         List<ProfissionalResponse> profissionais = profissionalService.buscarPorNomeComFiltro(nome, filtro)
                 .stream()
                 .map(ProfissionalResponse::fromEntity)
@@ -254,7 +126,6 @@ public class ProfissionalController {
     public ResponseEntity<List<ProfissionalResponse>> buscarPorCRM(
             @RequestParam String crm, 
             @RequestParam(required = false, defaultValue = "ALL") String filtro) {
-        log.debug("Buscando profissionais por CRM: {} no tenant com filtro: {}", crm, filtro);
         List<ProfissionalResponse> profissionais = profissionalService.buscarPorCRMComFiltro(crm, filtro)
                 .stream()
                 .map(ProfissionalResponse::fromEntity)
@@ -266,7 +137,6 @@ public class ProfissionalController {
     public ResponseEntity<List<ProfissionalResponse>> buscarPorCidade(
             @RequestParam String cidade, 
             @RequestParam(required = false, defaultValue = "ALL") String filtro) {
-        log.debug("Buscando profissionais por cidade: {} no tenant com filtro: {}", cidade, filtro);
         List<ProfissionalResponse> profissionais = profissionalService.buscarPorCidadeComFiltro(cidade, filtro)
                 .stream()
                 .map(ProfissionalResponse::fromEntity)
@@ -278,7 +148,6 @@ public class ProfissionalController {
     public ResponseEntity<List<ProfissionalResponse>> buscarPorEspecialidade(
             @RequestParam String especialidade, 
             @RequestParam(required = false, defaultValue = "ALL") String filtro) {
-        log.debug("Buscando profissionais por especialidade: {} no tenant com filtro: {}", especialidade, filtro);
         List<ProfissionalResponse> profissionais = profissionalService.buscarPorEspecialidadeComFiltro(especialidade, filtro)
                 .stream()
                 .map(ProfissionalResponse::fromEntity)

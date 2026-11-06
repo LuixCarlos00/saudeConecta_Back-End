@@ -557,15 +557,9 @@ O sistema **Saúde Conecta** é uma plataforma multi-tenant de gestão clínica 
 
 ---
 
-## 22. CodigoVerificacao
+## 22. CodigoVerificacao (removida)
 
-| Campo                       | Tipo           | Descrição                     |
-|-----------------------------|----------------|-------------------------------|
-| `codVerificacaoCodigoID`    | Long (PK)      | Identificador único           |
-| `codVerificacaoCodigo`      | String (6 chars)| Código de verificação         |
-| `codVerificacaoTempo`       | LocalDateTime  | Data/hora de expiração        |
-
-> Entidade independente, sem relacionamentos com outras tabelas.
+> A entidade e o repository foram removidos em 06/11/2026 (código morto, plano de arquitetura B-R10): nenhum fluxo gerava nem lia códigos de verificação. A recuperação de senha usa outro caminho (`/Home/esqueciMinhaSenha`).
 
 ---
 

@@ -14,7 +14,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -44,38 +43,9 @@ public class MensageriaController {
             @RequestParam(required = false) TipoMensagem tipo,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        log.info("Listando mensagens - status: {}, tipo: {}, page: {}", status, tipo, page);
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "dataCriacao"));
         Page<MensageriaResponse> resultado = mensageriaService.listarMensagens(status, tipo, pageable);
         return ResponseEntity.ok(resultado);
-    }
-
-    /**
-     * Busca uma mensagem específica por ID.
-     *
-     * @param id ID da mensagem
-     * @return Dados da mensagem
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<MensageriaResponse> buscarPorId(@PathVariable Long id) {
-        log.info("Buscando mensagem por ID: {}", id);
-        try {
-            return ResponseEntity.ok(mensageriaService.buscarPorId(id));
-        } catch (IllegalArgumentException e) {
-            log.warn("Mensagem nao encontrada: {}", id);
-            return ResponseEntity.notFound().build();
-        }
-    }
-
-    /**
-     * Lista mensagens com falha ainda não notificadas ao administrador.
-     *
-     * @return Lista de falhas pendentes de notificação
-     */
-    @GetMapping("/falhas-pendentes")
-    public ResponseEntity<List<MensageriaResponse>> listarFalhasPendentes() {
-        log.info("Listando falhas pendentes de notificacao");
-        return ResponseEntity.ok(mensageriaService.listarFalhasPendentesNotificacao());
     }
 
     /**
@@ -97,12 +67,11 @@ public class MensageriaController {
      */
     @PatchMapping("/{id}/notificar")
     public ResponseEntity<Void> marcarComoNotificado(@PathVariable Long id) {
-        log.info("Marcando mensagem {} como notificada", id);
         try {
             mensageriaService.marcarComoNotificado(id);
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException e) {
-            log.warn("Erro ao marcar mensagem como notificada: {}", e.getMessage());
+            log.warn("mensageria.notificar negado motivo=NAO_ENCONTRADA_OU_ACESSO_NEGADO mensageriaId={} detalhe={}", id, e.getMessage());
             return ResponseEntity.notFound().build();
         }
     }
@@ -115,15 +84,12 @@ public class MensageriaController {
      */
     @PostMapping("/{id}/reenviar")
     public ResponseEntity<?> reenviarMensagem(@PathVariable Long id) {
-        log.info("Reenviando mensagem ID: {}", id);
+        // Regra de negócio (IllegalStateException) sobe para o handler global e vira 409
         try {
             mensageriaService.reenviarMensagem(id);
             return ResponseEntity.ok().build();
-        } catch (IllegalStateException e) {
-            log.warn("Erro ao reenviar mensagem: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
         } catch (IllegalArgumentException e) {
-            log.warn("Mensagem não encontrada para reenvio: {}", e.getMessage());
+            log.warn("mensageria.reenviar negado motivo=NAO_ENCONTRADA mensageriaId={}", id);
             return ResponseEntity.notFound().build();
         }
     }

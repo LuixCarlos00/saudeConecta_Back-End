@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -99,12 +100,14 @@ class ConsultaControllerIntegrationTest {
     class ListarConsultasHoje {
 
         @Test
-        @WithMockUser(roles = "PROFISSIONAL")
         @DisplayName("Deve retornar 200 com lista de consultas de hoje")
         void deveRetornar200ComListaDeConsultasHoje() throws Exception {
-            when(consultaService.buscarConsultasHoje(null)).thenReturn(java.util.Collections.emptyList());
+            // O controller usa @AuthenticationPrincipal Usuario; @WithMockUser não injeta o Usuario do domínio.
+            br.com.saudeConecta.domain.usuario.Usuario usuarioLogado = new br.com.saudeConecta.domain.usuario.Usuario();
+            usuarioLogado.setId(1L);
+            when(consultaService.buscarConsultasHoje(any(), any(br.com.saudeConecta.domain.usuario.Usuario.class))).thenReturn(java.util.Collections.emptyList());
 
-            mockMvc.perform(get("/consultas/hoje"))
+            mockMvc.perform(get("/consultas/hoje").with(user(usuarioLogado)))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON));
         }
@@ -117,39 +120,33 @@ class ConsultaControllerIntegrationTest {
         }
     }
 
-    // ========== PUT /consultas/concluirConsultabyOrg/{id} ==========
+    // ========== GET /consultas/horarios-ocupados-detalhado ==========
 
     @Nested
-    @DisplayName("PUT /consultas/concluirConsultabyOrg/{id}")
-    class ConcluirConsulta {
+    @DisplayName("GET /consultas/horarios-ocupados-detalhado")
+    class HorariosOcupadosDetalhado {
 
         @Test
-        @WithMockUser(roles = "PROFISSIONAL")
-        @DisplayName("Deve retornar 200 ao concluir consulta existente")
-        void deveRetornar200AoConcluirConsultaExistente() throws Exception {
-            Consulta consultaMock = Consulta.builder()
-                    .id(1L).status(StatusConsulta.REALIZADA)
-                    .duracaoMinutos(30)
-                    .dataHora(LocalDateTime.now())
-                    .build();
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("Deve retornar 200 com início e duração de cada horário ocupado")
+        void deveRetornarInicioEDuracao() throws Exception {
+            when(consultaService.buscarHorariosOcupadosDetalhado(5L, "2030-05-10"))
+                    .thenReturn(java.util.List.of(
+                            new br.com.saudeConecta.presentation.dto.consulta.HorarioOcupadoResponse("09:00:00", 60)));
 
-            when(consultaService.concluirConsultabyOrg(1L)).thenReturn(consultaMock);
-
-            mockMvc.perform(put("/consultas/concluirConsultabyOrg/1")
-                            .with(csrf()))
-                    .andExpect(status().isOk());
+            mockMvc.perform(get("/consultas/horarios-ocupados-detalhado")
+                            .param("medicoId", "5").param("data", "2030-05-10"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].inicio").value("09:00:00"))
+                    .andExpect(jsonPath("$[0].duracaoMinutos").value(60));
         }
 
         @Test
-        @WithMockUser(roles = "PROFISSIONAL")
-        @DisplayName("Deve retornar 500 quando consulta não estiver em estado válido (sem try/catch no controller)")
-        void deveRetornar500QuandoConsultaNaoAgendada() throws Exception {
-            when(consultaService.concluirConsultabyOrg(1L))
-                    .thenThrow(new IllegalStateException("Apenas consultas AGENDADAS podem ser concluídas"));
-
-            mockMvc.perform(put("/consultas/concluirConsultabyOrg/1")
-                            .with(csrf()))
-                    .andExpect(status().isInternalServerError());
+        @DisplayName("Deve retornar 403 sem autenticação")
+        void deveRetornar403SemAutenticacao() throws Exception {
+            mockMvc.perform(get("/consultas/horarios-ocupados-detalhado")
+                            .param("medicoId", "5").param("data", "2030-05-10"))
+                    .andExpect(status().isForbidden());
         }
     }
 
@@ -163,26 +160,120 @@ class ConsultaControllerIntegrationTest {
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Deve retornar 200 quando consulta for encontrada")
         void deveRetornar200QuandoConsultaEncontrada() throws Exception {
+            br.com.saudeConecta.domain.usuario.Usuario dono = new br.com.saudeConecta.domain.usuario.Usuario();
+            dono.setId(7L);
+            br.com.saudeConecta.domain.profissional.Profissional profissional =
+                    new br.com.saudeConecta.domain.profissional.Profissional();
+            profissional.setId(3L);
+            profissional.setUsuario(dono);
             Consulta consultaMock = Consulta.builder()
                     .id(1L).status(StatusConsulta.AGENDADA)
                     .duracaoMinutos(30)
                     .dataHora(LocalDateTime.now().plusDays(1))
+                    .profissional(profissional)
                     .build();
 
-            when(consultaService.buscarPorId(1L)).thenReturn(java.util.Optional.of(consultaMock));
+            when(consultaService.buscarPorIdComRelacoes(1L)).thenReturn(java.util.Optional.of(consultaMock));
 
             mockMvc.perform(get("/consultas/1"))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.profissionalId").value(3))
+                    .andExpect(jsonPath("$.profissionalUsuarioId").value(7));
         }
 
         @Test
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Deve retornar 404 quando consulta não existir")
         void deveRetornar404QuandoConsultaNaoExistir() throws Exception {
-            when(consultaService.buscarPorId(999L)).thenReturn(java.util.Optional.empty());
+            when(consultaService.buscarPorIdComRelacoes(999L)).thenReturn(java.util.Optional.empty());
 
             mockMvc.perform(get("/consultas/999"))
                     .andExpect(status().isNotFound());
+        }
+    }
+
+    // ========== Isolamento multi-tenant (dashboards e buscas por organização) ==========
+
+    @Nested
+    @DisplayName("Isolamento entre clínicas")
+    class IsolamentoEntreClinicas {
+
+        @AfterEach
+        void limparTenant() {
+            br.com.saudeConecta.infra.tenant.TenantContext.clear();
+        }
+
+        private void tenant(Long orgId, Long usuarioId) {
+            br.com.saudeConecta.infra.tenant.TenantContext.setCurrentTenant(orgId);
+            br.com.saudeConecta.infra.tenant.TenantContext.setCurrentUser(usuarioId);
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("Endpoints com {organizacaoId} de outra clínica retornam 403 sem chamar o service")
+        void organizacaoDaUrlDeOutraClinica403() throws Exception {
+            tenant(1L, 5L);
+            String[] urls = {
+                    "/consultas/estatisticas/organizacao/2/dashboard",
+                    "/consultas/organizacao/2/intervalo?dataInicial=2026-01-01&dataFinal=2026-01-31"
+            };
+            for (String url : urls) {
+                tenant(1L, 5L);
+                mockMvc.perform(get(url)).andExpect(status().isForbidden());
+            }
+            verifyNoInteractions(consultaService);
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("Dashboard da própria clínica continua 200")
+        void dashboardPropriaClinica200() throws Exception {
+            tenant(1L, 5L);
+            when(consultaService.getEstatisticasDashboardAdminOrg(1L)).thenReturn(null);
+
+            mockMvc.perform(get("/consultas/estatisticas/organizacao/1/dashboard"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @WithMockUser(roles = "PROFISSIONAL")
+        @DisplayName("Dashboard do profissional com usuarioId de outro usuário retorna 403")
+        void dashboardProfissionalOutroUsuario403() throws Exception {
+            tenant(1L, 5L);
+
+            mockMvc.perform(get("/consultas/estatisticas/dashboard/profissional").param("usuarioId", "99"))
+                    .andExpect(status().isForbidden());
+            verify(consultaService, never()).getEstatisticasDashboardProfissional(anyLong());
+        }
+
+        @Test
+        @WithMockUser(roles = "PROFISSIONAL")
+        @DisplayName("Dashboard do profissional com o próprio usuarioId retorna 200")
+        void dashboardProfissionalProprio200() throws Exception {
+            tenant(1L, 5L);
+            when(consultaService.getEstatisticasDashboardProfissional(5L)).thenReturn(null);
+
+            mockMvc.perform(get("/consultas/estatisticas/dashboard/profissional").param("usuarioId", "5"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("Dashboard global é exclusivo do SUPER_ADMIN (GESTOR recebe 403)")
+        void dashboardSuperAdminGestor403() throws Exception {
+            mockMvc.perform(get("/consultas/estatisticas/dashboard/super-admin"))
+                    .andExpect(status().isForbidden());
+            verify(consultaService, never()).getEstatisticasDashboardSuperAdmin();
+        }
+
+        @Test
+        @WithMockUser(roles = {"SUPER_ADMIN", "ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
+        @DisplayName("Dashboard global liberado para o SUPER_ADMIN")
+        void dashboardSuperAdminRoot200() throws Exception {
+            when(consultaService.getEstatisticasDashboardSuperAdmin()).thenReturn(null);
+
+            mockMvc.perform(get("/consultas/estatisticas/dashboard/super-admin"))
+                    .andExpect(status().isOk());
         }
     }
 }

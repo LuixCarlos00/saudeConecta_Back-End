@@ -68,8 +68,8 @@ public class RelatorioPacienteService {
         LocalDateTime inicio = dataInicio != null ? dataInicio.atStartOfDay() : null;
         LocalDateTime fim = dataFim != null ? dataFim.plusDays(1).atStartOfDay() : null;
 
-        log.debug("Montando relatorios - orgId: {}, profissionalId: {}, pacienteId: {}, termo: {}",
-                orgId, profissionalId, pacienteId, termoNormalizado);
+        log.debug("relatorio.paciente montar profissionalId={} pacienteId={} comTermo={}",
+                profissionalId, pacienteId, termoNormalizado != null);
 
         List<Consulta> consultas = relatorioRepository.buscarConsultasParaRelatorio(
                 orgId, profissionalId, pacienteId, termoNormalizado, inicio, fim);
@@ -87,21 +87,6 @@ public class RelatorioPacienteService {
         coletarDocumentosDeTermos(orgId, profissionalId, pacienteId, documentosPorConsulta);
 
         return agruparPorPaciente(consultas, documentosPorConsulta, diagnosticoPorConsulta);
-    }
-
-    /**
-     * Busca os relatorios de um unico paciente.
-     *
-     * @param pacienteId     paciente desejado
-     * @param profissionalId profissional a filtrar; nulo considera toda a organizacao
-     * @return paciente com consultas e documentos, quando houver atendimento
-     */
-    @RequiresTenant
-    @Transactional(readOnly = true)
-    public Optional<PacienteAtendidoResponse> buscarRelatoriosDoPaciente(Long pacienteId, Long profissionalId) {
-        return buscarPacientesAtendidos(profissionalId, pacienteId, null, null, null)
-                .stream()
-                .findFirst();
     }
 
     /**

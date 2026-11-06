@@ -4,6 +4,7 @@ package br.com.saudeConecta.service;
  import br.com.saudeConecta.domain.historicodadospessoais.HistoricoDadosPessoais;
  import br.com.saudeConecta.domain.organizacao.Organizacao;
  import br.com.saudeConecta.domain.usuario.Usuario;
+ import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
  import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.HistoricoDadosPessoaisRepository;
  import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
@@ -17,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
  import java.lang.reflect.Modifier;
  import java.math.BigDecimal;
    import java.util.*;
-
 
 @Service
 @RequiredArgsConstructor
@@ -46,14 +46,9 @@ public class HistoricoDadosPessoaisService {
             "id", "paciCodigo", "endCodigo"
     );
 
-
     // ==========================================
     // Consultas
     // ==========================================
-
-
-
-
 
     /**
      * Busca histórico de alterações por tipo de entidade e ID da entidade.
@@ -65,15 +60,12 @@ public class HistoricoDadosPessoaisService {
      */
     @Transactional(readOnly = true)
     public List<HistoricoDadosPessoais> buscarHistoricoByEntidade(String entidade, Long idEntidade) {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
-
-        // SUPER_ADMIN não tem organização (orgId == null)
-        if (orgId == null) {
-            log.info("SUPER_ADMIN: buscando histórico global por entidade: {}, ID: {}", entidade, idEntidade);
-            return historicoRepository.findByEntidadeAndIdEntidadeOrderByCriadoEmDesc(entidade, idEntidade);
+        // Checagem explícita do papel: ausência de organização no token não basta.
+        if (!tenantHelper.isSuperAdmin()) {
+            throw new TenantAccessDeniedException("Acesso negado: apenas SUPER_ADMIN pode acessar histórico por entidade");
         }
-
-        throw new IllegalStateException("Acesso negado: apenas SUPER_ADMIN pode acessar histórico por entidade");
+        log.debug("historico.buscar escopo=ENTIDADE entidade={} entidadeId={}", entidade, idEntidade);
+        return historicoRepository.findByEntidadeAndIdEntidadeOrderByCriadoEmDesc(entidade, idEntidade);
     }
 
     /**
@@ -85,15 +77,12 @@ public class HistoricoDadosPessoaisService {
      */
     @Transactional(readOnly = true)
     public List<HistoricoDadosPessoais> buscarHistoricoByUsuario(Long idUsuario) {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
-
-        // SUPER_ADMIN não tem organização (orgId == null)
-        if (orgId == null) {
-            log.info("SUPER_ADMIN: buscando histórico global por usuário ID: {}", idUsuario);
-            return historicoRepository.findByUsuario_IdOrderByCriadoEmDesc(idUsuario);
+        // Checagem explícita do papel: ausência de organização no token não basta.
+        if (!tenantHelper.isSuperAdmin()) {
+            throw new TenantAccessDeniedException("Acesso negado: apenas SUPER_ADMIN pode acessar histórico por usuário");
         }
-
-        throw new IllegalStateException("Acesso negado: apenas SUPER_ADMIN pode acessar histórico por usuário");
+        log.debug("historico.buscar escopo=USUARIO usuarioId={}", idUsuario);
+        return historicoRepository.findByUsuario_IdOrderByCriadoEmDesc(idUsuario);
     }
 
     /**
@@ -104,26 +93,15 @@ public class HistoricoDadosPessoaisService {
      */
     @Transactional(readOnly = true)
     public List<HistoricoDadosPessoais> buscarHistoricoRecentes() {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
-
-        // SUPER_ADMIN não tem organização (orgId == null)
-        if (orgId == null) {
-            log.info("SUPER_ADMIN: buscando 10 registros mais recentes de histórico");
-            return historicoRepository.findTop10ByOrderByCriadoEmDesc();
+        // Checagem explícita do papel: ausência de organização no token não basta.
+        if (!tenantHelper.isSuperAdmin()) {
+            throw new TenantAccessDeniedException("Acesso negado: apenas SUPER_ADMIN pode acessar histórico");
         }
-
-        throw new IllegalStateException("Acesso negado: apenas SUPER_ADMIN pode acessar histórico");
+        log.debug("historico.buscar escopo=RECENTES");
+        return historicoRepository.findTop10ByOrderByCriadoEmDesc();
     }
 
-
-
-
-
-
-
-
    ///=======================================
-
 
     /**
      * Compara dois objetos (antes e depois da atualização) via reflection,
@@ -141,7 +119,7 @@ public class HistoricoDadosPessoaisService {
     public void registrarAlteracoesDeObjeto(EntidadeTipo entidade, Long idEntidade,
                                             Long idUsuario, Object antes, Object depois) {
         if (antes == null || depois == null) {
-            log.warn("Historico ignorado - objeto antes ou depois e nulo. Entidade: {}, ID: {}", entidade, idEntidade);
+            log.warn("historico.registrar ignorado motivo=OBJETO_NULO entidade={} entidadeId={}", entidade, idEntidade);
             return;
         }
 
@@ -178,8 +156,8 @@ public class HistoricoDadosPessoaisService {
                 String strAntes  = valorAntes  != null ? valorAntes.toString()  : null;
                 String strDepois = valorDepois != null ? valorDepois.toString() : null;
 
-                log.debug("Campo alterado - Entidade: {}, ID: {}, Campo: {}, Antes: {}, Depois: {}",
-                        entidade, idEntidade, campo.getName(), strAntes, strDepois);
+                log.debug("historico.registrar campo alterado entidade={} entidadeId={} campo={}",
+                        entidade, idEntidade, campo.getName());
 
                 registros.add(HistoricoDadosPessoais.builder()
                         .organizacao(organizacao)
@@ -192,17 +170,17 @@ public class HistoricoDadosPessoaisService {
                         .build());
 
             } catch (IllegalAccessException e) {
-                log.warn("Nao foi possivel acessar campo '{}' para historico: {}", campo.getName(), e.getMessage());
+                log.warn("historico.registrar falha motivo=CAMPO_INACESSIVEL campo={} causa={}", campo.getName(), e.getClass().getSimpleName());
             }
         }
 
         if (registros.isEmpty()) {
-            log.debug("Nenhuma alteracao detectada para Entidade: {}, ID: {}", entidade, idEntidade);
+            log.debug("historico.registrar sem alteracao entidade={} entidadeId={}", entidade, idEntidade);
             return;
         }
 
         historicoRepository.saveAll(registros);
-        log.info("{} campo(s) registrado(s) no historico. Entidade: {}, ID: {}", registros.size(), entidade, idEntidade);
+        log.debug("historico.registrar ok campos={} entidade={} entidadeId={}", registros.size(), entidade, idEntidade);
     }
 
     /**

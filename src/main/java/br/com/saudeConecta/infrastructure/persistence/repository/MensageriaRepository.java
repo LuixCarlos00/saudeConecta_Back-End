@@ -19,8 +19,6 @@ import java.util.List;
 public interface MensageriaRepository extends JpaRepository<Mensageria, Long> {
 
 
-    List<Mensageria> findByOrganizacao_IdAndAdminNotificadoFalseAndStatus(Long organizacaoId, StatusMensagem status);
-
 
     @Query("SELECT m FROM Mensageria m WHERE m.organizacao.id = :orgId " +
            "AND (:status IS NULL OR m.status = :status) " +
@@ -46,11 +44,20 @@ public interface MensageriaRepository extends JpaRepository<Mensageria, Long> {
             Pageable pageable);
 
 
-    List<Mensageria> findByAdminNotificadoFalseAndStatus(StatusMensagem status);
-
 
     long countByAdminNotificadoFalseAndStatus(StatusMensagem status);
 
 
-    List<Mensageria> findByDestinatarioEntidadeId(Long entidadeId);
+    /**
+     * Mensagens de um destinatário específico. O ID da entidade sozinho não identifica o
+     * destinatário: profissional, secretária, admin e paciente têm sequências próprias e cada
+     * clínica tem os seus, então o filtro precisa do tipo da mensagem e da organização.
+     *
+     * @param entidadeId    ID da entidade destinatária (profissional, secretária, admin ou paciente)
+     * @param tipoMensagem  tipo que liga a mensagem ao tipo de entidade (ex.: EMAIL_CREDENCIAIS_CLINICO)
+     * @param organizacaoId organização dona da mensagem
+     * @return mensagens daquele destinatário naquela organização
+     */
+    List<Mensageria> findByDestinatarioEntidadeIdAndTipoMensagemAndOrganizacao_Id(
+            Long entidadeId, TipoMensagem tipoMensagem, Long organizacaoId);
 }

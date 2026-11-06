@@ -1,5 +1,7 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.util.MascaraLog;
+
 import br.com.saudeConecta.domain.mensageria.Mensageria;
 import br.com.saudeConecta.domain.mensageria.StatusMensagem;
 import br.com.saudeConecta.domain.mensageria.TipoMensagem;
@@ -23,8 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.com.saudeConecta.email.EmailNotificacaoService;
 
-import java.util.List;
-
 /**
  * Service responsável pelo gerenciamento de mensagens do sistema.
  * Registra mensagens enviadas, falhas de envio e notificações ao administrador.
@@ -43,7 +43,6 @@ public class MensageriaService {
     private final TenantHelper tenantHelper;
     private final EmailNotificacaoService emailNotificacaoService;
 
-
     /**
      * Lista mensagens com paginação e filtros opcionais.
      * SuperAdmin (sem organização) vê mensagens globais de todas as organizações.
@@ -56,16 +55,16 @@ public class MensageriaService {
      */
     @Cacheable(
         value = "mensageria-lista",
-        key = "(@tenantHelper.getCurrentTenantIdOrNull() != null ? 'org-' + @tenantHelper.getCurrentTenantIdOrNull() : 'super-admin')"
+        key = "(@tenantHelper.getCurrentTenantIdOrNull() != null ? 'org-' + @tenantHelper.getCurrentTenantIdOrNull() : (@tenantHelper.isSuperAdmin() ? 'super-admin' : 'sem-tenant'))"
             + " + '-s:' + (#status != null ? #status.name() : 'ALL')"
             + " + '-t:' + (#tipo != null ? #tipo.name() : 'ALL')"
             + " + '-p:' + #pageable.pageNumber + '-sz:' + #pageable.pageSize"
     )
     @Transactional(readOnly = true)
     public Page<MensageriaResponse> listarMensagens(StatusMensagem status, TipoMensagem tipo, Pageable pageable) {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
+        Long orgId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
         if (orgId == null) {
-            log.info("SUPER_ADMIN: listando mensagens globais");
+            log.debug("mensageria.listar escopo=SUPER_ADMIN");
             return mensageriaRepository
                     .findAllWithFilters(status, tipo, pageable)
                     .map(MensageriaResponse::fromEntity);
@@ -73,30 +72,6 @@ public class MensageriaService {
         return mensageriaRepository
                 .findByOrganizacaoIdWithFilters(orgId, status, tipo, pageable)
                 .map(MensageriaResponse::fromEntity);
-    }
-
-    /**
-     * Busca mensagens com falha ainda não notificadas ao administrador.
-     * SuperAdmin vê falhas de todas as organizações.
-     *
-     * @return Lista de mensagens com falha pendentes de notificação
-     */
-    @Transactional(readOnly = true)
-    public List<MensageriaResponse> listarFalhasPendentesNotificacao() {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
-        if (orgId == null) {
-            log.info("SUPER_ADMIN: listando falhas pendentes globais");
-            return mensageriaRepository
-                    .findByAdminNotificadoFalseAndStatus(StatusMensagem.FALHOU)
-                    .stream()
-                    .map(MensageriaResponse::fromEntity)
-                    .toList();
-        }
-        return mensageriaRepository
-                .findByOrganizacao_IdAndAdminNotificadoFalseAndStatus(orgId, StatusMensagem.FALHOU)
-                .stream()
-                .map(MensageriaResponse::fromEntity)
-                .toList();
     }
 
     /**
@@ -108,7 +83,7 @@ public class MensageriaService {
     @CacheEvict(value = {"mensageria-contagem", "mensageria-lista"}, allEntries = true)
     @Transactional
     public void marcarComoNotificado(Long mensageriaId) {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
+        Long orgId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
         Mensageria mensageria = mensageriaRepository.findById(mensageriaId)
                 .orElseThrow(() -> new IllegalArgumentException("Mensagem não encontrada: " + mensageriaId));
 
@@ -119,7 +94,7 @@ public class MensageriaService {
         mensageria.setAdminNotificado(true);
         mensageria.setStatus(StatusMensagem.RENOTIFICADO);
         mensageriaRepository.save(mensageria);
-        log.info("Mensagem {} marcada como notificada ao admin.", mensageriaId);
+        log.info("mensageria.notificar ok mensageriaId={}", mensageriaId);
     }
 
     /**
@@ -128,34 +103,14 @@ public class MensageriaService {
      *
      * @return Quantidade de falhas pendentes
      */
-    @Cacheable(value = "mensageria-contagem", key = "(@tenantHelper.getCurrentTenantIdOrNull() != null ? 'org-' + @tenantHelper.getCurrentTenantIdOrNull() : 'super-admin') + '-falhas-pendentes'")
+    @Cacheable(value = "mensageria-contagem", key = "(@tenantHelper.getCurrentTenantIdOrNull() != null ? 'org-' + @tenantHelper.getCurrentTenantIdOrNull() : (@tenantHelper.isSuperAdmin() ? 'super-admin' : 'sem-tenant')) + '-falhas-pendentes'")
     @Transactional(readOnly = true)
     public long contarFalhasPendentes() {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
+        Long orgId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
         if (orgId == null) {
             return mensageriaRepository.countByAdminNotificadoFalseAndStatus(StatusMensagem.FALHOU);
         }
         return mensageriaRepository.countByOrganizacao_IdAndAdminNotificadoFalseAndStatus(orgId, StatusMensagem.FALHOU);
-    }
-
-    /**
-     * Busca uma mensagem específica por ID.
-     * SuperAdmin pode acessar mensagens de qualquer organização.
-     *
-     * @param mensageriaId ID da mensagem
-     * @return DTO da mensagem
-     */
-    @Transactional(readOnly = true)
-    public MensageriaResponse buscarPorId(Long mensageriaId) {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
-        Mensageria mensageria = mensageriaRepository.findById(mensageriaId)
-                .orElseThrow(() -> new IllegalArgumentException("Mensagem não encontrada: " + mensageriaId));
-
-        if (orgId != null && !mensageria.getOrganizacaoId().equals(orgId)) {
-            throw new IllegalArgumentException("Acesso negado à mensagem: " + mensageriaId);
-        }
-
-        return MensageriaResponse.fromEntity(mensageria);
     }
 
     /**
@@ -169,7 +124,7 @@ public class MensageriaService {
     @CacheEvict(value = {"mensageria-contagem", "mensageria-lista"}, allEntries = true)
     @Transactional
     public void reenviarMensagem(Long mensageriaId) {
-        Long orgId = tenantHelper.getCurrentTenantIdOrNull();
+        Long orgId = tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin();
         Mensageria mensageria = mensageriaRepository.findById(mensageriaId)
                 .orElseThrow(() -> new IllegalArgumentException("Mensagem não encontrada: " + mensageriaId));
 
@@ -180,7 +135,7 @@ public class MensageriaService {
         // Buscar email atualizado da entidade de domínio
         String emailAtualizado = obterEmailAtualizadoDoDominio(mensageria);
         
-        log.info("Reenviando mensagem ID: {} para email atualizado: {}", mensageriaId, emailAtualizado);
+        log.info("mensageria.reenviar inicio mensageriaId={} email={}", mensageriaId, MascaraLog.email(emailAtualizado));
 
         mensageria.setStatus(StatusMensagem.PENDENTE);
         mensageria.setErroDetalhe(null);
@@ -193,7 +148,7 @@ public class MensageriaService {
                 mensageria.getCorpoMensagem()
         );
 
-        log.info("Reenvio delegado ao EmailNotificacaoService. Mensagem ID: {}", mensageriaId);
+        log.debug("mensageria.reenviar delegado mensageriaId={}", mensageriaId);
     }
 
     /**
@@ -241,8 +196,8 @@ public class MensageriaService {
         }
 
         // Fallback: usar email armazenado na mensageria para outros tipos
-        log.warn("Nao foi possivel buscar email do dominio para mensagem ID: {}. Usando email armazenado.", 
-                 mensageria.getId());
+        log.warn("mensageria.reenviar ignorado motivo=EMAIL_DOMINIO_INDISPONIVEL mensageriaId={} acao=USA_EMAIL_ARMAZENADO",
+                mensageria.getId());
         return mensageria.getDestinatarioEmail();
     }
 

@@ -39,10 +39,10 @@ public class BuscarHistoricoCompletoPacienteDentistaUseCase {
     @Transactional(readOnly = true)
     public List<HistoricoConsultaPacienteResponse> executar(Long pacienteId, Long profissionalId) {
         Long orgId = tenantHelper.getCurrentTenantId();
-        log.info("Buscando histórico odontológico do paciente ID: {} profissionalId: {} na organização ID: {}", pacienteId, profissionalId, orgId);
+        log.debug("historico.paciente buscar perfil=DENTISTA pacienteId={} profissionalId={}", pacienteId, profissionalId);
 
         List<Consulta> consultas = consultaRepository.findHistoricoCompletoPaciente(pacienteId, orgId, profissionalId);
-        log.debug("Encontradas {} consultas odontológicas para o paciente", consultas.size());
+        log.debug("historico.paciente consultas perfil=DENTISTA quantidade={}", consultas.size());
 
         return consultas.stream()
             .map(consulta -> {
@@ -89,7 +89,10 @@ public class BuscarHistoricoCompletoPacienteDentistaUseCase {
         if (consulta.getProfissional() != null) {
             builder.profissionalId(consulta.getProfissional().getId())
                    .profissionalNome(consulta.getProfissional().getNome())
-                   .profissionalCrm(consulta.getProfissional().getRegistroConselho());
+                   .profissionalCrm(consulta.getProfissional().getRegistroConselho())
+                   // Para o front saber se o logado é o dono (só o dono edita o prontuário)
+                   .profissionalUsuarioId(consulta.getProfissional().getUsuario() != null
+                           ? consulta.getProfissional().getUsuario().getId() : null);
 
             if (consulta.getEspecialidade() != null) {
                 builder.profissionalEspecialidade(consulta.getEspecialidade().getNome());

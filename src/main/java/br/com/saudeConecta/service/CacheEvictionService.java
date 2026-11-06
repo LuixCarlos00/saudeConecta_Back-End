@@ -4,6 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Centraliza a invalidação seletiva (por chave) dos caches relacionados a
@@ -23,6 +25,9 @@ public class CacheEvictionService {
     private static final String CACHE_PERFIL_USUARIO = "perfil-usuario";
     private static final String CACHE_USUARIOS_AGRUPADOS = "usuarios-agrupados";
     private static final String CHAVE_SUPER_ADMIN = "super-admin";
+    private static final String CACHE_PRONTUARIO_RECENTE = "prontuario-recente";
+    private static final String CACHE_QUESTIONARIO_SAUDE = "questionario-saude";
+    private static final String CACHE_ACESSO_ASSINATURA = AcessoAssinaturaService.CACHE_ACESSO_ASSINATURA;
 
     private final CacheManager cacheManager;
 
@@ -79,13 +84,80 @@ public class CacheEvictionService {
         evictUsuariosAgrupadosSuperAdmin();
     }
 
+    /**
+     * Monta a chave dos caches indexados por consulta, sempre prefixada pela organização.
+     * Usada tanto nas anotações {@code @Cacheable} (via SpEL) quanto nas evicções manuais,
+     * garantindo o mesmo formato nos dois lados e impedindo que uma clínica leia o
+     * valor em cache de outra apenas trocando o ID da consulta.
+     *
+     * @param organizacaoId ID da organização dona da consulta
+     * @param consultaId    ID da consulta
+     * @return chave no formato {@code org-<organizacaoId>-<consultaId>}
+     */
+    public static String chaveConsultaPorTenant(Long organizacaoId, Long consultaId) {
+        return "org-" + organizacaoId + "-" + consultaId;
+    }
+
+    /**
+     * Invalida o prontuário médico mais recente em cache de uma consulta.
+     * Chamado via bean (e não por {@code @CacheEvict} na própria classe) porque a
+     * auto-invocação não passa pelo proxy do Spring e a anotação seria ignorada.
+     *
+     * @param organizacaoId ID da organização dona da consulta
+     * @param consultaId    ID da consulta
+     */
+    public void evictProntuarioRecente(Long organizacaoId, Long consultaId) {
+        evictAposCommit(CACHE_PRONTUARIO_RECENTE, chaveConsultaPorTenant(organizacaoId, consultaId));
+    }
+
+    /**
+     * Invalida o questionário de saúde em cache de uma consulta.
+     *
+     * @param organizacaoId ID da organização dona da consulta
+     * @param consultaId    ID da consulta
+     */
+    public void evictQuestionarioSaude(Long organizacaoId, Long consultaId) {
+        evictAposCommit(CACHE_QUESTIONARIO_SAUDE, chaveConsultaPorTenant(organizacaoId, consultaId));
+    }
+
+    /**
+     * Invalida o acesso em cache da assinatura de uma organização (consultado pelo FiltroAcesso).
+     * Chamado quando a assinatura muda, para a suspensão/reativação valer na próxima requisição.
+     *
+     * @param organizacaoId ID da organização (null é ignorado)
+     */
+    public void evictAcessoAssinatura(Long organizacaoId) {
+        if (organizacaoId == null) {
+            return;
+        }
+        evictAposCommit(CACHE_ACESSO_ASSINATURA, organizacaoId);
+    }
+
+    /**
+     * Evicta somente depois do commit: dentro da transação, uma leitura concorrente poderia
+     * repopular o cache com o dado antigo antes de o commit ficar visível. Sem transação ativa
+     * (ex.: testes unitários) o evict é imediato.
+     */
+    private void evictAposCommit(String cacheName, Object key) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    evict(cacheName, key);
+                }
+            });
+        } else {
+            evict(cacheName, key);
+        }
+    }
+
     private void evict(String cacheName, Object key) {
         Cache cache = cacheManager.getCache(cacheName);
         if (cache == null) {
-            log.warn("Cache '{}' nao encontrado ao tentar invalidar chave: {}", cacheName, key);
+            log.warn("cache.invalidar negado motivo=CACHE_NAO_ENCONTRADO cache={} chave={}", cacheName, key);
             return;
         }
         cache.evict(key);
-        log.debug("Cache '{}' invalidado para a chave: {}", cacheName, key);
+        log.debug("cache.invalidar ok cache={} chave={}", cacheName, key);
     }
 }

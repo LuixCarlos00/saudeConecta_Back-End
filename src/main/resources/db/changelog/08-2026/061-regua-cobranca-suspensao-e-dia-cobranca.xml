@@ -1,0 +1,83 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ================================================================ -->
+    <!-- REGUA DE COBRANCA (FASE 2)                                       -->
+    <!-- Colunas NULLABLE e sem default: retrocompativeis com a versao    -->
+    <!-- anterior da aplicacao, que simplesmente nao as le nem escreve.   -->
+    <!-- ================================================================ -->
+
+    <changeSet id="061-001-assinatura-tenant-data-suspensao" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="assinatura_tenant" columnName="data_suspensao"/></not>
+        </preConditions>
+        <comment>Data em que a assinatura foi suspensa: base do prazo de cancelamento (antes era atualizado_em, renovado a cada save)</comment>
+
+        <addColumn tableName="assinatura_tenant">
+            <column name="data_suspensao" type="DATETIME">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Suspensas existentes: melhor estimativa disponivel e a ultima atualizacao -->
+        <update tableName="assinatura_tenant">
+            <column name="data_suspensao" valueComputed="atualizado_em"/>
+            <where>status = 'SUSPENSA' AND data_suspensao IS NULL</where>
+        </update>
+
+        <rollback>
+            <dropColumn tableName="assinatura_tenant" columnName="data_suspensao"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="061-002-assinatura-tenant-dia-cobranca" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="assinatura_tenant" columnName="dia_cobranca"/></not>
+        </preConditions>
+        <comment>Dia ancora do ciclo de cobranca (1-31), fixado no primeiro pagamento; NULL ate la</comment>
+
+        <addColumn tableName="assinatura_tenant">
+            <column name="dia_cobranca" type="INT">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="assinatura_tenant" columnName="dia_cobranca"/>
+        </rollback>
+    </changeSet>
+
+    <!-- A versao anterior encerrava eventos em estados nao finais (fatura sem pagamento,  -->
+    <!-- recusada; preapproval authorized/paused). Reabri-los so permite que a PROXIMA     -->
+    <!-- notificacao do mesmo recurso seja processada; nada e reprocessado sozinho.        -->
+    <!-- A UNIQUE (tipo, data_id) da 058 e mantida.                                        -->
+    <changeSet id="061-003-reabrir-eventos-mp-nao-finais" author="equipe-sentinela">
+        <comment>Reabre eventos do Mercado Pago marcados como processados sem estado final</comment>
+
+        <sql>
+            UPDATE mp_webhook_evento
+               SET processado = 0
+             WHERE processado = 1
+               AND tipo = 'subscription_authorized_payment'
+               AND NOT EXISTS (SELECT 1 FROM cobranca_tenant c
+                                WHERE c.mp_authorized_payment_id = mp_webhook_evento.data_id
+                                  AND c.status = 'PAGO')
+        </sql>
+        <sql>
+            UPDATE mp_webhook_evento
+               SET processado = 0
+             WHERE processado = 1
+               AND tipo = 'subscription_preapproval'
+               AND NOT EXISTS (SELECT 1 FROM assinatura_tenant a
+                                WHERE a.mp_preapproval_id = mp_webhook_evento.data_id
+                                  AND a.status = 'CANCELADA')
+        </sql>
+
+        <!-- Sem volta: o flag antigo era incorreto e reabrir um evento nao gera efeito sozinho -->
+        <rollback/>
+    </changeSet>
+
+</databaseChangeLog>

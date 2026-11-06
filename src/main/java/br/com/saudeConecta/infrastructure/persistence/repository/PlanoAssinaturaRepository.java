@@ -17,5 +17,4 @@ public interface PlanoAssinaturaRepository extends JpaRepository<PlanoAssinatura
 
     Optional<PlanoAssinatura> findByIdAndAtivoTrue(Long id);
 
-    boolean existsByTipo(TipoPlano tipo);
 }

@@ -139,4 +139,37 @@
 
     <!-- Criar tabela de configurações de consulta -->
     <include file="db/changelog/08-2026/056-criar-tabela-configuracoes-consulta.xml"/>
+
+    <!-- Assinaturas automáticas por cartão via Mercado Pago (preapproval + webhooks) -->
+    <include file="db/changelog/08-2026/058-mercado-pago-assinaturas.xml"/>
+
+    <!-- Desativação do Pix estático (preserva txid para histórico) -->
+    <include file="db/changelog/08-2026/059-remover-pix-assinaturas.xml"/>
+
+    <!-- Validade do link publico de assinatura do planejamento terapeutico (coluna nullable) -->
+    <include file="db/changelog/08-2026/060-adicionar-token-expiracao-planejamento-terapeutico.xml"/>
+
+    <!-- Regua de cobranca: data da suspensao, dia ancora do ciclo e reabertura de eventos MP nao finais -->
+    <include file="db/changelog/08-2026/061-regua-cobranca-suspensao-e-dia-cobranca.xml"/>
+
+    <!-- Lock otimista em assinatura_tenant e reprocessamento de webhooks MP com erro -->
+    <include file="db/changelog/08-2026/062-cobranca-versao-e-reprocessamento-webhook.xml"/>
+
+    <!-- Fase 4: motivo do bloqueio, CPF unico por clinica e login unico (condicional a ausencia de duplicados) -->
+    <include file="db/changelog/08-2026/063-seguranca-unicidade-login-cpf-motivo-bloqueio.xml"/>
+
+    <!-- Fase 2 (re-revisao): UNIQUE/indice da fatura MP em cobranca_tenant e marcador de pendencia manual em mp_webhook_evento -->
+    <include file="db/changelog/08-2026/064-cobranca-indice-fatura-e-pendencias-manuais.xml"/>
+
+    <!-- Fase 5.4: trilha de auditoria persistente do acesso do ROOT via senha master -->
+    <include file="db/changelog/08-2026/065-auditoria-acesso-master.xml"/>
+
+    <!-- Rascunho do atendimento: um por consulta, apagado ao finalizar o prontuario -->
+    <include file="db/changelog/08-2026/066-atendimento-rascunho.xml"/>
+
+    <!-- Pagamento da assinatura: preapproval antigo cancelado no MP so depois do commit da troca -->
+    <include file="db/changelog/08-2026/067-assinatura-preapproval-substituido.xml"/>
+
+    <!-- Telas do SUPER_ADMIN: pendencia manual resolvida (quem, quando, observacao) e clinica da pendencia -->
+    <include file="db/changelog/08-2026/068-mp-webhook-evento-pendencia-resolvida.xml"/>
 </databaseChangeLog>

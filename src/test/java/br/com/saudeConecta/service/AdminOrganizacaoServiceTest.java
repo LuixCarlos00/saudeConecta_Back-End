@@ -10,6 +10,7 @@ import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infra.tenant.TenantHelper;
+import br.com.saudeConecta.infra.tenant.TenantNotDefinedException;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
@@ -102,7 +103,7 @@ class AdminOrganizacaoServiceTest {
         @Test
         @DisplayName("Deve buscar admin pelo ID sem filtro de org quando ROOT (orgId null)")
         void deveBuscarSemFiltroOrgQuandoSuperAdmin() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(null);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(null);
             when(adminOrganizacaoRepository.findById(ADMIN_ID))
                     .thenReturn(Optional.of(adminOrganizacao));
 
@@ -117,7 +118,7 @@ class AdminOrganizacaoServiceTest {
         @Test
         @DisplayName("Deve buscar admin com filtro de org quando orgId presente")
         void deveBuscarComFiltroOrgQuandoTenantPresente() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
             when(adminOrganizacaoRepository.findByIdAndOrganizacao_Id(ADMIN_ID, ORG_ID))
                     .thenReturn(Optional.of(adminOrganizacao));
 
@@ -131,7 +132,7 @@ class AdminOrganizacaoServiceTest {
         @Test
         @DisplayName("Deve retornar vazio quando admin não pertence à organização")
         void deveRetornarVazioQuandoAdminNaoPertenceOrg() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
             when(adminOrganizacaoRepository.findByIdAndOrganizacao_Id(ADMIN_ID, ORG_ID))
                     .thenReturn(Optional.empty());
 
@@ -158,7 +159,7 @@ class AdminOrganizacaoServiceTest {
         @DisplayName("Deve cadastrar admin com sucesso")
         void deveCadastrarAdminComSucesso() {
             doNothing().when(limitePlanoService).validarLimiteAdminOrg(ORG_ID);
-            when(usuarioRepository.existsByLogin("123.456.789-00")).thenReturn(false);
+            when(usuarioRepository.existsByLogin("12345678900")).thenReturn(false);
             when(emailUnicoService.emailJaExiste("novo@teste.com")).thenReturn(false);
             when(organizacaoRepository.findById(ORG_ID)).thenReturn(Optional.of(organizacao));
             when(passwordEncoder.encode(any())).thenReturn("encodedPass");
@@ -180,7 +181,7 @@ class AdminOrganizacaoServiceTest {
         @DisplayName("Deve lançar exceção quando CPF já cadastrado como login")
         void deveLancarExcecaoQuandoCpfJaCadastrado() {
             doNothing().when(limitePlanoService).validarLimiteAdminOrg(ORG_ID);
-            when(usuarioRepository.existsByLogin("123.456.789-00")).thenReturn(true);
+            when(usuarioRepository.existsByLogin("12345678900")).thenReturn(true);
 
             assertThatThrownBy(() -> adminOrganizacaoService.cadastrarAdminByOrg(request, ORG_ID))
                     .isInstanceOf(IllegalStateException.class)
@@ -191,7 +192,7 @@ class AdminOrganizacaoServiceTest {
         @DisplayName("Deve lançar exceção quando email já existe")
         void deveLancarExcecaoQuandoEmailJaExiste() {
             doNothing().when(limitePlanoService).validarLimiteAdminOrg(ORG_ID);
-            when(usuarioRepository.existsByLogin("123.456.789-00")).thenReturn(false);
+            when(usuarioRepository.existsByLogin("12345678900")).thenReturn(false);
             when(emailUnicoService.emailJaExiste("novo@teste.com")).thenReturn(true);
             when(emailUnicoService.ondeEmailFoiEncontrado("novo@teste.com")).thenReturn("GESTOR");
 
@@ -221,11 +222,27 @@ class AdminOrganizacaoServiceTest {
     class AtualizarAdmByOrg {
 
         @Test
+        @DisplayName("4.5d - Trocar para e-mail de outro usuário é rejeitado")
+        void deveRejeitarEmailDeOutroUsuario() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(adminOrganizacaoRepository.findByIdAndOrganizacao_Id(ADMIN_ID, ORG_ID))
+                    .thenReturn(Optional.of(adminOrganizacao));
+            doThrow(new IllegalStateException("Email ja cadastrado no sistema para outro usuario"))
+                    .when(emailUnicoService)
+                    .validarEmailLivreParaAtualizacao("prof@outra.com", "admin@teste.com", USUARIO_ID);
+
+            assertThatThrownBy(() -> adminOrganizacaoService.atualizarAdmByOrg(ADMIN_ID, "Nome", "prof@outra.com"))
+                    .isInstanceOf(IllegalStateException.class);
+            assertThat(adminOrganizacao.getEmail()).isEqualTo("admin@teste.com");
+            verify(adminOrganizacaoRepository, never()).save(any());
+        }
+
+        @Test
         @DisplayName("Deve atualizar nome e email do admin com sucesso")
         void deveAtualizarAdminComSucesso() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(tenantHelper.getCurrentUserId()).thenReturn(USUARIO_ID);
-            when(adminOrganizacaoRepository.findById(ADMIN_ID))
+            when(adminOrganizacaoRepository.findByIdAndOrganizacao_Id(ADMIN_ID, ORG_ID))
                     .thenReturn(Optional.of(adminOrganizacao));
             when(adminOrganizacaoRepository.save(any())).thenReturn(adminOrganizacao);
 
@@ -241,7 +258,7 @@ class AdminOrganizacaoServiceTest {
         @DisplayName("Deve lançar exceção quando admin não encontrado")
         void deveLancarExcecaoQuandoAdminNaoEncontrado() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
-            when(adminOrganizacaoRepository.findById(ADMIN_ID)).thenReturn(Optional.empty());
+            when(adminOrganizacaoRepository.findByIdAndOrganizacao_Id(ADMIN_ID, ORG_ID)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> adminOrganizacaoService.atualizarAdmByOrg(ADMIN_ID, "Nome", "email@teste.com"))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -253,7 +270,7 @@ class AdminOrganizacaoServiceTest {
         void naoDeveAlterarNomeQuandoNulo() {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(tenantHelper.getCurrentUserId()).thenReturn(USUARIO_ID);
-            when(adminOrganizacaoRepository.findById(ADMIN_ID))
+            when(adminOrganizacaoRepository.findByIdAndOrganizacao_Id(ADMIN_ID, ORG_ID))
                     .thenReturn(Optional.of(adminOrganizacao));
             when(adminOrganizacaoRepository.save(any())).thenReturn(adminOrganizacao);
 
@@ -261,6 +278,23 @@ class AdminOrganizacaoServiceTest {
 
             assertThat(adminOrganizacao.getNome()).isEqualTo("Admin Teste");
             assertThat(adminOrganizacao.getEmail()).isEqualTo("admin@teste.com");
+        }
+
+        @Test
+        @DisplayName("Não deve alterar admin de outra organização (tomada de conta entre tenants)")
+        void naoDeveAlterarAdminDeOutraOrganizacao() {
+            Long outraOrgId = 2L;
+            when(tenantHelper.getCurrentTenantId()).thenReturn(outraOrgId);
+            when(adminOrganizacaoRepository.findByIdAndOrganizacao_Id(ADMIN_ID, outraOrgId))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> adminOrganizacaoService.atualizarAdmByOrg(ADMIN_ID, "Invasor", "invasor@email.com"))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Administrador não encontrado");
+
+            assertThat(adminOrganizacao.getEmail()).isEqualTo("admin@teste.com");
+            verify(adminOrganizacaoRepository, never()).findById(any());
+            verify(adminOrganizacaoRepository, never()).save(any());
         }
     }
 
@@ -273,7 +307,7 @@ class AdminOrganizacaoServiceTest {
         @Test
         @DisplayName("Deve deletar admin com sucesso quando ROOT (orgId null)")
         void deveDeletarAdminSuperAdmin() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(null);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(null);
             when(adminOrganizacaoRepository.findById(ADMIN_ID))
                     .thenReturn(Optional.of(adminOrganizacao));
 
@@ -286,7 +320,7 @@ class AdminOrganizacaoServiceTest {
         @Test
         @DisplayName("Deve deletar admin com filtro de org quando orgId presente")
         void deveDeletarAdminComFiltroOrg() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(ORG_ID);
             when(adminOrganizacaoRepository.findByIdAndOrganizacao_Id(ADMIN_ID, ORG_ID))
                     .thenReturn(Optional.of(adminOrganizacao));
 
@@ -299,7 +333,7 @@ class AdminOrganizacaoServiceTest {
         @Test
         @DisplayName("Deve lançar exceção quando admin não encontrado")
         void deveLancarExcecaoQuandoAdminNaoEncontrado() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(null);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(null);
             when(adminOrganizacaoRepository.findById(ADMIN_ID)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> adminOrganizacaoService.deletarAdmByOrg(ADMIN_ID))
@@ -314,7 +348,7 @@ class AdminOrganizacaoServiceTest {
                     .nome("Sem Usuário").usuario(null).status(AdminOrganizacao.StatusAdmin.ATIVO).build();
             adminSemUsuario.setId(ADMIN_ID);
 
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(null);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(null);
             when(adminOrganizacaoRepository.findById(ADMIN_ID)).thenReturn(Optional.of(adminSemUsuario));
 
             assertThatThrownBy(() -> adminOrganizacaoService.deletarAdmByOrg(ADMIN_ID))
@@ -325,14 +359,47 @@ class AdminOrganizacaoServiceTest {
         @Test
         @DisplayName("Deve propagar exceção de relacionamento ao deletar")
         void devePropararExcecaoDeRelacionamento() {
-            when(tenantHelper.getCurrentTenantIdOrNull()).thenReturn(null);
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin()).thenReturn(null);
             when(adminOrganizacaoRepository.findById(ADMIN_ID)).thenReturn(Optional.of(adminOrganizacao));
             doThrow(new RuntimeException("FK constraint violation"))
                     .when(adminOrganizacaoRepository).delete(adminOrganizacao);
 
+            // Fase 5.3: a causa original fica encadeada e a mensagem do banco não vaza para o cliente
             assertThatThrownBy(() -> adminOrganizacaoService.deletarAdmByOrg(ADMIN_ID))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("relacionamentos existentes");
+                    .hasMessageContaining("relacionamentos existentes")
+                    .hasMessageNotContaining("FK constraint")
+                    .hasCauseInstanceOf(RuntimeException.class);
+        }
+    }
+
+    // ========== Falha fechada sem tenant ==========
+
+    @Nested
+    @DisplayName("Sem tenant e sem papel SUPER_ADMIN")
+    class SemTenantNaoSuperAdmin {
+
+        @Test
+        @DisplayName("buscarrAdminByOrg nega em vez de buscar sem filtro de organização")
+        void buscarNega() {
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin())
+                    .thenThrow(new TenantNotDefinedException("Tenant não definido"));
+
+            assertThatThrownBy(() -> adminOrganizacaoService.buscarrAdminByOrg(ADMIN_ID))
+                    .isInstanceOf(TenantNotDefinedException.class);
+            verify(adminOrganizacaoRepository, never()).findById(any());
+        }
+
+        @Test
+        @DisplayName("deletarAdmByOrg nega em vez de deletar sem filtro de organização")
+        void deletarNega() {
+            when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin())
+                    .thenThrow(new TenantNotDefinedException("Tenant não definido"));
+
+            assertThatThrownBy(() -> adminOrganizacaoService.deletarAdmByOrg(ADMIN_ID))
+                    .isInstanceOf(TenantNotDefinedException.class);
+            verify(adminOrganizacaoRepository, never()).delete(any());
+            verify(usuarioRepository, never()).delete(any());
         }
     }
 
@@ -450,7 +517,7 @@ class AdminOrganizacaoServiceTest {
                     "Nova Clínica", "Nova Razao Social LTDA", "12.345.678/0001-00",
                     "CLINICA", "clinica@nova.com", "11999999999",
                     "01310-100", "SP", "São Paulo", "Bela Vista",
-                    "Avenida Paulista", 1000L, null, 1L
+                    "Avenida Paulista", 1000L, null, 1L, false
             );
         }
 
@@ -464,7 +531,7 @@ class AdminOrganizacaoServiceTest {
             when(passwordEncoder.encode(any())).thenReturn("encodedPass");
             when(usuarioRepository.save(any(Usuario.class))).thenReturn(usuario);
             when(adminOrganizacaoRepository.save(any(AdminOrganizacao.class))).thenReturn(adminOrganizacao);
-            doNothing().when(assinaturaTenantService).assinar(any(Long.class), any(Long.class));
+            when(assinaturaTenantService.assinar(any(Long.class), any(Long.class), anyBoolean())).thenReturn(null);
 
             AdminOrganizacao resultado = adminOrganizacaoService.cadastrarAdminOrgCompleto(request);
 
@@ -473,7 +540,7 @@ class AdminOrganizacaoServiceTest {
             verify(organizacaoRepository).save(any(Organizacao.class));
             verify(usuarioRepository).save(any(Usuario.class));
             verify(adminOrganizacaoRepository).save(any(AdminOrganizacao.class));
-            verify(assinaturaTenantService).assinar(eq(ORG_ID), eq(1L));
+            verify(assinaturaTenantService).assinar(eq(ORG_ID), eq(1L), eq(false));
             verify(configuracaoGraficoDashboardService).inicializarParaNovoUsuario(any());
             verify(emailNotificacaoService).enviarCredenciaisAdministrador(
                     eq("clinica@nova.com"), eq("Admin Completo"), eq("12345678000100"),
@@ -508,7 +575,7 @@ class AdminOrganizacaoServiceTest {
                     "FISICA", "Admin Física", "987.654.321-00", "Gerente", "admin@fisica.com",
                     null, null, null, null, null, null,
                     "01310-100", "SP", "São Paulo", "Bela Vista",
-                    "Rua A", 100L, null, 1L
+                    "Rua A", 100L, null, 1L, false
             );
 
             when(usuarioRepository.existsByLogin("98765432100")).thenReturn(false);
@@ -517,7 +584,7 @@ class AdminOrganizacaoServiceTest {
             when(passwordEncoder.encode(any())).thenReturn("encodedPass");
             when(usuarioRepository.save(any(Usuario.class))).thenReturn(usuario);
             when(adminOrganizacaoRepository.save(any(AdminOrganizacao.class))).thenReturn(adminOrganizacao);
-            doNothing().when(assinaturaTenantService).assinar(any(Long.class), any(Long.class));
+            when(assinaturaTenantService.assinar(any(Long.class), any(Long.class), anyBoolean())).thenReturn(null);
 
             AdminOrganizacao resultado = adminOrganizacaoService.cadastrarAdminOrgCompleto(requestFisica);
 
@@ -526,7 +593,7 @@ class AdminOrganizacaoServiceTest {
             verify(organizacaoRepository).save(any(Organizacao.class));
             verify(usuarioRepository).save(any(Usuario.class));
             verify(adminOrganizacaoRepository).save(any(AdminOrganizacao.class));
-            verify(assinaturaTenantService).assinar(eq(ORG_ID), eq(1L));
+            verify(assinaturaTenantService).assinar(eq(ORG_ID), eq(1L), eq(false));
             verify(configuracaoGraficoDashboardService).inicializarParaNovoUsuario(any());
             verify(emailNotificacaoService).enviarCredenciaisAdministrador(
                     eq("admin@fisica.com"), eq("Admin Física"), eq("98765432100"),
@@ -541,7 +608,7 @@ class AdminOrganizacaoServiceTest {
                     "Nova Clínica", "Nova Razao Social LTDA", null,
                     "CLINICA", "clinica@nova.com", "11999999999",
                     "01310-100", "SP", "São Paulo", "Bela Vista",
-                    "Avenida Paulista", 1000L, null, 1L
+                    "Avenida Paulista", 1000L, null, 1L, false
             );
 
             assertThatThrownBy(() -> adminOrganizacaoService.cadastrarAdminOrgCompleto(requestSemCnpj))
@@ -598,6 +665,37 @@ class AdminOrganizacaoServiceTest {
             assertThatThrownBy(() -> adminOrganizacaoService.atualizarMeusDadosAdminOrg(ADMIN_ID, request))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Administrador não encontrado");
+        }
+
+        @Test
+        @DisplayName("4.5d - Meus Dados: trocar para e-mail de outro usuário é rejeitado")
+        void deveRejeitarEmailDeOutroUsuarioEmMeusDados() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentUserId()).thenReturn(USUARIO_ID);
+            when(adminOrganizacaoRepository.findByIdWithOrgAndEndereco(ADMIN_ID))
+                    .thenReturn(Optional.of(adminOrganizacao));
+            doThrow(new IllegalStateException("Email ja cadastrado no sistema para outro usuario"))
+                    .when(emailUnicoService)
+                    .validarEmailLivreParaAtualizacao("atualizado@email.com", "admin@teste.com", USUARIO_ID);
+
+            assertThatThrownBy(() -> adminOrganizacaoService.atualizarMeusDadosAdminOrg(ADMIN_ID, request))
+                    .isInstanceOf(IllegalStateException.class);
+            verify(adminOrganizacaoRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Meus Dados: outro usuário da mesma clínica não altera os dados deste admin")
+        void outroUsuarioDaMesmaOrgEhNegado() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(tenantHelper.getCurrentUserId()).thenReturn(USUARIO_ID + 1);
+            when(adminOrganizacaoRepository.findByIdWithOrgAndEndereco(ADMIN_ID))
+                    .thenReturn(Optional.of(adminOrganizacao));
+
+            assertThatThrownBy(() -> adminOrganizacaoService.atualizarMeusDadosAdminOrg(ADMIN_ID, request))
+                    .isInstanceOf(br.com.saudeConecta.infra.tenant.TenantAccessDeniedException.class);
+            verify(adminOrganizacaoRepository, never()).save(any());
+            verify(organizacaoRepository, never()).save(any());
+            verify(enderecoRepository, never()).save(any());
         }
 
         @Test
