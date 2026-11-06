@@ -1,7 +1,7 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.domain.consulta.ConfiguracoesConsulta;
-import br.com.saudeConecta.infra.tenant.TenantContext;
 import br.com.saudeConecta.presentation.dto.consulta.ConfiguracoesConsultaRequest;
 import br.com.saudeConecta.presentation.dto.consulta.ConfiguracoesConsultaResponse;
 import br.com.saudeConecta.service.ConfiguracoesConsultaService;

@@ -1,6 +1,6 @@
 package br.com.saudeConecta.presentation.controller;
 
-import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.presentation.dto.planos.CobrancaTenantResponse;
 import br.com.saudeConecta.service.CobrancaService;
 import lombok.RequiredArgsConstructor;

@@ -1,17 +1,17 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.config.logging.MascaraLog;
+import br.com.saudeConecta.config.tenant.RequiresTenant;
+import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.historicodadospessoais.EntidadeTipo;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.paciente.Paciente;
-import br.com.saudeConecta.infra.tenant.RequiresTenant;
-import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
 import br.com.saudeConecta.presentation.dto.paciente.AtualizarPacienteRequest;
 import br.com.saudeConecta.presentation.dto.paciente.CadastrarPacienteCompletoRequest;
-import br.com.saudeConecta.util.MascaraLog;
 import br.com.saudeConecta.util.SnapshotUtil;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;

@@ -1,17 +1,17 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.config.tenant.TenantAccessDeniedException;
+import br.com.saudeConecta.config.tenant.TenantContext;
+import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.profissional.StatusProfissional;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.domain.secretaria.StatusSecretaria;
 import br.com.saudeConecta.domain.usuario.MotivoBloqueio;
+import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.domain.usuario.StatusUsuario;
-import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
-import br.com.saudeConecta.infra.tenant.TenantContext;
-import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.presentation.dto.usuario.*;
 import lombok.extern.slf4j.Slf4j;

@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import br.com.saudeConecta.util.MascaraLog;
+import br.com.saudeConecta.config.logging.MascaraLog;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

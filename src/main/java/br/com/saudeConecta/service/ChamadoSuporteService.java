@@ -1,5 +1,7 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.config.tenant.TenantAccessDeniedException;
+import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.suporte.ChamadoAnexo;
 import br.com.saudeConecta.domain.suporte.ChamadoSuporte;
@@ -8,8 +10,6 @@ import br.com.saudeConecta.domain.suporte.StatusChamado;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.email.EmailNotificacaoService;
-import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
-import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ChamadoSuporteRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;

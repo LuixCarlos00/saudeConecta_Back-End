@@ -386,7 +386,7 @@ class AdminOrganizacaoControllerIntegrationTest {
         @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
         @DisplayName("GESTOR cadastra gestor da própria clínica (201)")
         void gestorCadastraGestor() throws Exception {
-            br.com.saudeConecta.infra.tenant.TenantContext.setCurrentTenant(1L);
+            br.com.saudeConecta.config.tenant.TenantContext.setCurrentTenant(1L);
             try {
                 when(adminOrganizacaoService.cadastrarAdminByOrg(any(), eq(1L))).thenReturn(new AdminOrganizacao());
 
@@ -394,7 +394,7 @@ class AdminOrganizacaoControllerIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON).content(CORPO_CADASTRO))
                         .andExpect(status().isCreated());
             } finally {
-                br.com.saudeConecta.infra.tenant.TenantContext.clear();
+                br.com.saudeConecta.config.tenant.TenantContext.clear();
             }
         }
 
@@ -402,7 +402,7 @@ class AdminOrganizacaoControllerIntegrationTest {
         @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
         @DisplayName("Meus Dados de outro admin responde 403")
         void meusDadosDeOutroAdminResponde403() throws Exception {
-            doThrow(new br.com.saudeConecta.infra.tenant.TenantAccessDeniedException("negado"))
+            doThrow(new br.com.saudeConecta.config.tenant.TenantAccessDeniedException("negado"))
                     .when(adminOrganizacaoService).atualizarMeusDadosAdminOrg(eq(2L), any());
 
             mockMvc.perform(put("/administrador/atualizarMeusDados/2").with(csrf())

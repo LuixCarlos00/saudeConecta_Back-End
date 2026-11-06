@@ -1,9 +1,9 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.paciente.Paciente;
-import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;

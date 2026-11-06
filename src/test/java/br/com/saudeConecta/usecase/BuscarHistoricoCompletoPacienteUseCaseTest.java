@@ -1,14 +1,14 @@
 package br.com.saudeConecta.usecase;
 
+import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
 import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.domain.profissional.Especialidade;
 import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.domain.prontuario.Prontuario;
 import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
 import br.com.saudeConecta.domain.prontuario.ProntuarioDentistaDente;
-import br.com.saudeConecta.domain.prontuario.Prontuario;
-import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProntuarioDentistaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProntuarioRepository;

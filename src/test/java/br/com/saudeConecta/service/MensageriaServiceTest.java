@@ -1,13 +1,13 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.config.tenant.TenantHelper;
+import br.com.saudeConecta.config.tenant.TenantNotDefinedException;
 import br.com.saudeConecta.domain.mensageria.Mensageria;
 import br.com.saudeConecta.domain.mensageria.StatusMensagem;
 import br.com.saudeConecta.domain.mensageria.TipoMensagem;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.email.EmailNotificacaoService;
-import br.com.saudeConecta.infra.tenant.TenantHelper;
-import br.com.saudeConecta.infra.tenant.TenantNotDefinedException;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.presentation.dto.mensageria.MensageriaResponse;
 import org.junit.jupiter.api.*;

@@ -1,5 +1,6 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.domain.secretaria.StatusSecretaria;
@@ -7,7 +8,6 @@ import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.email.EmailNotificacaoService;
-import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.SecretariaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
@@ -120,11 +120,11 @@ class SecretariaServiceTest {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(secretariaRepository.findByIdAndOrganizacao_Id(SEC_ID, ORG_ID))
                     .thenReturn(Optional.of(secretaria));
-            doThrow(new br.com.saudeConecta.infra.tenant.TenantAccessDeniedException("negado"))
+            doThrow(new br.com.saudeConecta.config.tenant.TenantAccessDeniedException("negado"))
                     .when(tenantHelper).validarGestorOuDono(USUARIO_ID);
 
             assertThatThrownBy(() -> secretariaService.atualizarSecretariaIdByOrg(SEC_ID, dadosAtualizados))
-                    .isInstanceOf(br.com.saudeConecta.infra.tenant.TenantAccessDeniedException.class);
+                    .isInstanceOf(br.com.saudeConecta.config.tenant.TenantAccessDeniedException.class);
             assertThat(secretaria.getEmail()).isNotEqualTo("invasor@email.com");
             verify(secretariaRepository, never()).save(any());
         }

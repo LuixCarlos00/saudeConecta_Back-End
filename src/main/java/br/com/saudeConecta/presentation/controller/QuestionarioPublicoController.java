@@ -1,12 +1,12 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.config.logging.MascaraLog;
 import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
 import br.com.saudeConecta.domain.prontuario.TermoAutorizacao;
 import br.com.saudeConecta.presentation.dto.prontuario.AssinaturaPlanjamentoRequest;
 import br.com.saudeConecta.presentation.dto.prontuario.QuestionarioSaudeRequest;
 import br.com.saudeConecta.service.PlanejamentoTerapeuticoService;
 import br.com.saudeConecta.service.TermoAutorizacaoService;
-import br.com.saudeConecta.util.MascaraLog;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

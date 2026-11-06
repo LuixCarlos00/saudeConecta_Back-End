@@ -1,8 +1,8 @@
 package br.com.saudeConecta.domain.historicodadospessoais;
 
+import br.com.saudeConecta.config.tenant.TenantAware;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.infra.tenant.TenantAware;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;

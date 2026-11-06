@@ -1,5 +1,7 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.config.tenant.TenantContext;
+import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.atendimento.AtendimentoRascunho;
 import br.com.saudeConecta.domain.atendimento.RascunhoAtendimentoResumo;
 import br.com.saudeConecta.domain.atendimento.TipoAtendimentoRascunho;
@@ -10,8 +12,6 @@ import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
-import br.com.saudeConecta.infra.tenant.TenantContext;
-import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.AtendimentoRascunhoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.presentation.dto.atendimento.RascunhoAtendimentoResponse;

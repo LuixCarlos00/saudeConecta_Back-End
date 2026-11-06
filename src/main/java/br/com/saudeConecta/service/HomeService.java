@@ -1,6 +1,6 @@
 package br.com.saudeConecta.service;
 
-import br.com.saudeConecta.util.MascaraLog;
+import br.com.saudeConecta.config.logging.MascaraLog;
 
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.profissional.Profissional;

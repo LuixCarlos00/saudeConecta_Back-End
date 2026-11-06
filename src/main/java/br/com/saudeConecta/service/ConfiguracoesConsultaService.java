@@ -1,10 +1,10 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.config.tenant.TenantContext;
+import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.consulta.ConfiguracoesConsulta;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConfiguracoesConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
-import br.com.saudeConecta.infra.tenant.TenantContext;
-import br.com.saudeConecta.infra.tenant.TenantHelper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

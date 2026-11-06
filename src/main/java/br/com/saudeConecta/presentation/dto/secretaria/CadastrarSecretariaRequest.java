@@ -1,6 +1,6 @@
 package br.com.saudeConecta.presentation.dto.secretaria;
 
-import br.com.saudeConecta.util.validation.SafeInput;
+import br.com.saudeConecta.config.web.SafeInput;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

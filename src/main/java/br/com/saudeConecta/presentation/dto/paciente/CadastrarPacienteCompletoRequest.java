@@ -1,6 +1,6 @@
 package br.com.saudeConecta.presentation.dto.paciente;
 
-import br.com.saudeConecta.util.validation.SafeInput;
+import br.com.saudeConecta.config.web.SafeInput;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

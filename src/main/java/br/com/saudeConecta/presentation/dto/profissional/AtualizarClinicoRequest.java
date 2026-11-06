@@ -1,7 +1,7 @@
 package br.com.saudeConecta.presentation.dto.profissional;
 
+import br.com.saudeConecta.config.web.SafeInput;
 import br.com.saudeConecta.presentation.dto.endereco.EnderecoResponse;
-import br.com.saudeConecta.util.validation.SafeInput;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

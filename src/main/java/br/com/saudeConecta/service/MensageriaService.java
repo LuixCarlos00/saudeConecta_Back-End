@@ -1,18 +1,18 @@
 package br.com.saudeConecta.service;
 
-import br.com.saudeConecta.util.MascaraLog;
+import br.com.saudeConecta.config.logging.MascaraLog;
 
+import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.mensageria.Mensageria;
 import br.com.saudeConecta.domain.mensageria.StatusMensagem;
 import br.com.saudeConecta.domain.mensageria.TipoMensagem;
 import br.com.saudeConecta.domain.profissional.Profissional;
-import br.com.saudeConecta.infra.tenant.TenantHelper;
+import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.MensageriaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
+import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.SecretariaRepository;
-import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
-import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
 import br.com.saudeConecta.presentation.dto.mensageria.MensageriaResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

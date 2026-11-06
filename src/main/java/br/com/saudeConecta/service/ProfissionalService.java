@@ -1,5 +1,7 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.config.tenant.RequiresTenant;
+import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.common.Sexo;
 import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.historicodadospessoais.EntidadeTipo;
@@ -14,8 +16,6 @@ import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.email.EmailNotificacaoService;
-import br.com.saudeConecta.infra.tenant.RequiresTenant;
-import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.presentation.dto.profissional.AtualizarClinicoRequest;
 import br.com.saudeConecta.presentation.dto.profissional.CadastrarClinicoRequest;

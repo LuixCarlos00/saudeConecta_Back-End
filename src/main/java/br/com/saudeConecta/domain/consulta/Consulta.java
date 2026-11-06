@@ -1,12 +1,12 @@
 package br.com.saudeConecta.domain.consulta;
 
+import br.com.saudeConecta.config.tenant.TenantAware;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.domain.pagamento.FormaPagamento;
 import br.com.saudeConecta.domain.profissional.Especialidade;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.infra.tenant.TenantAware;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;

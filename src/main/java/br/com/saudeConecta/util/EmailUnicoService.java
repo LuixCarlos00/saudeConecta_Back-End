@@ -1,5 +1,6 @@
 package br.com.saudeConecta.util;
 
+import br.com.saudeConecta.config.logging.MascaraLog;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.secretaria.Secretaria;

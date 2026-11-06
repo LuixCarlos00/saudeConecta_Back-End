@@ -1,5 +1,7 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.config.tenant.TenantHelper;
+import br.com.saudeConecta.config.tenant.TenantNotDefinedException;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
@@ -9,8 +11,6 @@ import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.email.EmailNotificacaoService;
-import br.com.saudeConecta.infra.tenant.TenantHelper;
-import br.com.saudeConecta.infra.tenant.TenantNotDefinedException;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.EnderecoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
@@ -692,7 +692,7 @@ class AdminOrganizacaoServiceTest {
                     .thenReturn(Optional.of(adminOrganizacao));
 
             assertThatThrownBy(() -> adminOrganizacaoService.atualizarMeusDadosAdminOrg(ADMIN_ID, request))
-                    .isInstanceOf(br.com.saudeConecta.infra.tenant.TenantAccessDeniedException.class);
+                    .isInstanceOf(br.com.saudeConecta.config.tenant.TenantAccessDeniedException.class);
             verify(adminOrganizacaoRepository, never()).save(any());
             verify(organizacaoRepository, never()).save(any());
             verify(enderecoRepository, never()).save(any());

@@ -253,7 +253,7 @@ class SecretariaControllerIntegrationTest {
         @DisplayName("ASSISTENTE editando cadastro de outra pessoa recebe 403")
         void assistenteEditandoOutraRecebe403() throws Exception {
             when(secretariaService.atualizarSecretariaIdByOrg(eq(6L), any()))
-                    .thenThrow(new br.com.saudeConecta.infra.tenant.TenantAccessDeniedException("negado"));
+                    .thenThrow(new br.com.saudeConecta.config.tenant.TenantAccessDeniedException("negado"));
 
             mockMvc.perform(put("/secretaria/atualizarSecretariaIdByOrg/6").with(csrf())
                             .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"x@x.com\"}"))

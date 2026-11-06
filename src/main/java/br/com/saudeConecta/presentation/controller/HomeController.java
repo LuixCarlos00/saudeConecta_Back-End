@@ -1,8 +1,7 @@
 package br.com.saudeConecta.presentation.controller;
 
-import br.com.saudeConecta.util.MascaraLog;
+import br.com.saudeConecta.config.logging.MascaraLog;
 
-import br.com.saudeConecta.service.HomeService;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
 import br.com.saudeConecta.domain.planos.StatusAssinatura;
@@ -11,8 +10,9 @@ import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.domain.usuario.AuditoriaAcessoMaster;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infrastructure.persistence.repository.AuditoriaAcessoMasterRepository;
+import br.com.saudeConecta.service.HomeService;
 import jakarta.servlet.http.HttpServletRequest;
-import br.com.saudeConecta.infra.configuracoesseguranca.TokenService;
+import br.com.saudeConecta.config.security.TokenService;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;

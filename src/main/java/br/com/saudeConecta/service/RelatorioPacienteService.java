@@ -1,5 +1,7 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.config.tenant.RequiresTenant;
+import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
 import br.com.saudeConecta.domain.paciente.Paciente;
@@ -9,8 +11,6 @@ import br.com.saudeConecta.domain.prontuario.Prontuario;
 import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
 import br.com.saudeConecta.domain.prontuario.TermoAutorizacao;
 import br.com.saudeConecta.domain.relatorio.TipoDocumentoRelatorio;
-import br.com.saudeConecta.infra.tenant.RequiresTenant;
-import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.RelatorioRepository;
 import br.com.saudeConecta.presentation.dto.relatorio.ConsultaRelatorioResponse;

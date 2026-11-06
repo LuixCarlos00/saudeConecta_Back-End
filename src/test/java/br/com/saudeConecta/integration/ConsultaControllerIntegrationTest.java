@@ -200,12 +200,12 @@ class ConsultaControllerIntegrationTest {
 
         @AfterEach
         void limparTenant() {
-            br.com.saudeConecta.infra.tenant.TenantContext.clear();
+            br.com.saudeConecta.config.tenant.TenantContext.clear();
         }
 
         private void tenant(Long orgId, Long usuarioId) {
-            br.com.saudeConecta.infra.tenant.TenantContext.setCurrentTenant(orgId);
-            br.com.saudeConecta.infra.tenant.TenantContext.setCurrentUser(usuarioId);
+            br.com.saudeConecta.config.tenant.TenantContext.setCurrentTenant(orgId);
+            br.com.saudeConecta.config.tenant.TenantContext.setCurrentUser(usuarioId);
         }
 
         @Test

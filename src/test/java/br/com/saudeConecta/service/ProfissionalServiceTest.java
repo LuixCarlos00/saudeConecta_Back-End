@@ -1,5 +1,6 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.mensageria.Mensageria;
 import br.com.saudeConecta.domain.mensageria.TipoMensagem;
@@ -12,7 +13,6 @@ import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.email.EmailNotificacaoService;
-import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.presentation.dto.profissional.AtualizarClinicoRequest;
 import br.com.saudeConecta.presentation.dto.profissional.CadastrarClinicoRequest;
@@ -309,11 +309,11 @@ class ProfissionalServiceTest {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(profissionalRepository.buscarClinicoIdByOrg(PROF_ID, ORG_ID))
                     .thenReturn(Optional.of(profissional));
-            doThrow(new br.com.saudeConecta.infra.tenant.TenantAccessDeniedException("negado"))
+            doThrow(new br.com.saudeConecta.config.tenant.TenantAccessDeniedException("negado"))
                     .when(tenantHelper).validarGestorOuDono(USUARIO_ID);
 
             assertThatThrownBy(() -> profissionalService.atualizarClinicoIdByOrg(PROF_ID, request))
-                    .isInstanceOf(br.com.saudeConecta.infra.tenant.TenantAccessDeniedException.class);
+                    .isInstanceOf(br.com.saudeConecta.config.tenant.TenantAccessDeniedException.class);
             assertThat(profissional.getEmail()).isNotEqualTo("dr.atualizado@teste.com");
             verify(profissionalRepository, never()).save(any());
         }

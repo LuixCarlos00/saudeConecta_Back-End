@@ -1,6 +1,6 @@
 package br.com.saudeConecta.email;
 
-import br.com.saudeConecta.util.MascaraLog;
+import br.com.saudeConecta.config.logging.MascaraLog;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;

@@ -2,8 +2,8 @@ package br.com.saudeConecta.presentation.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import br.com.saudeConecta.config.logging.MascaraLog;
 import br.com.saudeConecta.infra.exceptions.ErrorResponse;
-import br.com.saudeConecta.util.MascaraLog;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

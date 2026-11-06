@@ -1,9 +1,9 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.config.logging.MascaraLog;
+import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
-import br.com.saudeConecta.infra.tenant.TenantHelper;
-import br.com.saudeConecta.util.MascaraLog;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

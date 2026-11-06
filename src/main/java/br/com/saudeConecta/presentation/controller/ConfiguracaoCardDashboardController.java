@@ -1,6 +1,6 @@
 package br.com.saudeConecta.presentation.controller;
 
-import br.com.saudeConecta.infra.tenant.TenantHelper;
+import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.presentation.dto.dashboard.AtualizarConfiguracaoCardRequest;
 import br.com.saudeConecta.presentation.dto.dashboard.ConfiguracaoCardResponse;
 import br.com.saudeConecta.service.ConfiguracaoCardDashboardService;

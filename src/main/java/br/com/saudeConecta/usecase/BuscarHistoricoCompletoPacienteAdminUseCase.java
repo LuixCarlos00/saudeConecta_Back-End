@@ -1,6 +1,6 @@
 package br.com.saudeConecta.usecase;
 
-import br.com.saudeConecta.infra.tenant.RequiresTenant;
+import br.com.saudeConecta.config.tenant.RequiresTenant;
 import br.com.saudeConecta.presentation.dto.consulta.HistoricoConsultaPacienteResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

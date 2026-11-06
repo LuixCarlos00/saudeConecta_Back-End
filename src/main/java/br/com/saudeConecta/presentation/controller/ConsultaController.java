@@ -1,21 +1,21 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.config.tenant.TenantAccessDeniedException;
+import br.com.saudeConecta.config.tenant.TenantContext;
+import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.common.Periodo;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
-import br.com.saudeConecta.infra.tenant.TenantContext;
-import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.presentation.dto.consulta.*;
 import br.com.saudeConecta.presentation.dto.dashboard.SaldoFinanceiroResponse;
 import br.com.saudeConecta.service.ConsultaService;
+import br.com.saudeConecta.service.SaldoFinanceiroService;
 import br.com.saudeConecta.usecase.BuscarHistoricoCompletoPacienteAdminUseCase;
 import br.com.saudeConecta.usecase.BuscarHistoricoCompletoPacienteDentistaUseCase;
 import br.com.saudeConecta.usecase.BuscarHistoricoCompletoPacienteMedicoUseCase;
-import br.com.saudeConecta.service.SaldoFinanceiroService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import br.com.saudeConecta.util.MascaraLog;
+import br.com.saudeConecta.config.logging.MascaraLog;
 import java.util.List;
 import java.util.Optional;
 

@@ -1,6 +1,6 @@
 package br.com.saudeConecta.config;
 
-import br.com.saudeConecta.infra.logging.MdcTaskDecorator;
+import br.com.saudeConecta.config.logging.MdcTaskDecorator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;

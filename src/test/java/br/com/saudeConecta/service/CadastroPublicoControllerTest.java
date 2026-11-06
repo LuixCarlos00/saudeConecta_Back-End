@@ -1,8 +1,8 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.config.web.RateLimiter;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
-import br.com.saudeConecta.infra.ratelimit.RateLimiter;
 import br.com.saudeConecta.presentation.controller.CadastroPublicoController;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

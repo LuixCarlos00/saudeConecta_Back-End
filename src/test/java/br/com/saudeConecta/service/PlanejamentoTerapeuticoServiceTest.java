@@ -1,8 +1,8 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.config.tenant.TenantContext;
+import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
-import br.com.saudeConecta.infra.tenant.TenantContext;
-import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

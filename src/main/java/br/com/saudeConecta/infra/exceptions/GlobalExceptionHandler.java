@@ -1,7 +1,7 @@
 package br.com.saudeConecta.infra.exceptions;
 
-import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
-import br.com.saudeConecta.infra.tenant.TenantNotDefinedException;
+import br.com.saudeConecta.config.tenant.TenantAccessDeniedException;
+import br.com.saudeConecta.config.tenant.TenantNotDefinedException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;

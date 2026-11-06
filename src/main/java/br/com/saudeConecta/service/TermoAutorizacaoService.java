@@ -1,14 +1,14 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.config.logging.MascaraLog;
+import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.paciente.Paciente;
 import br.com.saudeConecta.domain.prontuario.TermoAutorizacao;
-import br.com.saudeConecta.infra.tenant.TenantHelper;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.TermoAutorizacaoRepository;
 import br.com.saudeConecta.presentation.dto.prontuario.QuestionarioSaudeRequest;
-import br.com.saudeConecta.util.MascaraLog;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;

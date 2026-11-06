@@ -1,6 +1,6 @@
 package br.com.saudeConecta.email;
 
-import br.com.saudeConecta.util.MascaraLog;
+import br.com.saudeConecta.config.logging.MascaraLog;
 
 import br.com.saudeConecta.domain.mensageria.TipoMensagem;
 import lombok.RequiredArgsConstructor;

@@ -1,7 +1,7 @@
 package br.com.saudeConecta.integration;
 
 import org.junit.jupiter.api.AfterEach;
-import br.com.saudeConecta.infra.tenant.TenantContext;
+import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.profissional.StatusProfissional;
@@ -328,7 +328,7 @@ class ProfissionalControllerIntegrationTest {
         @DisplayName("ASSISTENTE editando o cadastro de um clínico recebe 403")
         void assistenteEditandoClinicoRecebe403() throws Exception {
             when(profissionalService.atualizarClinicoIdByOrg(eq(10L), any()))
-                    .thenThrow(new br.com.saudeConecta.infra.tenant.TenantAccessDeniedException("negado"));
+                    .thenThrow(new br.com.saudeConecta.config.tenant.TenantAccessDeniedException("negado"));
 
             mockMvc.perform(put("/profissionais/atualizarClinicoIdByOrg/10").with(csrf())
                             .contentType(MediaType.APPLICATION_JSON).content(CORPO_ATUALIZACAO))

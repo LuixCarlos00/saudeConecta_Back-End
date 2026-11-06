@@ -1,11 +1,11 @@
 package br.com.saudeConecta.presentation.controller;
 
-import br.com.saudeConecta.service.UsuarioService;
-import br.com.saudeConecta.infra.tenant.TenantContext;
-import br.com.saudeConecta.infra.tenant.TenantHelper;
+import br.com.saudeConecta.config.tenant.TenantContext;
+import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.presentation.dto.usuario.BloquearUsuarioRequest;
 import br.com.saudeConecta.presentation.dto.usuario.TodosUsuariosAgrupadosResponse;
 import br.com.saudeConecta.presentation.dto.usuario.UsuarioPerfilCompletoResponse;
+import br.com.saudeConecta.service.UsuarioService;
 import jakarta.validation.Valid;
 import jdk.jfr.Description;
 import lombok.RequiredArgsConstructor;

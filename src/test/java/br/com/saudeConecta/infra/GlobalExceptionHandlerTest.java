@@ -1,11 +1,11 @@
 package br.com.saudeConecta.infra;
 
+import br.com.saudeConecta.config.tenant.TenantAccessDeniedException;
+import br.com.saudeConecta.config.tenant.TenantNotDefinedException;
 import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.infra.exceptions.GlobalExceptionHandler;
 import br.com.saudeConecta.infra.exceptions.LimitePlanoException;
 import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
-import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
-import br.com.saudeConecta.infra.tenant.TenantNotDefinedException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;

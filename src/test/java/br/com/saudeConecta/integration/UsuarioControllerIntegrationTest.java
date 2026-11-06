@@ -1,6 +1,6 @@
 package br.com.saudeConecta.integration;
 
-import br.com.saudeConecta.infra.tenant.TenantAccessDeniedException;
+import br.com.saudeConecta.config.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.presentation.dto.usuario.BloquearUsuarioRequest;
 import br.com.saudeConecta.presentation.dto.usuario.TodosUsuariosAgrupadosResponse;
 import br.com.saudeConecta.presentation.dto.usuario.UsuarioPerfilCompletoResponse;
@@ -58,14 +58,14 @@ class UsuarioControllerIntegrationTest {
 
         @AfterEach
         void limparTenant() {
-            br.com.saudeConecta.infra.tenant.TenantContext.clear();
+            br.com.saudeConecta.config.tenant.TenantContext.clear();
         }
 
         @Test
         @WithMockUser(roles = "PROFISSIONAL")
         @DisplayName("Deve retornar 200 quando o perfil é da mesma organização do token")
         void deveRetornar200QuandoExiste() throws Exception {
-            br.com.saudeConecta.infra.tenant.TenantContext.setCurrentTenant(1L);
+            br.com.saudeConecta.config.tenant.TenantContext.setCurrentTenant(1L);
             when(usuarioService.buscarPerfilCompleto(1L)).thenReturn(Optional.of(perfilDaOrg(1L)));
 
             mockMvc.perform(get("/usuario/buscarPerfilCompleto/1"))
@@ -76,7 +76,7 @@ class UsuarioControllerIntegrationTest {
         @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
         @DisplayName("Item 3 - perfil de usuário de outra organização responde 404")
         void deveRetornar404ParaOutraOrganizacao() throws Exception {
-            br.com.saudeConecta.infra.tenant.TenantContext.setCurrentTenant(1L);
+            br.com.saudeConecta.config.tenant.TenantContext.setCurrentTenant(1L);
             when(usuarioService.buscarPerfilCompleto(1L)).thenReturn(Optional.of(perfilDaOrg(2L)));
 
             mockMvc.perform(get("/usuario/buscarPerfilCompleto/1"))
