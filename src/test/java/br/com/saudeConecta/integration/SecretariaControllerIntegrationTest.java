@@ -1,6 +1,7 @@
 package br.com.saudeConecta.integration;
 
 import br.com.saudeConecta.application.secretaria.SecretariaService;
+import br.com.saudeConecta.application.secretaria.dto.AtualizarSecretariaRequest;
 import br.com.saudeConecta.application.secretaria.dto.CadastrarSecretariaRequest;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.domain.secretaria.StatusSecretaria;
@@ -186,6 +187,41 @@ class SecretariaControllerIntegrationTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"email\":\"outro@email.com\"}"))
                     .andExpect(status().isConflict());
+        }
+    }
+
+    @Nested
+    @DisplayName("PUT /secretaria/atualizarSecretariaIdByOrg/{id} - corpo restrito (S4684)")
+    class AtualizarSecretariaCorpoRestrito {
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("Campos fora de nome/e-mail/telefone são ignorados e não chegam ao service")
+        void camposExtrasSaoIgnorados() throws Exception {
+            when(secretariaService.atualizarSecretariaIdByOrg(eq(5L), any())).thenReturn(criarSecretaria(5L));
+
+            mockMvc.perform(put("/secretaria/atualizarSecretariaIdByOrg/5").with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"nome\":\"Ana\",\"email\":\"ana@x.com\",\"telefone\":\"1199\","
+                                    + "\"id\":99,\"organizacao\":{\"id\":7},\"usuario\":{\"id\":3}}"))
+                    .andExpect(status().isOk());
+
+            org.mockito.ArgumentCaptor<AtualizarSecretariaRequest> corpo =
+                    org.mockito.ArgumentCaptor.forClass(AtualizarSecretariaRequest.class);
+            verify(secretariaService).atualizarSecretariaIdByOrg(eq(5L), corpo.capture());
+            org.assertj.core.api.Assertions.assertThat(corpo.getValue())
+                    .isEqualTo(new AtualizarSecretariaRequest("Ana", "ana@x.com", "1199"));
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("E-mail inválido responde 400 sem chamar o service")
+        void emailInvalidoResponde400() throws Exception {
+            mockMvc.perform(put("/secretaria/atualizarSecretariaIdByOrg/5").with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"nao-e-email\"}"))
+                    .andExpect(status().isBadRequest());
+
+            verify(secretariaService, never()).atualizarSecretariaIdByOrg(any(), any());
         }
     }
 

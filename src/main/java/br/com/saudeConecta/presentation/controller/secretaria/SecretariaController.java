@@ -1,6 +1,7 @@
 package br.com.saudeConecta.presentation.controller.secretaria;
 
 import br.com.saudeConecta.application.secretaria.SecretariaService;
+import br.com.saudeConecta.application.secretaria.dto.AtualizarSecretariaRequest;
 import br.com.saudeConecta.application.secretaria.dto.CadastrarSecretariaRequest;
 import br.com.saudeConecta.application.secretaria.dto.SecretariaResponse;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
@@ -43,7 +44,7 @@ public class SecretariaController {
 
     @PutMapping("/atualizarSecretariaIdByOrg/{id}")
     @Description("Atualiza secretária por ID. Gestor ou a própria secretária (regra no service)")
-    public ResponseEntity<?> atualizarSecretariaIdByOrg(@PathVariable Long id, @RequestBody Secretaria secretaria) {
+    public ResponseEntity<?> atualizarSecretariaIdByOrg(@PathVariable Long id, @RequestBody @Valid AtualizarSecretariaRequest secretaria) {
         try {
             Secretaria atualizada = secretariaService.atualizarSecretariaIdByOrg(id, secretaria);
             return ResponseEntity.ok(SecretariaResponse.fromEntity(atualizada));
