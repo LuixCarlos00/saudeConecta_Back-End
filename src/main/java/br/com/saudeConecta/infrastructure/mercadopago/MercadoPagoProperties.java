@@ -1,4 +1,4 @@
-package br.com.saudeConecta.service.mercadopago;
+package br.com.saudeConecta.infrastructure.mercadopago;
 
 import lombok.Getter;
 import lombok.Setter;

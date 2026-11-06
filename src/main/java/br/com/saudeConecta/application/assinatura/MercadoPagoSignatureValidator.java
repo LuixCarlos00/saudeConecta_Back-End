@@ -1,4 +1,4 @@
-package br.com.saudeConecta.service.mercadopago;
+package br.com.saudeConecta.application.assinatura;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import br.com.saudeConecta.config.logging.MascaraLog;
+import br.com.saudeConecta.infrastructure.mercadopago.MercadoPagoProperties;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

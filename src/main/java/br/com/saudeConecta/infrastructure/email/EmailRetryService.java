@@ -1,5 +1,6 @@
-package br.com.saudeConecta.email;
+package br.com.saudeConecta.infrastructure.email;
 
+import br.com.saudeConecta.application.notificacao.EmailMensageriaService;
 import br.com.saudeConecta.config.logging.MascaraLog;
 
 import br.com.saudeConecta.domain.mensageria.TipoMensagem;

@@ -1,12 +1,12 @@
 package br.com.saudeConecta.application.assinatura;
 
 import br.com.saudeConecta.domain.planos.*;
+import br.com.saudeConecta.infrastructure.mercadopago.MercadoPagoClient;
+import br.com.saudeConecta.infrastructure.mercadopago.dto.AuthorizedPaymentResponse;
+import br.com.saudeConecta.infrastructure.mercadopago.dto.PreapprovalResponse;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.CobrancaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.MpWebhookEventoRepository;
-import br.com.saudeConecta.service.mercadopago.MercadoPagoClient;
-import br.com.saudeConecta.service.mercadopago.dto.AuthorizedPaymentResponse;
-import br.com.saudeConecta.service.mercadopago.dto.PreapprovalResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;

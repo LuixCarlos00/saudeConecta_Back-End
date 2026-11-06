@@ -1,4 +1,7 @@
-package br.com.saudeConecta.email;
+package br.com.saudeConecta.application.notificacao;
+
+import br.com.saudeConecta.infrastructure.email.EmailRetryService;
+import br.com.saudeConecta.infrastructure.email.EmailTemplateService;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;

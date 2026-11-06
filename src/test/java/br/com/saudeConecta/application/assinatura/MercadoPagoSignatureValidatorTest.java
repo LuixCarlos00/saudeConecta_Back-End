@@ -1,4 +1,6 @@
-package br.com.saudeConecta.service.mercadopago;
+package br.com.saudeConecta.application.assinatura;
+
+import br.com.saudeConecta.infrastructure.mercadopago.MercadoPagoProperties;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

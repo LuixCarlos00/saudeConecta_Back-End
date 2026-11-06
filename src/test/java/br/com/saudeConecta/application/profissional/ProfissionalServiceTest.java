@@ -2,6 +2,7 @@ package br.com.saudeConecta.application.profissional;
 
 import br.com.saudeConecta.application.assinatura.LimitePlanoService;
 import br.com.saudeConecta.application.historico.HistoricoDadosPessoaisService;
+import br.com.saudeConecta.application.notificacao.EmailNotificacaoService;
 import br.com.saudeConecta.application.profissional.dto.AtualizarClinicoRequest;
 import br.com.saudeConecta.application.profissional.dto.CadastrarClinicoRequest;
 import br.com.saudeConecta.application.usuario.EmailUnicoService;
@@ -18,7 +19,6 @@ import br.com.saudeConecta.domain.profissional.TipoProfissional;
 import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;

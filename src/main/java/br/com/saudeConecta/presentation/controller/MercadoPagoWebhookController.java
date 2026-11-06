@@ -1,7 +1,7 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.application.assinatura.MercadoPagoSignatureValidator;
 import br.com.saudeConecta.application.assinatura.MercadoPagoWebhookService;
-import br.com.saudeConecta.service.mercadopago.MercadoPagoSignatureValidator;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

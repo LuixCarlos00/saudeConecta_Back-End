@@ -1,4 +1,4 @@
-package br.com.saudeConecta.email;
+package br.com.saudeConecta.application.notificacao;
 
 import br.com.saudeConecta.config.logging.MascaraLog;
 import br.com.saudeConecta.domain.mensageria.Mensageria;

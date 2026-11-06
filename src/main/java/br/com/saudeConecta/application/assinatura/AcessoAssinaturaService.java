@@ -1,8 +1,8 @@
 package br.com.saudeConecta.application.assinatura;
 
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
+import br.com.saudeConecta.infrastructure.persistence.listener.AssinaturaTenantCacheListener;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
-import br.com.saudeConecta.service.AssinaturaTenantCacheListener;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

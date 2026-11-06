@@ -1,4 +1,4 @@
-package br.com.saudeConecta.email;
+package br.com.saudeConecta.infrastructure.email;
 
 import br.com.saudeConecta.config.logging.MascaraLog;
 

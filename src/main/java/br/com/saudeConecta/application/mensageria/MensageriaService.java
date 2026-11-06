@@ -23,7 +23,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import br.com.saudeConecta.email.EmailNotificacaoService;
+import br.com.saudeConecta.application.notificacao.EmailNotificacaoService;
 
 /**
  * Service responsável pelo gerenciamento de mensagens do sistema.

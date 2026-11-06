@@ -1,5 +1,6 @@
 package br.com.saudeConecta.application.suporte;
 
+import br.com.saudeConecta.application.notificacao.EmailNotificacaoService;
 import br.com.saudeConecta.application.suporte.dto.AtualizarStatusChamadoRequest;
 import br.com.saudeConecta.application.suporte.dto.ChamadoAnexoRequest;
 import br.com.saudeConecta.application.suporte.dto.ChamadoSuporteRequest;
@@ -13,7 +14,6 @@ import br.com.saudeConecta.domain.suporte.PrioridadeChamado;
 import br.com.saudeConecta.domain.suporte.StatusChamado;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ChamadoSuporteRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;

@@ -1,6 +1,8 @@
-package br.com.saudeConecta.email;
+package br.com.saudeConecta.application.notificacao;
 
 import br.com.saudeConecta.config.logging.MascaraLog;
+import br.com.saudeConecta.infrastructure.email.EmailRetryService;
+import br.com.saudeConecta.infrastructure.email.EmailTemplateService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;

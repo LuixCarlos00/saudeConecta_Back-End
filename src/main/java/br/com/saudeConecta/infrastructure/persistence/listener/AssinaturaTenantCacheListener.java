@@ -1,4 +1,4 @@
-package br.com.saudeConecta.service;
+package br.com.saudeConecta.infrastructure.persistence.listener;
 
 import br.com.saudeConecta.config.CacheEvictionService;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;

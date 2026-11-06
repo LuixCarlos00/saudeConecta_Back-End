@@ -152,15 +152,14 @@
 						<exclude>br/com/saudeConecta/presentation/erro/**/*</exclude>
 						<exclude>br/com/saudeConecta/infrastructure/**/*</exclude>
 						<!-- Infraestrutura de email: depende de SMTP/Thymeleaf reais -->
-						<exclude>br/com/saudeConecta/email/EmailRemetenteService*</exclude>
-						<exclude>br/com/saudeConecta/email/EmailRetryService*</exclude>
-						<exclude>br/com/saudeConecta/email/EmailTemplateService*</exclude>
-						<exclude>br/com/saudeConecta/email/EmailMensageriaService*</exclude>
-						<exclude>br/com/saudeConecta/email/EmailConfig*</exclude>
+						<exclude>br/com/saudeConecta/infrastructure/email/EmailRemetenteService*</exclude>
+						<exclude>br/com/saudeConecta/infrastructure/email/EmailRetryService*</exclude>
+						<exclude>br/com/saudeConecta/infrastructure/email/EmailTemplateService*</exclude>
+						<exclude>br/com/saudeConecta/application/notificacao/EmailMensageriaService*</exclude>
+						<exclude>br/com/saudeConecta/infrastructure/email/EmailConfig*</exclude>
 						<!-- Gateway de pagamento Mercado Pago (integração externa) -->
-						<exclude>br/com/saudeConecta/service/mercadopago/MercadoPagoClient*</exclude>
-						<exclude>br/com/saudeConecta/service/mercadopago/MercadoPagoProperties*</exclude>
-						<exclude>br/com/saudeConecta/service/mercadopago/dto/**/*</exclude>
+						<exclude>br/com/saudeConecta/infrastructure/mercadopago/MercadoPagoClient*</exclude>
+						<exclude>br/com/saudeConecta/infrastructure/mercadopago/MercadoPagoProperties*</exclude>
 						<!-- Utilitários com dependências de repositório/infraestrutura -->
 						<exclude>br/com/saudeConecta/application/usuario/EmailUnicoService*</exclude>
 						<exclude>br/com/saudeConecta/application/historico/SnapshotUtil*</exclude>

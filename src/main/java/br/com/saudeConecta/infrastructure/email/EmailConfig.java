@@ -1,4 +1,4 @@
-package br.com.saudeConecta.email;
+package br.com.saudeConecta.infrastructure.email;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

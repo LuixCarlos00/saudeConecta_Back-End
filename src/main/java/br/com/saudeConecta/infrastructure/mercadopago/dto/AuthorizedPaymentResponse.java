@@ -1,4 +1,4 @@
-package br.com.saudeConecta.service.mercadopago.dto;
+package br.com.saudeConecta.infrastructure.mercadopago.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

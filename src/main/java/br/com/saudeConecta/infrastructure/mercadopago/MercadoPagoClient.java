@@ -1,9 +1,9 @@
-package br.com.saudeConecta.service.mercadopago;
+package br.com.saudeConecta.infrastructure.mercadopago;
 
 import br.com.saudeConecta.application.exception.BusinessException;
-import br.com.saudeConecta.service.mercadopago.dto.AuthorizedPaymentResponse;
-import br.com.saudeConecta.service.mercadopago.dto.AuthorizedPaymentSearchResponse;
-import br.com.saudeConecta.service.mercadopago.dto.PreapprovalResponse;
+import br.com.saudeConecta.infrastructure.mercadopago.dto.AuthorizedPaymentResponse;
+import br.com.saudeConecta.infrastructure.mercadopago.dto.AuthorizedPaymentSearchResponse;
+import br.com.saudeConecta.infrastructure.mercadopago.dto.PreapprovalResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;

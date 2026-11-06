@@ -1,4 +1,4 @@
-package br.com.saudeConecta.email;
+package br.com.saudeConecta.infrastructure.email;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

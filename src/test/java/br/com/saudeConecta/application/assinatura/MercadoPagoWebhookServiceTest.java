@@ -1,16 +1,16 @@
 package br.com.saudeConecta.application.assinatura;
 
+import br.com.saudeConecta.application.notificacao.EmailNotificacaoService;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.planos.*;
-import br.com.saudeConecta.email.EmailNotificacaoService;
+import br.com.saudeConecta.infrastructure.mercadopago.MercadoPagoClient;
+import br.com.saudeConecta.infrastructure.mercadopago.MercadoPagoProperties;
+import br.com.saudeConecta.infrastructure.mercadopago.dto.AuthorizedPaymentResponse;
+import br.com.saudeConecta.infrastructure.mercadopago.dto.PreapprovalResponse;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.CobrancaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.MpWebhookEventoRepository;
-import br.com.saudeConecta.service.mercadopago.MercadoPagoClient;
-import br.com.saudeConecta.service.mercadopago.MercadoPagoProperties;
-import br.com.saudeConecta.service.mercadopago.dto.AuthorizedPaymentResponse;
-import br.com.saudeConecta.service.mercadopago.dto.PreapprovalResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
