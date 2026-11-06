@@ -1,5 +1,6 @@
 package br.com.saudeConecta.application.cobranca;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.application.assinatura.AssinaturaTenantService;
 import br.com.saudeConecta.application.assinatura.dto.CobrancaTenantResponse;
 import br.com.saudeConecta.application.exception.BusinessException;
@@ -60,7 +61,7 @@ public class CobrancaService {
 
         cobranca.setStatus(StatusCobranca.PAGO);
         cobranca.setFormaPagamento(FormaPagamentoCobranca.MANUAL);
-        cobranca.setDataPagamento(LocalDateTime.now());
+        cobranca.setDataPagamento(LocalDateTime.now(FusoHorario.ZONA));
         cobrancaTenantRepository.save(cobranca);
 
         assinaturaTenantService.renovarAposPagamento(cobranca.getAssinaturaTenant().getId());

@@ -1,5 +1,6 @@
 package br.com.saudeConecta.application.assinatura;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.application.assinatura.dto.LinkPagamentoResponse;
 import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.application.notificacao.EmailNotificacaoService;
@@ -163,7 +164,7 @@ public class AssinaturaMercadoPagoService {
             if (MercadoPagoClient.STATUS_AUTHORIZED.equals(statusMp) || MercadoPagoClient.STATUS_PAUSED.equals(statusMp)) {
                 atualizarValorConfirmando(assinatura, preapprovalId);
                 assinatura.setMpStatus(statusMp);
-                assinatura.setMpUltimaSincronizacao(LocalDateTime.now());
+                assinatura.setMpUltimaSincronizacao(LocalDateTime.now(FusoHorario.ZONA));
                 log.info("mp.preapproval.valor ok preapprovalId={} assinaturaId={} de={} para={}",
                         preapprovalId, assinatura.getId(), valorAnterior, assinatura.getValorMensal());
             } else if (MercadoPagoClient.STATUS_PENDING.equals(statusMp)) {
@@ -380,7 +381,7 @@ public class AssinaturaMercadoPagoService {
 
         String anterior = assinatura.getMpPreapprovalId();
         assinatura.vincularNovoPreapproval(preapproval.id(), preapproval.status(), preapproval.initPoint(), payerEmail);
-        assinatura.setMpUltimaSincronizacao(LocalDateTime.now());
+        assinatura.setMpUltimaSincronizacao(LocalDateTime.now(FusoHorario.ZONA));
         assinaturaTenantRepository.save(assinatura);
 
         log.info("mp.preapproval.criar ok preapprovalId={} substituidoId={} assinaturaId={} organizacaoId={}",
@@ -516,7 +517,7 @@ public class AssinaturaMercadoPagoService {
                     .tipo(MpWebhookEvento.TIPO_PENDENCIA_PREAPPROVAL_SUBSTITUIDO)
                     .dataId(preapprovalId)
                     .processado(true)
-                    .recebidoEm(LocalDateTime.now())
+                    .recebidoEm(LocalDateTime.now(FusoHorario.ZONA))
                     .build();
             pendencia.marcarParaAtencao(MpWebhookEvento.MOTIVO_PREAPPROVAL_SUBSTITUIDO_AUTORIZADO,
                     "preapproval " + preapprovalId + " saiu da assinatura " + assinaturaId + " e está " + statusMp
@@ -590,9 +591,9 @@ public class AssinaturaMercadoPagoService {
         }
 
         assinatura.setStatus(StatusAssinatura.CANCELADA);
-        assinatura.setDataCancelamento(LocalDateTime.now());
+        assinatura.setDataCancelamento(LocalDateTime.now(FusoHorario.ZONA));
         assinatura.setCanceladoPor(origem);
-        assinatura.setMpUltimaSincronizacao(LocalDateTime.now());
+        assinatura.setMpUltimaSincronizacao(LocalDateTime.now(FusoHorario.ZONA));
         assinaturaTenantRepository.save(assinatura);
 
         log.info("assinatura.cancelar ok assinaturaId={} origem={} organizacaoId={} status={}",
@@ -613,7 +614,7 @@ public class AssinaturaMercadoPagoService {
         try {
             PreapprovalResponse resposta = mercadoPagoClient.pausarPreapproval(assinatura.getMpPreapprovalId());
             assinatura.setMpStatus(resposta != null ? resposta.status() : MercadoPagoClient.STATUS_PAUSED);
-            assinatura.setMpUltimaSincronizacao(LocalDateTime.now());
+            assinatura.setMpUltimaSincronizacao(LocalDateTime.now(FusoHorario.ZONA));
             assinaturaTenantRepository.save(assinatura);
         } catch (BusinessException e) {
             log.error("mp.preapproval.pausar falha preapprovalId={} assinaturaId={}",
@@ -636,7 +637,7 @@ public class AssinaturaMercadoPagoService {
             PreapprovalResponse resposta = mercadoPagoClient.reativarPreapproval(assinatura.getMpPreapprovalId());
             assinatura.setMpStatus(resposta != null && resposta.status() != null
                     ? resposta.status() : MercadoPagoClient.STATUS_AUTHORIZED);
-            assinatura.setMpUltimaSincronizacao(LocalDateTime.now());
+            assinatura.setMpUltimaSincronizacao(LocalDateTime.now(FusoHorario.ZONA));
             assinaturaTenantRepository.save(assinatura);
             log.info("mp.preapproval.reativar ok preapprovalId={} assinaturaId={}",
                     assinatura.getMpPreapprovalId(), assinatura.getId());
@@ -688,7 +689,7 @@ public class AssinaturaMercadoPagoService {
 
         boolean mudou = !remoto.status().equals(assinatura.getMpStatus());
         assinatura.setMpStatus(remoto.status());
-        assinatura.setMpUltimaSincronizacao(LocalDateTime.now());
+        assinatura.setMpUltimaSincronizacao(LocalDateTime.now(FusoHorario.ZONA));
 
         StatusAssinatura statusAnterior = assinatura.getStatus();
         if (aplicarStatusRemoto(assinatura, remoto.status())) {
@@ -761,12 +762,12 @@ public class AssinaturaMercadoPagoService {
                     return false;
                 }
                 assinatura.setStatus(StatusAssinatura.SUSPENSA);
-                assinatura.setDataSuspensao(LocalDateTime.now());
+                assinatura.setDataSuspensao(LocalDateTime.now(FusoHorario.ZONA));
                 return true;
             }
             case MercadoPagoClient.STATUS_CANCELLED -> {
                 assinatura.setStatus(StatusAssinatura.CANCELADA);
-                assinatura.setDataCancelamento(LocalDateTime.now());
+                assinatura.setDataCancelamento(LocalDateTime.now(FusoHorario.ZONA));
                 assinatura.setCanceladoPor(OrigemCancelamento.MERCADO_PAGO);
                 return true;
             }
@@ -784,7 +785,7 @@ public class AssinaturaMercadoPagoService {
     private static boolean ativaEmDia(AssinaturaTenant assinatura) {
         return StatusAssinatura.ATIVA.equals(assinatura.getStatus())
                 && assinatura.getDataVencimento() != null
-                && !assinatura.getDataVencimento().isBefore(LocalDate.now());
+                && !assinatura.getDataVencimento().isBefore(LocalDate.now(FusoHorario.ZONA));
     }
 
     /**

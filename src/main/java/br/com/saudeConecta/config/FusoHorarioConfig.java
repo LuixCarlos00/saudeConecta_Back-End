@@ -1,5 +1,6 @@
 package br.com.saudeConecta.config;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -15,8 +16,8 @@ import java.time.ZoneId;
 public class FusoHorarioConfig {
 
     /** Usado também no {@code zone} dos {@code @Scheduled}. */
-    public static final String FUSO = "America/Sao_Paulo";
-    public static final ZoneId ZONA = ZoneId.of(FUSO);
+    public static final String FUSO = FusoHorario.NOME;
+    public static final ZoneId ZONA = FusoHorario.ZONA;
 
     /**
      * Relógio injetável dos services de cobrança; nos testes é trocado por {@link Clock#fixed}.

@@ -1,5 +1,6 @@
 package br.com.saudeConecta.domain.suporte;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.config.tenant.TenantAware;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.usuario.Usuario;
@@ -91,19 +92,19 @@ public class ChamadoSuporte implements Serializable, TenantAware {
         if (id == null || id.isBlank()) {
             id = gerarIdentificador();
         }
-        dataCriacao = LocalDateTime.now();
-        dataAtualizacao = LocalDateTime.now();
+        dataCriacao = LocalDateTime.now(FusoHorario.ZONA);
+        dataAtualizacao = LocalDateTime.now(FusoHorario.ZONA);
         if (status == null) {
             status = StatusChamado.EM_ANALISE;
         }
         if (previsaoAtendimento == null && prioridade != null) {
-            previsaoAtendimento = LocalDate.now().plusDays(prioridade.getPrazoPrevistoDias());
+            previsaoAtendimento = LocalDate.now(FusoHorario.ZONA).plusDays(prioridade.getPrazoPrevistoDias());
         }
     }
 
     @PreUpdate
     protected void onUpdate() {
-        dataAtualizacao = LocalDateTime.now();
+        dataAtualizacao = LocalDateTime.now(FusoHorario.ZONA);
     }
 
     /**

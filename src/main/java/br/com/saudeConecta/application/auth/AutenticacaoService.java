@@ -1,5 +1,6 @@
 package br.com.saudeConecta.application.auth;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.application.usuario.HomeService;
 import br.com.saudeConecta.application.usuario.dto.DadosLoginUsuario;
 import br.com.saudeConecta.config.logging.MascaraLog;
@@ -163,7 +164,7 @@ public class AutenticacaoService {
                     .alvoLogin(usuarioAlvo.getLogin())
                     .alvoOrganizacaoId(usuarioAlvo.getOrganizacaoId())
                     .ip(ip)
-                    .dataHora(LocalDateTime.now())
+                    .dataHora(LocalDateTime.now(FusoHorario.ZONA))
                     .build());
             log.info("auth.senhaMaster ok usuarioAlvoId={} auditado=true", usuarioAlvo.getId());
             return usuarioAlvo;

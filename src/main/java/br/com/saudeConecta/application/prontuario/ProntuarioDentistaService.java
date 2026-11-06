@@ -1,5 +1,6 @@
 package br.com.saudeConecta.application.prontuario;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import org.springframework.http.HttpStatus;
 import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.application.exception.ResourceNotFoundException;
@@ -366,12 +367,12 @@ public class ProntuarioDentistaService {
     // =========================================================================
 
     private LocalDate parseData(String data) {
-        if (data == null || data.isBlank()) return LocalDate.now();
+        if (data == null || data.isBlank()) return LocalDate.now(FusoHorario.ZONA);
         try {
             return LocalDate.parse(data);
         } catch (Exception e) {
             log.warn("prontuario.dentista.data negado motivo=DATA_INVALIDA data={} acao=USA_DATA_ATUAL", data);
-            return LocalDate.now();
+            return LocalDate.now(FusoHorario.ZONA);
         }
     }
 }

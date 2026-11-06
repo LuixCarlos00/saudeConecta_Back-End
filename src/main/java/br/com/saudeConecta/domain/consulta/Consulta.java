@@ -1,5 +1,6 @@
 package br.com.saudeConecta.domain.consulta;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.config.tenant.TenantAware;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.paciente.Paciente;
@@ -90,13 +91,13 @@ public class Consulta implements Serializable, TenantAware {
     
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now(FusoHorario.ZONA);
+        updatedAt = LocalDateTime.now(FusoHorario.ZONA);
     }
     
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now(FusoHorario.ZONA);
     }
     
     @Override

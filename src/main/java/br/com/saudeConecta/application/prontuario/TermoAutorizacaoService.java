@@ -1,5 +1,6 @@
 package br.com.saudeConecta.application.prontuario;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.application.cache.CacheEvictionService;
 import br.com.saudeConecta.application.prontuario.dto.QuestionarioSaudeRequest;
 import br.com.saudeConecta.config.logging.MascaraLog;
@@ -76,7 +77,7 @@ public class TermoAutorizacaoService {
                 .paciente(paciente)
                 .organizacao(organizacao)
                 .token(token)
-                .dataExpiracao(LocalDateTime.now().plusHours(HORAS_EXPIRACAO))
+                .dataExpiracao(LocalDateTime.now(FusoHorario.ZONA).plusHours(HORAS_EXPIRACAO))
                 .status("PENDENTE")
                 .build();
 
@@ -138,7 +139,7 @@ public class TermoAutorizacaoService {
                 request.getRespostasQuestionario(),
                 request.getAssinaturaBase64(),
                 ipOrigem,
-                LocalDateTime.now());
+                LocalDateTime.now(FusoHorario.ZONA));
         if (atualizados == 0) {
             throw new IllegalStateException("Este questionario já foi respondido.");
         }

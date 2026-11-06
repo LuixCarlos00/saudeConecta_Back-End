@@ -1,5 +1,6 @@
 package br.com.saudeConecta.application.consulta;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.application.consulta.dto.EstatisticasDashboardAdminOrgResponse;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.common.Periodo;
@@ -47,7 +48,7 @@ public class ConsultaEstatisticaService {
     @Transactional(readOnly = true)
     public EstatisticasDashboardAdminOrgResponse getEstatisticasDashboardAdminOrg(Long organizacaoId) {
         tenantHelper.validateTenant(organizacaoId);
-        LocalDate hoje = LocalDate.now();
+        LocalDate hoje = LocalDate.now(FusoHorario.ZONA);
         Periodo semana = Periodo.semanaDe(hoje);
         Periodo dia = Periodo.dia(hoje);
         LocalDate inicioSemana = semana.dataInicio();
@@ -124,7 +125,7 @@ public class ConsultaEstatisticaService {
     @Cacheable(value = "dashboard-profissional", key = "#usuarioId")
     @Transactional(readOnly = true)
     public EstatisticasDashboardAdminOrgResponse getEstatisticasDashboardProfissional(Long usuarioId) {
-        LocalDate hoje = LocalDate.now();
+        LocalDate hoje = LocalDate.now(FusoHorario.ZONA);
         Periodo semana = Periodo.semanaDe(hoje);
         Periodo dia = Periodo.dia(hoje);
         LocalDate inicioSemana = semana.dataInicio();
@@ -196,7 +197,7 @@ public class ConsultaEstatisticaService {
     @Cacheable(value = "dashboard-super-admin", key = "'global'")
     @Transactional(readOnly = true)
     public EstatisticasDashboardAdminOrgResponse getEstatisticasDashboardSuperAdmin() {
-        LocalDate hoje = LocalDate.now();
+        LocalDate hoje = LocalDate.now(FusoHorario.ZONA);
         Periodo semana = Periodo.semanaDe(hoje);
         Periodo dia = Periodo.dia(hoje);
         LocalDate inicioSemana = semana.dataInicio();

@@ -1,5 +1,6 @@
 package br.com.saudeConecta.domain.planos;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -67,13 +68,13 @@ public class PlanoAssinatura implements Serializable {
 
     @PrePersist
     protected void onCreate() {
-        criadoEm = LocalDateTime.now();
-        atualizadoEm = LocalDateTime.now();
+        criadoEm = LocalDateTime.now(FusoHorario.ZONA);
+        atualizadoEm = LocalDateTime.now(FusoHorario.ZONA);
     }
 
     @PreUpdate
     protected void onUpdate() {
-        atualizadoEm = LocalDateTime.now();
+        atualizadoEm = LocalDateTime.now(FusoHorario.ZONA);
     }
 
     /**

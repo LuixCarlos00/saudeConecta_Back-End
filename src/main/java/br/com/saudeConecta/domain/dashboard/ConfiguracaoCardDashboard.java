@@ -1,5 +1,6 @@
 package br.com.saudeConecta.domain.dashboard;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -58,12 +59,12 @@ public class ConfiguracaoCardDashboard implements Serializable {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now(FusoHorario.ZONA);
+        updatedAt = LocalDateTime.now(FusoHorario.ZONA);
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now(FusoHorario.ZONA);
     }
 }

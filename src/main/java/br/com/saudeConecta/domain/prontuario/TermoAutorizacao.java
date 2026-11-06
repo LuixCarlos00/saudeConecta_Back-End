@@ -1,5 +1,6 @@
 package br.com.saudeConecta.domain.prontuario;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.paciente.Paciente;
@@ -67,17 +68,17 @@ public class TermoAutorizacao {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now(FusoHorario.ZONA);
+        updatedAt = LocalDateTime.now(FusoHorario.ZONA);
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now(FusoHorario.ZONA);
     }
 
     public boolean isExpirado() {
-        return LocalDateTime.now().isAfter(this.dataExpiracao);
+        return LocalDateTime.now(FusoHorario.ZONA).isAfter(this.dataExpiracao);
     }
 
     public boolean isPendente() {

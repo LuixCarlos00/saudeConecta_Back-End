@@ -1,5 +1,6 @@
 package br.com.saudeConecta.application.atendimento;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.application.historico.BuscarHistoricoCompletoPacienteDentistaUseCase;
 import br.com.saudeConecta.application.historico.BuscarHistoricoCompletoPacienteMedicoUseCase;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -221,7 +222,7 @@ public class IALocalService {
                     String dataStr = node.get(CAMPO_DATA_FINALIZADO).asText();
                     try {
                         LocalDate data = LocalDate.parse(dataStr.split("T")[0]);
-                        return data.isAfter(LocalDate.now().minusMonths(6));
+                        return data.isAfter(LocalDate.now(FusoHorario.ZONA).minusMonths(6));
                     } catch (Exception e) {
                         return false;
                     }
@@ -320,7 +321,7 @@ public class IALocalService {
         
         resumo.append("\n---\n");
         resumo.append("*Resumo gerado por análise inteligente local - ");
-        resumo.append(LocalDate.now().format(DateTimeFormatter.ofPattern(FORMATO_DATA)));
+        resumo.append(LocalDate.now(FusoHorario.ZONA).format(DateTimeFormatter.ofPattern(FORMATO_DATA)));
         
         return resumo.toString();
     }

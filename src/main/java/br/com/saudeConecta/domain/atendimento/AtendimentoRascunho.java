@@ -1,5 +1,6 @@
 package br.com.saudeConecta.domain.atendimento;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.profissional.Profissional;
@@ -70,12 +71,12 @@ public class AtendimentoRascunho implements Serializable {
     // Segundos inteiros: a coluna DATETIME não guarda fração e a resposta precisa bater com o que o GET devolve depois.
     @PrePersist
     protected void onCreate() {
-        criadoEm = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        criadoEm = LocalDateTime.now(FusoHorario.ZONA).truncatedTo(ChronoUnit.SECONDS);
         atualizadoEm = criadoEm;
     }
 
     @PreUpdate
     protected void onUpdate() {
-        atualizadoEm = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        atualizadoEm = LocalDateTime.now(FusoHorario.ZONA).truncatedTo(ChronoUnit.SECONDS);
     }
 }

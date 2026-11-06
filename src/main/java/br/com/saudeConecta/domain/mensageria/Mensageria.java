@@ -1,5 +1,6 @@
 package br.com.saudeConecta.domain.mensageria;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.config.tenant.TenantAware;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -79,13 +80,13 @@ public class Mensageria implements Serializable, TenantAware {
 
     @PrePersist
     protected void onCreate() {
-        dataCriacao = LocalDateTime.now();
-        dataAtualizacao = LocalDateTime.now();
+        dataCriacao = LocalDateTime.now(FusoHorario.ZONA);
+        dataAtualizacao = LocalDateTime.now(FusoHorario.ZONA);
     }
 
     @PreUpdate
     protected void onUpdate() {
-        dataAtualizacao = LocalDateTime.now();
+        dataAtualizacao = LocalDateTime.now(FusoHorario.ZONA);
     }
 
     @Override

@@ -1,5 +1,6 @@
 package br.com.saudeConecta.application.prontuario;
 
+import br.com.saudeConecta.domain.FusoHorario;
 import org.springframework.http.HttpStatus;
 import br.com.saudeConecta.application.cache.CacheEvictionService;
 import br.com.saudeConecta.application.exception.BusinessException;
@@ -292,7 +293,7 @@ public class ProntuarioService {
     }
 
     private LocalDate parseDataToLocalDate(Date data) {
-        if (data == null) return LocalDate.now();
+        if (data == null) return LocalDate.now(FusoHorario.ZONA);
         return data.toLocalDate();
     }
 
