@@ -128,6 +128,6 @@ Cada movimentação foi seguida de um refreeze em commit próprio. Contagem do s
 | após B5e (listener em `infrastructure.persistence.listener`) | 8 | 25 | 0 |
 | após B5f e fechamento | 8 | 25 | 0 |
 
-- A regra 1 passou a proibir também `infrastructure`, com exceção explícita para `..infrastructure.persistence.listener..`. As 8 violações restantes são as entidades que implementam `config.tenant.TenantAware`.
+- A regra 1 passou a proibir também `infrastructure`, com exceção só para a classe `infrastructure.persistence.listener.AssinaturaTenantCacheListener` (o `@EntityListeners` de `AssinaturaTenant`). As 8 violações restantes são as entidades que implementam `config.tenant.TenantAware`.
 - A regra 2 continua com `HomeController` (22) e `ConsultaController` (3). Elas saem na B6.
 - A regra 5 está ligada: não existe mais classe em `..infra..`, `..usecase..` nem `..util..`.
