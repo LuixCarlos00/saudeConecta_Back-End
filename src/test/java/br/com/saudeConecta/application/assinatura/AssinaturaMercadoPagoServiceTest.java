@@ -3,6 +3,7 @@ package br.com.saudeConecta.application.assinatura;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import br.com.saudeConecta.application.assinatura.dto.LinkPagamentoResponse;
 import br.com.saudeConecta.application.exception.BusinessException;
+import br.com.saudeConecta.application.notificacao.DadosEmailAtivacaoAssinatura;
 import br.com.saudeConecta.application.notificacao.EmailNotificacaoService;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
@@ -23,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -277,9 +279,15 @@ class AssinaturaMercadoPagoServiceTest {
         // M1: o e-mail só sai depois do commit da transação que vinculou o link
         var ordem = inOrder(transactionManager, emailNotificacaoService);
         ordem.verify(transactionManager).commit(any());
-        ordem.verify(emailNotificacaoService).enviarLinkAtivacaoAssinatura(
-                eq(EMAIL_ADMIN), eq("Fulano"), eq("Profissional"), any(), eq(INIT_POINT),
-                eq(EMAIL_ADMIN), any(), eq(ORG_ID), eq(3L));
+        var dados = ArgumentCaptor.forClass(DadosEmailAtivacaoAssinatura.class);
+        ordem.verify(emailNotificacaoService).enviarLinkAtivacaoAssinatura(dados.capture());
+        assertThat(dados.getValue().email()).isEqualTo(EMAIL_ADMIN);
+        assertThat(dados.getValue().nome()).isEqualTo("Fulano");
+        assertThat(dados.getValue().plano()).isEqualTo("Profissional");
+        assertThat(dados.getValue().initPoint()).isEqualTo(INIT_POINT);
+        assertThat(dados.getValue().payerEmail()).isEqualTo(EMAIL_ADMIN);
+        assertThat(dados.getValue().organizacaoId()).isEqualTo(ORG_ID);
+        assertThat(dados.getValue().adminOrgId()).isEqualTo(3L);
     }
 
     @Test
@@ -1009,8 +1017,10 @@ class AssinaturaMercadoPagoServiceTest {
 
         linkService.aoSolicitarLink(new LinkPagamentoSolicitadoEvent(ASSINATURA_ID));
 
-        verify(emailNotificacaoService).enviarLinkAtivacaoAssinatura(eq(EMAIL_ADMIN), any(), any(), any(),
-                eq(INIT_POINT), any(), any(), any(), any());
+        var dados = ArgumentCaptor.forClass(DadosEmailAtivacaoAssinatura.class);
+        verify(emailNotificacaoService).enviarLinkAtivacaoAssinatura(dados.capture());
+        assertThat(dados.getValue().email()).isEqualTo(EMAIL_ADMIN);
+        assertThat(dados.getValue().initPoint()).isEqualTo(INIT_POINT);
     }
 
     @Test

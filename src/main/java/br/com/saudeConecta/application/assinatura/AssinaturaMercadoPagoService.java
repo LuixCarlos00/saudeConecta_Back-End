@@ -3,6 +3,7 @@ package br.com.saudeConecta.application.assinatura;
 import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.application.assinatura.dto.LinkPagamentoResponse;
 import br.com.saudeConecta.application.exception.BusinessException;
+import br.com.saudeConecta.application.notificacao.DadosEmailAtivacaoAssinatura;
 import br.com.saudeConecta.application.notificacao.EmailNotificacaoService;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
@@ -840,7 +841,7 @@ public class AssinaturaMercadoPagoService {
             return;
         }
 
-        emailNotificacaoService.enviarLinkAtivacaoAssinatura(
+        emailNotificacaoService.enviarLinkAtivacaoAssinatura(new DadosEmailAtivacaoAssinatura(
                 owner.getEmail(),
                 owner.getNome(),
                 assinatura.getPlanoAssinatura().getNome(),
@@ -849,6 +850,6 @@ public class AssinaturaMercadoPagoService {
                 link.payerEmail(),
                 assinatura.getDataVencimento(),
                 assinatura.getOrganizacao().getId(),
-                owner.getId());
+                owner.getId()));
     }
 }
