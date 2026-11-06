@@ -1,4 +1,4 @@
-package br.com.saudeConecta.config;
+package br.com.saudeConecta.application.cache;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;

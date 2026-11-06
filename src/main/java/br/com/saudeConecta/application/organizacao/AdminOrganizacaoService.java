@@ -2,6 +2,7 @@ package br.com.saudeConecta.application.organizacao;
 
 import br.com.saudeConecta.application.assinatura.AssinaturaTenantService;
 import br.com.saudeConecta.application.assinatura.LimitePlanoService;
+import br.com.saudeConecta.application.cache.CacheEvictionService;
 import br.com.saudeConecta.application.dashboard.ConfiguracaoGraficoDashboardService;
 import br.com.saudeConecta.application.historico.HistoricoDadosPessoaisService;
 import br.com.saudeConecta.application.historico.SnapshotUtil;
@@ -12,7 +13,6 @@ import br.com.saudeConecta.application.organizacao.dto.CadastrarAdminOrgCompleto
 import br.com.saudeConecta.application.organizacao.dto.CadastrarAdminRequest;
 import br.com.saudeConecta.application.organizacao.dto.CadastroSaasRequest;
 import br.com.saudeConecta.application.usuario.EmailUnicoService;
-import br.com.saudeConecta.config.CacheEvictionService;
 import br.com.saudeConecta.config.logging.MascaraLog;
 import br.com.saudeConecta.config.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.config.tenant.TenantHelper;

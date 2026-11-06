@@ -1,10 +1,10 @@
 package br.com.saudeConecta.application.paciente;
 
+import br.com.saudeConecta.application.cache.CacheEvictionService;
 import br.com.saudeConecta.application.historico.HistoricoDadosPessoaisService;
 import br.com.saudeConecta.application.historico.SnapshotUtil;
 import br.com.saudeConecta.application.paciente.dto.AtualizarPacienteRequest;
 import br.com.saudeConecta.application.paciente.dto.CadastrarPacienteCompletoRequest;
-import br.com.saudeConecta.config.CacheEvictionService;
 import br.com.saudeConecta.config.logging.MascaraLog;
 import br.com.saudeConecta.config.tenant.RequiresTenant;
 import br.com.saudeConecta.config.tenant.TenantHelper;

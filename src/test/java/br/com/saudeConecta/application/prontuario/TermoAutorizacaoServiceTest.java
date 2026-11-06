@@ -1,7 +1,7 @@
 package br.com.saudeConecta.application.prontuario;
 
+import br.com.saudeConecta.application.cache.CacheEvictionService;
 import br.com.saudeConecta.application.prontuario.dto.QuestionarioSaudeRequest;
-import br.com.saudeConecta.config.CacheEvictionService;
 import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.consulta.Consulta;

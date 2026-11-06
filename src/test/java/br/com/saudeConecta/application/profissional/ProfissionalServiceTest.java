@@ -1,12 +1,12 @@
 package br.com.saudeConecta.application.profissional;
 
 import br.com.saudeConecta.application.assinatura.LimitePlanoService;
+import br.com.saudeConecta.application.cache.CacheEvictionService;
 import br.com.saudeConecta.application.historico.HistoricoDadosPessoaisService;
 import br.com.saudeConecta.application.notificacao.EmailNotificacaoService;
 import br.com.saudeConecta.application.profissional.dto.AtualizarClinicoRequest;
 import br.com.saudeConecta.application.profissional.dto.CadastrarClinicoRequest;
 import br.com.saudeConecta.application.usuario.EmailUnicoService;
-import br.com.saudeConecta.config.CacheEvictionService;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.endereco.Endereco;
 import br.com.saudeConecta.domain.mensageria.Mensageria;

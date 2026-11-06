@@ -1,12 +1,12 @@
 package br.com.saudeConecta.application.prontuario;
 
 import org.springframework.http.HttpStatus;
+import br.com.saudeConecta.application.cache.CacheEvictionService;
 import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.application.exception.ResourceNotFoundException;
 import br.com.saudeConecta.application.prontuario.dto.CadastrarProntuarioRequest;
 import br.com.saudeConecta.application.prontuario.dto.PlanejamentoTerapeuticoRequest;
 import br.com.saudeConecta.application.prontuario.mapper.ProntuarioMapper;
-import br.com.saudeConecta.config.CacheEvictionService;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
@@ -53,7 +53,7 @@ public class ProntuarioService {
 
     // Chave de cache sempre prefixada pela organização do token (mesmo formato usado na evicção).
     private static final String CHAVE_CACHE_CONSULTA_TENANT =
-            "T(br.com.saudeConecta.config.CacheEvictionService).chaveConsultaPorTenant("
+            "T(br.com.saudeConecta.application.cache.CacheEvictionService).chaveConsultaPorTenant("
                     + "@tenantHelper.getCurrentTenantIdOrNull(), #consultaId)";
 
     /**

@@ -1,8 +1,8 @@
 package br.com.saudeConecta.application.usuario;
 
 import br.com.saudeConecta.application.assinatura.LimitePlanoService;
+import br.com.saudeConecta.application.cache.CacheEvictionService;
 import br.com.saudeConecta.application.usuario.dto.*;
-import br.com.saudeConecta.config.CacheEvictionService;
 import br.com.saudeConecta.config.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.config.tenant.TenantHelper;

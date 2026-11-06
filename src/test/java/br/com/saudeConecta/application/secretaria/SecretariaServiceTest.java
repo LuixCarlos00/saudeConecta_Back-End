@@ -1,11 +1,11 @@
 package br.com.saudeConecta.application.secretaria;
 
 import br.com.saudeConecta.application.assinatura.LimitePlanoService;
+import br.com.saudeConecta.application.cache.CacheEvictionService;
 import br.com.saudeConecta.application.historico.HistoricoDadosPessoaisService;
 import br.com.saudeConecta.application.notificacao.EmailNotificacaoService;
 import br.com.saudeConecta.application.secretaria.dto.CadastrarSecretariaRequest;
 import br.com.saudeConecta.application.usuario.EmailUnicoService;
-import br.com.saudeConecta.config.CacheEvictionService;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.secretaria.Secretaria;

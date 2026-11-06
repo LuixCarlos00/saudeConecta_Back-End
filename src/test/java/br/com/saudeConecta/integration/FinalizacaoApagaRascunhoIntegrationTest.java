@@ -1,11 +1,11 @@
 package br.com.saudeConecta.integration;
 
+import br.com.saudeConecta.application.cache.CacheEvictionService;
 import br.com.saudeConecta.application.prontuario.PlanejamentoTerapeuticoService;
 import br.com.saudeConecta.application.prontuario.ProntuarioDentistaService;
 import br.com.saudeConecta.application.prontuario.ProntuarioService;
 import br.com.saudeConecta.application.prontuario.dto.CadastrarProntuarioDentistaRequest;
 import br.com.saudeConecta.application.prontuario.dto.CadastrarProntuarioRequest;
-import br.com.saudeConecta.config.CacheEvictionService;
 import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.atendimento.AtendimentoRascunho;

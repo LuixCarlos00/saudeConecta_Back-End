@@ -1,6 +1,6 @@
 package br.com.saudeConecta.infrastructure.persistence.listener;
 
-import br.com.saudeConecta.config.CacheEvictionService;
+import br.com.saudeConecta.application.cache.CacheEvictionService;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
 import jakarta.persistence.PostPersist;
 import jakarta.persistence.PostRemove;

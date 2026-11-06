@@ -1,7 +1,7 @@
 package br.com.saudeConecta.application.prontuario;
 
+import br.com.saudeConecta.application.cache.CacheEvictionService;
 import br.com.saudeConecta.application.prontuario.dto.QuestionarioSaudeRequest;
-import br.com.saudeConecta.config.CacheEvictionService;
 import br.com.saudeConecta.config.logging.MascaraLog;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.consulta.Consulta;
@@ -33,7 +33,7 @@ public class TermoAutorizacaoService {
 
     // Chave de cache sempre prefixada pela organização do token (mesmo formato usado na evicção).
     private static final String CHAVE_CACHE_CONSULTA_TENANT =
-            "T(br.com.saudeConecta.config.CacheEvictionService).chaveConsultaPorTenant("
+            "T(br.com.saudeConecta.application.cache.CacheEvictionService).chaveConsultaPorTenant("
                     + "@tenantHelper.getCurrentTenantIdOrNull(), #consultaId)";
 
     /**

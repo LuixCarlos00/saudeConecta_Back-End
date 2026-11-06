@@ -1,4 +1,4 @@
-package br.com.saudeConecta.config;
+package br.com.saudeConecta.application.cache;
 
 import br.com.saudeConecta.application.assinatura.AcessoAssinaturaService;
 

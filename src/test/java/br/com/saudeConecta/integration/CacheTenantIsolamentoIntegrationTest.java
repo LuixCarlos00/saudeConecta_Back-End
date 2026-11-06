@@ -1,8 +1,8 @@
 package br.com.saudeConecta.integration;
 
+import br.com.saudeConecta.application.cache.CacheEvictionService;
 import br.com.saudeConecta.application.prontuario.ProntuarioService;
 import br.com.saudeConecta.application.prontuario.TermoAutorizacaoService;
-import br.com.saudeConecta.config.CacheEvictionService;
 import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.prontuario.Prontuario;
