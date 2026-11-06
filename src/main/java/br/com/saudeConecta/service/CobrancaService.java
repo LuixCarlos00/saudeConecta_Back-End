@@ -1,9 +1,9 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.domain.planos.CobrancaTenant;
 import br.com.saudeConecta.domain.planos.FormaPagamentoCobranca;
 import br.com.saudeConecta.domain.planos.StatusCobranca;
-import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.infrastructure.persistence.repository.CobrancaTenantRepository;
 import br.com.saudeConecta.presentation.dto.planos.CobrancaTenantResponse;
 import org.slf4j.Logger;

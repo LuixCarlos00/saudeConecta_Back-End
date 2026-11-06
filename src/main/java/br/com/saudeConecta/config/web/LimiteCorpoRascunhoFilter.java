@@ -1,6 +1,6 @@
 package br.com.saudeConecta.config.web;
 
-import br.com.saudeConecta.infra.exceptions.ErrorResponse;
+import br.com.saudeConecta.presentation.erro.ErrorResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ReadListener;

@@ -1,6 +1,6 @@
 package br.com.saudeConecta.service.mercadopago;
 
-import br.com.saudeConecta.infra.exceptions.BusinessException;
+import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.service.mercadopago.dto.AuthorizedPaymentResponse;
 import br.com.saudeConecta.service.mercadopago.dto.AuthorizedPaymentSearchResponse;
 import br.com.saudeConecta.service.mercadopago.dto.PreapprovalResponse;

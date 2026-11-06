@@ -1,4 +1,4 @@
-package br.com.saudeConecta.infra.exceptions;
+package br.com.saudeConecta.application.exception;
 
 import org.springframework.http.HttpStatus;
 

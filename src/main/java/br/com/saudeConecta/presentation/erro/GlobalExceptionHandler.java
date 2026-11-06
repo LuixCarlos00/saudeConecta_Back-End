@@ -1,5 +1,8 @@
-package br.com.saudeConecta.infra.exceptions;
+package br.com.saudeConecta.presentation.erro;
 
+import br.com.saudeConecta.application.exception.BusinessException;
+import br.com.saudeConecta.application.exception.LimitePlanoException;
+import br.com.saudeConecta.application.exception.ResourceNotFoundException;
 import br.com.saudeConecta.config.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.config.tenant.TenantNotDefinedException;
 import com.auth0.jwt.exceptions.JWTVerificationException;

@@ -1,6 +1,8 @@
 package br.com.saudeConecta.service;
 
 import org.springframework.http.HttpStatus;
+import br.com.saudeConecta.application.exception.BusinessException;
+import br.com.saudeConecta.application.exception.ResourceNotFoundException;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
@@ -10,8 +12,6 @@ import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
 import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
 import br.com.saudeConecta.domain.prontuario.ProntuarioDentistaDente;
-import br.com.saudeConecta.infra.exceptions.BusinessException;
-import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
 import br.com.saudeConecta.infrastructure.persistence.repository.AtendimentoRascunhoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;

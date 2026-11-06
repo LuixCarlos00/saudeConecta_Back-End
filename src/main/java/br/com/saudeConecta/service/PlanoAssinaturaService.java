@@ -1,8 +1,8 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.domain.planos.PlanoAssinatura;
 import br.com.saudeConecta.domain.planos.TipoPlano;
-import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.infrastructure.persistence.repository.PlanoAssinaturaRepository;
 import br.com.saudeConecta.presentation.dto.planos.PlanoAssinaturaRequest;
 import br.com.saudeConecta.presentation.dto.planos.PlanoAssinaturaResponse;

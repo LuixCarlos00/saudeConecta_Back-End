@@ -1,8 +1,8 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.config.web.RateLimiter;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
-import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.presentation.dto.admin.CadastroSaasRequest;
 import br.com.saudeConecta.service.AdminOrganizacaoService;
 import jakarta.servlet.http.HttpServletRequest;

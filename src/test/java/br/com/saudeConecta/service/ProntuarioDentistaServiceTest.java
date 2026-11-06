@@ -1,5 +1,7 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.application.exception.BusinessException;
+import br.com.saudeConecta.application.exception.ResourceNotFoundException;
 import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.consulta.Consulta;
@@ -9,8 +11,6 @@ import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
 import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.infra.exceptions.BusinessException;
-import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
 import br.com.saudeConecta.infrastructure.persistence.repository.AtendimentoRascunhoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.PacienteRepository;
@@ -175,9 +175,9 @@ class ProntuarioDentistaServiceTest {
             when(prontuarioDentistaRepository.existsByConsulta_Id(10L)).thenReturn(true);
 
             assertThatThrownBy(() -> service.cadastrarProntuarioByOrg(criarRequest()))
-                    .isInstanceOf(br.com.saudeConecta.infra.exceptions.BusinessException.class)
+                    .isInstanceOf(br.com.saudeConecta.application.exception.BusinessException.class)
                     .satisfies(ex -> {
-                        var be = (br.com.saudeConecta.infra.exceptions.BusinessException) ex;
+                        var be = (br.com.saudeConecta.application.exception.BusinessException) ex;
                         assertThat(be.getStatus()).isEqualTo(org.springframework.http.HttpStatus.CONFLICT);
                         assertThat(be.getErrorCode()).isEqualTo("PRONTUARIO_JA_FINALIZADO");
                     });

@@ -1,5 +1,6 @@
 package br.com.saudeConecta.e2e;
 
+import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.organizacao.TipoOrganizacao;
 import br.com.saudeConecta.domain.planos.*;
@@ -8,7 +9,6 @@ import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
-import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.service.CobrancaScheduler;
 import br.com.saudeConecta.service.mercadopago.MercadoPagoClient;
 import br.com.saudeConecta.service.mercadopago.MercadoPagoWebhookService;

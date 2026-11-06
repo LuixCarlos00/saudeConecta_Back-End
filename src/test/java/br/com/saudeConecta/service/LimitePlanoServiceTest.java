@@ -1,10 +1,10 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.application.exception.LimitePlanoException;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
 import br.com.saudeConecta.domain.planos.PlanoAssinatura;
 import br.com.saudeConecta.domain.planos.StatusAssinatura;
 import br.com.saudeConecta.domain.planos.TipoPlano;
-import br.com.saudeConecta.infra.exceptions.LimitePlanoException;
 import br.com.saudeConecta.infrastructure.persistence.repository.AdminOrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;

@@ -1,10 +1,10 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.config.FusoHorarioConfig;
 import br.com.saudeConecta.domain.planos.StatusAssinatura;
 import br.com.saudeConecta.domain.planos.TipoPlano;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
-import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.infrastructure.persistence.projection.PlataformaProjecoes;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.CobrancaTenantRepository;

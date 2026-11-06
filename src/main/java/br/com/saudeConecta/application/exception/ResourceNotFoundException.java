@@ -1,4 +1,4 @@
-package br.com.saudeConecta.infra.exceptions;
+package br.com.saudeConecta.application.exception;
 
 public class ResourceNotFoundException extends RuntimeException{
 

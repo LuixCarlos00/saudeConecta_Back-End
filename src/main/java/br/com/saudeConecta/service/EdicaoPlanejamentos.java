@@ -1,7 +1,7 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.domain.prontuario.PlanejamentoTerapeutico;
-import br.com.saudeConecta.infra.exceptions.BusinessException;
 import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;

@@ -1,4 +1,4 @@
-package br.com.saudeConecta.infra.exceptions;
+package br.com.saudeConecta.presentation.erro;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 

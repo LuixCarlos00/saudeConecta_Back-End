@@ -1,7 +1,7 @@
 package br.com.saudeConecta.service.mercadopago;
 
+import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.config.RestTemplateConfig;
-import br.com.saudeConecta.infra.exceptions.BusinessException;
 import br.com.saudeConecta.service.mercadopago.dto.AuthorizedPaymentResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

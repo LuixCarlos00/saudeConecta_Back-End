@@ -1,6 +1,6 @@
 package br.com.saudeConecta.integration;
 
-import br.com.saudeConecta.infra.exceptions.BusinessException;
+import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.presentation.dto.planos.AssinaturaPlataformaResponse;
 import br.com.saudeConecta.presentation.dto.planos.PendenciaManualResponse;
 import br.com.saudeConecta.service.AssinaturaTenantService;

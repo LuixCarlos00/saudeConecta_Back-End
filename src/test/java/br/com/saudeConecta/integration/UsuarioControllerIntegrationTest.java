@@ -168,7 +168,7 @@ class UsuarioControllerIntegrationTest {
         @WithMockUser(roles = {"ADMIN", "PROFISSIONAL", "RECEPCIONISTA"})
         @DisplayName("4.4 - Reativar acima do limite do plano responde 422 com a mensagem (antes: 500 sem corpo)")
         void deveRetornar422QuandoLimiteDoPlanoAtingido() throws Exception {
-            doThrow(new br.com.saudeConecta.infra.exceptions.LimitePlanoException("PROFISSIONAL", 3, 3L))
+            doThrow(new br.com.saudeConecta.application.exception.LimitePlanoException("PROFISSIONAL", 3, 3L))
                     .when(usuarioService).bloquearUsuariobyOrg(any());
 
             BloquearUsuarioRequest request = new BloquearUsuarioRequest(20L, 10L, 1);

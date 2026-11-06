@@ -182,7 +182,7 @@ public class UsuarioService   {
      *
      * @param tipoUsuario   tipo do usuário reativado
      * @param organizacaoId organização dona da vaga
-     * @throws br.com.saudeConecta.infra.exceptions.LimitePlanoException se o limite estiver cheio
+     * @throws br.com.saudeConecta.application.exception.LimitePlanoException se o limite estiver cheio
      */
     private void validarLimiteParaReativar(TipoUsuarioNovo tipoUsuario, Long organizacaoId) {
         if (tipoUsuario == null || organizacaoId == null) {

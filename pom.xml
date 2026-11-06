@@ -147,7 +147,9 @@
 						<!-- Configurações Spring -->
 						<exclude>br/com/saudeConecta/config/**/*</exclude>
 						<!-- Infraestrutura: repositórios JPA, tenant, filtros -->
-						<exclude>br/com/saudeConecta/infra/**/*</exclude>
+						<!-- (ex-infra/exceptions: exceções e handler HTTP, excluídos como antes da B5) -->
+						<exclude>br/com/saudeConecta/application/exception/**/*</exclude>
+						<exclude>br/com/saudeConecta/presentation/erro/**/*</exclude>
 						<exclude>br/com/saudeConecta/infrastructure/**/*</exclude>
 						<!-- Infraestrutura de email: depende de SMTP/Thymeleaf reais -->
 						<exclude>br/com/saudeConecta/email/EmailRemetenteService*</exclude>

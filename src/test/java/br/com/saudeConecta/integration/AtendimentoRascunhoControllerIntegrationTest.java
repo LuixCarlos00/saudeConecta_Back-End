@@ -1,7 +1,7 @@
 package br.com.saudeConecta.integration;
 
-import br.com.saudeConecta.infra.exceptions.BusinessException;
-import br.com.saudeConecta.infra.exceptions.ResourceNotFoundException;
+import br.com.saudeConecta.application.exception.BusinessException;
+import br.com.saudeConecta.application.exception.ResourceNotFoundException;
 import br.com.saudeConecta.presentation.dto.atendimento.RascunhoAtendimentoResponse;
 import br.com.saudeConecta.presentation.dto.atendimento.RascunhoAtendimentoResumoResponse;
 import br.com.saudeConecta.presentation.dto.atendimento.SalvarRascunhoAtendimentoRequest;
