@@ -7,6 +7,7 @@ import br.com.saudeConecta.infrastructure.mercadopago.dto.PreapprovalResponse;
 import br.com.saudeConecta.infrastructure.persistence.repository.AssinaturaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.CobrancaTenantRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.MpWebhookEventoRepository;
+import br.com.saudeConecta.config.logging.MascaraLog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -99,7 +100,7 @@ public class MercadoPagoWebhookService {
         try {
             processar(tipo, dataId, payload);
         } catch (Exception e) {
-            log.error("mp.webhook falha tipo={} dataId={} etapa=ASSINCRONO", tipo, dataId, e);
+            log.error("mp.webhook falha tipo={} dataId={} etapa=ASSINCRONO", MascaraLog.seguro(tipo), MascaraLog.seguro(dataId), e);
         }
     }
 
@@ -117,14 +118,14 @@ public class MercadoPagoWebhookService {
     public void processar(String tipo, String dataId, String payload) {
         MpWebhookEvento evento = transactionTemplate.execute(status -> registrarEvento(tipo, dataId, payload));
         if (evento == null) {
-            log.info("mp.webhook ignorado motivo=JA_ENCERRADO tipo={} dataId={}", tipo, dataId);
+            log.info("mp.webhook ignorado motivo=JA_ENCERRADO tipo={} dataId={}", MascaraLog.seguro(tipo), MascaraLog.seguro(dataId));
             return;
         }
 
         try {
             processarComReaplicacao(evento, tipo, dataId);
         } catch (Exception e) {
-            log.error("mp.webhook falha tipo={} dataId={}", tipo, dataId, e);
+            log.error("mp.webhook falha tipo={} dataId={}", MascaraLog.seguro(tipo), MascaraLog.seguro(dataId), e);
             registrarFalha(evento, e);
         }
     }
@@ -178,14 +179,14 @@ public class MercadoPagoWebhookService {
         int reprocessados = 0;
         for (MpWebhookEvento evento : elegiveis) {
             log.info("mp.webhook.reprocessar inicio tipo={} dataId={} tentativasAnteriores={} ultimoErro={}",
-                    evento.getTipo(), evento.getDataId(), evento.getTentativas(), evento.getErro());
+                    MascaraLog.seguro(evento.getTipo()), MascaraLog.seguro(evento.getDataId()), evento.getTentativas(), evento.getErro());
             // Falha fora do tratamento do processar (ex.: banco ao registrar o evento) não derruba o lote
             try {
                 processar(evento.getTipo(), evento.getDataId(), evento.getPayload());
                 reprocessados++;
             } catch (Exception e) {
                 log.error("mp.webhook.reprocessar falha tipo={} dataId={} acao=SEGUE_PARA_O_PROXIMO",
-                        evento.getTipo(), evento.getDataId(), e);
+                        MascaraLog.seguro(evento.getTipo()), MascaraLog.seguro(evento.getDataId()), e);
             }
         }
         return reprocessados;
@@ -215,7 +216,7 @@ public class MercadoPagoWebhookService {
                     throw e;
                 }
                 log.warn("mp.webhook conflito.versao tipo={} dataId={} tentativa={}/{} acao=REAPLICAR",
-                        tipo, dataId, tentativa, MAX_TENTATIVAS_CONFLITO_VERSAO);
+                        MascaraLog.seguro(tipo), MascaraLog.seguro(dataId), tentativa, MAX_TENTATIVAS_CONFLITO_VERSAO);
             }
         }
     }
@@ -289,7 +290,7 @@ public class MercadoPagoWebhookService {
 
         } catch (DataIntegrityViolationException e) {
             // Corrida entre duas entregas simultâneas da mesma notificação
-            log.info("mp.webhook ignorado motivo=JA_REGISTRADO_CONCORRENTEMENTE tipo={} dataId={}", tipo, dataId);
+            log.info("mp.webhook ignorado motivo=JA_REGISTRADO_CONCORRENTEMENTE tipo={} dataId={}", MascaraLog.seguro(tipo), MascaraLog.seguro(dataId));
             return null;
         }
     }
@@ -469,7 +470,7 @@ public class MercadoPagoWebhookService {
             return true;
         }
         log.warn("mp.webhook ignorado motivo=RECURSO_DIVERGENTE tipo={} dataId={} idConsultado={}",
-                tipo, dataId, idConsultado);
+                MascaraLog.seguro(tipo), MascaraLog.seguro(dataId), MascaraLog.seguro(idConsultado));
         return false;
     }
 
