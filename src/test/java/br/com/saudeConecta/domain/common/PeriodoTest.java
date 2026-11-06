@@ -168,7 +168,8 @@ class PeriodoTest {
         @Test
         @DisplayName("data nula é recusada na criação")
         void dataNula() {
-            assertThatThrownBy(() -> Periodo.entre(null, data("2026-11-03")))
+            var fim = data("2026-11-03");
+            assertThatThrownBy(() -> Periodo.entre(null, fim))
                     .isInstanceOf(NullPointerException.class)
                     .hasMessageContaining("dataInicio");
             assertThatThrownBy(() -> Periodo.dia(null))

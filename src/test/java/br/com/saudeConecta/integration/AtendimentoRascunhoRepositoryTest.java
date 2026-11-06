@@ -88,7 +88,8 @@ class AtendimentoRascunhoRepositoryTest {
         Consulta c = consulta(ORG_A, profissional(ORG_A, USUARIO_DONO));
         repository.saveAndFlush(rascunho(c, 1));
 
-        assertThatThrownBy(() -> repository.saveAndFlush(rascunho(c, 2)))
+        var segundo = rascunho(c, 2);
+        assertThatThrownBy(() -> repository.saveAndFlush(segundo))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 

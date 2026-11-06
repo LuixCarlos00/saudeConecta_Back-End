@@ -235,8 +235,8 @@ class ConsultaBuscaServiceTest {
     @DisplayName("pesquisarClinicasEmIntervaloDeDatas")
     class PesquisarClinicasEmIntervaloDeDatas {
 
-        private final LocalDate INICIO = LocalDate.now().minusDays(7);
-        private final LocalDate FIM = LocalDate.now();
+        private final LocalDate inicio = LocalDate.now().minusDays(7);
+        private final LocalDate fim = LocalDate.now();
 
         @Test
         @DisplayName("Deve buscar todas as consultas quando status for ALL")
@@ -246,7 +246,7 @@ class ConsultaBuscaServiceTest {
                     eq(ORG_ID), eq(5L), isNull(), any(), any()))
                     .thenReturn(List.of(consultaAgendada));
 
-            List<Consulta> resultado = consultaBuscaService.pesquisarClinicasEmIntervaloDeDatas(5L, INICIO, FIM, "ALL");
+            List<Consulta> resultado = consultaBuscaService.pesquisarClinicasEmIntervaloDeDatas(5L, inicio, fim, "ALL");
 
             assertThat(resultado).hasSize(1);
             verify(consultaRepository).findByOrganizacaoIdAndUsuarioIdAndStatusOptionalAndDataHoraBetween(
@@ -261,7 +261,7 @@ class ConsultaBuscaServiceTest {
                     eq(ORG_ID), eq(5L), eq(StatusConsulta.AGENDADA), any(), any()))
                     .thenReturn(List.of(consultaAgendada));
 
-            List<Consulta> resultado = consultaBuscaService.pesquisarClinicasEmIntervaloDeDatas(5L, INICIO, FIM, "AGENDADA");
+            List<Consulta> resultado = consultaBuscaService.pesquisarClinicasEmIntervaloDeDatas(5L, inicio, fim, "AGENDADA");
 
             assertThat(resultado).hasSize(1);
             verify(consultaRepository).findByOrganizacaoIdAndUsuarioIdAndStatusOptionalAndDataHoraBetween(
@@ -276,7 +276,7 @@ class ConsultaBuscaServiceTest {
                     eq(ORG_ID), eq(5L), isNull(), any(), any()))
                     .thenReturn(List.of(consultaAgendada));
 
-            List<Consulta> resultado = consultaBuscaService.pesquisarClinicasEmIntervaloDeDatas(5L, INICIO, FIM, null);
+            List<Consulta> resultado = consultaBuscaService.pesquisarClinicasEmIntervaloDeDatas(5L, inicio, fim, null);
 
             assertThat(resultado).hasSize(1);
         }
@@ -287,7 +287,7 @@ class ConsultaBuscaServiceTest {
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
 
             assertThatThrownBy(() ->
-                    consultaBuscaService.pesquisarClinicasEmIntervaloDeDatas(5L, INICIO, FIM, "INEXISTENTE"))
+                    consultaBuscaService.pesquisarClinicasEmIntervaloDeDatas(5L, inicio, fim, "INEXISTENTE"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Status de consulta invalido");
         }

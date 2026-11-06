@@ -47,7 +47,7 @@ class QuestionarioPublicoControllerIntegrationTest {
                         .content("{\"token\":\"" + TOKEN + "\",\"assinaturaBase64\":\"sig\"}"))
                 .andExpect(status().isOk());
 
-        verify(planejamentoService).assinarPorToken(eq(TOKEN), eq("sig"), eq("10.1.2.3"));
+        verify(planejamentoService).assinarPorToken(TOKEN, "sig", "10.1.2.3");
         assertThat(output.getAll()).contains("token=abcdef***").doesNotContain(TOKEN);
     }
 

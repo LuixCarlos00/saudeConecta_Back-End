@@ -84,7 +84,7 @@ class HomeControllerIntegrationTest {
         @Test
         @DisplayName("Deve retornar 200 ao solicitar recuperação de senha para email válido")
         void deveRetornar200AoSolicitarRecuperacao() throws Exception {
-            doNothing().when(homeService).recuperarSenhaPorEmail(eq("usuario@teste.com"));
+            doNothing().when(homeService).recuperarSenhaPorEmail("usuario@teste.com");
 
             mockMvc.perform(post("/Home/esqueciMinhaSenha")
                             .with(csrf())

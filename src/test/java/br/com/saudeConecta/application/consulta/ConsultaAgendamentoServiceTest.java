@@ -233,7 +233,8 @@ class ConsultaAgendamentoServiceTest {
             when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
                     .thenReturn(List.of(existente(nove, 60, StatusConsulta.AGENDADA)));
 
-            assertThatThrownBy(() -> consultaAgendamentoService.cadastrarConsultaByOrg(requestEm(nove.plusMinutes(30), 30)))
+            var requisicao = requestEm(nove.plusMinutes(30), 30);
+            assertThatThrownBy(() -> consultaAgendamentoService.cadastrarConsultaByOrg(requisicao))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("Já existe consulta agendada para este horário");
             verify(consultaRepository, never()).save(any());
@@ -247,7 +248,8 @@ class ConsultaAgendamentoServiceTest {
             when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
                     .thenReturn(List.of(existente(nove, 60, StatusConsulta.CONFIRMADA)));
 
-            assertThatThrownBy(() -> consultaAgendamentoService.cadastrarConsultaByOrg(requestEm(nove, 30)))
+            var requisicao = requestEm(nove, 30);
+            assertThatThrownBy(() -> consultaAgendamentoService.cadastrarConsultaByOrg(requisicao))
                     .isInstanceOf(IllegalStateException.class);
             verify(consultaRepository, never()).save(any());
         }
@@ -260,7 +262,8 @@ class ConsultaAgendamentoServiceTest {
             when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
                     .thenReturn(List.of(existente(nove.plusMinutes(15), 15, StatusConsulta.AGENDADA)));
 
-            assertThatThrownBy(() -> consultaAgendamentoService.cadastrarConsultaByOrg(requestEm(nove, 60)))
+            var requisicao = requestEm(nove, 60);
+            assertThatThrownBy(() -> consultaAgendamentoService.cadastrarConsultaByOrg(requisicao))
                     .isInstanceOf(IllegalStateException.class);
         }
 
@@ -272,7 +275,8 @@ class ConsultaAgendamentoServiceTest {
             when(consultaRepository.findAtivasDoProfissionalNoPeriodo(eq(ORG_ID), eq(5L), any(), any()))
                     .thenReturn(List.of(existente(nove, null, StatusConsulta.AGENDADA)));
 
-            assertThatThrownBy(() -> consultaAgendamentoService.cadastrarConsultaByOrg(requestEm(nove.plusMinutes(29), 30)))
+            var requisicao = requestEm(nove.plusMinutes(29), 30);
+            assertThatThrownBy(() -> consultaAgendamentoService.cadastrarConsultaByOrg(requisicao))
                     .isInstanceOf(IllegalStateException.class);
         }
 
@@ -650,8 +654,10 @@ class ConsultaAgendamentoServiceTest {
                     .thenReturn(Optional.of(consultaAgendada));
             when(prontuarioDentistaRepository.findByConsultaId(100L))
                     .thenReturn(Collections.emptyList());
+            br.com.saudeConecta.domain.prontuario.Prontuario prontuarioMedico =
+                    mock(br.com.saudeConecta.domain.prontuario.Prontuario.class);
             when(prontuarioRepository.findByConsulta_Id(100L))
-                    .thenReturn(mock(br.com.saudeConecta.domain.prontuario.Prontuario.class));
+                    .thenReturn(prontuarioMedico);
 
             assertThatThrownBy(() -> consultaAgendamentoService.deletarConsulta(100L))
                     .isInstanceOf(IllegalStateException.class)

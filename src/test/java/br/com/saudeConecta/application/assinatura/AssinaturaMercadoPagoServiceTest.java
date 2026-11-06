@@ -662,7 +662,8 @@ class AssinaturaMercadoPagoServiceTest {
         when(mercadoPagoClient.atualizarValor(any(), any()))
                 .thenThrow(new BusinessException("MP fora", org.springframework.http.HttpStatus.BAD_GATEWAY));
 
-        assertThatThrownBy(() -> service.propagarNovoValor(assinatura, BigDecimal.valueOf(279)))
+        BigDecimal novoValor = BigDecimal.valueOf(279);
+        assertThatThrownBy(() -> service.propagarNovoValor(assinatura, novoValor))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> {
                     BusinessException be = (BusinessException) e;
@@ -702,7 +703,8 @@ class AssinaturaMercadoPagoServiceTest {
         when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID))
                 .thenReturn(comValor(PREAPPROVAL_ID, "authorized", "279"));
 
-        assertThatThrownBy(() -> service.propagarNovoValor(assinatura, BigDecimal.valueOf(279)))
+        BigDecimal novoValor = BigDecimal.valueOf(279);
+        assertThatThrownBy(() -> service.propagarNovoValor(assinatura, novoValor))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo("MP_VALOR_NAO_ATUALIZADO"));
     }
@@ -717,7 +719,8 @@ class AssinaturaMercadoPagoServiceTest {
                 .thenReturn(comValor(PREAPPROVAL_ID, "authorized", "279"))
                 .thenThrow(new BusinessException("timeout", org.springframework.http.HttpStatus.BAD_GATEWAY));
 
-        assertThatThrownBy(() -> service.propagarNovoValor(assinatura, BigDecimal.valueOf(279)))
+        BigDecimal novoValor = BigDecimal.valueOf(279);
+        assertThatThrownBy(() -> service.propagarNovoValor(assinatura, novoValor))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo("MP_VALOR_NAO_ATUALIZADO"));
     }

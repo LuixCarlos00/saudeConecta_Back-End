@@ -57,7 +57,8 @@ class ChamadoSuporteServiceTest {
         when(tenantHelper.getCurrentTenantIdOrNullIfSuperAdmin())
                 .thenThrow(new TenantNotDefinedException("Tenant não definido"));
 
-        assertThatThrownBy(() -> service.listarPorTenant(null, null, PageRequest.of(0, 10)))
+        var pagina = PageRequest.of(0, 10);
+        assertThatThrownBy(() -> service.listarPorTenant(null, null, pagina))
                 .isInstanceOf(TenantNotDefinedException.class);
         verify(chamadoSuporteRepository, never()).findAllWithFilters(any(), any(), any());
     }
@@ -99,8 +100,8 @@ class ChamadoSuporteServiceTest {
     void atualizarStatusExigeRoot() {
         when(tenantHelper.isSuperAdmin()).thenReturn(false);
 
-        assertThatThrownBy(() -> service.atualizarStatus("ABC123",
-                new AtualizarStatusChamadoRequest(StatusChamado.EM_ANALISE, null)))
+        var requisicao = new AtualizarStatusChamadoRequest(StatusChamado.EM_ANALISE, null);
+        assertThatThrownBy(() -> service.atualizarStatus("ABC123", requisicao))
                 .isInstanceOf(TenantAccessDeniedException.class);
         verify(chamadoSuporteRepository, never()).findByIdWithAnexos(any());
     }

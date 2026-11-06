@@ -154,7 +154,8 @@ class ProntuarioServiceTest {
             when(consultaRepository.buscarComLock(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
             when(prontuarioRepository.save(any())).thenThrow(new org.springframework.dao.DataIntegrityViolationException("falha"));
 
-            assertThatThrownBy(() -> service.cadastrarProntuarioMedico(criarRequest()))
+            var requisicao = criarRequest();
+            assertThatThrownBy(() -> service.cadastrarProntuarioMedico(requisicao))
                     .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
 
             verify(atendimentoRascunhoRepository, never()).apagarPorConsulta(any());
@@ -167,7 +168,8 @@ class ProntuarioServiceTest {
             when(consultaRepository.buscarComLock(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
             when(prontuarioRepository.existsByConsulta_Id(10L)).thenReturn(true);
 
-            assertThatThrownBy(() -> service.cadastrarProntuarioMedico(criarRequest()))
+            var requisicao = criarRequest();
+            assertThatThrownBy(() -> service.cadastrarProntuarioMedico(requisicao))
                     .isInstanceOf(br.com.saudeConecta.application.exception.BusinessException.class)
                     .satisfies(ex -> {
                         var be = (br.com.saudeConecta.application.exception.BusinessException) ex;
@@ -412,7 +414,8 @@ class ProntuarioServiceTest {
         void deveLancarExcecaoQuandoNaoEncontrado() {
             when(prontuarioRepository.findByProntCodigoProntuarioAndConsulta_Organizacao_Id(99L, ORG)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> service.atualizarProntuarioMedico(99L, criarRequest()))
+            var requisicao = criarRequest();
+            assertThatThrownBy(() -> service.atualizarProntuarioMedico(99L, requisicao))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Prontuário não encontrado");
         }
@@ -437,7 +440,8 @@ class ProntuarioServiceTest {
             for (Long outroUsuario : List.of(501L, 502L, 503L)) { // outro médico, secretária, gestor
                 TenantContext.setCurrentUser(outroUsuario);
 
-                assertThatThrownBy(() -> service.atualizarProntuarioMedico(1L, criarRequest()))
+                var requisicao = criarRequest();
+                assertThatThrownBy(() -> service.atualizarProntuarioMedico(1L, requisicao))
                         .isInstanceOf(ResourceNotFoundException.class);
             }
             verify(prontuarioRepository, never()).save(any());
@@ -451,7 +455,8 @@ class ProntuarioServiceTest {
             prontuarioGravado();
             TenantContext.setCurrentUser(null);
 
-            assertThatThrownBy(() -> service.atualizarProntuarioMedico(1L, criarRequest()))
+            var requisicao = criarRequest();
+            assertThatThrownBy(() -> service.atualizarProntuarioMedico(1L, requisicao))
                     .isInstanceOf(ResourceNotFoundException.class);
         }
 
@@ -645,7 +650,8 @@ class ProntuarioServiceTest {
             when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
             lenient().when(consultaRepository.findById(10L)).thenReturn(Optional.of(criarConsulta(10L)));
 
-            assertThatThrownBy(() -> service.cadastrarProntuarioMedico(criarRequest()))
+            var requisicao = criarRequest();
+            assertThatThrownBy(() -> service.cadastrarProntuarioMedico(requisicao))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Consulta nao encontrada");
             verify(prontuarioRepository, never()).save(any());
@@ -656,7 +662,8 @@ class ProntuarioServiceTest {
         void cadastrarProfissionalOutraClinica() {
             lenient().when(profissionalRepository.findById(1L)).thenReturn(Optional.of(criarProfissional(1L)));
 
-            assertThatThrownBy(() -> service.cadastrarProntuarioMedico(criarRequest()))
+            var requisicao = criarRequest();
+            assertThatThrownBy(() -> service.cadastrarProntuarioMedico(requisicao))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Profissional nao encontrado");
             verify(prontuarioRepository, never()).save(any());
@@ -667,7 +674,8 @@ class ProntuarioServiceTest {
         void atualizarOutraClinica() {
             lenient().when(prontuarioRepository.findById(1L)).thenReturn(Optional.of(prontuarioDeOutraClinica()));
 
-            assertThatThrownBy(() -> service.atualizarProntuarioMedico(1L, criarRequest()))
+            var requisicao = criarRequest();
+            assertThatThrownBy(() -> service.atualizarProntuarioMedico(1L, requisicao))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Prontuário não encontrado");
             verify(prontuarioRepository, never()).saveAndFlush(any());

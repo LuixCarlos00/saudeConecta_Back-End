@@ -44,8 +44,8 @@ class ViaCepClientTest {
 
         Object endereco = cliente.buscar("01310100");
 
-        assertThat(endereco).isInstanceOf(Map.class);
-        assertThat(((Map<?, ?>) endereco).get("logradouro")).isEqualTo("Avenida Paulista");
+        assertThat(endereco).asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories.map(String.class, Object.class))
+                .containsEntry("logradouro", "Avenida Paulista");
         servidor.verify();
     }
 

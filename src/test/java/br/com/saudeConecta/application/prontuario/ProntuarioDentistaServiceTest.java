@@ -161,7 +161,8 @@ class ProntuarioDentistaServiceTest {
             when(consultaRepository.buscarComLock(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
             when(prontuarioDentistaRepository.save(any())).thenThrow(new org.springframework.dao.DataIntegrityViolationException("falha"));
 
-            assertThatThrownBy(() -> service.cadastrarProntuarioByOrg(criarRequest()))
+            var requisicao = criarRequest();
+            assertThatThrownBy(() -> service.cadastrarProntuarioByOrg(requisicao))
                     .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
 
             verify(atendimentoRascunhoRepository, never()).apagarPorConsulta(any());
@@ -174,7 +175,8 @@ class ProntuarioDentistaServiceTest {
             when(consultaRepository.buscarComLock(10L, ORG)).thenReturn(Optional.of(criarConsulta(10L)));
             when(prontuarioDentistaRepository.existsByConsulta_Id(10L)).thenReturn(true);
 
-            assertThatThrownBy(() -> service.cadastrarProntuarioByOrg(criarRequest()))
+            var requisicao = criarRequest();
+            assertThatThrownBy(() -> service.cadastrarProntuarioByOrg(requisicao))
                     .isInstanceOf(br.com.saudeConecta.application.exception.BusinessException.class)
                     .satisfies(ex -> {
                         var be = (br.com.saudeConecta.application.exception.BusinessException) ex;
@@ -354,7 +356,8 @@ class ProntuarioDentistaServiceTest {
         void deveLancarExcecaoQuandoNaoEncontrado() {
             when(prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(99L, ORG)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> service.atualizarProntuario(99L, criarRequest()))
+            var requisicao = criarRequest();
+            assertThatThrownBy(() -> service.atualizarProntuario(99L, requisicao))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Prontuario odontologico nao encontrado");
         }
@@ -449,7 +452,8 @@ class ProntuarioDentistaServiceTest {
             when(prontuarioDentistaRepository.findByCodigoAndConsulta_Organizacao_Id(1L, ORG)).thenReturn(Optional.of(prontuario));
             for (Long outroUsuario : List.of(501L, 502L, 503L)) {
                 TenantContext.setCurrentUser(outroUsuario);
-                assertThatThrownBy(() -> service.atualizarProntuario(1L, criarRequest()))
+                var requisicao = criarRequest();
+                assertThatThrownBy(() -> service.atualizarProntuario(1L, requisicao))
                         .isInstanceOf(ResourceNotFoundException.class);
             }
             verify(prontuarioDentistaRepository, never()).saveAndFlush(any());
@@ -518,7 +522,8 @@ class ProntuarioDentistaServiceTest {
             when(profissionalRepository.findByIdAndOrganizacao_Id(1L, ORG)).thenReturn(Optional.of(criarProfissional(1L)));
             lenient().when(consultaRepository.findById(10L)).thenReturn(Optional.of(criarConsulta(10L)));
 
-            assertThatThrownBy(() -> service.cadastrarProntuarioByOrg(criarRequest()))
+            var requisicao = criarRequest();
+            assertThatThrownBy(() -> service.cadastrarProntuarioByOrg(requisicao))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Consulta nao encontrada");
             verify(prontuarioDentistaRepository, never()).save(any());
@@ -529,7 +534,8 @@ class ProntuarioDentistaServiceTest {
         void atualizarOutraClinica() {
             lenient().when(prontuarioDentistaRepository.findById(1L)).thenReturn(Optional.of(criarProntuario(1L)));
 
-            assertThatThrownBy(() -> service.atualizarProntuario(1L, criarRequest()))
+            var requisicao = criarRequest();
+            assertThatThrownBy(() -> service.atualizarProntuario(1L, requisicao))
                     .isInstanceOf(ResourceNotFoundException.class);
             verify(prontuarioDentistaRepository, never()).saveAndFlush(any());
             verify(prontuarioDentistaRepository, never()).save(any());

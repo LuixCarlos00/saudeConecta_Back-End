@@ -302,12 +302,12 @@ class PlataformaDashboardRepositoryTest {
 
         assertThat(suspensas).extracting(PlataformaProjecoes.ClinicaAtencao::getNome).containsExactly("Zeta");
         assertThat(inadimplentes).hasSize(1);
-        PlataformaProjecoes.ClinicaAtencao beta = inadimplentes.get(0);
-        assertThat(beta.getOrganizacaoId()).isEqualTo(this.beta.getId());
-        assertThat(beta.getNome()).isEqualTo("Beta");
-        assertThat(beta.getPlano()).isEqualTo(TipoPlano.PROFISSIONAL);
-        assertThat(beta.getDataVencimento()).isEqualTo(LocalDate.of(2026, 10, 28));
-        assertThat(beta.getValorMensal()).isEqualByComparingTo("279");
+        PlataformaProjecoes.ClinicaAtencao clinicaBeta = inadimplentes.get(0);
+        assertThat(clinicaBeta.getOrganizacaoId()).isEqualTo(this.beta.getId());
+        assertThat(clinicaBeta.getNome()).isEqualTo("Beta");
+        assertThat(clinicaBeta.getPlano()).isEqualTo(TipoPlano.PROFISSIONAL);
+        assertThat(clinicaBeta.getDataVencimento()).isEqualTo(LocalDate.of(2026, 10, 28));
+        assertThat(clinicaBeta.getValorMensal()).isEqualByComparingTo("279");
         assertThat(trials).extracting(PlataformaProjecoes.ClinicaAtencao::getNome).containsExactly("Delta");
         assertThat(assinaturaRepository.buscarAtencaoPorStatus(StatusAssinatura.ATIVA, PageRequest.ofSize(2)))
                 .hasSize(2);

@@ -243,8 +243,8 @@ class MensageriaServiceTest {
             assertThat(mensageria.getErroDetalhe()).isNull();
             verify(mensageriaRepository).save(mensageria);
             verify(emailNotificacaoService).reenviarEmail(
-                    eq(MSG_ID), eq("prof@teste.com"),
-                    eq(mensageria.getAssunto()), eq(mensageria.getCorpoMensagem()));
+                    MSG_ID, "prof@teste.com",
+                    mensageria.getAssunto(), mensageria.getCorpoMensagem());
         }
 
         @Test
@@ -299,7 +299,8 @@ class MensageriaServiceTest {
         @Test
         @DisplayName("listarMensagens nega e não consulta a visão global")
         void listarNega() {
-            assertThatThrownBy(() -> mensageriaService.listarMensagens(null, null, PageRequest.of(0, 10)))
+            var pagina = PageRequest.of(0, 10);
+            assertThatThrownBy(() -> mensageriaService.listarMensagens(null, null, pagina))
                     .isInstanceOf(TenantNotDefinedException.class);
             verify(mensageriaRepository, never()).findAllWithFilters(any(), any(), any());
         }

@@ -307,7 +307,7 @@ class PagamentoAssinaturaFluxoE2ETest {
             return preapproval("pa-c3-a", "cancelled", referencia);
         });
 
-        gerarLink(suspensa);
+        gerarLink();
 
         assertThat(vistaNoCancelamento.get()).isNotNull();
         assertThat(vistaNoCancelamento.get().getMpPreapprovalId()).isEqualTo("pa-c3-b");
@@ -335,7 +335,7 @@ class PagamentoAssinaturaFluxoE2ETest {
         when(mercadoPagoClient.criarPreapprovalPendente(anyString(), anyString(), anyString(), any()))
                 .thenThrow(new BusinessException("MP fora do ar", HttpStatus.BAD_GATEWAY));
 
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> gerarLink(suspensa))
+        org.assertj.core.api.Assertions.assertThatThrownBy(this::gerarLink)
                 .isInstanceOf(BusinessException.class);
 
         AssinaturaTenant depois = recarregar(suspensa);
@@ -360,7 +360,7 @@ class PagamentoAssinaturaFluxoE2ETest {
                 .thenThrow(new BusinessException("MP fora do ar", HttpStatus.BAD_GATEWAY))
                 .thenReturn(preapproval("pa-c3-a", "cancelled", referencia));
 
-        gerarLink(suspensa);
+        gerarLink();
 
         AssinaturaTenant pendente = recarregar(suspensa);
         assertThat(pendente.getMpPreapprovalId()).isEqualTo("pa-c3-b");
@@ -613,7 +613,7 @@ class PagamentoAssinaturaFluxoE2ETest {
         assertThat(recarregar(legada).getMpPreapprovalId()).isNull();
     }
 
-    private void gerarLink(AssinaturaTenant assinatura) {
+    private void gerarLink() {
         linkPagamentoAssinaturaService.gerarLinkPagamento(organizacao.getId());
     }
 }

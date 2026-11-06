@@ -333,8 +333,8 @@ class AssinaturaTenantServiceTest {
         @Test
         @DisplayName("Listagem da plataforma: ordenação fora da lista branca responde 400")
         void listarParaPlataformaOrdenacaoInvalida() {
-            assertThatThrownBy(() -> service.listarParaPlataforma(null, null, null, null,
-                    PageRequest.of(0, 20, Sort.by("mpPayerEmail"))))
+            PageRequest ordenacaoInvalida = PageRequest.of(0, 20, Sort.by("mpPayerEmail"));
+            assertThatThrownBy(() -> service.listarParaPlataforma(null, null, null, null, ordenacaoInvalida))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -542,7 +542,7 @@ class AssinaturaTenantServiceTest {
 
             service.customizarPlano(1L, request);
 
-            assertThat(assinatura.getQtdAdminExtra()).isEqualTo(0);
+            assertThat(assinatura.getQtdAdminExtra()).isZero();
         }
     }
 
