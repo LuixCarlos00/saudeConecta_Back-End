@@ -131,3 +131,20 @@ Cada movimentação foi seguida de um refreeze em commit próprio. Contagem do s
 - A regra 1 passou a proibir também `infrastructure`, com exceção só para a classe `infrastructure.persistence.listener.AssinaturaTenantCacheListener` (o `@EntityListeners` de `AssinaturaTenant`). As 8 violações restantes são as entidades que implementam `config.tenant.TenantAware`.
 - A regra 2 continua com `HomeController` (22) e `ConsultaController` (3). Elas saem na B6.
 - A regra 5 está ligada: não existe mais classe em `..infra..`, `..usecase..` nem `..util..`.
+
+### Depois da B6 (quebra dos arquivos gigantes)
+
+Nenhuma violação nova: o store só encolheu, sem refreeze. As linhas saem sozinhas quando o `ArquiteturaTest` roda; cada encolhimento foi commitado à parte.
+
+| Momento | Regra 1 | Regra 2 | Regra 3 |
+|---|---|---|---|
+| início da B6 | 8 | 25 | 0 |
+| histórico do paciente sai do `ConsultaController` (`application/historico/BuscarHistoricoPacientePorPerfilUseCase`) | 8 | 22 | 0 |
+| `ConsultaService` quebrado em agendamento, busca e estatística | 8 | 22 | 0 |
+| `ConsultaEstatisticaController` separado | 8 | 22 | 0 |
+| login sai do `HomeController` (`application/auth/AutenticacaoService`) | 8 | 0 | 0 |
+| ViaCEP sai do `CepController` (`infrastructure/viacep/ViaCepClient` + porta `application/endereco/port/BuscaCep`) | 8 | 0 | 0 |
+
+- A regra 2 zerou. Ela continua congelada (store vazio): qualquer controller que voltar a tocar `infrastructure` quebra o build.
+- O histórico do paciente saiu do `ConsultaController` **antes** da quebra do `ConsultaService` de propósito: a linha do store guarda a assinatura do construtor, e trocar os services injetados com o `ProfissionalRepository` ainda lá viraria uma violação "nova" e exigiria refreeze.
+- O `AdminOrganizacaoService` (651 linhas) **ficou inteiro**. A divisão natural seria separar o cadastro de tenant (`cadastrarAdminOrgCompleto`, `cadastrarTenantPublico` e os auxiliares, cerca de 220 linhas) da gestão dos admins. Mas as duas metades compartilham `gerarSenhaAleatoria`, `limparCpf`, `limparCnpj` e `isBlank`, o que obrigaria a duplicar código ou criar um utilitário novo, e o cadastro público mexe em trial, cortesia e limite de plano. O ganho não compensa o risco agora; vale rever se o cadastro de tenant crescer.
