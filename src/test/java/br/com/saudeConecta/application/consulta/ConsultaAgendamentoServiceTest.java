@@ -969,4 +969,37 @@ class ConsultaAgendamentoServiceTest {
                     .containsExactly(tuple("09:00:00", 60), tuple("10:30:00", 30));
         }
     }
+
+    // ========== caches limpos pela escrita ==========
+
+    @Nested
+    @DisplayName("Caches limpos pelas escritas")
+    class CachesLimpos {
+
+        private java.util.Set<String> cachesLimpos(String metodo) {
+            java.lang.reflect.Method m = java.util.Arrays.stream(ConsultaAgendamentoService.class.getDeclaredMethods())
+                    .filter(x -> x.getName().equals(metodo))
+                    .findFirst().orElseThrow();
+            org.springframework.cache.annotation.CacheEvict evict =
+                    m.getAnnotation(org.springframework.cache.annotation.CacheEvict.class);
+            assertThat(evict.allEntries()).isTrue();
+            return java.util.Set.of(evict.value());
+        }
+
+        @Test
+        @DisplayName("Cadastrar limpa o dashboard do profissional (antes ficava velho até expirar)")
+        void cadastrarLimpaDashboardProfissional() {
+            assertThat(cachesLimpos("cadastrarConsultaByOrg")).contains("dashboard-profissional");
+        }
+
+        @Test
+        @DisplayName("Cadastrar, atualizar, status e excluir limpam os mesmos caches")
+        void escritasLimpamOsMesmosCaches() {
+            java.util.Set<String> atualizar = cachesLimpos("atualizarConsultaByOrg");
+
+            assertThat(cachesLimpos("cadastrarConsultaByOrg")).isEqualTo(atualizar);
+            assertThat(cachesLimpos("atualizarStatus")).isEqualTo(atualizar);
+            assertThat(cachesLimpos("deletarConsulta")).isEqualTo(atualizar);
+        }
+    }
 }

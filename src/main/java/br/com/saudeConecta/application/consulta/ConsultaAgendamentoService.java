@@ -60,7 +60,7 @@ public class ConsultaAgendamentoService {
     private final ConfiguracoesConsultaService configuracoesConsultaService;
 
     @RequiresTenant
-    @CacheEvict(value = {"dashboard-admin-org", "dashboard-super-admin", "consultas-intervalo-org",
+    @CacheEvict(value = {"dashboard-admin-org", "dashboard-profissional", "dashboard-super-admin", "consultas-intervalo-org",
                           "consultas-hoje-org", "consultas-semana-org", "consultas-mes-org", "consultas-ano-org",
                           "horarios-ocupados-org", "disponibilidade-consulta"}, allEntries = true)
     @Transactional
