@@ -37,12 +37,12 @@ public class BuscarHistoricoPacientePorPerfilUseCase {
      *
      * @param pacienteId    ID do paciente
      * @param usuarioLogado usuário do token
-     * @return o histórico; vazio quando o usuário é clínico mas não tem cadastro de profissional
-     *         (o controller responde 404)
+     * @return o histórico; vazio quando o usuário é clínico mas não tem cadastro de profissional,
+     *         ou quando o caso de uso devolve lista nula (o controller responde 404)
      */
     public Optional<List<HistoricoConsultaPacienteResponse>> executar(Long pacienteId, Usuario usuarioLogado) {
         if (!usuarioLogado.isClinico()) {
-            return Optional.of(buscarHistoricoCompletoPacienteAdminUseCase.executar(pacienteId));
+            return Optional.ofNullable(buscarHistoricoCompletoPacienteAdminUseCase.executar(pacienteId));
         }
 
         Optional<Profissional> profissionalLogado =
@@ -55,8 +55,8 @@ public class BuscarHistoricoPacientePorPerfilUseCase {
         Profissional profissional = profissionalLogado.get();
         Long profissionalId = profissional.getId();
         if (profissional.getTipoProfissional() != null && profissional.getTipoProfissional().isDentista()) {
-            return Optional.of(buscarHistoricoCompletoPacienteDentistaUseCase.executar(pacienteId, profissionalId));
+            return Optional.ofNullable(buscarHistoricoCompletoPacienteDentistaUseCase.executar(pacienteId, profissionalId));
         }
-        return Optional.of(buscarHistoricoCompletoPacienteMedicoUseCase.executar(pacienteId, profissionalId));
+        return Optional.ofNullable(buscarHistoricoCompletoPacienteMedicoUseCase.executar(pacienteId, profissionalId));
     }
 }

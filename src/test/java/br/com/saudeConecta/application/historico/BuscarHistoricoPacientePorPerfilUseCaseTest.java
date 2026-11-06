@@ -85,4 +85,12 @@ class BuscarHistoricoPacientePorPerfilUseCaseTest {
         assertThat(useCase.executar(20L, usuario(TipoUsuarioNovo.CLINICO))).isEmpty();
         verifyNoInteractions(admin, medico, dentista);
     }
+
+    @Test
+    @DisplayName("Caso de uso devolvendo lista nula: vazio em vez de NPE")
+    void listaNula() {
+        when(admin.executar(20L)).thenReturn(null);
+
+        assertThat(useCase.executar(20L, usuario(TipoUsuarioNovo.GESTOR))).isEmpty();
+    }
 }
