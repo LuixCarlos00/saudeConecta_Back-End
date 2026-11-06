@@ -31,12 +31,12 @@ public class ViaCepClient implements BuscaCep {
      */
     @Override
     public Object buscar(String cep) {
-        String url = VIACEP_URL + "/" + cep + "/json";
         log.debug("cep.buscar viacep cep={}", MascaraLog.cep(cep));
 
         ResponseEntity<Object> response;
         try {
-            response = restTemplate.getForEntity(url, Object.class);
+            // CEP entra como variável do template: o RestTemplate codifica o valor, então "/" ou ".." não mudam o caminho
+            response = restTemplate.getForEntity(VIACEP_URL + "/{cep}/json", Object.class, cep);
         } catch (RestClientException e) {
             // ViaCEP fora do ar/lento é falha do serviço externo, não nossa
             log.warn("cep.buscar falha motivo=VIACEP_INDISPONIVEL cep={}", MascaraLog.cep(cep), e);

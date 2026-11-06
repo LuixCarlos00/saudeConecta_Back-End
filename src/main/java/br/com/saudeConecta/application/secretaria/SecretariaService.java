@@ -32,6 +32,8 @@ import java.util.Optional;
 @Slf4j
 public class SecretariaService {
 
+    /** Um gerador só por classe: criar um SecureRandom por senha gasta entropia à toa (S2119). */
+    private static final SecureRandom GERADOR_SENHA = new SecureRandom();
     private static final String CARACTERES_SENHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*";
     private static final int TAMANHO_SENHA = 10;
 
@@ -220,10 +222,9 @@ public class SecretariaService {
     }
 
     private String gerarSenhaAleatoria() {
-        SecureRandom random = new SecureRandom();
         StringBuilder senha = new StringBuilder(TAMANHO_SENHA);
         for (int i = 0; i < TAMANHO_SENHA; i++) {
-            int index = random.nextInt(CARACTERES_SENHA.length());
+            int index = GERADOR_SENHA.nextInt(CARACTERES_SENHA.length());
             senha.append(CARACTERES_SENHA.charAt(index));
         }
         return senha.toString();

@@ -23,6 +23,9 @@ import java.util.Optional;
 @Slf4j
 public class HomeService {
 
+    /** Um gerador só por classe: criar um SecureRandom por senha gasta entropia à toa (S2119). */
+    private static final SecureRandom GERADOR_SENHA = new SecureRandom();
+
     private final ProfissionalRepository profissionalRepository;
     private final UsuarioRepository usuarioRepository;
     private final SecretariaRepository secretariaRepository;
@@ -106,10 +109,9 @@ public class HomeService {
 
     private String gerarSenhaAleatoria() {
         String caracteres = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$%";
-        SecureRandom random = new SecureRandom();
         StringBuilder senha = new StringBuilder();
         for (int i = 0; i < 10; i++) {
-            senha.append(caracteres.charAt(random.nextInt(caracteres.length())));
+            senha.append(caracteres.charAt(GERADOR_SENHA.nextInt(caracteres.length())));
         }
         return senha.toString();
     }

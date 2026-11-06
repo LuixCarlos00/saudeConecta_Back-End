@@ -58,6 +58,8 @@ public class ProfissionalService {
     private final MensageriaRepository mensageriaRepository;
     private final CacheEvictionService cacheEvictionService;
 
+    /** Um gerador só por classe: criar um SecureRandom por senha gasta entropia à toa (S2119). */
+    private static final SecureRandom GERADOR_SENHA = new SecureRandom();
     private static final String CARACTERES_SENHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*";
 
     public ProfissionalService(
@@ -386,10 +388,9 @@ return resultado ;
     }
 
     private String gerarSenhaAleatoria() {
-        SecureRandom random = new SecureRandom();
         StringBuilder senha = new StringBuilder(10);
         for (int i = 0; i < 10; i++) {
-            int index = random.nextInt(CARACTERES_SENHA.length());
+            int index = GERADOR_SENHA.nextInt(CARACTERES_SENHA.length());
             senha.append(CARACTERES_SENHA.charAt(index));
         }
         return senha.toString();

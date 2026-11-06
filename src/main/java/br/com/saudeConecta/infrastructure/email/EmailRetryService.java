@@ -77,7 +77,7 @@ public class EmailRetryService {
                 return;
             }
 
-            long delayMs = DELAY_INICIAL_MS * (long) Math.pow(2, tentativa - 1);
+            long delayMs = DELAY_INICIAL_MS * (1L << (tentativa - 1));
             log.warn("email.enviar nova.tentativa tentativa={}/{} proximaEmMs={} email={} tipo={} causa={}",
                     tentativa, MAX_TENTATIVAS, delayMs, MascaraLog.email(destinatario), tipoUsuario, e.getClass().getSimpleName());
 
@@ -128,7 +128,7 @@ public class EmailRetryService {
                 return;
             }
 
-            long delayMs = DELAY_INICIAL_MS * (long) Math.pow(2, tentativa - 1);
+            long delayMs = DELAY_INICIAL_MS * (1L << (tentativa - 1));
             log.warn("email.reenviar nova.tentativa tentativa={}/{} proximaEmMs={} mensageriaId={} email={} causa={}",
                     tentativa, MAX_TENTATIVAS, delayMs, mensageriaId, MascaraLog.email(destinatario), e.getClass().getSimpleName());
 

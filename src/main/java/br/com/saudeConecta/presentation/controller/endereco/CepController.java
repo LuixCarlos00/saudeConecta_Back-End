@@ -33,10 +33,9 @@ public class CepController {
      */
     @GetMapping("/{cep}")
     public ResponseEntity<?> buscarEnderecoPorCep(@PathVariable String cep) {
-        log.debug("cep.buscar inicio cep={}", MascaraLog.cep(cep));
-
         // Remove caracteres não numéricos do CEP
         String cepLimpo = cep.replaceAll("[^0-9]", "");
+        log.debug("cep.buscar inicio cep={}", MascaraLog.cep(cep));
 
         if (cepLimpo.length() != 8) {
             return ResponseEntity.badRequest()
