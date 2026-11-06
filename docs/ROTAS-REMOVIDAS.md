@@ -106,3 +106,12 @@ O bytecode também mostrou métodos que **já estavam sem chamador antes da B2**
 - `EmailNotificacaoService.enviarCredenciaisPaciente`;
 - `ProntuarioRepository.deleteByConsultaId`, `ProntuarioDentistaRepository.deleteByConsultaId`, `SecretariaRepository.findByOrganizacao_Id` e `TermoAutorizacaoRepository.findByConsultaId`;
 - `TipoDocumentoRelatorio.getRotulo`, que perdeu o único leitor com a rota `tipos-documento`. Ficou porque é dado do enum de domínio e não custa nada.
+
+## Linha de base do ArchUnit (fase B4, para referência)
+
+O `ArquiteturaTest` congelou as violações que já existiam em `src/test/resources/archunit_store`:
+- **Regra 1** (domain não depende de application, presentation nem config): 9 violações. São 8 entidades que implementam `infra.tenant.TenantAware`, mais o `@EntityListeners` de `AssinaturaTenant`, que aponta para `service.AssinaturaTenantCacheListener`.
+- **Regra 2** (presentation não depende de infrastructure): 25 violações em **2 controllers**: `HomeController` (22) e `ConsultaController` (3, por causa do `ProfissionalRepository`). A mensagem do commit `9a19ce9` fala em "4 controllers"; o número certo é 2.
+- **Regra 3** (application não depende de presentation): 863 violações em 29 classes de `service`, `usecase` e `email`.
+
+O `ProntuarioMapper` (`service/mapper`, commit `11a8419`) entrou congelado na regra 3, com 24 linhas do store: ele recebe o `CadastrarProntuarioRequest`, que ainda mora em `presentation.dto`. Isso é esperado. Na B5 o mapper vai junto com os DTOs para `application/<area>`, e as linhas saem do store.
