@@ -4,6 +4,7 @@ import br.com.saudeConecta.application.assinatura.LimitePlanoService;
 import br.com.saudeConecta.application.cache.CacheEvictionService;
 import br.com.saudeConecta.application.historico.HistoricoDadosPessoaisService;
 import br.com.saudeConecta.application.notificacao.EmailNotificacaoService;
+import br.com.saudeConecta.application.secretaria.dto.AtualizarSecretariaRequest;
 import br.com.saudeConecta.application.secretaria.dto.CadastrarSecretariaRequest;
 import br.com.saudeConecta.application.usuario.EmailUnicoService;
 import br.com.saudeConecta.config.tenant.TenantHelper;
@@ -119,7 +120,7 @@ class SecretariaServiceTest {
         @Test
         @DisplayName("Sem ser gestor nem a dona, a atualização é negada antes de qualquer alteração")
         void naoGestorNemDonaEhNegado() {
-            Secretaria dadosAtualizados = Secretaria.builder().email("invasor@email.com").build();
+            AtualizarSecretariaRequest dadosAtualizados = new AtualizarSecretariaRequest(null, "invasor@email.com", null);
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(secretariaRepository.findByIdAndOrganizacao_Id(SEC_ID, ORG_ID))
                     .thenReturn(Optional.of(secretaria));
@@ -135,8 +136,8 @@ class SecretariaServiceTest {
         @Test
         @DisplayName("Deve atualizar nome, email e telefone com sucesso")
         void deveAtualizarDadosComSucesso() {
-            Secretaria dadosAtualizados = Secretaria.builder()
-                    .nome("Novo Nome").email("novo@email.com").telefone("11888888888").build();
+            AtualizarSecretariaRequest dadosAtualizados =
+                    new AtualizarSecretariaRequest("Novo Nome", "novo@email.com", "11888888888");
 
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(tenantHelper.getCurrentUserId()).thenReturn(USUARIO_ID);
@@ -157,7 +158,7 @@ class SecretariaServiceTest {
         @Test
         @DisplayName("4.5d - Trocar para e-mail de outro usuário é rejeitado")
         void deveRejeitarEmailDeOutroUsuario() {
-            Secretaria dadosAtualizados = Secretaria.builder().email("gestor@outra.com").build();
+            AtualizarSecretariaRequest dadosAtualizados = new AtualizarSecretariaRequest(null, "gestor@outra.com", null);
 
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(secretariaRepository.findByIdAndOrganizacao_Id(SEC_ID, ORG_ID))
@@ -175,7 +176,7 @@ class SecretariaServiceTest {
         @Test
         @DisplayName("Não deve alterar campos quando forem nulos")
         void naoDeveAlterarCamposNulos() {
-            Secretaria dadosVazios = Secretaria.builder().build();
+            AtualizarSecretariaRequest dadosVazios = new AtualizarSecretariaRequest(null, null, null);
 
             when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
             when(tenantHelper.getCurrentUserId()).thenReturn(USUARIO_ID);
@@ -197,7 +198,7 @@ class SecretariaServiceTest {
             when(secretariaRepository.findByIdAndOrganizacao_Id(999L, ORG_ID))
                     .thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> secretariaService.atualizarSecretariaIdByOrg(999L, new Secretaria()))
+            assertThatThrownBy(() -> secretariaService.atualizarSecretariaIdByOrg(999L, new AtualizarSecretariaRequest(null, null, null)))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Secretaria nao encontrada");
         }

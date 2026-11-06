@@ -307,6 +307,7 @@ class AssinaturaTenantServiceTest {
             });
             assertThat(AssinaturaPlataformaResponse.class.getRecordComponents())
                     .extracting(java.lang.reflect.RecordComponent::getName)
+                    .isNotEmpty()
                     .doesNotContain("mpPayerEmail", "mpInitPoint", "mpPreapprovalId");
             var pageable = org.mockito.ArgumentCaptor.forClass(Pageable.class);
             verify(assinaturaTenantRepository).listarVigentesParaPlataforma(any(), any(), any(), any(), pageable.capture());

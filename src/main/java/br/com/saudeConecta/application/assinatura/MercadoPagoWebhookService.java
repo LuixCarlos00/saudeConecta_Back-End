@@ -118,7 +118,9 @@ public class MercadoPagoWebhookService {
     public void processar(String tipo, String dataId, String payload) {
         MpWebhookEvento evento = transactionTemplate.execute(status -> registrarEvento(tipo, dataId, payload));
         if (evento == null) {
-            log.info("mp.webhook ignorado motivo=JA_ENCERRADO tipo={} dataId={}", MascaraLog.seguro(tipo), MascaraLog.seguro(dataId));
+            if (log.isInfoEnabled()) {
+                log.info("mp.webhook ignorado motivo=JA_ENCERRADO tipo={} dataId={}", MascaraLog.seguro(tipo), MascaraLog.seguro(dataId));
+            }
             return;
         }
 
@@ -450,8 +452,10 @@ public class MercadoPagoWebhookService {
             if (assinatura.getStatus() != null && assinatura.getStatus().isAtiva()) {
                 assinaturaTenantService.marcarInadimplente(assinatura.getId());
             }
-            log.warn("mp.fatura recusada assinaturaId={} faturaId={} motivo={}",
-                    assinatura.getId(), authorizedPaymentId, fatura.motivoRecusa());
+            if (log.isWarnEnabled()) {
+                log.warn("mp.fatura recusada assinaturaId={} faturaId={} motivo={}",
+                        assinatura.getId(), authorizedPaymentId, fatura.motivoRecusa());
+            }
             return false;
         }
 
@@ -469,8 +473,10 @@ public class MercadoPagoWebhookService {
         if (dataId.equals(idConsultado)) {
             return true;
         }
-        log.warn("mp.webhook ignorado motivo=RECURSO_DIVERGENTE tipo={} dataId={} idConsultado={}",
-                MascaraLog.seguro(tipo), MascaraLog.seguro(dataId), MascaraLog.seguro(idConsultado));
+        if (log.isWarnEnabled()) {
+            log.warn("mp.webhook ignorado motivo=RECURSO_DIVERGENTE tipo={} dataId={} idConsultado={}",
+                    MascaraLog.seguro(tipo), MascaraLog.seguro(dataId), MascaraLog.seguro(idConsultado));
+        }
         return false;
     }
 

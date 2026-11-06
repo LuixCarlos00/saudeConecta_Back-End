@@ -5,6 +5,7 @@ import br.com.saudeConecta.application.cache.CacheEvictionService;
 import br.com.saudeConecta.application.historico.HistoricoDadosPessoaisService;
 import br.com.saudeConecta.application.historico.SnapshotUtil;
 import br.com.saudeConecta.application.notificacao.EmailNotificacaoService;
+import br.com.saudeConecta.application.secretaria.dto.AtualizarSecretariaRequest;
 import br.com.saudeConecta.application.secretaria.dto.CadastrarSecretariaRequest;
 import br.com.saudeConecta.application.usuario.EmailUnicoService;
 import br.com.saudeConecta.config.tenant.RequiresTenant;
@@ -77,7 +78,7 @@ public class SecretariaService {
 
     @RequiresTenant
     @Transactional
-    public Secretaria atualizarSecretariaIdByOrg(Long id, Secretaria dadosAtualizados) {
+    public Secretaria atualizarSecretariaIdByOrg(Long id, AtualizarSecretariaRequest dadosAtualizados) {
         Long orgId = tenantHelper.getCurrentTenantId();
         
         Secretaria antes = secretariaRepository.findByIdAndOrganizacao_Id(id, orgId)
@@ -87,20 +88,20 @@ public class SecretariaService {
         tenantHelper.validarGestorOuDono(antes.getUsuario() != null ? antes.getUsuario().getId() : null);
 
         // E-mail duplicado desvia o "esqueci minha senha" (que busca por e-mail) para a conta errada
-        emailUnicoService.validarEmailLivreParaAtualizacao(dadosAtualizados.getEmail(), antes.getEmail(),
+        emailUnicoService.validarEmailLivreParaAtualizacao(dadosAtualizados.email(), antes.getEmail(),
                 antes.getUsuario() != null ? antes.getUsuario().getId() : null);
 
         Secretaria snapshot = SnapshotUtil.copiarSnapshot(antes);
 
         // Atualiza campos permitidos (nome, email e telefone)
-        if (dadosAtualizados.getNome() != null) {
-            antes.setNome(dadosAtualizados.getNome());
+        if (dadosAtualizados.nome() != null) {
+            antes.setNome(dadosAtualizados.nome());
         }
-        if (dadosAtualizados.getEmail() != null) {
-            antes.setEmail(dadosAtualizados.getEmail());
+        if (dadosAtualizados.email() != null) {
+            antes.setEmail(dadosAtualizados.email());
         }
-        if (dadosAtualizados.getTelefone() != null) {
-            antes.setTelefone(dadosAtualizados.getTelefone());
+        if (dadosAtualizados.telefone() != null) {
+            antes.setTelefone(dadosAtualizados.telefone());
         }
        Secretaria resultado = secretariaRepository.save(antes);
         log.info("secretaria.atualizar ok secretariaId={}", antes.getId());

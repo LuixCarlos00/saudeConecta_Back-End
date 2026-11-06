@@ -97,7 +97,7 @@ class PlataformaDashboardServiceTest {
         assertThat(r.serieMensal()).extracting(SerieMensalResponse::mes)
                 .containsExactly("2026-09", "2026-10", "2026-11");
         assertThat(r.serieMensal()).allMatch(m -> m.novasClinicas() == 0 && m.cancelamentos() == 0
-                && m.consultas() == 0 && m.receitaRecebida().equals(new BigDecimal("0.00")));
+                && m.consultas() == 0 && m.receitaRecebida().compareTo(BigDecimal.ZERO) == 0);
         assertThat(r.topClinicasUso()).isEmpty();
         assertThat(r.atencao()).isEmpty();
         verifyNoInteractions(profissionalRepository);
