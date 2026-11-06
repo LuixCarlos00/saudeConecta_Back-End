@@ -1,5 +1,6 @@
 package br.com.saudeConecta.service;
 
+import br.com.saudeConecta.domain.common.Periodo;
 import br.com.saudeConecta.domain.consulta.*;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.paciente.Paciente;
@@ -76,7 +77,8 @@ public class ConsultaService {
     public List<Consulta> buscarConsultasHoje(LocalDate data, Long profissionalId) {
         Long orgId = tenantHelper.getCurrentTenantId();
         LocalDate referencia = data != null ? data : LocalDate.now();
-        return consultaRepository.findByOrganizacaoIdAndPeriodo(orgId, profissionalId, referencia.atStartOfDay(), referencia.atTime(23, 59, 59));
+        Periodo dia = Periodo.dia(referencia);
+        return consultaRepository.findByOrganizacaoIdAndPeriodo(orgId, profissionalId, dia.inicio(), dia.fim());
     }
 
     @RequiresTenant
@@ -104,9 +106,8 @@ public class ConsultaService {
     public List<Consulta> buscarConsultasDaSemanaAtual(LocalDate data, Long profissionalId) {
         Long orgId = tenantHelper.getCurrentTenantId();
         LocalDate referencia = data != null ? data : LocalDate.now();
-        LocalDate inicioSemana = referencia.minusDays(referencia.getDayOfWeek().getValue() - 1); // Segunda-feira
-        LocalDate fimSemana = inicioSemana.plusDays(6); // Domingo
-        return consultaRepository.findByOrganizacaoIdAndPeriodo(orgId, profissionalId, inicioSemana.atStartOfDay(), fimSemana.atTime(23, 59, 59));
+        Periodo semana = Periodo.semanaDe(referencia);
+        return consultaRepository.findByOrganizacaoIdAndPeriodo(orgId, profissionalId, semana.inicio(), semana.fim());
     }
 
     @RequiresTenant
@@ -135,9 +136,8 @@ public class ConsultaService {
     public List<Consulta> buscarConsultasDoMesAtual(LocalDate data, Long profissionalId) {
         Long orgId = tenantHelper.getCurrentTenantId();
         LocalDate referencia = data != null ? data : LocalDate.now();
-        LocalDate inicioMes = referencia.withDayOfMonth(1); // Primeiro dia do mês
-        LocalDate fimMes = referencia.withDayOfMonth(referencia.lengthOfMonth()); // Último dia do mês
-        return consultaRepository.findByOrganizacaoIdAndPeriodo(orgId, profissionalId, inicioMes.atStartOfDay(), fimMes.atTime(23, 59, 59));
+        Periodo mes = Periodo.mesDe(referencia);
+        return consultaRepository.findByOrganizacaoIdAndPeriodo(orgId, profissionalId, mes.inicio(), mes.fim());
     }
 
     @RequiresTenant
@@ -159,10 +159,8 @@ public class ConsultaService {
     @Transactional(readOnly = true)
     public List<Consulta> buscarConsultasDoAnoAtual() {
         Long orgId = tenantHelper.getCurrentTenantId();
-        LocalDate hoje = LocalDate.now();
-        LocalDate inicioAno = hoje.withDayOfYear(1); // Primeiro dia do ano
-        LocalDate fimAno = hoje.withDayOfYear(hoje.lengthOfYear()); // Último dia do ano
-        return consultaRepository.findByOrganizacaoIdAndPeriodo(orgId, inicioAno.atStartOfDay(), fimAno.atTime(23, 59, 59));
+        Periodo ano = Periodo.anoDe(LocalDate.now());
+        return consultaRepository.findByOrganizacaoIdAndPeriodo(orgId, ano.inicio(), ano.fim());
     }
     
     /**
@@ -537,13 +535,15 @@ public class ConsultaService {
     public EstatisticasDashboardAdminOrgResponse getEstatisticasDashboardAdminOrg(Long organizacaoId) {
         tenantHelper.validateTenant(organizacaoId);
         LocalDate hoje = LocalDate.now();
-        LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
-        LocalDate fimSemana = inicioSemana.plusDays(6);
+        Periodo semana = Periodo.semanaDe(hoje);
+        Periodo dia = Periodo.dia(hoje);
+        LocalDate inicioSemana = semana.dataInicio();
+        LocalDate fimSemana = semana.dataFim();
 
-        LocalDateTime inicioSemanaLdt = inicioSemana.atStartOfDay();
-        LocalDateTime fimSemanaLdt = fimSemana.atTime(23, 59, 59);
-        LocalDateTime inicioDiaLdt = hoje.atStartOfDay();
-        LocalDateTime fimDiaLdt = hoje.atTime(23, 59, 59);
+        LocalDateTime inicioSemanaLdt = semana.inicio();
+        LocalDateTime fimSemanaLdt    = semana.fim();
+        LocalDateTime inicioDiaLdt    = dia.inicio();
+        LocalDateTime fimDiaLdt       = dia.fim();
 
         log.debug("consulta.dashboard buscar perfil=ADMIN_ORG semanaInicio={} semanaFim={} hoje={}",
                 inicioSemana, fimSemana, hoje);
@@ -612,13 +612,15 @@ public class ConsultaService {
     @Transactional(readOnly = true)
     public EstatisticasDashboardAdminOrgResponse getEstatisticasDashboardProfissional(Long usuarioId) {
         LocalDate hoje = LocalDate.now();
-        LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
-        LocalDate fimSemana = inicioSemana.plusDays(6);
+        Periodo semana = Periodo.semanaDe(hoje);
+        Periodo dia = Periodo.dia(hoje);
+        LocalDate inicioSemana = semana.dataInicio();
+        LocalDate fimSemana = semana.dataFim();
 
-        LocalDateTime inicioSemanaLdt = inicioSemana.atStartOfDay();
-        LocalDateTime fimSemanaLdt    = fimSemana.atTime(23, 59, 59);
-        LocalDateTime inicioDiaLdt    = hoje.atStartOfDay();
-        LocalDateTime fimDiaLdt       = hoje.atTime(23, 59, 59);
+        LocalDateTime inicioSemanaLdt = semana.inicio();
+        LocalDateTime fimSemanaLdt    = semana.fim();
+        LocalDateTime inicioDiaLdt    = dia.inicio();
+        LocalDateTime fimDiaLdt       = dia.fim();
 
         log.debug("consulta.dashboard buscar perfil=PROFISSIONAL usuarioId={} semanaInicio={} semanaFim={} hoje={}",
                 usuarioId, inicioSemana, fimSemana, hoje);
@@ -682,13 +684,15 @@ public class ConsultaService {
     @Transactional(readOnly = true)
     public EstatisticasDashboardAdminOrgResponse getEstatisticasDashboardSuperAdmin() {
         LocalDate hoje = LocalDate.now();
-        LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
-        LocalDate fimSemana = inicioSemana.plusDays(6);
+        Periodo semana = Periodo.semanaDe(hoje);
+        Periodo dia = Periodo.dia(hoje);
+        LocalDate inicioSemana = semana.dataInicio();
+        LocalDate fimSemana = semana.dataFim();
 
-        LocalDateTime inicioSemanaLdt = inicioSemana.atStartOfDay();
-        LocalDateTime fimSemanaLdt    = fimSemana.atTime(23, 59, 59);
-        LocalDateTime inicioDiaLdt    = hoje.atStartOfDay();
-        LocalDateTime fimDiaLdt       = hoje.atTime(23, 59, 59);
+        LocalDateTime inicioSemanaLdt = semana.inicio();
+        LocalDateTime fimSemanaLdt    = semana.fim();
+        LocalDateTime inicioDiaLdt    = dia.inicio();
+        LocalDateTime fimDiaLdt       = dia.fim();
 
         log.debug("consulta.dashboard buscar perfil=SUPER_ADMIN semanaInicio={} semanaFim={} hoje={}",
                 inicioSemana, fimSemana, hoje);
@@ -741,10 +745,11 @@ public class ConsultaService {
     @Transactional(readOnly = true)
     public List<Consulta> buscarConsultasPorOrganizacaoEIntervalo(Long organizacaoId, LocalDate dataInicio, LocalDate dataFim) {
         tenantHelper.validateTenant(organizacaoId);
+        Periodo periodo = Periodo.entre(dataInicio, dataFim);
         return consultaRepository.findByOrganizacaoIdAndDataHoraBetweenWithRelations(
             organizacaoId,
-            dataInicio.atStartOfDay(),
-            dataFim.plusDays(1).atStartOfDay()
+            periodo.inicio(),
+            periodo.fimExclusivo()
         );
     }
 
@@ -772,11 +777,13 @@ public class ConsultaService {
         log.debug("consulta.estatisticas buscar usuarioId={} inicio={} fim={}",
                 usuarioId, dataInicio, dataFim);
         
+        Periodo periodo = Periodo.entre(dataInicio, dataFim);
+        
         return consultaRepository.findEstatisticasPorMedicoEIntervalo(
             organizacaoId,
             usuarioId,
-            dataInicio.atStartOfDay(),
-            dataFim.atTime(23, 59, 59)
+            periodo.inicio(),
+            periodo.fim()
         );
     }
 
@@ -800,11 +807,13 @@ public class ConsultaService {
         log.debug("consulta.duracoes buscar usuarioId={} dataInicio={} dataFim={}",
                 usuarioId, dataInicio, dataFim);
 
+        Periodo periodo = Periodo.entre(dataInicio, dataFim);
+
         List<Integer> duracoes = consultaRepository.findDuracoesConsultasPorMedicoEIntervalo(
             organizacaoId,
             usuarioId,
-            dataInicio.atStartOfDay(),
-            dataFim.atTime(23, 59, 59)
+            periodo.inicio(),
+            periodo.fim()
         );
         
         log.debug("consulta.duracoes resultado quantidade={}", duracoes.size());
@@ -822,12 +831,14 @@ public class ConsultaService {
 
         StatusConsulta statusEnum = converterStatus(status);
 
+        Periodo periodo = Periodo.entre(dataInicio, dataFim);
+
         return consultaRepository.findByOrganizacaoIdAndUsuarioIdAndStatusOptionalAndDataHoraBetween(
             orgId,
             profissionalId,
             statusEnum,
-            dataInicio.atStartOfDay(),
-            dataFim.plusDays(1).atStartOfDay()
+            periodo.inicio(),
+            periodo.fimExclusivo()
         );
     }
 
@@ -842,11 +853,13 @@ public class ConsultaService {
         
         StatusConsulta statusEnum = converterStatus(status);
 
+        Periodo periodo = Periodo.entre(dataInicio, dataFim);
+
         return consultaRepository.findByStatusOptionalAndDataHoraBetweenWithRelations(
             orgId,
             statusEnum,
-            dataInicio.atStartOfDay(),
-            dataFim.plusDays(1).atStartOfDay()
+            periodo.inicio(),
+            periodo.fimExclusivo()
         );
     }
     
@@ -974,45 +987,18 @@ public class ConsultaService {
                 usuarioId, tipoPeriodo);
 
         LocalDate hoje = LocalDate.now();
-        LocalDateTime inicio;
-        LocalDateTime fim;
-
-        switch (tipoPeriodo.toLowerCase()) {
-            case "diario":
-                // Hoje: 00:00:00 até 23:59:59
-                inicio = hoje.atStartOfDay();
-                fim = hoje.atTime(23, 59, 59);
-                break;
-
-            case "semanal":
-                // Semana atual: Segunda-feira até Domingo
-                LocalDate inicioSemana = hoje.minusDays(hoje.getDayOfWeek().getValue() - 1);
-                LocalDate fimSemana = inicioSemana.plusDays(6);
-                inicio = inicioSemana.atStartOfDay();
-                fim = fimSemana.atTime(23, 59, 59);
-                break;
-
-            case "mensal":
-                // Mês atual: Primeiro dia até último dia
-                LocalDate inicioMes = hoje.withDayOfMonth(1);
-                LocalDate fimMes = hoje.withDayOfMonth(hoje.lengthOfMonth());
-                inicio = inicioMes.atStartOfDay();
-                fim = fimMes.atTime(23, 59, 59);
-                break;
-
-            case "anual":
-                // Ano atual: 01/01 até 31/12
-                LocalDate inicioAno = hoje.withDayOfYear(1);
-                LocalDate fimAno = hoje.withDayOfYear(hoje.lengthOfYear());
-                inicio = inicioAno.atStartOfDay();
-                fim = fimAno.atTime(23, 59, 59);
-                break;
-
-            default:
+        Periodo periodo = switch (tipoPeriodo.toLowerCase()) {
+            case "diario" -> Periodo.dia(hoje);
+            case "semanal" -> Periodo.semanaDe(hoje);   // segunda a domingo
+            case "mensal" -> Periodo.mesDe(hoje);
+            case "anual" -> Periodo.anoDe(hoje);
+            default -> {
                 log.warn("consulta.periodo negado motivo=TIPO_INVALIDO tipo={} acao=USA_DIARIO", tipoPeriodo);
-                inicio = hoje.atStartOfDay();
-                fim = hoje.atTime(23, 59, 59);
-        }
+                yield Periodo.dia(hoje);
+            }
+        };
+        LocalDateTime inicio = periodo.inicio();
+        LocalDateTime fim = periodo.fim();
 
         log.debug("consulta.periodo calculado inicio={} fim={}", inicio, fim);
         return consultaRepository.findConsultasPorMedicoEPeriodo(orgId, usuarioId, inicio, fim);

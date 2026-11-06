@@ -1,5 +1,6 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.domain.common.Periodo;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
 import br.com.saudeConecta.domain.profissional.Profissional;
@@ -231,8 +232,8 @@ public class ConsultaController {
         
         
         // Converter datas para LocalDateTime
-        LocalDateTime inicio = dataInicial != null ? dataInicial.atStartOfDay() : null;
-        LocalDateTime fim = dataFinal != null ? dataFinal.atTime(23, 59, 59) : null;
+        LocalDateTime inicio = dataInicial != null ? Periodo.dia(dataInicial).inicio() : null;
+        LocalDateTime fim = dataFinal != null ? Periodo.dia(dataFinal).fim() : null;
         
         // Converter string de status para lista de StatusConsulta
         List<StatusConsulta> statusList = null;
