@@ -57,8 +57,7 @@ class MercadoPagoWebhookControllerTest {
         assertThat(resposta.getStatusCode().value()).isEqualTo(200);
         assertThat(appender.list).hasSize(1);
         String mensagem = appender.list.get(0).getFormattedMessage();
-        assertThat(mensagem).doesNotContain("\r").doesNotContain("\n");
-        assertThat(mensagem).isEqualTo(
+        assertThat(mensagem).doesNotContain("\r").doesNotContain("\n").isEqualTo(
                 "mp.webhook aceito tipo=subscription__preapproval dataId=123__mp.webhook_aceito_tipo_FORJ");
         verify(webhookService).processarAssincrono("subscription\n_preapproval", dataIdMalicioso, null);
     }

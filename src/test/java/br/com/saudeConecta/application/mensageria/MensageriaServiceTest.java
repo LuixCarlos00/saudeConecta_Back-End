@@ -176,7 +176,7 @@ class MensageriaServiceTest {
             assertThatThrownBy(() -> mensageriaService.marcarComoNotificado(MSG_ID))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Acesso negado");
-            verify(mensageriaRepository, org.mockito.Mockito.never()).save(any());
+            verify(mensageriaRepository, never()).save(any());
         }
 
         @Test
@@ -269,7 +269,7 @@ class MensageriaServiceTest {
             assertThatThrownBy(() -> mensageriaService.reenviarMensagem(MSG_ID))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Acesso negado");
-            verify(emailNotificacaoService, org.mockito.Mockito.never()).reenviarEmail(any(), any(), any(), any());
+            verify(emailNotificacaoService, never()).reenviarEmail(any(), any(), any(), any());
         }
 
         @Test

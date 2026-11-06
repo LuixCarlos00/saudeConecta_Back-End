@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -63,7 +64,7 @@ class ConfiguracaoGraficoDashboardServiceTest {
 
         ArgumentCaptor<ConfiguracaoGraficoDashboard> captor =
                 ArgumentCaptor.forClass(ConfiguracaoGraficoDashboard.class);
-        verify(configuracaoRepository, org.mockito.Mockito.times(esperados)).save(captor.capture());
+        verify(configuracaoRepository, times(esperados)).save(captor.capture());
         assertTrue(captor.getAllValues().stream().allMatch(c -> Boolean.TRUE.equals(c.getAtivo())));
         assertEquals(esperados, resposta.size());
     }

@@ -22,9 +22,14 @@ class CorrelationIdFilterTest {
 
     private final CorrelationIdFilter filtro = new CorrelationIdFilter();
 
+    private ListAppender<ILoggingEvent> appenderAtivo;
+
     @AfterEach
     void limpar() {
         MDC.clear();
+        if (appenderAtivo != null) {
+            ((Logger) LoggerFactory.getLogger(CorrelationIdFilter.class)).detachAppender(appenderAtivo);
+        }
     }
 
     @Test
@@ -94,14 +99,7 @@ class CorrelationIdFilterTest {
         return appender;
     }
 
-    private ListAppender<ILoggingEvent> appenderAtivo;
 
-    @AfterEach
-    void removerAppender() {
-        if (appenderAtivo != null) {
-            ((Logger) LoggerFactory.getLogger(CorrelationIdFilter.class)).detachAppender(appenderAtivo);
-        }
-    }
 
     @Test
     @DisplayName("Registra 'http fim' com rota padrão, status e duração, ainda com o requestId no MDC")
