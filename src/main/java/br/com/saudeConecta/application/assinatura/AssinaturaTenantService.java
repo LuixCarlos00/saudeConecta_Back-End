@@ -34,6 +34,7 @@ import java.util.Map;
 
 @Service
 public class AssinaturaTenantService {
+    private static final String MSG_ASSINATURA_NAO_ENCONTRADA = "Assinatura não encontrada: ";
 
     private static final Logger log = LoggerFactory.getLogger(AssinaturaTenantService.class);
     /** Código do 409 ao associar plano a uma clínica com assinatura SUSPENSA vigente. */
@@ -212,7 +213,7 @@ public class AssinaturaTenantService {
                         HttpStatus.NOT_FOUND));
         return assinaturaTenantRepository.findByIdParaAtualizacao(assinaturaId)
                 .orElseThrow(() -> new BusinessException(
-                        "Assinatura não encontrada: " + assinaturaId, HttpStatus.NOT_FOUND));
+                        MSG_ASSINATURA_NAO_ENCONTRADA + assinaturaId, HttpStatus.NOT_FOUND));
     }
 
     /**
@@ -326,7 +327,7 @@ public class AssinaturaTenantService {
     private AssinaturaTenant buscarParaAtualizacao(Long assinaturaId) {
         return assinaturaTenantRepository.findByIdParaAtualizacao(assinaturaId)
                 .orElseThrow(() -> new BusinessException(
-                        "Assinatura não encontrada: " + assinaturaId, HttpStatus.NOT_FOUND));
+                        MSG_ASSINATURA_NAO_ENCONTRADA + assinaturaId, HttpStatus.NOT_FOUND));
     }
 
     /**
@@ -556,7 +557,7 @@ public class AssinaturaTenantService {
         // Lock: serializa com a geração de link, que relê a cortesia com a linha travada
         AssinaturaTenant assinatura = assinaturaTenantRepository.findByIdParaAtualizacao(assinaturaId)
                 .orElseThrow(() -> new BusinessException(
-                        "Assinatura não encontrada: " + assinaturaId, HttpStatus.NOT_FOUND));
+                        MSG_ASSINATURA_NAO_ENCONTRADA + assinaturaId, HttpStatus.NOT_FOUND));
         boolean cancelada = StatusAssinatura.CANCELADA.equals(assinatura.getStatus());
         boolean removendoCortesia = !cortesia && assinatura.isCortesia() && !cancelada;
         assinatura.setCortesia(cortesia);
@@ -654,7 +655,7 @@ public class AssinaturaTenantService {
     private AssinaturaTenant buscarPorId(Long id) {
         return assinaturaTenantRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(
-                        "Assinatura não encontrada: " + id,
+                        MSG_ASSINATURA_NAO_ENCONTRADA + id,
                         HttpStatus.NOT_FOUND));
     }
 }

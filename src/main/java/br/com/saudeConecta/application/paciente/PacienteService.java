@@ -32,6 +32,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Slf4j
 public class PacienteService  {
+    private static final String STATUS_ATIVO = "ATIVO";
 
      private final PacienteRepository pacienteRepository;
     private final EnderecoRepository enderecoRepository;
@@ -82,7 +83,7 @@ public class PacienteService  {
                 .paciEmail(request.email())
                 .paciTelefone(request.telefone())
                 .endereco(endereco)
-                .paciStatus("ATIVO")
+                .paciStatus(STATUS_ATIVO)
                 .build();
 
         enderecoRepository.save(endereco);
@@ -93,7 +94,7 @@ public class PacienteService  {
     }
 
     private String limparCpf(String cpf) {
-        return cpf != null ? cpf.replaceAll("[^0-9]", "") : null;
+        return cpf != null ? cpf.replaceAll("\\D", "") : null;
     }
 
     @RequiresTenant
@@ -215,7 +216,7 @@ public class PacienteService  {
         @CacheEvict(value = "pacientes-org", key = "'org-' + @tenantHelper.getCurrentTenantIdOrNull() + '-filtro-ALL'")
     })
     public void bloquearPacientebyOrg(Long id, int status) {
-        log.info("paciente.status inicio pacienteId={} status={}", id, status == 0 ? "INATIVO" : "ATIVO");
+        log.info("paciente.status inicio pacienteId={} status={}", id, status == 0 ? "INATIVO" : STATUS_ATIVO);
 
         var pacienteOpt = buscarrPacientebyOrg(id);
         if (pacienteOpt.isEmpty()) {
@@ -224,7 +225,7 @@ public class PacienteService  {
         }
 
         var paciente = pacienteOpt.get();
-        paciente.setPaciStatus(status == 0 ? "INATIVO" : "ATIVO");
+        paciente.setPaciStatus(status == 0 ? "INATIVO" : STATUS_ATIVO);
         pacienteRepository.save(paciente);
 
         cacheEvictionService.evictUsuariosAgrupados(paciente.getOrganizacaoId());
@@ -244,8 +245,8 @@ public class PacienteService  {
         Long orgId = tenantHelper.getCurrentTenantId();
         log.debug("paciente.buscar nome organizacaoId={} filtro={}", orgId, filtro);
         
-        if ("ATIVO".equals(filtro)) {
-            return pacienteRepository.findByOrganizacaoIdAndNomeContainingWithFiltro(orgId, pesquisa, filtro, "ATIVO");
+        if (STATUS_ATIVO.equals(filtro)) {
+            return pacienteRepository.findByOrganizacaoIdAndNomeContainingWithFiltro(orgId, pesquisa, filtro, STATUS_ATIVO);
         } else {
             // ALL - usa consulta original
             return pacienteRepository.findByOrganizacaoIdAndNomeContaining(orgId, pesquisa);
@@ -260,8 +261,8 @@ public class PacienteService  {
         Long orgId = tenantHelper.getCurrentTenantId();
         log.debug("paciente.buscar cpf={} organizacaoId={} filtro={}", MascaraLog.cpf(pesquisa), orgId, filtro);
         
-        if ("ATIVO".equals(filtro)) {
-            return pacienteRepository.findByOrganizacaoIdAndCpfContainingWithFiltro(orgId, pesquisa, filtro, "ATIVO");
+        if (STATUS_ATIVO.equals(filtro)) {
+            return pacienteRepository.findByOrganizacaoIdAndCpfContainingWithFiltro(orgId, pesquisa, filtro, STATUS_ATIVO);
         } else {
             // ALL - usa consulta original
             return pacienteRepository.findByOrganizacaoIdAndCpfContaining(orgId, pesquisa);
@@ -276,8 +277,8 @@ public class PacienteService  {
         Long orgId = tenantHelper.getCurrentTenantId();
         log.debug("paciente.buscar rg organizacaoId={} filtro={}", orgId, filtro);
         
-        if ("ATIVO".equals(filtro)) {
-            return pacienteRepository.findByOrganizacaoIdAndRgContainingWithFiltro(orgId, pesquisa, filtro, "ATIVO");
+        if (STATUS_ATIVO.equals(filtro)) {
+            return pacienteRepository.findByOrganizacaoIdAndRgContainingWithFiltro(orgId, pesquisa, filtro, STATUS_ATIVO);
         } else {
             // ALL - usa consulta original
             return pacienteRepository.findByOrganizacaoIdAndRgContaining(orgId, pesquisa);
@@ -292,8 +293,8 @@ public class PacienteService  {
         Long orgId = tenantHelper.getCurrentTenantId();
         log.debug("paciente.buscar telefone organizacaoId={} filtro={}", orgId, filtro);
         
-        if ("ATIVO".equals(filtro)) {
-            return pacienteRepository.findByOrganizacaoIdAndTelefoneContainingWithFiltro(orgId, pesquisa, filtro, "ATIVO");
+        if (STATUS_ATIVO.equals(filtro)) {
+            return pacienteRepository.findByOrganizacaoIdAndTelefoneContainingWithFiltro(orgId, pesquisa, filtro, STATUS_ATIVO);
         } else {
             // ALL - usa consulta original
             return pacienteRepository.findByOrganizacaoIdAndTelefoneContaining(orgId, pesquisa);
@@ -307,8 +308,8 @@ public class PacienteService  {
         Long orgId = tenantHelper.getCurrentTenantId();
         log.debug("paciente.buscar todos organizacaoId={} filtro={}", orgId, filtro);
         
-        if ("ATIVO".equals(filtro)) {
-            return pacienteRepository.findByOrganizacao_IdWithFiltro(orgId, filtro, "ATIVO");
+        if (STATUS_ATIVO.equals(filtro)) {
+            return pacienteRepository.findByOrganizacao_IdWithFiltro(orgId, filtro, STATUS_ATIVO);
         } else {
             // ALL - usa consulta original
             return pacienteRepository.findByOrganizacao_Id(orgId);

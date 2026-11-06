@@ -194,7 +194,9 @@ public class UsuarioService   {
             case GESTOR -> limitePlanoService.validarLimiteAdminOrg(organizacaoId);
             case CLINICO -> limitePlanoService.validarLimiteProfissional(organizacaoId);
             case ASSISTENTE -> limitePlanoService.validarLimiteSecretaria(organizacaoId);
-            default -> { }
+            default -> {
+                // Demais perfis (ex.: ROOT) não têm limite de plano a validar
+            }
         }
     }
 
@@ -202,50 +204,44 @@ public class UsuarioService   {
                                        TipoUsuarioNovo tipoUsuario, StatusUsuario status) {
 
         switch (tipoUsuario) {
-            case GESTOR -> {
-                adminOrganizacaoRepository.findByIdAndOrganizacao_Id(codigoPerfil, organizacaoId)
-                        .ifPresentOrElse(
-                                admin -> {
-                                    admin.setStatus(status == StatusUsuario.ATIVO
-                                            ? AdminOrganizacao.StatusAdmin.ATIVO
-                                            : AdminOrganizacao.StatusAdmin.INATIVO);
-                                    adminOrganizacaoRepository.save(admin);
-                                    log.debug("usuario.bloquear perfil tipo=ADMIN perfilId={}", codigoPerfil);
-                                },
-                                () -> log.warn("usuario.bloquear negado motivo=PERFIL_NAO_ENCONTRADO tipo=ADMIN perfilId={} organizacaoId={}",
-                                        codigoPerfil, organizacaoId)
-                        );
-            }
+            case GESTOR -> adminOrganizacaoRepository.findByIdAndOrganizacao_Id(codigoPerfil, organizacaoId)
+                    .ifPresentOrElse(
+                            admin -> {
+                                admin.setStatus(status == StatusUsuario.ATIVO
+                                        ? AdminOrganizacao.StatusAdmin.ATIVO
+                                        : AdminOrganizacao.StatusAdmin.INATIVO);
+                                adminOrganizacaoRepository.save(admin);
+                                log.debug("usuario.bloquear perfil tipo=ADMIN perfilId={}", codigoPerfil);
+                            },
+                            () -> log.warn("usuario.bloquear negado motivo=PERFIL_NAO_ENCONTRADO tipo=ADMIN perfilId={} organizacaoId={}",
+                                    codigoPerfil, organizacaoId)
+                    );
 
-            case ASSISTENTE -> {
-                secretariaRepository.findByIdAndOrganizacao_Id(codigoPerfil, organizacaoId)
-                        .ifPresentOrElse(
-                                secretaria -> {
-                                    secretaria.setStatus(status == StatusUsuario.ATIVO
-                                            ? StatusSecretaria.ATIVO
-                                            : StatusSecretaria.INATIVO);
-                                    secretariaRepository.save(secretaria);
-                                    log.debug("usuario.bloquear perfil tipo=SECRETARIA perfilId={}", codigoPerfil);
-                                },
-                                () -> log.warn("usuario.bloquear negado motivo=PERFIL_NAO_ENCONTRADO tipo=SECRETARIA perfilId={} organizacaoId={}",
-                                        codigoPerfil, organizacaoId)
-                        );
-            }
+            case ASSISTENTE -> secretariaRepository.findByIdAndOrganizacao_Id(codigoPerfil, organizacaoId)
+                    .ifPresentOrElse(
+                            secretaria -> {
+                                secretaria.setStatus(status == StatusUsuario.ATIVO
+                                        ? StatusSecretaria.ATIVO
+                                        : StatusSecretaria.INATIVO);
+                                secretariaRepository.save(secretaria);
+                                log.debug("usuario.bloquear perfil tipo=SECRETARIA perfilId={}", codigoPerfil);
+                            },
+                            () -> log.warn("usuario.bloquear negado motivo=PERFIL_NAO_ENCONTRADO tipo=SECRETARIA perfilId={} organizacaoId={}",
+                                    codigoPerfil, organizacaoId)
+                    );
 
-            case CLINICO -> {
-                profissionalRepository.findByIdAndOrganizacao_Id(codigoPerfil, organizacaoId)
-                        .ifPresentOrElse(
-                                profissional -> {
-                                    profissional.setStatus(status == StatusUsuario.ATIVO
-                                            ? StatusProfissional.ATIVO
-                                            : StatusProfissional.INATIVO);
-                                    profissionalRepository.save(profissional);
-                                    log.debug("usuario.bloquear perfil tipo=PROFISSIONAL perfilId={}", codigoPerfil);
-                                },
-                                () -> log.warn("usuario.bloquear negado motivo=PERFIL_NAO_ENCONTRADO tipo=PROFISSIONAL perfilId={} organizacaoId={}",
-                                        codigoPerfil, organizacaoId)
-                        );
-            }
+            case CLINICO -> profissionalRepository.findByIdAndOrganizacao_Id(codigoPerfil, organizacaoId)
+                    .ifPresentOrElse(
+                            profissional -> {
+                                profissional.setStatus(status == StatusUsuario.ATIVO
+                                        ? StatusProfissional.ATIVO
+                                        : StatusProfissional.INATIVO);
+                                profissionalRepository.save(profissional);
+                                log.debug("usuario.bloquear perfil tipo=PROFISSIONAL perfilId={}", codigoPerfil);
+                            },
+                            () -> log.warn("usuario.bloquear negado motivo=PERFIL_NAO_ENCONTRADO tipo=PROFISSIONAL perfilId={} organizacaoId={}",
+                                    codigoPerfil, organizacaoId)
+                    );
 
             default -> log.warn("usuario.bloquear negado motivo=TIPO_SEM_PERFIL tipo={}", tipoUsuario);
         }

@@ -3,6 +3,7 @@ package br.com.saudeConecta.application.exception;
 import org.springframework.http.HttpStatus;
 
 public class BusinessException extends RuntimeException {
+    private static final String CODIGO_ERRO_NEGOCIO = "BUSINESS_ERROR";
 
     private final HttpStatus status;
     private final String errorCode;
@@ -10,13 +11,13 @@ public class BusinessException extends RuntimeException {
     public BusinessException(String message) {
         super(message);
         this.status = HttpStatus.BAD_REQUEST;
-        this.errorCode = "BUSINESS_ERROR";
+        this.errorCode = CODIGO_ERRO_NEGOCIO;
     }
 
     public BusinessException(String message, HttpStatus status) {
         super(message);
         this.status = status;
-        this.errorCode = "BUSINESS_ERROR";
+        this.errorCode = CODIGO_ERRO_NEGOCIO;
     }
 
     public BusinessException(String message, HttpStatus status, String errorCode) {
@@ -35,13 +36,13 @@ public class BusinessException extends RuntimeException {
     public BusinessException(String message, HttpStatus status, Throwable cause) {
         super(message, cause);
         this.status = status;
-        this.errorCode = "BUSINESS_ERROR";
+        this.errorCode = CODIGO_ERRO_NEGOCIO;
     }
 
     public BusinessException(String message, Throwable cause) {
         super(message, cause);
         this.status = HttpStatus.BAD_REQUEST;
-        this.errorCode = "BUSINESS_ERROR";
+        this.errorCode = CODIGO_ERRO_NEGOCIO;
     }
 
     public HttpStatus getStatus() {

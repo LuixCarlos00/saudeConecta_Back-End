@@ -29,6 +29,7 @@ import java.util.concurrent.Executor;
 @Service
 @Slf4j
 public class EmailNotificacaoService {
+    private static final String PERFIL_ADMINISTRADOR = "Administrador";
 
     private static final String TEMPLATE_CREDENCIAIS = "email-credenciais";
     private static final String TEMPLATE_RECUPERACAO = "email-recuperacao-senha";
@@ -74,7 +75,7 @@ public class EmailNotificacaoService {
     @Async
     public void enviarCredenciaisAdministrador(String email, String nome, String login,
                                                 String senha, Long organizacaoId, Long adminOrgId) {
-        enviarCredenciais(email, nome, login, senha, "Administrador",
+        enviarCredenciais(email, nome, login, senha, PERFIL_ADMINISTRADOR,
                 COR_ADMINISTRADOR, null, organizacaoId, adminOrgId);
     }
 
@@ -288,7 +289,7 @@ public class EmailNotificacaoService {
 
                 emailRetryService.executarComRetry(
                         email, nome, ASSUNTO_ATIVACAO_ASSINATURA, corpoHtml,
-                        "Administrador", organizacaoId, adminOrgId);
+                        PERFIL_ADMINISTRADOR, organizacaoId, adminOrgId);
 
             } catch (Exception e) {
                 log.error("email.ativacao falha email={}", MascaraLog.email(email), e);
@@ -389,7 +390,7 @@ public class EmailNotificacaoService {
      */
     private String resolverTipoMensageria(String tipoUsuario) {
         return switch (tipoUsuario) {
-            case "Administrador" -> "administrador";
+            case PERFIL_ADMINISTRADOR -> "administrador";
             case "Médico" -> "medico";
             case "Secretária" -> "secretaria";
             case "Paciente" -> "paciente";

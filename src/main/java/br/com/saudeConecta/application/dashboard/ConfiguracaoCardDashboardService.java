@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -89,7 +88,7 @@ public class ConfiguracaoCardDashboardService {
                 .stream()
                 .filter(c -> tiposPermitidos.contains(c.getTipoCard()))
                 .map(this::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     /**
@@ -175,7 +174,7 @@ public class ConfiguracaoCardDashboardService {
                 config.setOrdemExibicao(request.ordemExibicao());
             }
             return toResponse(cardRepository.save(config));
-        }).collect(Collectors.toList());
+        }).toList();
     }
 
     // ── Reset / Inicialização ────────────────────────────────────────────────
@@ -196,7 +195,7 @@ public class ConfiguracaoCardDashboardService {
                 cardRepository.findByUsuarioIdOrderByOrdemExibicaoAsc(usuarioId)
                         .stream()
                         .filter(c -> tiposPermitidos.contains(c.getTipoCard()))
-                        .collect(Collectors.toList());
+                        .toList();
         int ordem = 1;
         for (ConfiguracaoCardDashboard config : configs) {
             config.setAtivo(true);

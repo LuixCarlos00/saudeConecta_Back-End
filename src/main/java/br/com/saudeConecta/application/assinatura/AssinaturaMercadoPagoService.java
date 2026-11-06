@@ -190,7 +190,6 @@ public class AssinaturaMercadoPagoService {
         BigDecimal valorNovo = assinatura.getValorMensal();
         try {
             mercadoPagoClient.atualizarValor(preapprovalId, valorNovo);
-            return;
         } catch (BusinessException falhaNoPut) {
             PreapprovalResponse relido;
             try {

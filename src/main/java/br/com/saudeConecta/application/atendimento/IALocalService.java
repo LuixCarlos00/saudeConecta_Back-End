@@ -26,6 +26,14 @@ public class IALocalService {
     private final BuscarHistoricoCompletoPacienteDentistaUseCase historicoDentistaUseCase;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    private static final String FORMATO_DATA = "dd/MM/yyyy";
+    private static final String FORMATO_ITEM_LISTA = "• %s%n";
+    private static final String CAMPO_DATA_FINALIZADO = "dataFinalizado";
+    private static final String CAMPO_QUEIXA_PRINCIPAL = "queixaPrincipal";
+    private static final String CAMPO_DIAGNOSTICO = "diagnostico";
+    private static final String CAMPO_PRESCRICAO = "prescricao";
+    private static final String CAMPO_ANAMNESE = "anamnese";
+
     // Palavras-chave médicas para análise
     private static final Set<String> PALAVRAS_CRONICAS = Set.of(
         "hipertensão", "diabetes", "asma", "artrite", "depressão", "ansiedade",
@@ -56,7 +64,7 @@ public class IALocalService {
             }
 
             // 2. Analisar dados com algoritmos locais
-            AnaliseHistorico analise = analisarHistoricoLocal(historico, tipo);
+            AnaliseHistorico analise = analisarHistoricoLocal(historico);
             
             // 3. Gerar resumo estruturado
             return gerarResumoEstruturado(analise, historico.size(), tipo);
@@ -81,10 +89,9 @@ public class IALocalService {
     /**
      * Analisa o histórico usando algoritmos locais de NLP
      */
-    private AnaliseHistorico analisarHistoricoLocal(List<?> historico, String tipo) {
+    private AnaliseHistorico analisarHistoricoLocal(List<?> historico) {
         AnaliseHistorico analise = new AnaliseHistorico();
         
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         Map<String, Integer> frequenciaSintomas = new HashMap<>();
         Map<String, Integer> frequenciaDiagnosticos = new HashMap<>();
         Set<String> condicoesCronicas = new HashSet<>();
@@ -102,8 +109,8 @@ public class IALocalService {
             JsonNode node = objectMapper.valueToTree(consulta);
             
             // Análise temporal
-            if (node.has("dataFinalizado") && node.get("dataFinalizado") != null) {
-                String dataStr = node.get("dataFinalizado").asText();
+            if (node.has(CAMPO_DATA_FINALIZADO) && node.get(CAMPO_DATA_FINALIZADO) != null) {
+                String dataStr = node.get(CAMPO_DATA_FINALIZADO).asText();
                 try {
                     LocalDate data = LocalDate.parse(dataStr.split("T")[0]);
                     if (primeiraData == null || data.isBefore(primeiraData)) {
@@ -118,9 +125,9 @@ public class IALocalService {
             }
 
             // Análise de queixa principal
-            if (node.has("queixaPrincipal") && node.get("queixaPrincipal") != null) {
-                String queixa = node.get("queixaPrincipal").asText().toLowerCase();
-                ultimaQueixa = node.get("queixaPrincipal").asText();
+            if (node.has(CAMPO_QUEIXA_PRINCIPAL) && node.get(CAMPO_QUEIXA_PRINCIPAL) != null) {
+                String queixa = node.get(CAMPO_QUEIXA_PRINCIPAL).asText().toLowerCase();
+                ultimaQueixa = node.get(CAMPO_QUEIXA_PRINCIPAL).asText();
                 
                 // Extrair sintomas
                 for (String palavra : PALAVRAS_CRONICAS) {
@@ -139,9 +146,9 @@ public class IALocalService {
             }
 
             // Análise de diagnóstico
-            if (node.has("diagnostico") && node.get("diagnostico") != null) {
-                String diagnostico = node.get("diagnostico").asText().toLowerCase();
-                ultimoDiagnostico = node.get("diagnostico").asText();
+            if (node.has(CAMPO_DIAGNOSTICO) && node.get(CAMPO_DIAGNOSTICO) != null) {
+                String diagnostico = node.get(CAMPO_DIAGNOSTICO).asText().toLowerCase();
+                ultimoDiagnostico = node.get(CAMPO_DIAGNOSTICO).asText();
                 
                 // Extrair termos do diagnóstico
                 String[] termos = diagnostico.split("[\\s,.;]+");
@@ -153,8 +160,8 @@ public class IALocalService {
             }
 
             // Análise de prescrição
-            if (node.has("prescricao") && node.get("prescricao") != null) {
-                String prescricao = node.get("prescricao").asText().toLowerCase();
+            if (node.has(CAMPO_PRESCRICAO) && node.get(CAMPO_PRESCRICAO) != null) {
+                String prescricao = node.get(CAMPO_PRESCRICAO).asText().toLowerCase();
                 
                 for (String medicamento : MEDICAMENTOS_COMUNS) {
                     if (prescricao.contains(medicamento)) {
@@ -164,8 +171,8 @@ public class IALocalService {
             }
 
             // Análise de anamnese
-            if (node.has("anamnese") && node.get("anamnese") != null) {
-                String anamnese = node.get("anamnese").asText().toLowerCase();
+            if (node.has(CAMPO_ANAMNESE) && node.get(CAMPO_ANAMNESE) != null) {
+                String anamnese = node.get(CAMPO_ANAMNESE).asText().toLowerCase();
                 
                 // Buscar padrões adicionais
                 for (String palavra : PALAVRAS_CRONICAS) {
@@ -210,8 +217,8 @@ public class IALocalService {
         long consultasUltimos6Meses = historico.stream()
             .filter(consulta -> {
                 JsonNode node = objectMapper.valueToTree(consulta);
-                if (node.has("dataFinalizado") && node.get("dataFinalizado") != null) {
-                    String dataStr = node.get("dataFinalizado").asText();
+                if (node.has(CAMPO_DATA_FINALIZADO) && node.get(CAMPO_DATA_FINALIZADO) != null) {
+                    String dataStr = node.get(CAMPO_DATA_FINALIZADO).asText();
                     try {
                         LocalDate data = LocalDate.parse(dataStr.split("T")[0]);
                         return data.isAfter(LocalDate.now().minusMonths(6));
@@ -242,18 +249,18 @@ public class IALocalService {
         
         // Visão geral
         resumo.append("📊 **Visão Geral**\n");
-        resumo.append(String.format("• **Total de consultas**: %d %s\n", totalConsultas, 
+        resumo.append(String.format("• **Total de consultas**: %d %s%n", totalConsultas, 
             tipo.equals("dentista") ? "odontológicas" : "médicas"));
         
         if (analise.primeiraConsulta != null && analise.ultimaConsulta != null) {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-            resumo.append(String.format("• **Período de acompanhamento**: %s a %s\n", 
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern(FORMATO_DATA);
+            resumo.append(String.format("• **Período de acompanhamento**: %s a %s%n", 
                 analise.primeiraConsulta.format(formatter), 
                 analise.ultimaConsulta.format(formatter)));
             
             if (analise.totalDiasAcompanhamento > 0) {
                 long meses = analise.totalDiasAcompanhamento / 30;
-                resumo.append(String.format("• **Tempo de acompanhamento**: %d meses\n", meses));
+                resumo.append(String.format("• **Tempo de acompanhamento**: %d meses%n", meses));
             }
         }
         
@@ -262,7 +269,7 @@ public class IALocalService {
             resumo.append("\n🏥 **Condições Crônicas Identificadas**\n");
             for (String condicao : analise.condicoesCronicas) {
                 int frequencia = analise.frequenciaSintomas.getOrDefault(condicao, 0);
-                resumo.append(String.format("• **%s** (mencionado %d vezes)\n", 
+                resumo.append(String.format("• **%s** (mencionado %d vezes)%n", 
                     capitalize(condicao), frequencia));
             }
         }
@@ -271,7 +278,7 @@ public class IALocalService {
         if (!analise.sintomasUrgentes.isEmpty()) {
             resumo.append("\n⚠️ **Alertas Clínicos**\n");
             for (String urgente : analise.sintomasUrgentes) {
-                resumo.append(String.format("• %s\n", capitalize(urgente)));
+                resumo.append(String.format(FORMATO_ITEM_LISTA, capitalize(urgente)));
             }
         }
         
@@ -279,20 +286,20 @@ public class IALocalService {
         if (!analise.medicamentosUsados.isEmpty()) {
             resumo.append("\n💊 **Medicamentos Identificados**\n");
             for (String medicamento : analise.medicamentosUsados) {
-                resumo.append(String.format("• %s\n", capitalize(medicamento)));
+                resumo.append(String.format(FORMATO_ITEM_LISTA, capitalize(medicamento)));
             }
         }
         
         // Padrão evolutivo
         resumo.append("\n📈 **Padrão Evolutivo**\n");
-        resumo.append(String.format("• %s\n", analise.padraoEvolucao));
+        resumo.append(String.format(FORMATO_ITEM_LISTA, analise.padraoEvolucao));
         
         // Consulta mais recente
         if (!analise.ultimaQueixa.isEmpty()) {
             resumo.append("\n🩺 **Consulta Mais Recente**\n");
-            resumo.append(String.format("• **Queixa principal**: %s\n", analise.ultimaQueixa));
+            resumo.append(String.format("• **Queixa principal**: %s%n", analise.ultimaQueixa));
             if (!analise.ultimoDiagnostico.isEmpty()) {
-                resumo.append(String.format("• **Diagnóstico**: %s\n", analise.ultimoDiagnostico));
+                resumo.append(String.format("• **Diagnóstico**: %s%n", analise.ultimoDiagnostico));
             }
         }
         
@@ -303,7 +310,7 @@ public class IALocalService {
             resumo.append("• **Paciente plurimórbido** - requer atenção integrada\n");
         }
         
-        if (analise.sintomasUrgentes.size() > 0) {
+        if (!analise.sintomasUrgentes.isEmpty()) {
             resumo.append("• **Atenção a sintomas agudos** - monitorar evolução\n");
         }
         
@@ -313,7 +320,7 @@ public class IALocalService {
         
         resumo.append("\n---\n");
         resumo.append("*Resumo gerado por análise inteligente local - ");
-        resumo.append(LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+        resumo.append(LocalDate.now().format(DateTimeFormatter.ofPattern(FORMATO_DATA)));
         
         return resumo.toString();
     }

@@ -145,5 +145,6 @@ public class ChamadoSuporte implements Serializable, TenantAware {
 
     @Override
     public void setOrganizacaoId(Long organizacaoId) {
+        // Sem efeito: a organização é definida pela associação (campo "organizacao"); o setter existe só para cumprir a interface de tenant.
     }
 }

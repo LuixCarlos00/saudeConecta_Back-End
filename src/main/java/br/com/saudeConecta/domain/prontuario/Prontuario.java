@@ -8,7 +8,6 @@ import lombok.*;
 
 import java.io.Serializable;
 import java.sql.Date;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -124,14 +123,4 @@ public class Prontuario implements Serializable {
         planejamento.setProntuario(this);
         this.planejamentos.add(planejamento);
     }
-
-    private LocalDate parseData(String data) {
-        if (data == null || data.isBlank()) return null;
-        try {
-            return LocalDate.parse(data);
-        } catch (Exception e) {
-            return null;
-        }
-    }
 }
-

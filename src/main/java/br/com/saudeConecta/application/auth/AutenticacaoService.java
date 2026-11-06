@@ -42,6 +42,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Slf4j
 public class AutenticacaoService {
+    private static final String NOME_PADRAO_PROFISSIONAL = "Profissional";
 
     private final AuthenticationManager authenticationManager;
     private final TokenService tokenService;
@@ -225,7 +226,7 @@ public class AutenticacaoService {
                 return admin.map(AdminOrganizacao::getNome).orElse("Administrador");
             } else if (usuario.isClinico()) {
                 Optional<Profissional> profissional = profissionalRepository.findByUsuario_Id(usuario.getId());
-                return profissional.map(Profissional::getNome).orElse("Profissional");
+                return profissional.map(Profissional::getNome).orElse(NOME_PADRAO_PROFISSIONAL);
             } else if (usuario.isAssistente()) {
                 Optional<Secretaria> secretaria = secretariaRepository.findByUsuario_Id(usuario.getId());
                 return secretaria.map(Secretaria::getNome).orElse("Secretária");
@@ -251,8 +252,8 @@ public class AutenticacaoService {
                             return p.getTipoProfissional().getCodigo();
                         }
                     }
-                    return "Profissional";
-                }).orElse("Profissional");
+                    return NOME_PADRAO_PROFISSIONAL;
+                }).orElse(NOME_PADRAO_PROFISSIONAL);
             }
             if (usuario.isGestor()) {
                 Optional<AdminOrganizacao> admin = adminOrganizacaoRepository.findByUsuario_Id(usuario.getId());

@@ -40,6 +40,7 @@ import java.util.Optional;
 @Service
 @Slf4j
 public class AdminOrganizacaoService {
+    private static final String MSG_ADMIN_NAO_ENCONTRADO = "Administrador não encontrado";
 
     /** Um gerador só por classe: criar um SecureRandom por senha gasta entropia à toa (S2119). */
     private static final SecureRandom GERADOR_SENHA = new SecureRandom();
@@ -177,7 +178,7 @@ public class AdminOrganizacaoService {
         log.info("adminOrg.atualizarMeusDados inicio adminId={} organizacaoId={}", adminId, orgId);
 
         AdminOrganizacao admin = adminOrganizacaoRepository.findByIdWithOrgAndEndereco(adminId)
-                .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
+                .orElseThrow(() -> new IllegalArgumentException(MSG_ADMIN_NAO_ENCONTRADO));
 
         // Validação de tenant
         if (!admin.getOrganizacao().getId().equals(orgId)) {
@@ -263,7 +264,7 @@ public class AdminOrganizacaoService {
         // permitiria tomar a conta via "esqueci minha senha". Admin de outra org responde
         // igual a inexistente para não revelar quais IDs existem.
         AdminOrganizacao antes = adminOrganizacaoRepository.findByIdAndOrganizacao_Id(id, orgId)
-            .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
+            .orElseThrow(() -> new IllegalArgumentException(MSG_ADMIN_NAO_ENCONTRADO));
 
         // E-mail duplicado desvia o "esqueci minha senha" (que busca por e-mail) para a conta errada
         emailUnicoService.validarEmailLivreParaAtualizacao(email, antes.getEmail(),
@@ -305,7 +306,7 @@ public class AdminOrganizacaoService {
         if (orgId == null) {
             log.debug("adminOrg.deletar escopo=ROOT adminId={}", idAdmin);
             admin = adminOrganizacaoRepository.findById(idAdmin)
-                    .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
+                    .orElseThrow(() -> new IllegalArgumentException(MSG_ADMIN_NAO_ENCONTRADO));
         } else {
             admin = adminOrganizacaoRepository.findByIdAndOrganizacao_Id(idAdmin, orgId)
                     .orElseThrow(() -> new IllegalArgumentException("Administrador nao encontrado"));
@@ -352,7 +353,7 @@ public class AdminOrganizacaoService {
     public AdminOrgCompletoResponse buscarAdminOrgCompleto(Long id) {
         log.debug("adminOrg.buscar escopo=SUPER_ADMIN adminId={}", id);
         AdminOrganizacao admin = adminOrganizacaoRepository.findByIdWithOrgAndEndereco(id)
-                .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
+                .orElseThrow(() -> new IllegalArgumentException(MSG_ADMIN_NAO_ENCONTRADO));
         return AdminOrgCompletoResponse.fromEntity(admin);
     }
 
@@ -369,7 +370,7 @@ public class AdminOrganizacaoService {
         log.info("adminOrg.atualizar inicio escopo=SUPER_ADMIN adminId={}", id);
 
         AdminOrganizacao admin = adminOrganizacaoRepository.findByIdWithOrgAndEndereco(id)
-                .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado"));
+                .orElseThrow(() -> new IllegalArgumentException(MSG_ADMIN_NAO_ENCONTRADO));
 
         // Atualiza dados do admin
         if (request.nome() != null && !request.nome().isBlank()) {
@@ -480,7 +481,7 @@ public class AdminOrganizacaoService {
         }
 
         String login = determinarLogin(request, isJuridica);
-        validarUnicidadeLogin(login, isJuridica, request);
+        validarUnicidadeLogin(login, isJuridica);
 
         if (isJuridica) {
             validarUnicidadeCnpj(request.cnpj());
@@ -550,7 +551,7 @@ public class AdminOrganizacaoService {
         return isJuridica ? limparCnpj(request.cnpj()) : limparCpf(request.cpf());
     }
 
-    private void validarUnicidadeLogin(String login, boolean isJuridica, CadastrarAdminOrgCompletoRequest request) {
+    private void validarUnicidadeLogin(String login, boolean isJuridica) {
         if (usuarioRepository.existsByLogin(login)) {
             String documento = isJuridica ? "CNPJ" : "CPF";
             throw new IllegalStateException(documento + " já cadastrado como login no sistema");
@@ -634,7 +635,7 @@ public class AdminOrganizacaoService {
     }
 
     private String limparCnpj(String cnpj) {
-        return cnpj.replaceAll("[^0-9]", "");
+        return cnpj.replaceAll("\\D", "");
     }
 
     private String gerarSenhaAleatoria() {
@@ -647,6 +648,6 @@ public class AdminOrganizacaoService {
     }
 
     private String limparCpf(String cpf) {
-        return cpf.replaceAll("[^0-9]", "");
+        return cpf.replaceAll("\\D", "");
     }
 }

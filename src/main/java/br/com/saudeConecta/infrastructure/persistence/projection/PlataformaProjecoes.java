@@ -1,6 +1,5 @@
 package br.com.saudeConecta.infrastructure.persistence.projection;
 
-import br.com.saudeConecta.domain.consulta.StatusConsulta;
 import br.com.saudeConecta.domain.planos.StatusAssinatura;
 import br.com.saudeConecta.domain.planos.TipoPlano;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;

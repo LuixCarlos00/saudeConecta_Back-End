@@ -101,7 +101,7 @@ public class HistoricoDadosPessoaisService {
         return historicoRepository.findTop10ByOrderByCriadoEmDesc();
     }
 
-   ///=======================================
+   //=======================================
 
     /**
      * Compara dois objetos (antes e depois da atualização) via reflection,
@@ -141,8 +141,7 @@ public class HistoricoDadosPessoaisService {
         List<Field> campos = getAllFieldsFromClass(antes.getClass());
 
         for (Field campo : campos) {
-            if (CAMPOS_IGNORADOS.contains(campo.getName())) continue;
-            if (Modifier.isStatic(campo.getModifiers())) continue;
+            if (CAMPOS_IGNORADOS.contains(campo.getName()) || Modifier.isStatic(campo.getModifiers())) continue;
 
             campo.setAccessible(true);
 
@@ -151,23 +150,23 @@ public class HistoricoDadosPessoaisService {
                 Object valorDepois = campo.get(depois);
 
                 // Sem mudança — ignora (com tratamento especial para BigDecimal)
-                if (saoIguais(valorAntes, valorDepois)) continue;
+                if (!saoIguais(valorAntes, valorDepois)) {
+                    String strAntes  = valorAntes  != null ? valorAntes.toString()  : null;
+                    String strDepois = valorDepois != null ? valorDepois.toString() : null;
 
-                String strAntes  = valorAntes  != null ? valorAntes.toString()  : null;
-                String strDepois = valorDepois != null ? valorDepois.toString() : null;
+                    log.debug("historico.registrar campo alterado entidade={} entidadeId={} campo={}",
+                            entidade, idEntidade, campo.getName());
 
-                log.debug("historico.registrar campo alterado entidade={} entidadeId={} campo={}",
-                        entidade, idEntidade, campo.getName());
-
-                registros.add(HistoricoDadosPessoais.builder()
-                        .organizacao(organizacao)
-                        .usuario(usuario)
-                        .entidade(entidade)
-                        .idEntidade(idEntidade)
-                        .campo(campo.getName())
-                        .valorAnterior(strAntes)
-                        .valorNovo(strDepois)
-                        .build());
+                    registros.add(HistoricoDadosPessoais.builder()
+                            .organizacao(organizacao)
+                            .usuario(usuario)
+                            .entidade(entidade)
+                            .idEntidade(idEntidade)
+                            .campo(campo.getName())
+                            .valorAnterior(strAntes)
+                            .valorNovo(strDepois)
+                            .build());
+                }
 
             } catch (IllegalAccessException e) {
                 log.warn("historico.registrar falha motivo=CAMPO_INACESSIVEL campo={} causa={}", campo.getName(), e.getClass().getSimpleName());
@@ -189,8 +188,8 @@ public class HistoricoDadosPessoaisService {
      */
     private boolean saoIguais(Object a, Object b) {
         if (Objects.equals(a, b)) return true;
-        if (a instanceof BigDecimal && b instanceof BigDecimal) {
-            return ((BigDecimal) a).compareTo((BigDecimal) b) == 0;
+        if (a instanceof BigDecimal bigA && b instanceof BigDecimal bigB) {
+            return bigA.compareTo(bigB) == 0;
         }
         return false;
     }

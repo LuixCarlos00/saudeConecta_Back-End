@@ -42,6 +42,8 @@ import java.util.Set;
 @Service
 @Slf4j
 public class ProfissionalService {
+    private static final String STATUS_ATIVO = "ATIVO";
+
     
     private final ProfissionalRepository profissionalRepository;
     private final TipoProfissionalRepository tipoProfissionalRepository;
@@ -397,7 +399,7 @@ return resultado ;
     }
 
     private String limparCpf(String cpf) {
-        return cpf != null ? cpf.replaceAll("[^0-9]", "") : null;
+        return cpf != null ? cpf.replaceAll("\\D", "") : null;
     }
 
     private Sexo converterSexo(String sexo) {
@@ -445,7 +447,7 @@ return resultado ;
         Long orgId = tenantHelper.getCurrentTenantId();
         log.debug("profissional.buscar nome={} organizacaoId={} filtro={}", nome, orgId, filtro);
         
-        if ("ATIVO".equals(filtro)) {
+        if (STATUS_ATIVO.equals(filtro)) {
             return profissionalRepository.findByOrganizacaoIdAndNomeContainingWithFiltro(orgId, nome, filtro, StatusProfissional.ATIVO);
         } else {
             // ALL - usa consulta original
@@ -459,7 +461,7 @@ return resultado ;
         Long orgId = tenantHelper.getCurrentTenantId();
         log.debug("profissional.buscar crm={} organizacaoId={} filtro={}", crm, orgId, filtro);
         
-        if ("ATIVO".equals(filtro)) {
+        if (STATUS_ATIVO.equals(filtro)) {
             return profissionalRepository.findByOrganizacaoIdAndCrmContainingWithFiltro(orgId, crm, filtro, StatusProfissional.ATIVO);
         } else {
             // ALL - usa consulta original
@@ -473,7 +475,7 @@ return resultado ;
         Long orgId = tenantHelper.getCurrentTenantId();
         log.debug("profissional.buscar cidade={} organizacaoId={} filtro={}", cidade, orgId, filtro);
         
-        if ("ATIVO".equals(filtro)) {
+        if (STATUS_ATIVO.equals(filtro)) {
             return profissionalRepository.findByOrganizacaoIdAndCidadeContainingWithFiltro(orgId, cidade, filtro, StatusProfissional.ATIVO);
         } else {
             // ALL - usa consulta original
@@ -487,7 +489,7 @@ return resultado ;
         Long orgId = tenantHelper.getCurrentTenantId();
         log.debug("profissional.buscar especialidade={} organizacaoId={} filtro={}", especialidade, orgId, filtro);
         
-        if ("ATIVO".equals(filtro)) {
+        if (STATUS_ATIVO.equals(filtro)) {
             return profissionalRepository.findByOrganizacaoIdAndEspecialidadeContainingWithFiltro(orgId, especialidade, filtro, StatusProfissional.ATIVO);
         } else {
             // ALL - usa consulta original
@@ -502,7 +504,7 @@ return resultado ;
         Long orgId = tenantHelper.getCurrentTenantId();
         log.debug("profissional.buscar todos organizacaoId={} filtro={}", orgId, filtro);
         
-        if ("ATIVO".equals(filtro)) {
+        if (STATUS_ATIVO.equals(filtro)) {
             return profissionalRepository.findByOrganizacao_IdWithUsuarioWithFiltro(orgId, filtro, StatusProfissional.ATIVO);
         } else {
             // ALL - usa consulta original

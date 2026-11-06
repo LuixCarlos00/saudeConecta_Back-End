@@ -231,6 +231,6 @@ public class SecretariaService {
     }
 
     private String limparCpf(String cpf) {
-        return cpf != null ? cpf.replaceAll("[^0-9]", "") : null;
+        return cpf != null ? cpf.replaceAll("\\D", "") : null;
     }
 }
