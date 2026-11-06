@@ -17,8 +17,8 @@ import br.com.saudeConecta.infrastructure.persistence.repository.PacienteReposit
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProntuarioRepository;
 import br.com.saudeConecta.presentation.dto.prontuario.CadastrarProntuarioRequest;
-import br.com.saudeConecta.service.mapper.ProntuarioMapper;
 import br.com.saudeConecta.presentation.dto.prontuario.PlanejamentoTerapeuticoRequest;
+import br.com.saudeConecta.service.mapper.ProntuarioMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
