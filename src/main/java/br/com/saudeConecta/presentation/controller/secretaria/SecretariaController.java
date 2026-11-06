@@ -44,7 +44,7 @@ public class SecretariaController {
 
     @PutMapping("/atualizarSecretariaIdByOrg/{id}")
     @Description("Atualiza secretária por ID. Gestor ou a própria secretária (regra no service)")
-    public ResponseEntity<?> atualizarSecretariaIdByOrg(@PathVariable Long id, @RequestBody @Valid AtualizarSecretariaRequest secretaria) {
+    public ResponseEntity<SecretariaResponse> atualizarSecretariaIdByOrg(@PathVariable Long id, @RequestBody @Valid AtualizarSecretariaRequest secretaria) {
         try {
             Secretaria atualizada = secretariaService.atualizarSecretariaIdByOrg(id, secretaria);
             return ResponseEntity.ok(SecretariaResponse.fromEntity(atualizada));
