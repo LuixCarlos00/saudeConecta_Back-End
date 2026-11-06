@@ -2,7 +2,6 @@ package br.com.saudeConecta.domain.usuario;
 
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.infra.tenant.TenantAware;
-import br.com.saudeConecta.presentation.dto.usuario.CadastrarUsuarioRequest;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
@@ -61,27 +60,6 @@ public class Usuario implements Serializable, UserDetails, TenantAware {
     @Column(name = "motivo_bloqueio", length = 20)
     private MotivoBloqueio motivoBloqueio;
 
-    private StatusUsuario converterByteParaStatus(Byte statusByte) {
-        return statusByte != null && statusByte == 1 ? StatusUsuario.ATIVO : StatusUsuario.INATIVO;
-    }
-
-    public Usuario(CadastrarUsuarioRequest dados, String senhaCriptografada, TipoUsuarioNovo tipoNovo) {
-        this.login = dados.login();
-        this.senha = senhaCriptografada;
-        this.tipoUsuarioNovo = tipoNovo;
-        this.status = converterByteParaStatus(dados.status());
-    }
-    
-    public Usuario(CadastrarUsuarioRequest dados, String senhaCriptografada, 
-                   Organizacao organizacao, TipoUsuarioNovo tipoNovo) {
-        this.login = dados.login();
-        this.senha = senhaCriptografada;
-        this.tipoUsuarioNovo = tipoNovo;
-        this.status = converterByteParaStatus(dados.status());
-        this.organizacao = organizacao;
-    }
-
-
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         if (!isEnabled()) {
@@ -121,7 +99,6 @@ public class Usuario implements Serializable, UserDetails, TenantAware {
     public boolean isEnabled() {
         return StatusUsuario.ATIVO.equals(this.status);
     }
-
 
     @Override
     public Long getOrganizacaoId() {
