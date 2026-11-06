@@ -17,6 +17,7 @@ import br.com.saudeConecta.infrastructure.persistence.repository.PacienteReposit
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProntuarioRepository;
 import br.com.saudeConecta.presentation.dto.prontuario.CadastrarProntuarioRequest;
+import br.com.saudeConecta.service.mapper.ProntuarioMapper;
 import br.com.saudeConecta.presentation.dto.prontuario.PlanejamentoTerapeuticoRequest;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -86,43 +87,7 @@ public class ProntuarioService {
                     HttpStatus.CONFLICT, CODE_PRONTUARIO_JA_FINALIZADO);
         }
 
-        // ── Monta Prontuario principal ────────────────────────────────────────
-        Prontuario prontuario = Prontuario.builder()
-                // anamnese
-                .prontQueixaPricipal(request.getQueixaPrincipal())
-                .prontAnamnese(request.getAnamnese())
-                .prontObservacao(request.getObservacao())
-                // exame clínico — sinais vitais
-                .prontPressao(request.getPressao())
-                .prontFrequenciaRespiratoria(request.getFrequenciaRespiratoria())
-                .prontFrequenciaArterialSistolica(request.getFrequenciaArterialSistolica())
-                .prontFrequenciaArterialDiastolica(request.getFrequenciaArterialDiastolica())
-                .prontPulso(request.getPulso())
-                .prontAltura(request.getAltura())
-                .prontTemperatura(request.getTemperatura())
-                .prontPeso(request.getPeso())
-                .prontSaturacao(request.getSaturacao())
-                .prontHemoglobina(request.getHemoglobina())
-                // diagnóstico
-                .prontDiagnostico(request.getDiagnostico())
-                .prontOrientacoes(request.getOrientacoes())
-                // prescrição
-                 .prontTituloPrescricao(request.getTituloPrescricao())
-                .prontPrescricao(request.getPrescricao())
-                // exames
-                 // controle
-                .prontDataFinalizado(request.getDataFinalizado())
-                .prontTempoDuracao(request.getTempoDuracao())
-                // identificação do paciente
-                .prontResponsavel(request.getResponsavel())
-                // TUSS e CID
-                .prontTussTexto(request.getTussTexto())
-                .prontCidTexto(request.getCidTexto())
-                .prontSolicitacaoExameTexto(request.getSolicitacaoExameTexto())
-                // relacionamentos
-                .profissional(profissional)
-                .consulta(consulta)
-                .build();
+        Prontuario prontuario = ProntuarioMapper.paraEntidade(request, profissional, consulta);
 
         Prontuario salvo = prontuarioRepository.save(prontuario);
         log.info("prontuario.medico.cadastrar ok prontuarioId={}", salvo.getProntCodigoProntuario());
