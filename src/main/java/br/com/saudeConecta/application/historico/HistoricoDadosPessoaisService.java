@@ -151,21 +151,10 @@ public class HistoricoDadosPessoaisService {
 
                 // Sem mudança — ignora (com tratamento especial para BigDecimal)
                 if (!saoIguais(valorAntes, valorDepois)) {
-                    String strAntes  = valorAntes  != null ? valorAntes.toString()  : null;
-                    String strDepois = valorDepois != null ? valorDepois.toString() : null;
-
                     log.debug("historico.registrar campo alterado entidade={} entidadeId={} campo={}",
                             entidade, idEntidade, campo.getName());
-
-                    registros.add(HistoricoDadosPessoais.builder()
-                            .organizacao(organizacao)
-                            .usuario(usuario)
-                            .entidade(entidade)
-                            .idEntidade(idEntidade)
-                            .campo(campo.getName())
-                            .valorAnterior(strAntes)
-                            .valorNovo(strDepois)
-                            .build());
+                    registros.add(montarRegistro(organizacao, usuario, entidade, idEntidade,
+                            campo.getName(), valorAntes, valorDepois));
                 }
 
             } catch (IllegalAccessException e) {
@@ -180,6 +169,19 @@ public class HistoricoDadosPessoaisService {
 
         historicoRepository.saveAll(registros);
         log.debug("historico.registrar ok campos={} entidade={} entidadeId={}", registros.size(), entidade, idEntidade);
+    }
+
+    private HistoricoDadosPessoais montarRegistro(Organizacao organizacao, Usuario usuario, EntidadeTipo entidade,
+                                                  Long idEntidade, String campo, Object valorAntes, Object valorDepois) {
+        return HistoricoDadosPessoais.builder()
+                .organizacao(organizacao)
+                .usuario(usuario)
+                .entidade(entidade)
+                .idEntidade(idEntidade)
+                .campo(campo)
+                .valorAnterior(valorAntes != null ? valorAntes.toString() : null)
+                .valorNovo(valorDepois != null ? valorDepois.toString() : null)
+                .build();
     }
 
     /**

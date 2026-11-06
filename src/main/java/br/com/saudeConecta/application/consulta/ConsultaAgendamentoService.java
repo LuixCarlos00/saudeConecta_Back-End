@@ -282,6 +282,25 @@ public class ConsultaAgendamentoService {
     }
 
     /**
+     * Status resultante da edição: o pedido passa pela regra de transição; ausente ou igual ao atual é no-op.
+     *
+     * @param consulta consulta sendo editada
+     * @param statusSolicitado status enviado na requisição (pode ser nulo ou em branco)
+     * @return status que a consulta terá após a edição
+     */
+    private StatusConsulta resolverNovoStatus(Consulta consulta, String statusSolicitado) {
+        if (statusSolicitado == null || statusSolicitado.isBlank()) {
+            return consulta.getStatus();
+        }
+        StatusConsulta solicitado = parseStatus(statusSolicitado);
+        if (solicitado == consulta.getStatus()) {
+            return consulta.getStatus();
+        }
+        validarTransicaoStatus(consulta.getStatus(), solicitado);
+        return solicitado;
+    }
+
+    /**
      * Gera descrição para o histórico baseado no novo status
      */
     private String gerarDescricaoHistorico(StatusConsulta novoStatus, String motivo) {
@@ -331,14 +350,7 @@ public class ConsultaAgendamentoService {
             .orElseThrow(() -> new IllegalArgumentException("Paciente não encontrado"));
 
         // Status pedido passa pela mesma regra de transição do PATCH /status; igual ao atual é no-op.
-        StatusConsulta novoStatus = consulta.getStatus();
-        if (request.status() != null && !request.status().isBlank()) {
-            StatusConsulta solicitado = parseStatus(request.status());
-            if (solicitado != consulta.getStatus()) {
-                validarTransicaoStatus(consulta.getStatus(), solicitado);
-                novoStatus = solicitado;
-            }
-        }
+        StatusConsulta novoStatus = resolverNovoStatus(consulta, request.status());
 
         if (StatusConsulta.AGENDADA.equals(novoStatus) || StatusConsulta.CONFIRMADA.equals(novoStatus)) {
             int duracaoMinutos = resolverDuracaoMinutos(request.duracaoMinutos(), consulta.getDuracaoMinutos());

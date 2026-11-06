@@ -92,120 +92,131 @@ public class IALocalService {
      */
     private AnaliseHistorico analisarHistoricoLocal(List<?> historico) {
         AnaliseHistorico analise = new AnaliseHistorico();
-        
-        Map<String, Integer> frequenciaSintomas = new HashMap<>();
-        Map<String, Integer> frequenciaDiagnosticos = new HashMap<>();
+        analise.sintomasUrgentes = new ArrayList<>();
+        analise.medicamentosUsados = new ArrayList<>();
+        analise.frequenciaSintomas = new HashMap<>();
+        analise.frequenciaDiagnosticos = new HashMap<>();
+        analise.ultimaQueixa = "";
+        analise.ultimoDiagnostico = "";
         Set<String> condicoesCronicas = new HashSet<>();
-        List<String> sintomasUrgentes = new ArrayList<>();
-        List<String> medicamentosUsados = new ArrayList<>();
-        String ultimaQueixa = "";
-        String ultimoDiagnostico = "";
-        
-        // Dados temporais
-        LocalDate primeiraData = null;
-        LocalDate ultimaData = null;
-        long totalDias = 0;
 
         for (Object consulta : historico) {
             JsonNode node = objectMapper.valueToTree(consulta);
-            
-            // Análise temporal
-            if (node.has(CAMPO_DATA_FINALIZADO) && node.get(CAMPO_DATA_FINALIZADO) != null) {
-                String dataStr = node.get(CAMPO_DATA_FINALIZADO).asText();
-                try {
-                    LocalDate data = LocalDate.parse(dataStr.split("T")[0]);
-                    if (primeiraData == null || data.isBefore(primeiraData)) {
-                        primeiraData = data;
-                    }
-                    if (ultimaData == null || data.isAfter(ultimaData)) {
-                        ultimaData = data;
-                    }
-                } catch (Exception e) {
-                    log.debug("ia.resumo data invalida data={}", dataStr);
-                }
-            }
-
-            // Análise de queixa principal
-            if (node.has(CAMPO_QUEIXA_PRINCIPAL) && node.get(CAMPO_QUEIXA_PRINCIPAL) != null) {
-                String queixa = node.get(CAMPO_QUEIXA_PRINCIPAL).asText().toLowerCase();
-                ultimaQueixa = node.get(CAMPO_QUEIXA_PRINCIPAL).asText();
-                
-                // Extrair sintomas
-                for (String palavra : PALAVRAS_CRONICAS) {
-                    if (queixa.contains(palavra)) {
-                        condicoesCronicas.add(palavra);
-                        frequenciaSintomas.merge(palavra, 1, Integer::sum);
-                    }
-                }
-                
-                // Verificar sintomas urgentes
-                for (String urgente : SINTOMAS_URGENTES) {
-                    if (queixa.contains(urgente)) {
-                        sintomasUrgentes.add(urgente);
-                    }
-                }
-            }
-
-            // Análise de diagnóstico
-            if (node.has(CAMPO_DIAGNOSTICO) && node.get(CAMPO_DIAGNOSTICO) != null) {
-                String diagnostico = node.get(CAMPO_DIAGNOSTICO).asText().toLowerCase();
-                ultimoDiagnostico = node.get(CAMPO_DIAGNOSTICO).asText();
-                
-                // Extrair termos do diagnóstico
-                String[] termos = diagnostico.split("[\\s,.;]+");
-                for (String termo : termos) {
-                    if (termo.length() > 3) {
-                        frequenciaDiagnosticos.merge(termo, 1, Integer::sum);
-                    }
-                }
-            }
-
-            // Análise de prescrição
-            if (node.has(CAMPO_PRESCRICAO) && node.get(CAMPO_PRESCRICAO) != null) {
-                String prescricao = node.get(CAMPO_PRESCRICAO).asText().toLowerCase();
-                
-                for (String medicamento : MEDICAMENTOS_COMUNS) {
-                    if (prescricao.contains(medicamento)) {
-                        medicamentosUsados.add(medicamento);
-                    }
-                }
-            }
-
-            // Análise de anamnese
-            if (node.has(CAMPO_ANAMNESE) && node.get(CAMPO_ANAMNESE) != null) {
-                String anamnese = node.get(CAMPO_ANAMNESE).asText().toLowerCase();
-                
-                // Buscar padrões adicionais
-                for (String palavra : PALAVRAS_CRONICAS) {
-                    if (anamnese.contains(palavra)) {
-                        condicoesCronicas.add(palavra);
-                    }
-                }
-            }
+            analisarPeriodo(node, analise);
+            analisarQueixaPrincipal(node, analise, condicoesCronicas);
+            analisarDiagnostico(node, analise);
+            analisarPrescricao(node, analise);
+            analisarAnamnese(node, condicoesCronicas);
         }
 
         // Calcular período total
-        if (primeiraData != null && ultimaData != null) {
-            totalDias = java.time.temporal.ChronoUnit.DAYS.between(primeiraData, ultimaData);
+        long totalDias = 0;
+        if (analise.primeiraConsulta != null && analise.ultimaConsulta != null) {
+            totalDias = java.time.temporal.ChronoUnit.DAYS.between(analise.primeiraConsulta, analise.ultimaConsulta);
         }
 
         // Preencher análise
         analise.totalConsultas = historico.size();
-        analise.primeiraConsulta = primeiraData;
-        analise.ultimaConsulta = ultimaData;
         analise.totalDiasAcompanhamento = totalDias;
         analise.condicoesCronicas = new ArrayList<>(condicoesCronicas);
-        analise.sintomasUrgentes = sintomasUrgentes;
-        analise.medicamentosUsados = medicamentosUsados;
-        analise.frequenciaSintomas = frequenciaSintomas;
-        analise.frequenciaDiagnosticos = frequenciaDiagnosticos;
-        analise.ultimaQueixa = ultimaQueixa;
-        analise.ultimoDiagnostico = ultimoDiagnostico;
-        
+
         // Determinar padrão evolutivo
         analise.padraoEvolucao = determinarPadraoEvolucao(historico);
-        
+
         return analise;
+    }
+
+    /** Campo presente no JSON da consulta, ou null quando ausente. */
+    private String textoDoCampo(JsonNode node, String campo) {
+        if (node.has(campo) && node.get(campo) != null) {
+            return node.get(campo).asText();
+        }
+        return null;
+    }
+
+    /** Atualiza a primeira e a última data de consulta; data inválida é ignorada. */
+    private void analisarPeriodo(JsonNode node, AnaliseHistorico analise) {
+        String dataStr = textoDoCampo(node, CAMPO_DATA_FINALIZADO);
+        if (dataStr == null) {
+            return;
+        }
+        try {
+            LocalDate data = LocalDate.parse(dataStr.split("T")[0]);
+            if (analise.primeiraConsulta == null || data.isBefore(analise.primeiraConsulta)) {
+                analise.primeiraConsulta = data;
+            }
+            if (analise.ultimaConsulta == null || data.isAfter(analise.ultimaConsulta)) {
+                analise.ultimaConsulta = data;
+            }
+        } catch (Exception e) {
+            log.debug("ia.resumo data invalida data={}", dataStr);
+        }
+    }
+
+    /** Extrai condições crônicas e sintomas urgentes da queixa principal. */
+    private void analisarQueixaPrincipal(JsonNode node, AnaliseHistorico analise, Set<String> condicoesCronicas) {
+        String queixaOriginal = textoDoCampo(node, CAMPO_QUEIXA_PRINCIPAL);
+        if (queixaOriginal == null) {
+            return;
+        }
+        String queixa = queixaOriginal.toLowerCase();
+        analise.ultimaQueixa = queixaOriginal;
+
+        for (String palavra : PALAVRAS_CRONICAS) {
+            if (queixa.contains(palavra)) {
+                condicoesCronicas.add(palavra);
+                analise.frequenciaSintomas.merge(palavra, 1, Integer::sum);
+            }
+        }
+
+        for (String urgente : SINTOMAS_URGENTES) {
+            if (queixa.contains(urgente)) {
+                analise.sintomasUrgentes.add(urgente);
+            }
+        }
+    }
+
+    /** Conta os termos do diagnóstico (mais de 3 letras) e guarda o último diagnóstico. */
+    private void analisarDiagnostico(JsonNode node, AnaliseHistorico analise) {
+        String diagnosticoOriginal = textoDoCampo(node, CAMPO_DIAGNOSTICO);
+        if (diagnosticoOriginal == null) {
+            return;
+        }
+        analise.ultimoDiagnostico = diagnosticoOriginal;
+
+        for (String termo : diagnosticoOriginal.toLowerCase().split("[\\s,.;]+")) {
+            if (termo.length() > 3) {
+                analise.frequenciaDiagnosticos.merge(termo, 1, Integer::sum);
+            }
+        }
+    }
+
+    /** Identifica medicamentos comuns citados na prescrição. */
+    private void analisarPrescricao(JsonNode node, AnaliseHistorico analise) {
+        String prescricao = textoDoCampo(node, CAMPO_PRESCRICAO);
+        if (prescricao == null) {
+            return;
+        }
+        String texto = prescricao.toLowerCase();
+        for (String medicamento : MEDICAMENTOS_COMUNS) {
+            if (texto.contains(medicamento)) {
+                analise.medicamentosUsados.add(medicamento);
+            }
+        }
+    }
+
+    /** Busca condições crônicas adicionais citadas na anamnese. */
+    private void analisarAnamnese(JsonNode node, Set<String> condicoesCronicas) {
+        String anamnese = textoDoCampo(node, CAMPO_ANAMNESE);
+        if (anamnese == null) {
+            return;
+        }
+        String texto = anamnese.toLowerCase();
+        for (String palavra : PALAVRAS_CRONICAS) {
+            if (texto.contains(palavra)) {
+                condicoesCronicas.add(palavra);
+            }
+        }
     }
 
     /**
@@ -245,85 +256,96 @@ public class IALocalService {
      */
     private String gerarResumoEstruturado(AnaliseHistorico analise, int totalConsultas, String tipo) {
         StringBuilder resumo = new StringBuilder();
-        
+
         resumo.append("🧠 **Resumo Clínico Inteligente**\n\n");
-        
-        // Visão geral
-        resumo.append("📊 **Visão Geral**\n");
-        resumo.append(String.format("• **Total de consultas**: %d %s%n", totalConsultas, 
-            tipo.equals("dentista") ? "odontológicas" : "médicas"));
-        
-        if (analise.primeiraConsulta != null && analise.ultimaConsulta != null) {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern(FORMATO_DATA);
-            resumo.append(String.format("• **Período de acompanhamento**: %s a %s%n", 
-                analise.primeiraConsulta.format(formatter), 
-                analise.ultimaConsulta.format(formatter)));
-            
-            if (analise.totalDiasAcompanhamento > 0) {
-                long meses = analise.totalDiasAcompanhamento / 30;
-                resumo.append(String.format("• **Tempo de acompanhamento**: %d meses%n", meses));
-            }
-        }
-        
-        // Condições crônicas
-        if (!analise.condicoesCronicas.isEmpty()) {
-            resumo.append("\n🏥 **Condições Crônicas Identificadas**\n");
-            for (String condicao : analise.condicoesCronicas) {
-                int frequencia = analise.frequenciaSintomas.getOrDefault(condicao, 0);
-                resumo.append(String.format("• **%s** (mencionado %d vezes)%n", 
-                    capitalize(condicao), frequencia));
-            }
-        }
-        
-        // Sintomas urgentes (alerta)
-        if (!analise.sintomasUrgentes.isEmpty()) {
-            resumo.append("\n⚠️ **Alertas Clínicos**\n");
-            for (String urgente : analise.sintomasUrgentes) {
-                resumo.append(String.format(FORMATO_ITEM_LISTA, capitalize(urgente)));
-            }
-        }
-        
-        // Medicamentos em uso
-        if (!analise.medicamentosUsados.isEmpty()) {
-            resumo.append("\n💊 **Medicamentos Identificados**\n");
-            for (String medicamento : analise.medicamentosUsados) {
-                resumo.append(String.format(FORMATO_ITEM_LISTA, capitalize(medicamento)));
-            }
-        }
-        
+
+        adicionarVisaoGeral(resumo, analise, totalConsultas, tipo);
+        adicionarCondicoesCronicas(resumo, analise);
+        adicionarListaCapitalizada(resumo, "\n⚠️ **Alertas Clínicos**\n", analise.sintomasUrgentes);
+        adicionarListaCapitalizada(resumo, "\n💊 **Medicamentos Identificados**\n", analise.medicamentosUsados);
+
         // Padrão evolutivo
         resumo.append("\n📈 **Padrão Evolutivo**\n");
         resumo.append(String.format(FORMATO_ITEM_LISTA, analise.padraoEvolucao));
-        
-        // Consulta mais recente
-        if (!analise.ultimaQueixa.isEmpty()) {
-            resumo.append("\n🩺 **Consulta Mais Recente**\n");
-            resumo.append(String.format("• **Queixa principal**: %s%n", analise.ultimaQueixa));
-            if (!analise.ultimoDiagnostico.isEmpty()) {
-                resumo.append(String.format("• **Diagnóstico**: %s%n", analise.ultimoDiagnostico));
-            }
-        }
-        
-        // Recomendações baseadas na análise
-        resumo.append("\n💡 **Observações Clínicas**\n");
-        
-        if (analise.condicoesCronicas.size() > 2) {
-            resumo.append("• **Paciente plurimórbido** - requer atenção integrada\n");
-        }
-        
-        if (!analise.sintomasUrgentes.isEmpty()) {
-            resumo.append("• **Atenção a sintomas agudos** - monitorar evolução\n");
-        }
-        
-        if (analise.totalDiasAcompanhamento > 365 && totalConsultas < 3) {
-            resumo.append("• **Seguimento irregular** - considerar reavaliação periódica\n");
-        }
-        
+
+        adicionarConsultaMaisRecente(resumo, analise);
+        adicionarObservacoesClinicas(resumo, analise, totalConsultas);
+
         resumo.append("\n---\n");
         resumo.append("*Resumo gerado por análise inteligente local - ");
         resumo.append(LocalDate.now(FusoHorario.ZONA).format(DateTimeFormatter.ofPattern(FORMATO_DATA)));
-        
+
         return resumo.toString();
+    }
+
+    private void adicionarVisaoGeral(StringBuilder resumo, AnaliseHistorico analise, int totalConsultas, String tipo) {
+        resumo.append("📊 **Visão Geral**\n");
+        resumo.append(String.format("• **Total de consultas**: %d %s%n", totalConsultas,
+            tipo.equals("dentista") ? "odontológicas" : "médicas"));
+
+        if (analise.primeiraConsulta == null || analise.ultimaConsulta == null) {
+            return;
+        }
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(FORMATO_DATA);
+        resumo.append(String.format("• **Período de acompanhamento**: %s a %s%n",
+            analise.primeiraConsulta.format(formatter),
+            analise.ultimaConsulta.format(formatter)));
+
+        if (analise.totalDiasAcompanhamento > 0) {
+            long meses = analise.totalDiasAcompanhamento / 30;
+            resumo.append(String.format("• **Tempo de acompanhamento**: %d meses%n", meses));
+        }
+    }
+
+    private void adicionarCondicoesCronicas(StringBuilder resumo, AnaliseHistorico analise) {
+        if (analise.condicoesCronicas.isEmpty()) {
+            return;
+        }
+        resumo.append("\n🏥 **Condições Crônicas Identificadas**\n");
+        for (String condicao : analise.condicoesCronicas) {
+            int frequencia = analise.frequenciaSintomas.getOrDefault(condicao, 0);
+            resumo.append(String.format("• **%s** (mencionado %d vezes)%n",
+                capitalize(condicao), frequencia));
+        }
+    }
+
+    /** Seção de itens capitalizados; omitida quando a lista está vazia. */
+    private void adicionarListaCapitalizada(StringBuilder resumo, String titulo, List<String> itens) {
+        if (itens.isEmpty()) {
+            return;
+        }
+        resumo.append(titulo);
+        for (String item : itens) {
+            resumo.append(String.format(FORMATO_ITEM_LISTA, capitalize(item)));
+        }
+    }
+
+    private void adicionarConsultaMaisRecente(StringBuilder resumo, AnaliseHistorico analise) {
+        if (analise.ultimaQueixa.isEmpty()) {
+            return;
+        }
+        resumo.append("\n🩺 **Consulta Mais Recente**\n");
+        resumo.append(String.format("• **Queixa principal**: %s%n", analise.ultimaQueixa));
+        if (!analise.ultimoDiagnostico.isEmpty()) {
+            resumo.append(String.format("• **Diagnóstico**: %s%n", analise.ultimoDiagnostico));
+        }
+    }
+
+    /** Recomendações baseadas na análise. */
+    private void adicionarObservacoesClinicas(StringBuilder resumo, AnaliseHistorico analise, int totalConsultas) {
+        resumo.append("\n💡 **Observações Clínicas**\n");
+
+        if (analise.condicoesCronicas.size() > 2) {
+            resumo.append("• **Paciente plurimórbido** - requer atenção integrada\n");
+        }
+
+        if (!analise.sintomasUrgentes.isEmpty()) {
+            resumo.append("• **Atenção a sintomas agudos** - monitorar evolução\n");
+        }
+
+        if (analise.totalDiasAcompanhamento > 365 && totalConsultas < 3) {
+            resumo.append("• **Seguimento irregular** - considerar reavaliação periódica\n");
+        }
     }
 
     private String capitalize(String str) {

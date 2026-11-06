@@ -243,18 +243,7 @@ public class AutenticacaoService {
         try {
             if (usuario.isClinico()) {
                 Optional<Profissional> profissional = profissionalRepository.findByUsuarioIdWithRelations(usuario.getId());
-                return profissional.map(p -> {
-                    if (p.getTipoProfissional() != null) {
-                        if (p.getTipoProfissional().isMedico()) {
-                            return "MEDICO";
-                        } else if (p.getTipoProfissional().isDentista()) {
-                            return "DENTISTA";
-                        } else {
-                            return p.getTipoProfissional().getCodigo();
-                        }
-                    }
-                    return NOME_PADRAO_PROFISSIONAL;
-                }).orElse(NOME_PADRAO_PROFISSIONAL);
+                return profissional.map(this::descreverTipoProfissional).orElse(NOME_PADRAO_PROFISSIONAL);
             }
             if (usuario.isGestor()) {
                 Optional<AdminOrganizacao> admin = adminOrganizacaoRepository.findByUsuario_Id(usuario.getId());
@@ -269,5 +258,19 @@ public class AutenticacaoService {
         }
 
         return "false"; // Default fallback
+    }
+
+    /** Tipo do profissional para o token: MEDICO, DENTISTA, o código do tipo ou o padrão se não houver tipo. */
+    private String descreverTipoProfissional(Profissional p) {
+        if (p.getTipoProfissional() == null) {
+            return NOME_PADRAO_PROFISSIONAL;
+        }
+        if (p.getTipoProfissional().isMedico()) {
+            return "MEDICO";
+        }
+        if (p.getTipoProfissional().isDentista()) {
+            return "DENTISTA";
+        }
+        return p.getTipoProfissional().getCodigo();
     }
 }

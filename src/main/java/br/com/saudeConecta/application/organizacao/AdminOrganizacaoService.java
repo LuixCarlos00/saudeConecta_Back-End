@@ -373,49 +373,18 @@ public class AdminOrganizacaoService {
                 .orElseThrow(() -> new IllegalArgumentException(MSG_ADMIN_NAO_ENCONTRADO));
 
         // Atualiza dados do admin
-        if (request.nome() != null && !request.nome().isBlank()) {
-            admin.setNome(request.nome());
-        }
-        if (request.cargo() != null && !request.cargo().isBlank()) {
-            admin.setCargo(request.cargo());
-        }
-        if (request.email() != null && !request.email().isBlank()) {
-            admin.setEmail(request.email());
-        }
+        atualizarDadosAdmin(admin, request);
 
         // Atualiza dados da organização
         Organizacao org = admin.getOrganizacao();
         if (org != null) {
-            if (request.nomeClinica() != null && !request.nomeClinica().isBlank()) {
-                org.setNome(request.nomeClinica());
-            }
-            if (request.razaoSocial() != null) {
-                org.setRazaoSocial(request.razaoSocial());
-            }
-            if (request.cnpj() != null && !request.cnpj().isBlank()) {
-                org.setCnpj(limparCnpj(request.cnpj()));
-            }
-            if (request.tipoClinica() != null && !request.tipoClinica().isBlank()) {
-                org.setTipo(TipoOrganizacao.valueOf(request.tipoClinica()));
-            }
-            if (request.emailClinica() != null) {
-                org.setEmail(request.emailClinica());
-            }
-            if (request.telefone() != null) {
-                org.setTelefone(request.telefone());
-            }
+            atualizarDadosOrganizacao(org, request);
             organizacaoRepository.save(org);
 
             // Atualiza endereço
             Endereco end = org.getEndereco();
             if (end != null) {
-                if (request.cep() != null) end.setEndCep(request.cep());
-                if (request.uf() != null) end.setEndUF(request.uf());
-                if (request.municipio() != null) end.setEndMunicipio(request.municipio());
-                if (request.bairro() != null) end.setEndBairro(request.bairro());
-                if (request.rua() != null) end.setEndRua(request.rua());
-                if (request.numero() != null) end.setEndNumero(request.numero());
-                if (request.complemento() != null) end.setEndComplemento(request.complemento());
+                atualizarDadosEndereco(end, request);
                 enderecoRepository.save(end);
             }
         }
@@ -427,6 +396,55 @@ public class AdminOrganizacaoService {
         cacheEvictionService.evictPerfilEUsuariosAgrupados(salvo.getUsuario().getId(), orgIdAfetada);
 
         return AdminOrgCompletoResponse.fromEntity(salvo);
+    }
+
+    /** Atualização parcial do admin: nome, cargo e e-mail em branco ou nulos são ignorados. */
+    private void atualizarDadosAdmin(AdminOrganizacao admin, AtualizarAdminOrgCompletoRequest request) {
+        if (!isBlank(request.nome())) {
+            admin.setNome(request.nome());
+        }
+        if (!isBlank(request.cargo())) {
+            admin.setCargo(request.cargo());
+        }
+        if (!isBlank(request.email())) {
+            admin.setEmail(request.email());
+        }
+    }
+
+    /**
+     * Atualização parcial da organização. Nome, CNPJ e tipo ignoram nulo e branco;
+     * razão social, e-mail e telefone ignoram só nulo (texto vazio é aceito).
+     */
+    private void atualizarDadosOrganizacao(Organizacao org, AtualizarAdminOrgCompletoRequest request) {
+        if (!isBlank(request.nomeClinica())) {
+            org.setNome(request.nomeClinica());
+        }
+        if (request.razaoSocial() != null) {
+            org.setRazaoSocial(request.razaoSocial());
+        }
+        if (!isBlank(request.cnpj())) {
+            org.setCnpj(limparCnpj(request.cnpj()));
+        }
+        if (!isBlank(request.tipoClinica())) {
+            org.setTipo(TipoOrganizacao.valueOf(request.tipoClinica()));
+        }
+        if (request.emailClinica() != null) {
+            org.setEmail(request.emailClinica());
+        }
+        if (request.telefone() != null) {
+            org.setTelefone(request.telefone());
+        }
+    }
+
+    /** Atualização parcial do endereço: só os campos informados (não nulos) são alterados. */
+    private void atualizarDadosEndereco(Endereco end, AtualizarAdminOrgCompletoRequest request) {
+        if (request.cep() != null) end.setEndCep(request.cep());
+        if (request.uf() != null) end.setEndUF(request.uf());
+        if (request.municipio() != null) end.setEndMunicipio(request.municipio());
+        if (request.bairro() != null) end.setEndBairro(request.bairro());
+        if (request.rua() != null) end.setEndRua(request.rua());
+        if (request.numero() != null) end.setEndNumero(request.numero());
+        if (request.complemento() != null) end.setEndComplemento(request.complemento());
     }
 
     private static final String TIPO_PESSOA_JURIDICA = "JURIDICA";

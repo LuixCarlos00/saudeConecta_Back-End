@@ -121,47 +121,10 @@ public class PacienteService  {
         Paciente snapshot = SnapshotUtil.copiarSnapshot(antes);
 
         // Atualiza o endereço se existir
-        Endereco enderecoAtualizado = null;
-        if (antes .getEndereco() != null) {
-            enderecoAtualizado = Endereco.builder()
-                    .endCodigo(antes .getEndereco().getEndCodigo())
-                    .endNacionalidade(dados.nacionalidade() != null ?
-                            dados.nacionalidade() : antes .getEndereco().getEndNacionalidade())
-                    .endUF(dados.uf() != null ?
-                            dados.uf() : antes .getEndereco().getEndUF())
-                    .endMunicipio(dados.municipio() != null ?
-                            dados.municipio() : antes .getEndereco().getEndMunicipio())
-                    .endBairro(dados.bairro() != null ?
-                            dados.bairro() : antes .getEndereco().getEndBairro())
-                    .endCep(dados.cep() != null ?
-                            dados.cep() : antes .getEndereco().getEndCep())
-                    .endRua(dados.rua() != null ?
-                            dados.rua() : antes .getEndereco().getEndRua())
-                    .endNumero(dados.numero() != null ?
-                            dados.numero().longValue() : antes .getEndereco().getEndNumero())
-                    .endComplemento(dados.complemento() != null ?
-                            dados.complemento() : antes .getEndereco().getEndComplemento())
-                    .build();
-
-            // Salva o endereço atualizado
-            enderecoAtualizado = enderecoRepository.save(enderecoAtualizado);
-        }
+        Endereco enderecoAtualizado = atualizarEndereco(antes.getEndereco(), dados);
 
         // Reconstrói o paciente com os dados atualizados
-        Paciente pacienteAtualizado = Paciente.builder()
-                .paciCodigo(antes .getPaciCodigo())
-                .organizacao(antes .getOrganizacao())
-                .paciNome(dados.nome() != null ? dados.nome() : antes .getPaciNome())
-                .paciSexo(dados.sexo() != null ? dados.sexo() : antes .getPaciSexo())
-                .paciDataNacimento(dados.dataNascimento () != null ?
-                        Date.valueOf(dados.dataNascimento ()) : antes .getPaciDataNacimento())
-                .paciCpf(dados.cpf() != null ? limparCpf(dados.cpf()) : antes .getPaciCpf())
-                .paciRg(dados.rg() != null ? dados.rg() : antes .getPaciRg())
-                .paciEmail(dados.email() != null ? dados.email() : antes .getPaciEmail())
-                .paciTelefone(dados.telefone() != null ? dados.telefone() : antes .getPaciTelefone())
-                .endereco(enderecoAtualizado)
-                .paciStatus(antes .getPaciStatus())
-                .build();
+        Paciente pacienteAtualizado = reconstruirPaciente(antes, dados, enderecoAtualizado);
 
         // Salva o paciente atualizado
         Paciente resultado = pacienteRepository.save(pacienteAtualizado);
@@ -176,6 +139,56 @@ public class PacienteService  {
         );
 
         return resultado;
+    }
+
+    /**
+     * Aplica sobre o endereço atual apenas os campos informados e salva o resultado.
+     *
+     * @param atual endereço vigente do paciente (pode ser nulo)
+     * @param dados dados enviados na atualização
+     * @return endereço salvo, ou nulo quando o paciente não tem endereço
+     */
+    private Endereco atualizarEndereco(Endereco atual, AtualizarPacienteRequest dados) {
+        if (atual == null) {
+            return null;
+        }
+        Endereco atualizado = Endereco.builder()
+                .endCodigo(atual.getEndCodigo())
+                .endNacionalidade(valorOuAtual(dados.nacionalidade(), atual.getEndNacionalidade()))
+                .endUF(valorOuAtual(dados.uf(), atual.getEndUF()))
+                .endMunicipio(valorOuAtual(dados.municipio(), atual.getEndMunicipio()))
+                .endBairro(valorOuAtual(dados.bairro(), atual.getEndBairro()))
+                .endCep(valorOuAtual(dados.cep(), atual.getEndCep()))
+                .endRua(valorOuAtual(dados.rua(), atual.getEndRua()))
+                .endNumero(dados.numero() != null ?
+                        dados.numero().longValue() : atual.getEndNumero())
+                .endComplemento(valorOuAtual(dados.complemento(), atual.getEndComplemento()))
+                .build();
+
+        // Salva o endereço atualizado
+        return enderecoRepository.save(atualizado);
+    }
+
+    private Paciente reconstruirPaciente(Paciente antes, AtualizarPacienteRequest dados, Endereco endereco) {
+        return Paciente.builder()
+                .paciCodigo(antes.getPaciCodigo())
+                .organizacao(antes.getOrganizacao())
+                .paciNome(valorOuAtual(dados.nome(), antes.getPaciNome()))
+                .paciSexo(valorOuAtual(dados.sexo(), antes.getPaciSexo()))
+                .paciDataNacimento(dados.dataNascimento() != null ?
+                        Date.valueOf(dados.dataNascimento()) : antes.getPaciDataNacimento())
+                .paciCpf(valorOuAtual(limparCpf(dados.cpf()), antes.getPaciCpf()))
+                .paciRg(valorOuAtual(dados.rg(), antes.getPaciRg()))
+                .paciEmail(valorOuAtual(dados.email(), antes.getPaciEmail()))
+                .paciTelefone(valorOuAtual(dados.telefone(), antes.getPaciTelefone()))
+                .endereco(endereco)
+                .paciStatus(antes.getPaciStatus())
+                .build();
+    }
+
+    /** Atualização parcial: o valor enviado vence; ausente (nulo) preserva o atual. */
+    private <T> T valorOuAtual(T novo, T atual) {
+        return novo != null ? novo : atual;
     }
 
     @Caching(evict = {

@@ -1,9 +1,16 @@
 package br.com.saudeConecta.application.consulta.dto;
 
 import br.com.saudeConecta.domain.consulta.Consulta;
+import br.com.saudeConecta.domain.pagamento.FormaPagamento;
+import br.com.saudeConecta.domain.paciente.Paciente;
+import br.com.saudeConecta.domain.profissional.Especialidade;
+import br.com.saudeConecta.domain.profissional.Profissional;
+import br.com.saudeConecta.domain.profissional.TipoProfissional;
+import br.com.saudeConecta.domain.usuario.Usuario;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.function.Function;
 
 public record ConsultaResponse(
     Long id,
@@ -31,33 +38,44 @@ public record ConsultaResponse(
     LocalDateTime createdAt
 ) {
     public static ConsultaResponse fromEntity(Consulta c) {
+        Profissional prof = c.getProfissional();
+        // Id do usuário dono do prontuário: o front compara com o logado para oferecer "Editar".
+        // Só o id do proxy lazy é lido, então não há select a mais nem LazyInitializationException.
+        Usuario usuarioProf = valorOuNulo(prof, Profissional::getUsuario);
+        TipoProfissional tipoProf = valorOuNulo(prof, Profissional::getTipoProfissional);
+        Paciente pac = c.getPaciente();
+        Especialidade esp = c.getEspecialidade();
+        FormaPagamento forma = c.getFormaPagamento();
+
         return new ConsultaResponse(
             c.getId(),
-            c.getProfissional() != null ? c.getProfissional().getId() : null,
-            c.getProfissional() != null ? c.getProfissional().getNome() : null,
-            c.getProfissional() != null ? c.getProfissional().getRegistroConselho() : null,
-            // Id do usuário dono do prontuário: o front compara com o logado para oferecer "Editar".
-            // Só o id do proxy lazy é lido, então não há select a mais nem LazyInitializationException.
-            c.getProfissional() != null && c.getProfissional().getUsuario() != null
-                    ? c.getProfissional().getUsuario().getId() : null,
-            c.getProfissional() != null && c.getProfissional().getTipoProfissional() != null ? c.getProfissional().getTipoProfissional().getId() : null,
-            c.getProfissional() != null && c.getProfissional().getTipoProfissional() != null ? c.getProfissional().getTipoProfissional().getCodigo() : null,
-            c.getPaciente() != null ? c.getPaciente().getPaciCodigo() : null,
-            c.getPaciente() != null ? c.getPaciente().getPaciNome() : null,
-            c.getPaciente() != null ? c.getPaciente().getPaciTelefone() : null,
-            c.getEspecialidade() != null ? c.getEspecialidade().getId() : null,
-            c.getEspecialidade() != null ? c.getEspecialidade().getNome() : null,
+            valorOuNulo(prof, Profissional::getId),
+            valorOuNulo(prof, Profissional::getNome),
+            valorOuNulo(prof, Profissional::getRegistroConselho),
+            valorOuNulo(usuarioProf, Usuario::getId),
+            valorOuNulo(tipoProf, TipoProfissional::getId),
+            valorOuNulo(tipoProf, TipoProfissional::getCodigo),
+            valorOuNulo(pac, Paciente::getPaciCodigo),
+            valorOuNulo(pac, Paciente::getPaciNome),
+            valorOuNulo(pac, Paciente::getPaciTelefone),
+            valorOuNulo(esp, Especialidade::getId),
+            valorOuNulo(esp, Especialidade::getNome),
             c.getDataHora(),
             c.getDataHoraFim(),
             c.getDuracaoMinutos(),
             c.getObservacoes(),
-            c.getFormaPagamento() != null ? c.getFormaPagamento().getId() : null,
-            c.getFormaPagamento() != null ? c.getFormaPagamento().getNome() : null,
+            valorOuNulo(forma, FormaPagamento::getId),
+            valorOuNulo(forma, FormaPagamento::getNome),
             c.getValor(),
-            c.getStatus() != null ? c.getStatus().name() : null,
-            c.getCanceladoPor() != null ? c.getCanceladoPor().name() : null,
+            valorOuNulo(c.getStatus(), Enum::name),
+            valorOuNulo(c.getCanceladoPor(), Enum::name),
             c.getMotivoCancelamento(),
             c.getCreatedAt()
         );
+    }
+
+    /** Aplica o extrator ao objeto, ou devolve nulo quando o objeto é nulo. */
+    private static <T, R> R valorOuNulo(T origem, Function<T, R> extrator) {
+        return origem != null ? extrator.apply(origem) : null;
     }
 }

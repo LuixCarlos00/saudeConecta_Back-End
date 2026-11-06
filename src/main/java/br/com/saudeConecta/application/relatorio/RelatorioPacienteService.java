@@ -173,35 +173,19 @@ public class RelatorioPacienteService {
 
             registrarDiagnostico(diagnosticos, consultaId, prontuario.getDiagnostico());
 
-            adicionar(documentos, consultaId, new DocumentoRelatorioResponse(
-                    id,
-                    TipoDocumentoRelatorio.REGISTRO_CONSULTA,
-                    "Registro da consulta",
-                    resumir(prontuario.getDiagnostico(), TipoDocumentoRelatorio.REGISTRO_CONSULTA.getDescricaoPadrao()),
-                    emitidoEm,
-                    false,
-                    consultaId));
+            adicionarDocumentoDeTexto(documentos, consultaId, id, TipoDocumentoRelatorio.REGISTRO_CONSULTA,
+                    "Registro da consulta", prontuario.getDiagnostico(), emitidoEm);
 
             if (preenchido(prontuario.getPrescricao())) {
-                adicionar(documentos, consultaId, new DocumentoRelatorioResponse(
-                        id,
-                        TipoDocumentoRelatorio.PRESCRICAO,
-                        preenchido(prontuario.getTituloPrescricao()) ? prontuario.getTituloPrescricao() : "Receituario",
-                        resumir(prontuario.getPrescricao(), TipoDocumentoRelatorio.PRESCRICAO.getDescricaoPadrao()),
-                        emitidoEm,
-                        false,
-                        consultaId));
+                adicionarDocumentoDeTexto(documentos, consultaId, id, TipoDocumentoRelatorio.PRESCRICAO,
+                        tituloOuPadrao(prontuario.getTituloPrescricao(), "Receituario"),
+                        prontuario.getPrescricao(), emitidoEm);
             }
 
             if (preenchido(prontuario.getSolicitacaoExameTexto())) {
-                adicionar(documentos, consultaId, new DocumentoRelatorioResponse(
-                        id,
-                        TipoDocumentoRelatorio.EXAMES,
-                        preenchido(prontuario.getTituloExame()) ? prontuario.getTituloExame() : "Solicitacao de exames",
-                        resumir(prontuario.getSolicitacaoExameTexto(), TipoDocumentoRelatorio.EXAMES.getDescricaoPadrao()),
-                        emitidoEm,
-                        false,
-                        consultaId));
+                adicionarDocumentoDeTexto(documentos, consultaId, id, TipoDocumentoRelatorio.EXAMES,
+                        tituloOuPadrao(prontuario.getTituloExame(), "Solicitacao de exames"),
+                        prontuario.getSolicitacaoExameTexto(), emitidoEm);
             }
         }
     }
@@ -295,33 +279,40 @@ public class RelatorioPacienteService {
 
         List<PacienteAtendidoResponse> resposta = new ArrayList<>();
 
-        pacientes.forEach((pacienteId, paciente) -> {
-            List<ConsultaRelatorioResponse> consultasDoPaciente = consultasPorPaciente.get(pacienteId);
-            Consulta recente = consultaMaisRecente.get(pacienteId);
-            Profissional profissional = recente.getProfissional();
-
-            int totalDocumentos = consultasDoPaciente.stream()
-                    .mapToInt(c -> c.documentos().size())
-                    .sum();
-
-            resposta.add(new PacienteAtendidoResponse(
-                    pacienteId,
-                    paciente.getPaciNome(),
-                    paciente.getPaciCpf(),
-                    paciente.getPaciTelefone(),
-                    paciente.getPaciEmail(),
-                    paciente.getPaciDataNacimento() != null ? paciente.getPaciDataNacimento().toLocalDate() : null,
-                    paciente.getPaciSexo(),
-                    profissional != null ? profissional.getId() : null,
-                    profissional != null ? profissional.getNome() : null,
-                    recente.getDataHora(),
-                    consultasDoPaciente.size(),
-                    totalDocumentos,
-                    consultasDoPaciente));
-        });
+        pacientes.forEach((pacienteId, paciente) -> resposta.add(montarPacienteAtendido(
+                pacienteId,
+                paciente,
+                consultaMaisRecente.get(pacienteId),
+                consultasPorPaciente.get(pacienteId))));
 
         resposta.sort(Comparator.comparing(PacienteAtendidoResponse::ultimoAtendimento).reversed());
         return resposta;
+    }
+
+    private PacienteAtendidoResponse montarPacienteAtendido(Long pacienteId,
+                                                            Paciente paciente,
+                                                            Consulta recente,
+                                                            List<ConsultaRelatorioResponse> consultasDoPaciente) {
+        Profissional profissional = recente.getProfissional();
+
+        int totalDocumentos = consultasDoPaciente.stream()
+                .mapToInt(c -> c.documentos().size())
+                .sum();
+
+        return new PacienteAtendidoResponse(
+                pacienteId,
+                paciente.getPaciNome(),
+                paciente.getPaciCpf(),
+                paciente.getPaciTelefone(),
+                paciente.getPaciEmail(),
+                paciente.getPaciDataNacimento() != null ? paciente.getPaciDataNacimento().toLocalDate() : null,
+                paciente.getPaciSexo(),
+                profissional != null ? profissional.getId() : null,
+                profissional != null ? profissional.getNome() : null,
+                recente.getDataHora(),
+                consultasDoPaciente.size(),
+                totalDocumentos,
+                consultasDoPaciente);
     }
 
     private ConsultaRelatorioResponse montarConsulta(Consulta consulta,
@@ -372,6 +363,28 @@ public class RelatorioPacienteService {
                            Long consultaId,
                            DocumentoRelatorioResponse documento) {
         documentos.computeIfAbsent(consultaId, chave -> new ArrayList<>()).add(documento);
+    }
+
+    /** Documento não assinado cuja descrição é o texto resumido (ou o padrão do tipo quando vazio). */
+    private void adicionarDocumentoDeTexto(Map<Long, List<DocumentoRelatorioResponse>> documentos,
+                                           Long consultaId,
+                                           Long id,
+                                           TipoDocumentoRelatorio tipo,
+                                           String titulo,
+                                           String texto,
+                                           LocalDateTime emitidoEm) {
+        adicionar(documentos, consultaId, new DocumentoRelatorioResponse(
+                id,
+                tipo,
+                titulo,
+                resumir(texto, tipo.getDescricaoPadrao()),
+                emitidoEm,
+                false,
+                consultaId));
+    }
+
+    private String tituloOuPadrao(String titulo, String padrao) {
+        return preenchido(titulo) ? titulo : padrao;
     }
 
     private void registrarDiagnostico(Map<Long, String> diagnosticos, Long consultaId, String diagnostico) {

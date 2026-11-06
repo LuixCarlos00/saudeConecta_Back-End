@@ -73,22 +73,7 @@ public class UsuarioService   {
                 isSuperAdmin);
 
         // 1. Busca o Usuario principal
-        Usuario usuario;
-        if (isSuperAdmin) {
-            usuario = usuarioRepository.findById(request.codigoUsuario())
-                    .orElseThrow(() -> {
-                        log.warn("usuario.bloquear negado motivo=NAO_ENCONTRADO usuarioId={}", request.codigoUsuario());
-                        return new IllegalArgumentException("usuario nao encontrado");
-                    });
-        } else {
-            usuario = usuarioRepository.findById(request.codigoUsuario())
-                    .filter(u -> organizacaoId.equals(u.getOrganizacaoId()))
-                    .orElseThrow(() -> {
-                        log.warn("usuario.bloquear negado motivo=NAO_ENCONTRADO_OU_OUTRA_CLINICA usuarioId={} organizacaoId={}",
-                                request.codigoUsuario(), organizacaoId);
-                        return new IllegalArgumentException("Usuario nao encontrado ou sem permissao");
-                    });
-        }
+        Usuario usuario = buscarUsuarioParaBloqueio(request.codigoUsuario(), organizacaoId, isSuperAdmin);
 
         // Validação: nao pode bloquear root
         if (usuario.isRoot()) {
@@ -100,29 +85,59 @@ public class UsuarioService   {
                 : StatusUsuario.ATIVO;
 
         // 2. Se ROOT bloqueando GESTOR → bloqueio em cascata (toda a organizacao)
-        if (isSuperAdmin && usuario.getTipoUsuarioNovo() == TipoUsuarioNovo.GESTOR) {
+        boolean cascata = isSuperAdmin && usuario.getTipoUsuarioNovo() == TipoUsuarioNovo.GESTOR;
+        if (cascata) {
             bloquearTenantEmCascata(usuario, request.codigo(), novoStatus);
         } else {
-            // Bloqueio individual
-            Long orgIdPerfil = isSuperAdmin ? usuario.getOrganizacaoId() : organizacaoId;
-
-            // Reativar ocupa uma vaga do plano, igual a um cadastro novo
-            if (novoStatus == StatusUsuario.ATIVO && !usuario.isEnabled()) {
-                validarLimiteParaReativar(usuario.getTipoUsuarioNovo(), orgIdPerfil);
-            }
-
-            usuario.setStatus(novoStatus);
-            usuario.setMotivoBloqueio(novoStatus == StatusUsuario.INATIVO ? MotivoBloqueio.INDIVIDUAL : null);
-            usuarioRepository.save(usuario);
-
-            atualizarStatusPerfil(request.codigo(), orgIdPerfil, usuario.getTipoUsuarioNovo(), novoStatus);
+            bloquearIndividualmente(usuario, request.codigo(), novoStatus, isSuperAdmin, organizacaoId);
         }
 
         Long orgIdAfetada = isSuperAdmin ? usuario.getOrganizacaoId() : organizacaoId;
         cacheEvictionService.evictPerfilEUsuariosAgrupados(request.codigoUsuario(), orgIdAfetada);
 
-        log.info("usuario.bloquear ok usuarioId={} status={} cascata={}", request.codigoUsuario(), novoStatus,
-                isSuperAdmin && usuario.getTipoUsuarioNovo() == TipoUsuarioNovo.GESTOR);
+        log.info("usuario.bloquear ok usuarioId={} status={} cascata={}", request.codigoUsuario(), novoStatus, cascata);
+    }
+
+    /**
+     * Busca o usuário a bloquear: o SUPER_ADMIN alcança qualquer um; os demais só os da própria organização.
+     *
+     * @param usuarioId      usuário a bloquear
+     * @param organizacaoId  organização do chamador (nula para SUPER_ADMIN)
+     * @param isSuperAdmin   se o chamador é SUPER_ADMIN
+     * @return usuário encontrado
+     * @throws IllegalArgumentException se não existir ou for de outra clínica
+     */
+    private Usuario buscarUsuarioParaBloqueio(Long usuarioId, Long organizacaoId, boolean isSuperAdmin) {
+        if (isSuperAdmin) {
+            return usuarioRepository.findById(usuarioId)
+                    .orElseThrow(() -> {
+                        log.warn("usuario.bloquear negado motivo=NAO_ENCONTRADO usuarioId={}", usuarioId);
+                        return new IllegalArgumentException("usuario nao encontrado");
+                    });
+        }
+        return usuarioRepository.findById(usuarioId)
+                .filter(u -> organizacaoId.equals(u.getOrganizacaoId()))
+                .orElseThrow(() -> {
+                    log.warn("usuario.bloquear negado motivo=NAO_ENCONTRADO_OU_OUTRA_CLINICA usuarioId={} organizacaoId={}",
+                            usuarioId, organizacaoId);
+                    return new IllegalArgumentException("Usuario nao encontrado ou sem permissao");
+                });
+    }
+
+    private void bloquearIndividualmente(Usuario usuario, Long codigoPerfil, StatusUsuario novoStatus,
+                                         boolean isSuperAdmin, Long organizacaoId) {
+        Long orgIdPerfil = isSuperAdmin ? usuario.getOrganizacaoId() : organizacaoId;
+
+        // Reativar ocupa uma vaga do plano, igual a um cadastro novo
+        if (novoStatus == StatusUsuario.ATIVO && !usuario.isEnabled()) {
+            validarLimiteParaReativar(usuario.getTipoUsuarioNovo(), orgIdPerfil);
+        }
+
+        usuario.setStatus(novoStatus);
+        usuario.setMotivoBloqueio(novoStatus == StatusUsuario.INATIVO ? MotivoBloqueio.INDIVIDUAL : null);
+        usuarioRepository.save(usuario);
+
+        atualizarStatusPerfil(codigoPerfil, orgIdPerfil, usuario.getTipoUsuarioNovo(), novoStatus);
     }
 
     /**
@@ -162,10 +177,7 @@ public class UsuarioService   {
                 if (u.getId().equals(adminUsuario.getId()) || u.isRoot()) {
                     continue;
                 }
-                boolean afetado = bloqueando
-                        ? u.isEnabled()
-                        : !u.isEnabled() && u.getMotivoBloqueio() == MotivoBloqueio.CASCATA;
-                if (afetado) {
+                if (afetadoPelaCascata(u, bloqueando)) {
                     u.setStatus(novoStatus);
                     u.setMotivoBloqueio(bloqueando ? MotivoBloqueio.CASCATA : null);
                     usuarioRepository.save(u);
@@ -176,6 +188,14 @@ public class UsuarioService   {
             log.info("usuario.bloquear cascata ok organizacaoId={} usuariosAdicionais={} status={}",
                     orgId, count, novoStatus);
         }
+    }
+
+    /** Bloqueio atinge quem está ativo; desbloqueio só reativa quem a própria cascata bloqueou. */
+    private boolean afetadoPelaCascata(Usuario u, boolean bloqueando) {
+        if (bloqueando) {
+            return u.isEnabled();
+        }
+        return !u.isEnabled() && u.getMotivoBloqueio() == MotivoBloqueio.CASCATA;
     }
 
     /**

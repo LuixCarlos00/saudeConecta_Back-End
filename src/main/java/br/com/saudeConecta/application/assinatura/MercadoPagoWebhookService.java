@@ -375,19 +375,7 @@ public class MercadoPagoWebhookService {
 
         AssinaturaTenant assinatura = localizarAssinatura(fatura.preapprovalId(), null);
         if (assinatura == null) {
-            // Sem fallback por external_reference: a fatura de um preapproval substituído nunca é
-            // aplicada a outra assinatura. Se foi aprovada, o dinheiro entrou e não pode sumir no log.
-            if (PAGAMENTO_APROVADO.equals(fatura.statusPagamento())) {
-                evento.marcarParaAtencao(MpWebhookEvento.MOTIVO_PAGAMENTO_SEM_ASSINATURA,
-                        "fatura " + authorizedPaymentId + " do preapproval " + fatura.preapprovalId()
-                                + " — conferir a assinatura e registrar manualmente");
-                // Preapproval ainda na coluna de substituído: a clínica é conhecida
-                if (evento.getOrganizacaoId() == null && fatura.preapprovalId() != null) {
-                    assinaturaTenantRepository.findFirstByMpPreapprovalSubstituidoId(fatura.preapprovalId())
-                            .map(a -> a.getOrganizacao().getId())
-                            .ifPresent(evento::setOrganizacaoId);
-                }
-            }
+            registrarPagamentoSemAssinatura(fatura, authorizedPaymentId, evento);
             return false;
         }
 
@@ -408,60 +396,98 @@ public class MercadoPagoWebhookService {
         }
 
         if (PAGAMENTO_APROVADO.equals(statusPagamento)) {
-            cobranca.setStatus(StatusCobranca.PAGO);
-            cobranca.setMotivoRecusa(null);
-            cobranca.setDataPagamento(LocalDateTime.now(clock));
-            cobrancaTenantRepository.save(cobranca);
-
-            // CANCELADA é terminal: o dinheiro fica registrado, mas a reativação/estorno é manual
-            if (StatusAssinatura.CANCELADA.equals(assinatura.getStatus())) {
-                Long organizacaoId = assinatura.getOrganizacao() != null ? assinatura.getOrganizacao().getId() : null;
-                log.warn("mp.fatura aprovada negado motivo=ASSINATURA_CANCELADA acao=TRATAR_MANUALMENTE assinaturaId={} organizacaoId={} faturaId={}",
-                        assinatura.getId(), organizacaoId, authorizedPaymentId);
-                evento.marcarParaAtencao(MpWebhookEvento.MOTIVO_PAGAMENTO_EM_CANCELADA,
-                        "assinatura " + assinatura.getId() + " (org " + organizacaoId + "), fatura "
-                                + authorizedPaymentId + " — estornar ou reativar manualmente");
-                evento.setOrganizacaoId(organizacaoId);
-                return true;
-            }
-
-            // Cortesia não é renovada nem reativada pelo MP: o dinheiro fica registrado para análise
-            if (assinatura.isCortesia()) {
-                log.warn("mp.fatura aprovada negado motivo=ASSINATURA_CORTESIA acao=TRATAR_MANUALMENTE assinaturaId={} faturaId={}",
-                        assinatura.getId(), authorizedPaymentId);
-                evento.marcarParaAtencao(MpWebhookEvento.MOTIVO_PAGAMENTO_EM_CORTESIA,
-                        "assinatura " + assinatura.getId() + ", fatura " + authorizedPaymentId
-                                + " — cortesia não é cobrada: estornar ou tratar manualmente");
-                evento.setOrganizacaoId(assinatura.getOrganizacao() != null ? assinatura.getOrganizacao().getId() : null);
-                return true;
-            }
-
-            assinaturaTenantService.renovarAposPagamento(assinatura.getId());
-            // Assinatura suspensa teve o preapproval pausado: sem reativar, o MP não cobra o próximo mês
-            assinaturaMercadoPagoService.reativarSePausado(assinatura);
-            log.info("mp.fatura aprovada assinaturaId={} faturaId={}", assinatura.getId(), authorizedPaymentId);
-            return true;
+            return processarFaturaAprovada(cobranca, assinatura, authorizedPaymentId, evento);
         }
 
         if (PAGAMENTO_RECUSADO.equals(statusPagamento)) {
-            cobranca.setStatus(StatusCobranca.RECUSADO);
-            cobranca.setMotivoRecusa(fatura.motivoRecusa());
-            cobrancaTenantRepository.save(cobranca);
-
-            // Recusa não pode tirar uma assinatura de SUSPENSA/CANCELADA de volta para INADIMPLENTE
-            if (assinatura.getStatus() != null && assinatura.getStatus().isAtiva()) {
-                assinaturaTenantService.marcarInadimplente(assinatura.getId());
-            }
-            if (log.isWarnEnabled()) {
-                log.warn("mp.fatura recusada assinaturaId={} faturaId={} motivo={}",
-                        assinatura.getId(), authorizedPaymentId, fatura.motivoRecusa());
-            }
+            processarFaturaRecusada(cobranca, assinatura, fatura, authorizedPaymentId);
             return false;
         }
 
         cobrancaTenantRepository.save(cobranca);
         log.info("mp.fatura status intermediario faturaId={} status={}", authorizedPaymentId, statusPagamento);
         return false;
+    }
+
+    /**
+     * Fatura sem assinatura localizada. Não há fallback por external_reference: a fatura de um
+     * preapproval substituído nunca é aplicada a outra assinatura. Se foi aprovada, o dinheiro
+     * entrou e não pode sumir no log, então o evento é marcado para atenção.
+     */
+    private void registrarPagamentoSemAssinatura(AuthorizedPaymentResponse fatura, String authorizedPaymentId,
+                                                 MpWebhookEvento evento) {
+        if (!PAGAMENTO_APROVADO.equals(fatura.statusPagamento())) {
+            return;
+        }
+        evento.marcarParaAtencao(MpWebhookEvento.MOTIVO_PAGAMENTO_SEM_ASSINATURA,
+                "fatura " + authorizedPaymentId + " do preapproval " + fatura.preapprovalId()
+                        + " — conferir a assinatura e registrar manualmente");
+        // Preapproval ainda na coluna de substituído: a clínica é conhecida
+        if (evento.getOrganizacaoId() == null && fatura.preapprovalId() != null) {
+            assinaturaTenantRepository.findFirstByMpPreapprovalSubstituidoId(fatura.preapprovalId())
+                    .map(a -> a.getOrganizacao().getId())
+                    .ifPresent(evento::setOrganizacaoId);
+        }
+    }
+
+    /**
+     * Registra a fatura aprovada como paga e, salvo assinatura cancelada ou cortesia,
+     * renova a assinatura.
+     *
+     * @return sempre true: fatura paga é estado final
+     */
+    private boolean processarFaturaAprovada(CobrancaTenant cobranca, AssinaturaTenant assinatura,
+                                            String authorizedPaymentId, MpWebhookEvento evento) {
+        cobranca.setStatus(StatusCobranca.PAGO);
+        cobranca.setMotivoRecusa(null);
+        cobranca.setDataPagamento(LocalDateTime.now(clock));
+        cobrancaTenantRepository.save(cobranca);
+
+        // CANCELADA é terminal: o dinheiro fica registrado, mas a reativação/estorno é manual
+        if (StatusAssinatura.CANCELADA.equals(assinatura.getStatus())) {
+            Long organizacaoId = assinatura.getOrganizacao() != null ? assinatura.getOrganizacao().getId() : null;
+            log.warn("mp.fatura aprovada negado motivo=ASSINATURA_CANCELADA acao=TRATAR_MANUALMENTE assinaturaId={} organizacaoId={} faturaId={}",
+                    assinatura.getId(), organizacaoId, authorizedPaymentId);
+            evento.marcarParaAtencao(MpWebhookEvento.MOTIVO_PAGAMENTO_EM_CANCELADA,
+                    "assinatura " + assinatura.getId() + " (org " + organizacaoId + "), fatura "
+                            + authorizedPaymentId + " — estornar ou reativar manualmente");
+            evento.setOrganizacaoId(organizacaoId);
+            return true;
+        }
+
+        // Cortesia não é renovada nem reativada pelo MP: o dinheiro fica registrado para análise
+        if (assinatura.isCortesia()) {
+            log.warn("mp.fatura aprovada negado motivo=ASSINATURA_CORTESIA acao=TRATAR_MANUALMENTE assinaturaId={} faturaId={}",
+                    assinatura.getId(), authorizedPaymentId);
+            evento.marcarParaAtencao(MpWebhookEvento.MOTIVO_PAGAMENTO_EM_CORTESIA,
+                    "assinatura " + assinatura.getId() + ", fatura " + authorizedPaymentId
+                            + " — cortesia não é cobrada: estornar ou tratar manualmente");
+            evento.setOrganizacaoId(assinatura.getOrganizacao() != null ? assinatura.getOrganizacao().getId() : null);
+            return true;
+        }
+
+        assinaturaTenantService.renovarAposPagamento(assinatura.getId());
+        // Assinatura suspensa teve o preapproval pausado: sem reativar, o MP não cobra o próximo mês
+        assinaturaMercadoPagoService.reativarSePausado(assinatura);
+        log.info("mp.fatura aprovada assinaturaId={} faturaId={}", assinatura.getId(), authorizedPaymentId);
+        return true;
+    }
+
+    /** Registra a fatura recusada; o Mercado Pago tenta cobrar de novo, então o evento segue aberto. */
+    private void processarFaturaRecusada(CobrancaTenant cobranca, AssinaturaTenant assinatura,
+                                         AuthorizedPaymentResponse fatura, String authorizedPaymentId) {
+        cobranca.setStatus(StatusCobranca.RECUSADO);
+        cobranca.setMotivoRecusa(fatura.motivoRecusa());
+        cobrancaTenantRepository.save(cobranca);
+
+        // Recusa não pode tirar uma assinatura de SUSPENSA/CANCELADA de volta para INADIMPLENTE
+        if (assinatura.getStatus() != null && assinatura.getStatus().isAtiva()) {
+            assinaturaTenantService.marcarInadimplente(assinatura.getId());
+        }
+        if (log.isWarnEnabled()) {
+            log.warn("mp.fatura recusada assinaturaId={} faturaId={} motivo={}",
+                    assinatura.getId(), authorizedPaymentId, fatura.motivoRecusa());
+        }
     }
 
     /**
