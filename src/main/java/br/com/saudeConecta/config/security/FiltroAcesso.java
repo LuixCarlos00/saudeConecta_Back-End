@@ -1,12 +1,12 @@
 package br.com.saudeConecta.config.security;
 
 
+import br.com.saudeConecta.application.assinatura.AcessoAssinaturaService;
 import br.com.saudeConecta.config.logging.MascaraLog;
 import br.com.saudeConecta.config.logging.MdcChaves;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
 import br.com.saudeConecta.presentation.erro.ErrorResponse;
-import br.com.saudeConecta.service.AcessoAssinaturaService;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;

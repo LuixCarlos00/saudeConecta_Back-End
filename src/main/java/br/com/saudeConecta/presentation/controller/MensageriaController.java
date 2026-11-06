@@ -1,9 +1,9 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.application.mensageria.MensageriaService;
 import br.com.saudeConecta.domain.mensageria.StatusMensagem;
 import br.com.saudeConecta.domain.mensageria.TipoMensagem;
 import br.com.saudeConecta.presentation.dto.mensageria.MensageriaResponse;
-import br.com.saudeConecta.service.MensageriaService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

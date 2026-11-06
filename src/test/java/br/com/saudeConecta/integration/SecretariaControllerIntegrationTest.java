@@ -1,9 +1,9 @@
 package br.com.saudeConecta.integration;
 
+import br.com.saudeConecta.application.secretaria.SecretariaService;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.domain.secretaria.StatusSecretaria;
 import br.com.saudeConecta.presentation.dto.secretaria.CadastrarSecretariaRequest;
-import br.com.saudeConecta.service.SecretariaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;

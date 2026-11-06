@@ -1,9 +1,9 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.application.dashboard.ConfiguracaoCardDashboardService;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.presentation.dto.dashboard.AtualizarConfiguracaoCardRequest;
 import br.com.saudeConecta.presentation.dto.dashboard.ConfiguracaoCardResponse;
-import br.com.saudeConecta.service.ConfiguracaoCardDashboardService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,8 +1,8 @@
 package br.com.saudeConecta.integration;
 
+import br.com.saudeConecta.application.organizacao.AdminOrganizacaoService;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.presentation.dto.admin.AdminOrgCompletoResponse;
-import br.com.saudeConecta.service.AdminOrganizacaoService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,7 +1,7 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.application.historico.HistoricoDadosPessoaisService;
 import br.com.saudeConecta.domain.historicodadospessoais.HistoricoDadosPessoais;
-import br.com.saudeConecta.service.HistoricoDadosPessoaisService;
 import jdk.jfr.Description;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

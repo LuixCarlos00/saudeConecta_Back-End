@@ -1,5 +1,9 @@
 package br.com.saudeConecta.integration;
 
+import br.com.saudeConecta.application.prontuario.PlanejamentoTerapeuticoService;
+import br.com.saudeConecta.application.prontuario.ProntuarioDentistaService;
+import br.com.saudeConecta.application.prontuario.ProntuarioService;
+import br.com.saudeConecta.config.CacheEvictionService;
 import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.atendimento.AtendimentoRascunho;
@@ -15,10 +19,6 @@ import br.com.saudeConecta.infrastructure.persistence.repository.AtendimentoRasc
 import br.com.saudeConecta.infrastructure.persistence.repository.ConsultaRepository;
 import br.com.saudeConecta.presentation.dto.prontuario.CadastrarProntuarioDentistaRequest;
 import br.com.saudeConecta.presentation.dto.prontuario.CadastrarProntuarioRequest;
-import br.com.saudeConecta.service.CacheEvictionService;
-import br.com.saudeConecta.service.PlanejamentoTerapeuticoService;
-import br.com.saudeConecta.service.ProntuarioDentistaService;
-import br.com.saudeConecta.service.ProntuarioService;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

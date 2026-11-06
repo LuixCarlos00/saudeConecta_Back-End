@@ -1,5 +1,10 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.application.consulta.ConsultaService;
+import br.com.saudeConecta.application.dashboard.SaldoFinanceiroService;
+import br.com.saudeConecta.application.historico.BuscarHistoricoCompletoPacienteAdminUseCase;
+import br.com.saudeConecta.application.historico.BuscarHistoricoCompletoPacienteDentistaUseCase;
+import br.com.saudeConecta.application.historico.BuscarHistoricoCompletoPacienteMedicoUseCase;
 import br.com.saudeConecta.config.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.config.tenant.TenantHelper;
@@ -11,11 +16,6 @@ import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import br.com.saudeConecta.presentation.dto.consulta.*;
 import br.com.saudeConecta.presentation.dto.dashboard.SaldoFinanceiroResponse;
-import br.com.saudeConecta.service.ConsultaService;
-import br.com.saudeConecta.service.SaldoFinanceiroService;
-import br.com.saudeConecta.usecase.BuscarHistoricoCompletoPacienteAdminUseCase;
-import br.com.saudeConecta.usecase.BuscarHistoricoCompletoPacienteDentistaUseCase;
-import br.com.saudeConecta.usecase.BuscarHistoricoCompletoPacienteMedicoUseCase;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

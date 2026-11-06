@@ -1,14 +1,14 @@
 package br.com.saudeConecta.integration;
 
+import br.com.saudeConecta.application.prontuario.ProntuarioService;
+import br.com.saudeConecta.application.prontuario.TermoAutorizacaoService;
+import br.com.saudeConecta.config.CacheEvictionService;
 import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.prontuario.Prontuario;
 import br.com.saudeConecta.domain.prontuario.TermoAutorizacao;
 import br.com.saudeConecta.infrastructure.persistence.repository.ProntuarioRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.TermoAutorizacaoRepository;
-import br.com.saudeConecta.service.CacheEvictionService;
-import br.com.saudeConecta.service.ProntuarioService;
-import br.com.saudeConecta.service.TermoAutorizacaoService;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

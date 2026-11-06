@@ -1,8 +1,8 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.application.cobranca.CobrancaService;
 import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.presentation.dto.planos.CobrancaTenantResponse;
-import br.com.saudeConecta.service.CobrancaService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;

@@ -1,9 +1,9 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.application.assinatura.PlanoAssinaturaService;
 import br.com.saudeConecta.domain.planos.TipoPlano;
 import br.com.saudeConecta.presentation.dto.planos.PlanoAssinaturaRequest;
 import br.com.saudeConecta.presentation.dto.planos.PlanoAssinaturaResponse;
-import br.com.saudeConecta.service.PlanoAssinaturaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,10 +1,10 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.application.prontuario.ProntuarioService;
 import br.com.saudeConecta.domain.prontuario.Prontuario;
 import br.com.saudeConecta.presentation.dto.prontuario.CadastrarProntuarioRequest;
 import br.com.saudeConecta.presentation.dto.prontuario.ProntuarioCompletoResponse;
 import br.com.saudeConecta.presentation.dto.prontuario.ProntuarioResponse;
-import br.com.saudeConecta.service.ProntuarioService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

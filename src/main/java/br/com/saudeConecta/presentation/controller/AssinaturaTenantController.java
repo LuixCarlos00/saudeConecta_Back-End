@@ -1,15 +1,15 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.application.assinatura.AssinaturaMercadoPagoService;
+import br.com.saudeConecta.application.assinatura.AssinaturaTenantService;
+import br.com.saudeConecta.application.assinatura.LimitePlanoService;
+import br.com.saudeConecta.application.assinatura.LinkPagamentoAssinaturaService;
+import br.com.saudeConecta.application.assinatura.PendenciaManualService;
+import br.com.saudeConecta.application.cobranca.CobrancaService;
 import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.domain.planos.StatusAssinatura;
 import br.com.saudeConecta.domain.planos.TipoPlano;
 import br.com.saudeConecta.presentation.dto.planos.*;
-import br.com.saudeConecta.service.AssinaturaTenantService;
-import br.com.saudeConecta.service.CobrancaService;
-import br.com.saudeConecta.service.LimitePlanoService;
-import br.com.saudeConecta.service.PendenciaManualService;
-import br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService;
-import br.com.saudeConecta.service.mercadopago.LinkPagamentoAssinaturaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,9 +1,9 @@
 package br.com.saudeConecta.integration;
 
+import br.com.saudeConecta.application.consulta.ConsultaService;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
 import br.com.saudeConecta.presentation.dto.consulta.AgendarConsultaRequest;
-import br.com.saudeConecta.service.ConsultaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.*;

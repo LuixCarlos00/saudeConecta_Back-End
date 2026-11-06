@@ -1,9 +1,9 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.application.atendimento.AtendimentoRascunhoService;
 import br.com.saudeConecta.presentation.dto.atendimento.RascunhoAtendimentoResponse;
 import br.com.saudeConecta.presentation.dto.atendimento.RascunhoAtendimentoResumoResponse;
 import br.com.saudeConecta.presentation.dto.atendimento.SalvarRascunhoAtendimentoRequest;
-import br.com.saudeConecta.service.AtendimentoRascunhoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

@@ -2,8 +2,8 @@ package br.com.saudeConecta.integration;
 
 import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.application.exception.ResourceNotFoundException;
-import br.com.saudeConecta.service.ProntuarioDentistaService;
-import br.com.saudeConecta.service.ProntuarioService;
+import br.com.saudeConecta.application.prontuario.ProntuarioDentistaService;
+import br.com.saudeConecta.application.prontuario.ProntuarioService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

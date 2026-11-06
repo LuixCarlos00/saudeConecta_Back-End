@@ -1,6 +1,6 @@
 package br.com.saudeConecta.presentation.controller;
 
-import br.com.saudeConecta.service.SecretariaService;
+import br.com.saudeConecta.application.secretaria.SecretariaService;
 import br.com.saudeConecta.domain.secretaria.Secretaria;
 import br.com.saudeConecta.presentation.dto.secretaria.CadastrarSecretariaRequest;
 import br.com.saudeConecta.presentation.dto.secretaria.SecretariaResponse;

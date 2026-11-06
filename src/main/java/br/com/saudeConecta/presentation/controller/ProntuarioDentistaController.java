@@ -1,9 +1,9 @@
 package br.com.saudeConecta.presentation.controller;
+import br.com.saudeConecta.application.prontuario.ProntuarioDentistaService;
+import br.com.saudeConecta.application.prontuario.TermoAutorizacaoService;
 import br.com.saudeConecta.domain.prontuario.ProntuarioDentista;
 import br.com.saudeConecta.domain.prontuario.TermoAutorizacao;
 import br.com.saudeConecta.presentation.dto.prontuario.CadastrarProntuarioDentistaRequest;
-import br.com.saudeConecta.service.ProntuarioDentistaService;
-import br.com.saudeConecta.service.TermoAutorizacaoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

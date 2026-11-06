@@ -1,11 +1,11 @@
 package br.com.saudeConecta.integration;
 
 import org.junit.jupiter.api.AfterEach;
+import br.com.saudeConecta.application.profissional.ProfissionalService;
 import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.profissional.StatusProfissional;
-import br.com.saudeConecta.service.ProfissionalService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.*;

@@ -1,7 +1,7 @@
 package br.com.saudeConecta.integration;
 
-import br.com.saudeConecta.service.PlanejamentoTerapeuticoService;
-import br.com.saudeConecta.service.TermoAutorizacaoService;
+import br.com.saudeConecta.application.prontuario.PlanejamentoTerapeuticoService;
+import br.com.saudeConecta.application.prontuario.TermoAutorizacaoService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

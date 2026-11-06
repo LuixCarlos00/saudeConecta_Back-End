@@ -1,8 +1,8 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.application.prontuario.ProcedimentoPadraoService;
 import br.com.saudeConecta.domain.prontuario.ProcedimentoPadrao;
 import br.com.saudeConecta.presentation.dto.prontuario.ProcedimentoPadraoRequest;
-import br.com.saudeConecta.service.ProcedimentoPadraoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

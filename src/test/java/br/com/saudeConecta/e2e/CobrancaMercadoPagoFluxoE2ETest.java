@@ -1,5 +1,8 @@
 package br.com.saudeConecta.e2e;
 
+import br.com.saudeConecta.application.assinatura.AssinaturaTenantService;
+import br.com.saudeConecta.application.assinatura.MercadoPagoWebhookService;
+import br.com.saudeConecta.application.cobranca.CobrancaScheduler;
 import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.organizacao.TipoOrganizacao;
@@ -10,10 +13,7 @@ import br.com.saudeConecta.infrastructure.persistence.repository.CobrancaTenantR
 import br.com.saudeConecta.infrastructure.persistence.repository.MpWebhookEventoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.OrganizacaoRepository;
 import br.com.saudeConecta.infrastructure.persistence.repository.PlanoAssinaturaRepository;
-import br.com.saudeConecta.service.AssinaturaTenantService;
-import br.com.saudeConecta.service.CobrancaScheduler;
 import br.com.saudeConecta.service.mercadopago.MercadoPagoClient;
-import br.com.saudeConecta.service.mercadopago.MercadoPagoWebhookService;
 import br.com.saudeConecta.service.mercadopago.dto.AuthorizedPaymentResponse;
 import br.com.saudeConecta.service.mercadopago.dto.PreapprovalResponse;
 import org.junit.jupiter.api.AfterEach;

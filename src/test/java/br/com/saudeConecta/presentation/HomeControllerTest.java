@@ -1,5 +1,6 @@
 package br.com.saudeConecta.presentation;
 
+import br.com.saudeConecta.application.usuario.HomeService;
 import br.com.saudeConecta.config.security.TokenService;
 import br.com.saudeConecta.domain.usuario.AuditoriaAcessoMaster;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
@@ -7,7 +8,6 @@ import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
 import br.com.saudeConecta.presentation.controller.HomeController;
 import br.com.saudeConecta.presentation.dto.usuario.DadosLoginUsuario;
-import br.com.saudeConecta.service.HomeService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

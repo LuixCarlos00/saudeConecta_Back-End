@@ -1,11 +1,11 @@
 package br.com.saudeConecta.presentation.controller;
 
+import br.com.saudeConecta.application.profissional.ProfissionalService;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.presentation.dto.profissional.AtualizarClinicoRequest;
 import br.com.saudeConecta.presentation.dto.profissional.CadastrarClinicoRequest;
 import br.com.saudeConecta.presentation.dto.profissional.ProfissionalResponse;
-import br.com.saudeConecta.service.ProfissionalService;
 import jakarta.validation.Valid;
 import jdk.jfr.Description;
 import lombok.RequiredArgsConstructor;

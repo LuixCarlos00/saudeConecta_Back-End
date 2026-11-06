@@ -1,5 +1,7 @@
 package br.com.saudeConecta.e2e;
 
+import br.com.saudeConecta.application.assinatura.MercadoPagoWebhookService;
+import br.com.saudeConecta.application.cobranca.CobrancaScheduler;
 import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.organizacao.TipoOrganizacao;
@@ -9,9 +11,7 @@ import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.email.EmailNotificacaoService;
 import br.com.saudeConecta.infrastructure.persistence.repository.*;
-import br.com.saudeConecta.service.CobrancaScheduler;
 import br.com.saudeConecta.service.mercadopago.MercadoPagoClient;
-import br.com.saudeConecta.service.mercadopago.MercadoPagoWebhookService;
 import br.com.saudeConecta.service.mercadopago.dto.AuthorizedPaymentResponse;
 import br.com.saudeConecta.service.mercadopago.dto.PreapprovalResponse;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -76,9 +76,9 @@ class PagamentoAssinaturaFluxoE2ETest {
     @Autowired private PlanoAssinaturaRepository planoAssinaturaRepository;
     @Autowired private UsuarioRepository usuarioRepository;
     @Autowired private CobrancaScheduler cobrancaScheduler;
-    @Autowired private br.com.saudeConecta.service.AssinaturaTenantService assinaturaTenantService;
-    @Autowired private br.com.saudeConecta.service.mercadopago.AssinaturaMercadoPagoService assinaturaMercadoPagoService;
-    @Autowired private br.com.saudeConecta.service.mercadopago.LinkPagamentoAssinaturaService linkPagamentoAssinaturaService;
+    @Autowired private br.com.saudeConecta.application.assinatura.AssinaturaTenantService assinaturaTenantService;
+    @Autowired private br.com.saudeConecta.application.assinatura.AssinaturaMercadoPagoService assinaturaMercadoPagoService;
+    @Autowired private br.com.saudeConecta.application.assinatura.LinkPagamentoAssinaturaService linkPagamentoAssinaturaService;
 
     private Organizacao organizacao;
     private PlanoAssinatura plano;

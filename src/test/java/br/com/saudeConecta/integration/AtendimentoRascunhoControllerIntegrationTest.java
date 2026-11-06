@@ -1,11 +1,11 @@
 package br.com.saudeConecta.integration;
 
+import br.com.saudeConecta.application.atendimento.AtendimentoRascunhoService;
 import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.application.exception.ResourceNotFoundException;
 import br.com.saudeConecta.presentation.dto.atendimento.RascunhoAtendimentoResponse;
 import br.com.saudeConecta.presentation.dto.atendimento.RascunhoAtendimentoResumoResponse;
 import br.com.saudeConecta.presentation.dto.atendimento.SalvarRascunhoAtendimentoRequest;
-import br.com.saudeConecta.service.AtendimentoRascunhoService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

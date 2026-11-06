@@ -1,10 +1,10 @@
 package br.com.saudeConecta.integration;
 
+import br.com.saudeConecta.application.usuario.UsuarioService;
 import br.com.saudeConecta.config.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.presentation.dto.usuario.BloquearUsuarioRequest;
 import br.com.saudeConecta.presentation.dto.usuario.TodosUsuariosAgrupadosResponse;
 import br.com.saudeConecta.presentation.dto.usuario.UsuarioPerfilCompletoResponse;
-import br.com.saudeConecta.service.UsuarioService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;

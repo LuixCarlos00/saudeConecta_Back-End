@@ -1,11 +1,11 @@
 package br.com.saudeConecta.config.security;
 
+import br.com.saudeConecta.application.assinatura.AcessoAssinaturaService;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.usuario.StatusUsuario;
 import br.com.saudeConecta.domain.usuario.TipoUsuarioNovo;
 import br.com.saudeConecta.domain.usuario.Usuario;
 import br.com.saudeConecta.infrastructure.persistence.repository.UsuarioRepository;
-import br.com.saudeConecta.service.AcessoAssinaturaService;
 import com.auth0.jwt.exceptions.TokenExpiredException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
