@@ -115,3 +115,19 @@ O `ArquiteturaTest` congelou as violações que já existiam em `src/test/resour
 - **Regra 3** (application não depende de presentation): 863 violações em 29 classes de `service`, `usecase` e `email`.
 
 O `ProntuarioMapper` (`service/mapper`, commit `11a8419`) entrou congelado na regra 3, com 24 linhas do store: ele recebe o `CadastrarProntuarioRequest`, que ainda mora em `presentation.dto`. Isso é esperado. Na B5 o mapper vai junto com os DTOs para `application/<area>`, e as linhas saem do store.
+
+### Depois da B5 (pacotes movidos)
+
+Cada movimentação foi seguida de um refreeze em commit próprio. Contagem do store por regra:
+
+| Momento | Regra 1 | Regra 2 | Regra 3 |
+|---|---|---|---|
+| B4 (linha de base) | 9 | 25 | 863 |
+| após B5a, B5b, B5c | 9 | 25 | 863 |
+| após B5d (DTOs em `application/<area>/dto`) | 9 | 25 | 0 |
+| após B5e (listener em `infrastructure.persistence.listener`) | 8 | 25 | 0 |
+| após B5f e fechamento | 8 | 25 | 0 |
+
+- A regra 1 passou a proibir também `infrastructure`, com exceção explícita para `..infrastructure.persistence.listener..`. As 8 violações restantes são as entidades que implementam `config.tenant.TenantAware`.
+- A regra 2 continua com `HomeController` (22) e `ConsultaController` (3). Elas saem na B6.
+- A regra 5 está ligada: não existe mais classe em `..infra..`, `..usecase..` nem `..util..`.

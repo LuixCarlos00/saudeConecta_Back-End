@@ -82,22 +82,18 @@ A API estará disponível em `http://localhost:8080`
 ```
 src/main/java/br/com/saudeConecta/
 ├── SaudeConectaApplication.java
-├── config/            # Cache, fuso horário, async, RestTemplate
 ├── domain/            # Entidades JPA e enums, por assunto
-├── presentation/      # Controllers REST e DTOs
-├── service/           # Regras de negócio (inclui mercadopago/)
-├── usecase/           # Casos de uso de histórico do paciente
-├── infrastructure/    # Persistência (repositories JPA)
-├── infra/             # Transversais: segurança, tenant, logging, exceções
-├── email/             # Envio de e-mail e retry
-└── util/              # Utilitários (MascaraLog, InputSanitizer...)
+├── application/       # Casos de uso por área (<area>/XxxService, <area>/dto, exception/)
+├── presentation/      # Controllers REST por área (controller/<area>) e erro/ (handler HTTP)
+├── infrastructure/    # Persistência (repository, listener...), Mercado Pago e e-mail
+└── config/            # Transversais: security, tenant, logging, web, cache, async
 ```
 
 Veja o `ARQUITETURA.md` para camadas, multi-tenant, segurança e cobrança.
 
 ## Endpoints Principais
 
-Os controllers ficam em `presentation/controller`. Os prefixos principais são:
+Os controllers ficam em `presentation/controller/<area>`. Os prefixos principais são:
 `/Home` (login e senha), `/usuario`, `/administrador`, `/secretaria`, `/profissionais`,
 `/pacientes`, `/consultas`, `/prontuario`, `/prontuario-dentista`, `/planejamento-terapeutico`,
 `/relatorios`, `/mensageria`, `/chamados-suporte`, `/planos`, `/assinaturas`, `/cobrancas`,

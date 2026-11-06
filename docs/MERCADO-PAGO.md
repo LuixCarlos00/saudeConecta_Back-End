@@ -115,7 +115,7 @@ A comparação com `v1` é *time-safe* (`MessageDigest.isEqual`) e timestamps co
 de 5 minutos de diferença são rejeitados (mitigação de replay). Requisições sem
 assinatura válida recebem `401`.
 
-Implementação: `service/mercadopago/MercadoPagoSignatureValidator`.
+Implementação: `application/assinatura/MercadoPagoSignatureValidator`.
 
 ## 6. Idempotência
 

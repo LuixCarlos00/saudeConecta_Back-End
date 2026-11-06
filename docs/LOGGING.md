@@ -51,7 +51,7 @@ Controllers não logam "recebi a requisição": o `http fim` e os logs do servic
 ## 4. Dados sensíveis (LGPD)
 
 Nunca em log, em nenhum nível: senha, hash, JWT, conteúdo clínico (anamnese, diagnóstico, prescrição...).
-Com máscara obrigatória (`util/MascaraLog`):
+Com máscara obrigatória (`config/logging/MascaraLog`):
 
 | Dado | Como |
 |---|---|
