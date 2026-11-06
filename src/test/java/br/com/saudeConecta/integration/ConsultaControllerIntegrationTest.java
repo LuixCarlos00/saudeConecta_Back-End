@@ -160,23 +160,32 @@ class ConsultaControllerIntegrationTest {
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Deve retornar 200 quando consulta for encontrada")
         void deveRetornar200QuandoConsultaEncontrada() throws Exception {
+            br.com.saudeConecta.domain.usuario.Usuario dono = new br.com.saudeConecta.domain.usuario.Usuario();
+            dono.setId(7L);
+            br.com.saudeConecta.domain.profissional.Profissional profissional =
+                    new br.com.saudeConecta.domain.profissional.Profissional();
+            profissional.setId(3L);
+            profissional.setUsuario(dono);
             Consulta consultaMock = Consulta.builder()
                     .id(1L).status(StatusConsulta.AGENDADA)
                     .duracaoMinutos(30)
                     .dataHora(LocalDateTime.now().plusDays(1))
+                    .profissional(profissional)
                     .build();
 
-            when(consultaService.buscarPorId(1L)).thenReturn(java.util.Optional.of(consultaMock));
+            when(consultaService.buscarPorIdComRelacoes(1L)).thenReturn(java.util.Optional.of(consultaMock));
 
             mockMvc.perform(get("/consultas/1"))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.profissionalId").value(3))
+                    .andExpect(jsonPath("$.profissionalUsuarioId").value(7));
         }
 
         @Test
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Deve retornar 404 quando consulta não existir")
         void deveRetornar404QuandoConsultaNaoExistir() throws Exception {
-            when(consultaService.buscarPorId(999L)).thenReturn(java.util.Optional.empty());
+            when(consultaService.buscarPorIdComRelacoes(999L)).thenReturn(java.util.Optional.empty());
 
             mockMvc.perform(get("/consultas/999"))
                     .andExpect(status().isNotFound());

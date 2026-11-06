@@ -64,6 +64,21 @@ public class ConsultaService {
         Long orgId = tenantHelper.getCurrentTenantId();
         return consultaRepository.findByIdAndOrganizacao_Id(id, orgId);
     }
+
+    /**
+     * Busca a consulta da organização do token já com profissional, paciente, especialidade e
+     * forma de pagamento carregados, para montar o {@code ConsultaResponse} fora da transação
+     * (open-in-view desligado). Sem o fetch, o proxy do profissional estoura LazyInitializationException.
+     *
+     * @param id ID da consulta
+     * @return a consulta, ou vazio se não existir ou for de outra clínica
+     */
+    @RequiresTenant
+    @Transactional(readOnly = true)
+    public Optional<Consulta> buscarPorIdComRelacoes(Long id) {
+        Long orgId = tenantHelper.getCurrentTenantId();
+        return consultaRepository.findByIdAndOrganizacao_IdWithRelations(id, orgId);
+    }
     
     /**
      * Busca as consultas do dia informado (ou do dia atual, se `data` for nulo).

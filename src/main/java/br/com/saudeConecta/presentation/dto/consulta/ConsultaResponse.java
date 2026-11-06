@@ -10,6 +10,7 @@ public record ConsultaResponse(
     Long profissionalId,
     String profissionalNome,
     String profissionalConselho,
+    Long profissionalUsuarioId,
     Long tipoProfissionalId,
     String tipoProfissionalNome,
     Long pacienteId,
@@ -35,6 +36,10 @@ public record ConsultaResponse(
             c.getProfissional() != null ? c.getProfissional().getId() : null,
             c.getProfissional() != null ? c.getProfissional().getNome() : null,
             c.getProfissional() != null ? c.getProfissional().getRegistroConselho() : null,
+            // Id do usuário dono do prontuário: o front compara com o logado para oferecer "Editar".
+            // Só o id do proxy lazy é lido, então não há select a mais nem LazyInitializationException.
+            c.getProfissional() != null && c.getProfissional().getUsuario() != null
+                    ? c.getProfissional().getUsuario().getId() : null,
             c.getProfissional() != null && c.getProfissional().getTipoProfissional() != null ? c.getProfissional().getTipoProfissional().getId() : null,
             c.getProfissional() != null && c.getProfissional().getTipoProfissional() != null ? c.getProfissional().getTipoProfissional().getCodigo() : null,
             c.getPaciente() != null ? c.getPaciente().getPaciCodigo() : null,

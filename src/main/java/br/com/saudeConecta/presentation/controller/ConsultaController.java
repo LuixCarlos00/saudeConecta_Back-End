@@ -295,7 +295,7 @@ public class ConsultaController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ConsultaResponse> buscarPorId(@PathVariable Long id) {
-        return consultaService.buscarPorId(id)
+        return consultaService.buscarPorIdComRelacoes(id)
             .map(ConsultaResponse::fromEntity)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());

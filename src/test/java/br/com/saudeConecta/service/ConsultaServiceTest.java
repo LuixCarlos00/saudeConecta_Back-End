@@ -114,6 +114,17 @@ class ConsultaServiceTest {
 
             assertThat(resultado).isEmpty();
         }
+
+        @Test
+        @DisplayName("buscarPorIdComRelacoes usa a query com fetch e filtra pela organização do token")
+        void comRelacoesUsaFetchDaOrganizacao() {
+            when(tenantHelper.getCurrentTenantId()).thenReturn(ORG_ID);
+            when(consultaRepository.findByIdAndOrganizacao_IdWithRelations(100L, ORG_ID))
+                    .thenReturn(Optional.of(consultaAgendada));
+
+            assertThat(consultaService.buscarPorIdComRelacoes(100L)).contains(consultaAgendada);
+            verify(consultaRepository, never()).findByIdAndOrganizacao_Id(anyLong(), any());
+        }
     }
 
     // ========== cadastrarConsultaByOrg ==========
