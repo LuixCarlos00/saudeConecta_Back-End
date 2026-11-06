@@ -145,7 +145,21 @@
 						<!-- Domain entities, enums e converters -->
 						<exclude>br/com/saudeConecta/domain/**/*</exclude>
 						<!-- Configurações Spring -->
-						<exclude>br/com/saudeConecta/config/**/*</exclude>
+						<!-- config/ é excluído por subpacote: MascaraLog e InputSanitizer têm lógica e teste, e são medidos -->
+						<!-- raiz de config/ classe a classe: "config/*" no agente vira "config.*" e pegaria os subpacotes -->
+						<exclude>br/com/saudeConecta/config/AsyncConfig*</exclude>
+						<exclude>br/com/saudeConecta/config/CacheConfig*</exclude>
+						<exclude>br/com/saudeConecta/config/FusoHorarioConfig*</exclude>
+						<exclude>br/com/saudeConecta/config/RestTemplateConfig*</exclude>
+						<exclude>br/com/saudeConecta/config/security/**/*</exclude>
+						<exclude>br/com/saudeConecta/config/tenant/**/*</exclude>
+						<exclude>br/com/saudeConecta/config/logging/CorrelationIdFilter*</exclude>
+						<exclude>br/com/saudeConecta/config/logging/MdcChaves*</exclude>
+						<exclude>br/com/saudeConecta/config/logging/MdcTaskDecorator*</exclude>
+						<exclude>br/com/saudeConecta/config/logging/ScheduledMdcAspect*</exclude>
+						<exclude>br/com/saudeConecta/config/web/RateLimiter*</exclude>
+						<exclude>br/com/saudeConecta/config/web/LimiteCorpoRascunhoFilter*</exclude>
+						<exclude>br/com/saudeConecta/config/web/SafeInput*</exclude>
 						<!-- Infraestrutura: repositórios JPA, tenant, filtros -->
 						<!-- (ex-infra/exceptions: exceções e handler HTTP, excluídos como antes da B5) -->
 						<exclude>br/com/saudeConecta/application/exception/**/*</exclude>
