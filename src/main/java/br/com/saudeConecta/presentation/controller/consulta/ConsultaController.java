@@ -4,18 +4,14 @@ import br.com.saudeConecta.application.consulta.ConsultaService;
 import br.com.saudeConecta.application.consulta.dto.*;
 import br.com.saudeConecta.application.dashboard.SaldoFinanceiroService;
 import br.com.saudeConecta.application.dashboard.dto.SaldoFinanceiroResponse;
-import br.com.saudeConecta.application.historico.BuscarHistoricoCompletoPacienteAdminUseCase;
-import br.com.saudeConecta.application.historico.BuscarHistoricoCompletoPacienteDentistaUseCase;
-import br.com.saudeConecta.application.historico.BuscarHistoricoCompletoPacienteMedicoUseCase;
+import br.com.saudeConecta.application.historico.BuscarHistoricoPacientePorPerfilUseCase;
 import br.com.saudeConecta.config.tenant.TenantAccessDeniedException;
 import br.com.saudeConecta.config.tenant.TenantContext;
 import br.com.saudeConecta.config.tenant.TenantHelper;
 import br.com.saudeConecta.domain.common.Periodo;
 import br.com.saudeConecta.domain.consulta.Consulta;
 import br.com.saudeConecta.domain.consulta.StatusConsulta;
-import br.com.saudeConecta.domain.profissional.Profissional;
 import br.com.saudeConecta.domain.usuario.Usuario;
-import br.com.saudeConecta.infrastructure.persistence.repository.ProfissionalRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +26,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import br.com.saudeConecta.config.logging.MascaraLog;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/consultas")
@@ -40,10 +35,7 @@ public class ConsultaController {
     
     private final ConsultaService consultaService;
     private final SaldoFinanceiroService saldoFinanceiroService;
-    private final BuscarHistoricoCompletoPacienteDentistaUseCase buscarHistoricoCompletoPacienteDentistaUseCase;
-    private final BuscarHistoricoCompletoPacienteMedicoUseCase buscarHistoricoCompletoPacienteMedicoUseCase;
-    private final BuscarHistoricoCompletoPacienteAdminUseCase buscarHistoricoCompletoPacienteAdminUseCase;
-    private final ProfissionalRepository profissionalRepository;
+    private final BuscarHistoricoPacientePorPerfilUseCase buscarHistoricoPacientePorPerfilUseCase;
     private final TenantHelper tenantHelper;
 
 //=================Tela de /gerenciamento =================
@@ -496,29 +488,9 @@ public class ConsultaController {
             @PathVariable Long pacienteId,
             @AuthenticationPrincipal Usuario usuarioLogado) {
 
-        List<HistoricoConsultaPacienteResponse> historico;
-
-        if (usuarioLogado.isClinico()) {
-            Optional<Profissional> profissionalLogado = profissionalRepository.findByUsuarioIdWithRelations(usuarioLogado.getId());
-
-            if (profissionalLogado.isEmpty()) {
-                log.warn("consulta.historico negado motivo=PROFISSIONAL_NAO_ENCONTRADO usuarioId={}", usuarioLogado.getId());
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-            }
-
-            Profissional profissional = profissionalLogado.get();
-            Long profissionalId = profissional.getId();
-
-            if (profissional.getTipoProfissional() != null && profissional.getTipoProfissional().isDentista()) {
-                historico = buscarHistoricoCompletoPacienteDentistaUseCase.executar(pacienteId, profissionalId);
-            } else {
-                historico = buscarHistoricoCompletoPacienteMedicoUseCase.executar(pacienteId, profissionalId);
-            }
-        } else {
-            historico = buscarHistoricoCompletoPacienteAdminUseCase.executar(pacienteId);
-        }
-
-        return ResponseEntity.ok(historico);
+        return buscarHistoricoPacientePorPerfilUseCase.executar(pacienteId, usuarioLogado)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
     // ==========================================
