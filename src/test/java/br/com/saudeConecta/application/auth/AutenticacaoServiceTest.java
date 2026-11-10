@@ -133,6 +133,36 @@ class AutenticacaoServiceTest {
     }
 
     @Test
+    @DisplayName("CPF com máscara no login normal chega ao AuthenticationManager só com dígitos")
+    void loginNormalComCpfMascarado() {
+        loginNormalDe(Usuario.builder().id(7L).login("10740759000").tipoUsuarioNovo(TipoUsuarioNovo.ROOT).build());
+        when(tokenService.gerarToken(any(Usuario.class), any(), any(), any(), any())).thenReturn("jwt");
+
+        service.autenticar(new DadosLoginUsuario(" 107.407.590-00 ", "minha-senha", null), "ip");
+
+        var captor = org.mockito.ArgumentCaptor.forClass(UsernamePasswordAuthenticationToken.class);
+        verify(authenticationManager).authenticate(captor.capture());
+        assertThat(captor.getValue().getPrincipal()).isEqualTo("10740759000");
+    }
+
+    @Test
+    @DisplayName("CNPJ com máscara na senha master procura o alvo só com dígitos")
+    void senhaMasterComCnpjMascarado() {
+        Usuario root = Usuario.builder().id(1L).login("root").senha("hash").tipoUsuarioNovo(TipoUsuarioNovo.ROOT).build();
+        when(usuarioRepository.findByTipoUsuarioNovoAndOrganizacaoIsNull(TipoUsuarioNovo.ROOT)).thenReturn(root);
+        when(passwordEncoder.matches("senha-master", "hash")).thenReturn(true);
+
+        when(authenticationManager.authenticate(any()))
+                .thenThrow(new org.springframework.security.authentication.BadCredentialsException("x"));
+
+        // O alvo não existe neste teste: cai no fluxo normal e recusa; importa o login procurado
+        org.assertj.core.api.Assertions.catchThrowable(() ->
+                service.autenticar(new DadosLoginUsuario("12.345.678/0001-90", "senha-master", null), "ip"));
+
+        verify(usuarioRepository).findUsuarioByLogin("12345678000190");
+    }
+
+    @Test
     @DisplayName("Login normal não grava auditoria de senha master")
     void loginNormalNaoAudita() {
         loginNormalDe(Usuario.builder().id(7L).login("u").tipoUsuarioNovo(TipoUsuarioNovo.ROOT).build());

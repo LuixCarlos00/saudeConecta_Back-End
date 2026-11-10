@@ -67,14 +67,17 @@ public class AutenticacaoService {
      *         usuário bloqueado (o handler global responde 401)
      */
     public ResultadoLogin autenticar(DadosLoginUsuario dados, String ip) {
+        // CPF/CNPJ pode vir com máscara; o login gravado é só dígitos
+        String login = LoginNormalizado.normalizar(dados.login());
+
         // Tenta autenticar via senha master (SUPER_ADMIN impersonando outro usuario)
-        Usuario usuarioMaster = autenticarComSenhaMaster(dados.login(), dados.senha(), ip);
+        Usuario usuarioMaster = autenticarComSenhaMaster(login, dados.senha(), ip);
         if (usuarioMaster != null) {
             return gerarResultadoLogin(usuarioMaster);
         }
 
         // Fluxo normal de autenticacao
-        var authenticatetoken = new UsernamePasswordAuthenticationToken(dados.login(), dados.senha());
+        var authenticatetoken = new UsernamePasswordAuthenticationToken(login, dados.senha());
         var authentication = authenticationManager.authenticate(authenticatetoken);
 
         Usuario usuario = (Usuario) authentication.getPrincipal();
