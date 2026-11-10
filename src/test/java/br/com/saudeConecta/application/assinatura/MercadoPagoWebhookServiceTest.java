@@ -163,8 +163,26 @@ class MercadoPagoWebhookServiceTest {
     }
 
     @Test
+    @DisplayName("TRIAL: preapproval cancelado pelo MP (recusa no 1º checkout) não cancela a assinatura")
+    void preapprovalCancelledNoTrialNaoCancela() {
+        assinatura.setStatus(StatusAssinatura.TRIAL);
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(
+                new PreapprovalResponse(PREAPPROVAL_ID, "cancelled", null,
+                        "admin@clinica.com", "ASSINATURA-42", null, null));
+
+        service.processar(MercadoPagoWebhookService.TOPICO_PREAPPROVAL, PREAPPROVAL_ID, "{}");
+
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.TRIAL);
+        assertThat(assinatura.getMpPreapprovalId()).isNull();
+        assertThat(assinatura.getMpStatus()).isNull();
+        assertThat(assinatura.getCanceladoPor()).isNull();
+        assertThat(ultimoEventoSalvo().getProcessado()).isTrue();
+    }
+
+    @Test
     @DisplayName("Preapproval cancelled deve cancelar a assinatura registrando a origem")
     void preapprovalCancelledDeveCancelarAssinatura() {
+        assinatura.setStatus(StatusAssinatura.ATIVA);
         when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(
                 new PreapprovalResponse(PREAPPROVAL_ID, "cancelled", null,
                         "admin@clinica.com", "ASSINATURA-42", null, null));
@@ -206,6 +224,7 @@ class MercadoPagoWebhookServiceTest {
     @Test
     @DisplayName("Pagamento recusado deve registrar cobrança RECUSADO e marcar inadimplência")
     void pagamentoRecusadoDeveMarcarInadimplente() {
+        assinatura.setStatus(StatusAssinatura.ATIVA);
         when(cobrancaTenantRepository.findByMpAuthorizedPaymentId(AUTHORIZED_PAYMENT_ID))
                 .thenReturn(Optional.empty());
         when(mercadoPagoClient.buscarAuthorizedPayment(AUTHORIZED_PAYMENT_ID)).thenReturn(
@@ -223,6 +242,44 @@ class MercadoPagoWebhookServiceTest {
         verify(assinaturaTenantService).marcarInadimplente(ASSINATURA_ID);
         verify(assinaturaTenantService, never()).renovarAposPagamento(any());
         assertThat(ultimoEventoSalvo().getProcessado()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Recusa no 1º checkout com a clínica em TRIAL: registra RECUSADO e a assinatura segue TRIAL")
+    void pagamentoRecusadoNoTrialNaoMarcaInadimplente() {
+        assinatura.setStatus(StatusAssinatura.TRIAL);
+        when(cobrancaTenantRepository.findByMpAuthorizedPaymentId(AUTHORIZED_PAYMENT_ID))
+                .thenReturn(Optional.empty());
+        when(mercadoPagoClient.buscarAuthorizedPayment(AUTHORIZED_PAYMENT_ID)).thenReturn(
+                new AuthorizedPaymentResponse(AUTHORIZED_PAYMENT_ID, PREAPPROVAL_ID, "processed",
+                        BigDecimal.valueOf(549),
+                        new AuthorizedPaymentResponse.Payment(1234L, "rejected", "cc_rejected_other_reason")));
+
+        service.processar(MercadoPagoWebhookService.TOPICO_AUTHORIZED_PAYMENT, AUTHORIZED_PAYMENT_ID, "{}");
+
+        ArgumentCaptor<CobrancaTenant> captor = ArgumentCaptor.forClass(CobrancaTenant.class);
+        verify(cobrancaTenantRepository).save(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo(StatusCobranca.RECUSADO);
+        assertThat(captor.getValue().getMotivoRecusa()).isEqualTo("cc_rejected_other_reason");
+        verify(assinaturaTenantService, never()).marcarInadimplente(any());
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.TRIAL);
+    }
+
+    @Test
+    @DisplayName("Pagamento recusado com a assinatura já INADIMPLENTE não chama a marcação de novo")
+    void pagamentoRecusadoEmInadimplenteNaoMarcaDeNovo() {
+        assinatura.setStatus(StatusAssinatura.INADIMPLENTE);
+        when(cobrancaTenantRepository.findByMpAuthorizedPaymentId(AUTHORIZED_PAYMENT_ID))
+                .thenReturn(Optional.empty());
+        when(mercadoPagoClient.buscarAuthorizedPayment(AUTHORIZED_PAYMENT_ID)).thenReturn(
+                new AuthorizedPaymentResponse(AUTHORIZED_PAYMENT_ID, PREAPPROVAL_ID, "recycling",
+                        BigDecimal.valueOf(279),
+                        new AuthorizedPaymentResponse.Payment(1234L, "rejected", "cc_rejected_other_reason")));
+
+        service.processar(MercadoPagoWebhookService.TOPICO_AUTHORIZED_PAYMENT, AUTHORIZED_PAYMENT_ID, "{}");
+
+        verify(assinaturaTenantService, never()).marcarInadimplente(any());
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.INADIMPLENTE);
     }
 
     @Test
@@ -653,6 +710,7 @@ class MercadoPagoWebhookServiceTest {
     @Test
     @DisplayName("Mesmo preapproval achado pela external_reference continua aplicando o status")
     void mesmoPreapprovalPeloFallbackAplicaStatus() {
+        assinatura.setStatus(StatusAssinatura.ATIVA);
         when(assinaturaTenantRepository.findByMpPreapprovalId(PREAPPROVAL_ID)).thenReturn(Optional.empty());
         when(assinaturaTenantRepository.findById(ASSINATURA_ID)).thenReturn(Optional.of(assinatura));
         when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(

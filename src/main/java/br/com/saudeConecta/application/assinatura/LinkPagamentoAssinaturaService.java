@@ -66,7 +66,10 @@ public class LinkPagamentoAssinaturaService {
      */
     public LinkPagamentoResponse gerarLinkPagamento(AssinaturaTenant assinatura) {
         AssinaturaMercadoPagoService.validarParaLink(assinatura);
-        if (assinatura.temPreapproval() && !AssinaturaMercadoPagoService.linkPendenteReaproveitavel(assinatura)) {
+        // O link pendente cancelado no MP também será trocado: um webhook perdido pode esconder
+        // uma fatura dele já paga, então a checagem vale para ele também.
+        if (assinatura.temPreapproval() && (!AssinaturaMercadoPagoService.linkPendenteReaproveitavel(assinatura)
+                || assinaturaMercadoPagoService.pendenteCanceladoNoMp(assinatura.getMpPreapprovalId()))) {
             recusarSeJaPagou(assinatura);
         }
         return assinaturaMercadoPagoService.gerarLinkPagamento(assinatura);

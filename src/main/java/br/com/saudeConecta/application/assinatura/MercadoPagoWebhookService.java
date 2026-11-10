@@ -480,8 +480,10 @@ public class MercadoPagoWebhookService {
         cobranca.setMotivoRecusa(fatura.motivoRecusa());
         cobrancaTenantRepository.save(cobranca);
 
-        // Recusa não pode tirar uma assinatura de SUSPENSA/CANCELADA de volta para INADIMPLENTE
-        if (assinatura.getStatus() != null && assinatura.getStatus().isAtiva()) {
+        // Recusa não pode tirar uma assinatura de SUSPENSA/CANCELADA de volta para INADIMPLENTE.
+        // No TRIAL (decisão de 10/11/2026) a recusa fica só no histórico: a clínica segue até o
+        // fim do trial e a régua trata o vencimento.
+        if (StatusAssinatura.ATIVA.equals(assinatura.getStatus())) {
             assinaturaTenantService.marcarInadimplente(assinatura.getId());
         }
         if (log.isWarnEnabled()) {

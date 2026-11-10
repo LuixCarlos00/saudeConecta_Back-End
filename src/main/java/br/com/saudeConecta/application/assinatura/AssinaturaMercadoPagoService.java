@@ -1,16 +1,18 @@
 package br.com.saudeConecta.application.assinatura;
 
-import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.application.assinatura.dto.LinkPagamentoResponse;
 import br.com.saudeConecta.application.exception.BusinessException;
 import br.com.saudeConecta.application.notificacao.DadosEmailAtivacaoAssinatura;
 import br.com.saudeConecta.application.notificacao.EmailNotificacaoService;
+import br.com.saudeConecta.domain.FusoHorario;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
 import br.com.saudeConecta.domain.planos.CobrancaTenant;
+import br.com.saudeConecta.domain.planos.FormaPagamentoCobranca;
 import br.com.saudeConecta.domain.planos.MpWebhookEvento;
 import br.com.saudeConecta.domain.planos.OrigemCancelamento;
 import br.com.saudeConecta.domain.planos.StatusAssinatura;
+import br.com.saudeConecta.domain.planos.StatusCobranca;
 import br.com.saudeConecta.infrastructure.mercadopago.MercadoPagoClient;
 import br.com.saudeConecta.infrastructure.mercadopago.MercadoPagoProperties;
 import br.com.saudeConecta.infrastructure.mercadopago.dto.AuthorizedPaymentResponse;
@@ -53,6 +55,7 @@ public class AssinaturaMercadoPagoService {
      */
     public static final String CODIGO_PREAPPROVAL_SUBSTITUIDO_EM_ANALISE = "PREAPPROVAL_SUBSTITUIDO_EM_ANALISE";
     private static final String PAGAMENTO_APROVADO = "approved";
+    private static final String PAGAMENTO_RECUSADO = "rejected";
 
     /** O que aconteceu ao tentar cancelar um preapproval que saiu da assinatura. */
     private enum DesfechoCancelamento { CANCELADO, PENDENCIA_MANUAL }
@@ -119,9 +122,12 @@ public class AssinaturaMercadoPagoService {
     LinkPagamentoResponse gerarLinkPagamento(AssinaturaTenant assinatura) {
         validarParaLink(assinatura);
         if (linkPendenteReaproveitavel(assinatura)) {
-            log.info("mp.preapproval.criar ignorado motivo=PENDENTE_REAPROVEITADO preapprovalId={} assinaturaId={}",
-                    assinatura.getMpPreapprovalId(), assinatura.getId());
-            return montarResposta(assinatura);
+            if (!pendenteCanceladoNoMp(assinatura.getMpPreapprovalId())) {
+                log.info("mp.preapproval.criar ignorado motivo=PENDENTE_REAPROVEITADO preapprovalId={} assinaturaId={}",
+                        assinatura.getMpPreapprovalId(), assinatura.getId());
+                return montarResposta(assinatura);
+            }
+            marcarPendenteComoCancelado(assinatura.getId(), assinatura.getMpPreapprovalId());
         }
 
         Long assinaturaId = assinatura.getId();
@@ -400,6 +406,46 @@ public class AssinaturaMercadoPagoService {
         if (StatusAssinatura.ATIVA.equals(assinatura.getStatus()) && assinatura.temPreapproval()) {
             throw new BusinessException("Esta assinatura já está ativa", HttpStatus.CONFLICT);
         }
+    }
+
+    /**
+     * O MP cancela sozinho o preapproval quando o cartão é recusado no checkout, e esse
+     * cancelamento nem sempre gera webhook. Antes de reaproveitar o link pendente, confere se ele
+     * ainda vale: um init_point cancelado levaria o cliente a um checkout morto.
+     *
+     * @param preapprovalId preapproval pendente vinculado
+     * @return true só quando o MP confirma que ele está cancelado; sem resposta, o link é
+     *         reaproveitado como antes
+     */
+    boolean pendenteCanceladoNoMp(String preapprovalId) {
+        try {
+            PreapprovalResponse remoto = mercadoPagoClient.buscarPreapproval(preapprovalId);
+            return remoto != null && preapprovalId.equals(remoto.id())
+                    && MercadoPagoClient.STATUS_CANCELLED.equals(remoto.status());
+        } catch (BusinessException e) {
+            log.warn("mp.preapproval.criar consulta falha motivo=MP_INDISPONIVEL preapprovalId={} acao=REAPROVEITAR_LINK",
+                    preapprovalId);
+            return false;
+        }
+    }
+
+    /**
+     * Grava o cancelamento remoto do preapproval pendente, com a linha travada, para que a
+     * fase 1 não reaproveite o link morto e trate o preapproval como substituído (já cancelado,
+     * a fase 2 só limpa a coluna).
+     */
+    private void marcarPendenteComoCancelado(Long assinaturaId, String preapprovalId) {
+        transacaoNova.executeWithoutResult(status -> assinaturaTenantRepository.findByIdParaAtualizacao(assinaturaId)
+                .filter(a -> preapprovalId.equals(a.getMpPreapprovalId())
+                        && MercadoPagoClient.STATUS_PENDING.equals(a.getMpStatus()))
+                .ifPresentOrElse(a -> {
+                    a.setMpStatus(MercadoPagoClient.STATUS_CANCELLED);
+                    a.setMpUltimaSincronizacao(LocalDateTime.now(FusoHorario.ZONA));
+                    assinaturaTenantRepository.save(a);
+                    log.info("mp.preapproval.criar link descartado motivo=PENDENTE_CANCELADO_NO_MP preapprovalId={} assinaturaId={}",
+                            preapprovalId, assinaturaId);
+                }, () -> log.info("mp.preapproval.criar link nao descartado motivo=VINCULO_MUDOU preapprovalId={} assinaturaId={}",
+                        preapprovalId, assinaturaId)));
     }
 
     static boolean linkPendenteReaproveitavel(AssinaturaTenant assinatura) {
@@ -767,6 +813,13 @@ public class AssinaturaMercadoPagoService {
                 return true;
             }
             case MercadoPagoClient.STATUS_CANCELLED -> {
+                // Decisão de 10/11/2026: no TRIAL, o cancelamento no MP (que o próprio MP faz ao
+                // recusar o cartão no 1º checkout) não encerra a assinatura. Ela segue até o fim do
+                // trial e depois entra na régua; o próximo "Pagar" gera um link novo.
+                if (StatusAssinatura.TRIAL.equals(assinatura.getStatus())) {
+                    desvincularCanceladoDoTrial(assinatura);
+                    return false;
+                }
                 assinatura.setStatus(StatusAssinatura.CANCELADA);
                 assinatura.setDataCancelamento(LocalDateTime.now(FusoHorario.ZONA));
                 assinatura.setCanceladoPor(OrigemCancelamento.MERCADO_PAGO);
@@ -775,6 +828,60 @@ public class AssinaturaMercadoPagoService {
             default -> {
                 return false;
             }
+        }
+    }
+
+    /**
+     * Tira do TRIAL o preapproval cancelado no MP. Se ele ficasse vinculado, a reconciliação o
+     * acharia de novo depois que a régua levasse o trial vencido a INADIMPLENTE e aplicaria o
+     * cancelamento, pulando a régua. Sem vínculo, o webhook atrasado cai em CANCELADO_SEM_VINCULO
+     * e a rotina de trials manda um link novo. O preapproval não vira "substituído": já está
+     * cancelado no MP.
+     *
+     * Uma fatura aprovada sem registro local (webhook perdido) mantém o vínculo: a recuperação
+     * de faturas registra o pagamento e renova a assinatura antes de qualquer decisão.
+     */
+    private void desvincularCanceladoDoTrial(AssinaturaTenant assinatura) {
+        String preapprovalId = assinatura.getMpPreapprovalId();
+        if (preapprovalId == null) {
+            return;
+        }
+        if (contarFaturasAprovadasSemRegistro(preapprovalId) > 0) {
+            log.warn("mp.preapproval cancelado ignorado motivo=TRIAL_COM_FATURA_SEM_REGISTRO preapprovalId={} assinaturaId={} acao=AGUARDAR_RECUPERACAO",
+                    preapprovalId, assinatura.getId());
+            return;
+        }
+        registrarRecusasSemRegistro(assinatura, preapprovalId);
+        assinatura.setMpPreapprovalId(null);
+        assinatura.setMpStatus(null);
+        assinatura.setMpInitPoint(null);
+        log.info("mp.preapproval cancelado desvinculado motivo=TRIAL_SEGUE preapprovalId={} assinaturaId={}",
+                preapprovalId, assinatura.getId());
+    }
+
+    /**
+     * Sem o vínculo, o webhook da fatura recusada que chegar depois não acha a assinatura e a
+     * recusa sumiria do histórico. Por isso as recusas ainda sem registro são gravadas antes.
+     */
+    private void registrarRecusasSemRegistro(AssinaturaTenant assinatura, String preapprovalId) {
+        for (AuthorizedPaymentResponse fatura : mercadoPagoClient.buscarAuthorizedPaymentsDoPreapproval(preapprovalId)) {
+            if (fatura == null || fatura.id() == null || !PAGAMENTO_RECUSADO.equals(fatura.statusPagamento())
+                    || cobrancaTenantRepository.findByMpAuthorizedPaymentId(fatura.id()).isPresent()) {
+                continue;
+            }
+            cobrancaTenantRepository.save(CobrancaTenant.builder()
+                    .assinaturaTenant(assinatura)
+                    .organizacao(assinatura.getOrganizacao())
+                    .valorTotal(fatura.transactionAmount() != null ? fatura.transactionAmount() : assinatura.getValorMensal())
+                    .status(StatusCobranca.RECUSADO)
+                    .motivoRecusa(fatura.motivoRecusa())
+                    .formaPagamento(FormaPagamentoCobranca.MERCADO_PAGO)
+                    .mpAuthorizedPaymentId(fatura.id())
+                    .mpPaymentId(fatura.payment() != null && fatura.payment().id() != null
+                            ? String.valueOf(fatura.payment().id()) : null)
+                    .build());
+            log.info("mp.fatura recusada registrada motivo=ANTES_DO_DESVINCULO assinaturaId={} faturaId={}",
+                    assinatura.getId(), fatura.id());
         }
     }
 
