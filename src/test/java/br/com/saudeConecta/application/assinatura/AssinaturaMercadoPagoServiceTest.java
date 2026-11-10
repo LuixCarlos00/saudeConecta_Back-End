@@ -8,6 +8,8 @@ import br.com.saudeConecta.application.notificacao.EmailNotificacaoService;
 import br.com.saudeConecta.domain.admin.AdminOrganizacao;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
 import br.com.saudeConecta.domain.planos.AssinaturaTenant;
+import br.com.saudeConecta.domain.planos.StatusCobranca;
+import br.com.saudeConecta.domain.planos.CobrancaTenant;
 import br.com.saudeConecta.domain.planos.MpWebhookEvento;
 import br.com.saudeConecta.domain.planos.OrigemCancelamento;
 import br.com.saudeConecta.domain.planos.PlanoAssinatura;
@@ -264,6 +266,110 @@ class AssinaturaMercadoPagoServiceTest {
     }
 
     @Test
+    @DisplayName("TRIAL: cancelamento no MP (recusa no 1º checkout) não encerra a assinatura")
+    void cancelamentoNoMpNaoEncerraTrial() {
+        assinatura.setStatus(StatusAssinatura.TRIAL);
+        assinatura.setMpPreapprovalId("pa-recusado");
+        assinatura.setMpStatus("cancelled");
+        assinatura.setMpInitPoint("https://mp/checkout-morto");
+
+        assertThat(service.aplicarStatusRemoto(assinatura, "cancelled")).isFalse();
+
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.TRIAL);
+        assertThat(assinatura.getDataCancelamento()).isNull();
+        assertThat(assinatura.getCanceladoPor()).isNull();
+        // Desvinculado: a reconciliação não o acha mais e o próximo Pagar gera link novo
+        assertThat(assinatura.getMpPreapprovalId()).isNull();
+        assertThat(assinatura.getMpStatus()).isNull();
+        assertThat(assinatura.getMpInitPoint()).isNull();
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isNull();
+    }
+
+    @Test
+    @DisplayName("TRIAL: o cancelamento chega antes da recusa e a cobrança RECUSADO é gravada antes de desvincular")
+    void cancelamentoNoTrialRegistraRecusaAntesDeDesvincular() {
+        assinatura.setStatus(StatusAssinatura.TRIAL);
+        assinatura.setMpPreapprovalId("pa-recusado");
+        when(mercadoPagoClient.buscarAuthorizedPaymentsDoPreapproval("pa-recusado")).thenReturn(List.of(
+                new AuthorizedPaymentResponse("fat-rec", "pa-recusado", "processed", BigDecimal.valueOf(549),
+                        new AuthorizedPaymentResponse.Payment(7L, "rejected", "cc_rejected_other_reason"))));
+        when(cobrancaTenantRepository.findByMpAuthorizedPaymentId("fat-rec")).thenReturn(Optional.empty());
+
+        service.aplicarStatusRemoto(assinatura, "cancelled");
+
+        ArgumentCaptor<CobrancaTenant> captor = ArgumentCaptor.forClass(CobrancaTenant.class);
+        verify(cobrancaTenantRepository).save(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo(StatusCobranca.RECUSADO);
+        assertThat(captor.getValue().getMotivoRecusa()).isEqualTo("cc_rejected_other_reason");
+        assertThat(captor.getValue().getMpAuthorizedPaymentId()).isEqualTo("fat-rec");
+        assertThat(captor.getValue().getValorTotal()).isEqualByComparingTo("549");
+        assertThat(assinatura.getMpPreapprovalId()).isNull();
+    }
+
+    @Test
+    @DisplayName("TRIAL: recusa já registrada pelo webhook não é gravada de novo")
+    void cancelamentoNoTrialNaoDuplicaRecusaRegistrada() {
+        assinatura.setStatus(StatusAssinatura.TRIAL);
+        assinatura.setMpPreapprovalId("pa-recusado");
+        when(mercadoPagoClient.buscarAuthorizedPaymentsDoPreapproval("pa-recusado")).thenReturn(List.of(
+                new AuthorizedPaymentResponse("fat-rec", "pa-recusado", "processed", BigDecimal.valueOf(549),
+                        new AuthorizedPaymentResponse.Payment(7L, "rejected", "cc_rejected_other_reason"))));
+        when(cobrancaTenantRepository.findByMpAuthorizedPaymentId("fat-rec"))
+                .thenReturn(Optional.of(new CobrancaTenant()));
+
+        service.aplicarStatusRemoto(assinatura, "cancelled");
+
+        verify(cobrancaTenantRepository, never()).save(any());
+        assertThat(assinatura.getMpPreapprovalId()).isNull();
+    }
+
+    @Test
+    @DisplayName("TRIAL: preapproval cancelado com fatura aprovada sem registro mantém o vínculo para a recuperação")
+    void cancelamentoNoTrialComFaturaPagaSemRegistroMantemVinculo() {
+        assinatura.setStatus(StatusAssinatura.TRIAL);
+        assinatura.setMpPreapprovalId("pa-pago");
+        when(mercadoPagoClient.buscarAuthorizedPaymentsDoPreapproval("pa-pago")).thenReturn(List.of(
+                new AuthorizedPaymentResponse("fat-1", "pa-pago", "processed", BigDecimal.valueOf(279),
+                        new AuthorizedPaymentResponse.Payment(1L, "approved", "accredited"))));
+        when(cobrancaTenantRepository.findByMpAuthorizedPaymentId("fat-1")).thenReturn(Optional.empty());
+
+        assertThat(service.aplicarStatusRemoto(assinatura, "cancelled")).isFalse();
+
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.TRIAL);
+        assertThat(assinatura.getMpPreapprovalId()).isEqualTo("pa-pago");
+    }
+
+    @Test
+    @DisplayName("Recusa no trial, trial vence e a régua leva a INADIMPLENTE: a reconciliação não pula para CANCELADA")
+    void trialComRecusaVencidoSegueNaReguaSemCancelar() {
+        assinatura.setStatus(StatusAssinatura.TRIAL);
+        assinatura.setMpPreapprovalId("pa-recusado");
+        assinatura.setMpStatus("pending");
+        when(mercadoPagoClient.buscarPreapproval("pa-recusado")).thenReturn(
+                new PreapprovalResponse("pa-recusado", "cancelled", null, EMAIL_ADMIN, null, null, null));
+
+        service.sincronizar(assinatura); // reconciliação dentro do trial
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.TRIAL);
+
+        assinatura.setStatus(StatusAssinatura.INADIMPLENTE); // a régua no vencimento do trial
+        service.sincronizar(assinatura); // reconciliação seguinte
+
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.INADIMPLENTE);
+        assertThat(assinatura.getCanceladoPor()).isNull();
+        verify(mercadoPagoClient, times(1)).buscarPreapproval("pa-recusado");
+    }
+
+    @Test
+    @DisplayName("INADIMPLENTE: cancelamento no MP continua encerrando a assinatura")
+    void cancelamentoNoMpEncerraInadimplente() {
+        assinatura.setStatus(StatusAssinatura.INADIMPLENTE);
+
+        assertThat(service.aplicarStatusRemoto(assinatura, "cancelled")).isTrue();
+
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.CANCELADA);
+    }
+
+    @Test
     @DisplayName("Gerar link e notificar: cria o preapproval e envia o e-mail ao administrador")
     void gerarLinkENotificar() {
         when(assinaturaTenantRepository.findById(ASSINATURA_ID)).thenReturn(Optional.of(assinatura));
@@ -417,6 +523,133 @@ class AssinaturaMercadoPagoServiceTest {
         assertThat(assinatura.getMpPreapprovalSubstituidoId()).isNull();
         // A1: o próximo pagamento aprovado do preapproval novo define a âncora
         assertThat(assinatura.getDiaCobranca()).isNull();
+    }
+
+    @Test
+    @DisplayName("Recusa no checkout: pendente cancelado pelo MP não é reaproveitado, o Pagar gera link novo")
+    void pendenteCanceladoNoMpGeraLinkNovo() {
+        assinatura.setMpPreapprovalId("pa-recusado");
+        assinatura.setMpStatus("pending");
+        assinatura.setMpInitPoint("https://mp/checkout-morto");
+        when(mercadoPagoClient.buscarPreapproval("pa-recusado")).thenReturn(
+                new PreapprovalResponse("pa-recusado", "cancelled", null, EMAIL_ADMIN, null, null, null));
+        when(mercadoPagoClient.criarPreapprovalPendente(any(), eq("ASSINATURA-42"), eq(EMAIL_ADMIN), any()))
+                .thenReturn(new PreapprovalResponse(PREAPPROVAL_ID, "pending", INIT_POINT,
+                        EMAIL_ADMIN, "ASSINATURA-42", null, null));
+
+        LinkPagamentoResponse link = service.gerarLinkPagamento(assinatura);
+
+        assertThat(link.initPoint()).isEqualTo(INIT_POINT);
+        assertThat(assinatura.getMpPreapprovalId()).isEqualTo(PREAPPROVAL_ID);
+        assertThat(assinatura.getMpStatus()).isEqualTo("pending");
+        assertThat(assinatura.getMpPreapprovalSubstituidoId()).isNull();
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.TRIAL);
+        // Já cancelado no MP: não cancela de novo
+        verify(mercadoPagoClient, never()).cancelarPreapproval(any());
+    }
+
+    @Test
+    @DisplayName("Pendente cancelado no MP com fatura paga sem registro: 409 PAGAMENTO_JA_RECEBIDO, sem link novo")
+    void pendenteCanceladoComFaturaPagaNaoGeraLinkNovo() {
+        assinatura.setMpPreapprovalId("pa-pago");
+        assinatura.setMpStatus("pending");
+        assinatura.setMpInitPoint("https://mp/checkout");
+        when(mercadoPagoClient.buscarPreapproval("pa-pago")).thenReturn(
+                new PreapprovalResponse("pa-pago", "cancelled", null, EMAIL_ADMIN, null, null, null));
+        when(webhookService.recuperarFaturasAprovadas("pa-pago")).thenReturn(1);
+
+        assertThatThrownBy(() -> linkService.gerarLinkPagamento(ORG_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo("PAGAMENTO_JA_RECEBIDO"));
+        verify(mercadoPagoClient, never()).criarPreapprovalPendente(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Pendente com resposta do MP de outro id: não confia nela e reaproveita o link")
+    void pendenteComIdDivergenteReaproveita() {
+        assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
+        assinatura.setMpStatus("pending");
+        assinatura.setMpInitPoint(INIT_POINT);
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(
+                new PreapprovalResponse("outro-id", "cancelled", null, EMAIL_ADMIN, null, null, null));
+
+        LinkPagamentoResponse link = service.gerarLinkPagamento(assinatura);
+
+        assertThat(link.initPoint()).isEqualTo(INIT_POINT);
+        verify(mercadoPagoClient, never()).criarPreapprovalPendente(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Pagar depois da recusa: a recusa do link cancelado vai para o histórico antes da troca")
+    void pendenteCanceladoRegistraRecusaAntesDaTroca() {
+        assinatura.setMpPreapprovalId("pa-recusado");
+        assinatura.setMpStatus("pending");
+        assinatura.setMpInitPoint("https://mp/checkout-morto");
+        when(mercadoPagoClient.buscarPreapproval("pa-recusado")).thenReturn(
+                new PreapprovalResponse("pa-recusado", "cancelled", null, EMAIL_ADMIN, null, null, null));
+        when(mercadoPagoClient.buscarAuthorizedPaymentsDoPreapproval("pa-recusado")).thenReturn(List.of(
+                new AuthorizedPaymentResponse("fat-rec", "pa-recusado", "recycling", BigDecimal.valueOf(549),
+                        new AuthorizedPaymentResponse.Payment(7L, "rejected", "cc_rejected_other_reason"))));
+        when(cobrancaTenantRepository.findByMpAuthorizedPaymentId("fat-rec")).thenReturn(Optional.empty());
+        when(mercadoPagoClient.criarPreapprovalPendente(any(), any(), any(), any()))
+                .thenReturn(new PreapprovalResponse(PREAPPROVAL_ID, "pending", INIT_POINT,
+                        EMAIL_ADMIN, "ASSINATURA-42", null, null));
+
+        LinkPagamentoResponse link = service.gerarLinkPagamento(assinatura);
+
+        ArgumentCaptor<CobrancaTenant> captor = ArgumentCaptor.forClass(CobrancaTenant.class);
+        verify(cobrancaTenantRepository).save(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo(StatusCobranca.RECUSADO);
+        assertThat(captor.getValue().getMpAuthorizedPaymentId()).isEqualTo("fat-rec");
+        assertThat(captor.getValue().getMotivoRecusa()).isEqualTo("cc_rejected_other_reason");
+        assertThat(link.initPoint()).isEqualTo(INIT_POINT);
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.TRIAL);
+    }
+
+    @Test
+    @DisplayName("Pendente ainda pendente no MP: reaproveita o link sem criar outro")
+    void pendenteAindaPendenteNoMpReaproveita() {
+        assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
+        assinatura.setMpStatus("pending");
+        assinatura.setMpInitPoint(INIT_POINT);
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(
+                new PreapprovalResponse(PREAPPROVAL_ID, "pending", INIT_POINT, EMAIL_ADMIN, null, null, null));
+
+        LinkPagamentoResponse link = service.gerarLinkPagamento(assinatura);
+
+        assertThat(link.initPoint()).isEqualTo(INIT_POINT);
+        verify(mercadoPagoClient, never()).criarPreapprovalPendente(any(), any(), any(), any());
+        verify(assinaturaTenantRepository, never()).findByIdParaAtualizacao(any());
+    }
+
+    @Test
+    @DisplayName("Pendente com MP fora do ar na consulta: reaproveita o link como antes")
+    void pendenteComMpIndisponivelReaproveita() {
+        assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
+        assinatura.setMpStatus("pending");
+        assinatura.setMpInitPoint(INIT_POINT);
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenThrow(
+                new BusinessException("MP fora", org.springframework.http.HttpStatus.BAD_GATEWAY));
+
+        LinkPagamentoResponse link = service.gerarLinkPagamento(assinatura);
+
+        assertThat(link.initPoint()).isEqualTo(INIT_POINT);
+        verify(mercadoPagoClient, never()).criarPreapprovalPendente(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Pendente autorizado no MP (webhook atrasado): reaproveita, nunca troca nem cancela o que o cliente pagou")
+    void pendenteAutorizadoNoMpNaoTroca() {
+        assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
+        assinatura.setMpStatus("pending");
+        assinatura.setMpInitPoint(INIT_POINT);
+        when(mercadoPagoClient.buscarPreapproval(PREAPPROVAL_ID)).thenReturn(
+                new PreapprovalResponse(PREAPPROVAL_ID, "authorized", INIT_POINT, EMAIL_ADMIN, null, null, null));
+
+        service.gerarLinkPagamento(assinatura);
+
+        verify(mercadoPagoClient, never()).criarPreapprovalPendente(any(), any(), any(), any());
+        verify(mercadoPagoClient, never()).cancelarPreapproval(any());
     }
 
     @Test
