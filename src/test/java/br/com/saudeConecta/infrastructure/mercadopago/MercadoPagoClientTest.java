@@ -127,4 +127,18 @@ class MercadoPagoClientTest {
             assertThat(Duration.ofNanos(System.nanoTime() - inicio)).isLessThan(Duration.ofSeconds(5));
         }
     }
+
+    @Test
+    @DisplayName("Busca de faturas usa limit aceito pelo MP (máximo 15; acima disso responde 400)")
+    void buscaFaturasUsaLimitAceitoPeloMp() {
+        assertThat(MercadoPagoClient.TAMANHO_PAGINA_FATURAS).isBetween(1, 15);
+        servidor.expect(once(), requestTo(org.hamcrest.Matchers.startsWith(API + "/authorized_payments/search")))
+                .andExpect(queryParam("limit", String.valueOf(MercadoPagoClient.TAMANHO_PAGINA_FATURAS)))
+                .andExpect(queryParam("offset", "0"))
+                .andRespond(withSuccess("{\"paging\":{\"total\":1,\"limit\":12,\"offset\":0},\"results\":["
+                        + fatura("f1") + "]}", MediaType.APPLICATION_JSON));
+
+        assertThat(client.buscarAuthorizedPaymentsDoPreapproval(PREAPPROVAL_ID)).hasSize(1);
+        servidor.verify();
+    }
 }

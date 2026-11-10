@@ -28,10 +28,13 @@ public class MercadoPagoClient {
     private static final String PATH_PREAPPROVAL = "/preapproval";
     private static final String PATH_AUTHORIZED_PAYMENT = "/authorized_payments/";
     private static final String PATH_AUTHORIZED_PAYMENT_SEARCH = "/authorized_payments/search?preapproval_id=";
-    /** Tamanho de página pedido na busca de faturas. */
-    static final int TAMANHO_PAGINA_FATURAS = 50;
-    /** Teto de páginas na busca de faturas (50 x 20 = 1000 faturas, ~83 anos de mensalidades). */
-    static final int MAXIMO_PAGINAS_FATURAS = 20;
+    /**
+     * Tamanho de página pedido na busca de faturas. Validado no sandbox em 10/11/2026: o MP
+     * responde 400 "Invalid value for limit" acima de 15; 12 é o padrão que ele mesmo devolve.
+     */
+    static final int TAMANHO_PAGINA_FATURAS = 12;
+    /** Teto de páginas na busca de faturas (12 x 30 = 360 faturas, 30 anos de mensalidades). */
+    static final int MAXIMO_PAGINAS_FATURAS = 30;
     private static final String CURRENCY_BRL = "BRL";
     private static final String FREQUENCY_TYPE_MONTHS = "months";
 
@@ -158,7 +161,8 @@ public class MercadoPagoClient {
      * parâmetro recusado derrubaria a recuperação; percorrer todas as páginas já cobre
      * a fatura mais recente.
      *
-     * ❓ Contrato a validar no sandbox do Mercado Pago (aceite de limit/offset e formato de paging).
+     * Contrato validado no sandbox em 10/11/2026: aceita limit (máximo 15) e offset, e devolve
+     * {@code paging {offset, limit, total}}.
      *
      * @param preapprovalId identificador do preapproval
      * @return faturas da assinatura (lista vazia quando não há nenhuma)
