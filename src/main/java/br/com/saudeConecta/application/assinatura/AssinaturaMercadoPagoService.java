@@ -439,6 +439,9 @@ public class AssinaturaMercadoPagoService {
                 .filter(a -> preapprovalId.equals(a.getMpPreapprovalId())
                         && MercadoPagoClient.STATUS_PENDING.equals(a.getMpStatus()))
                 .ifPresentOrElse(a -> {
+                    // O webhook da recusa costuma chegar depois do novo "Pagar": com o preapproval
+                    // já trocado, ele não acharia a assinatura e a recusa sumiria do histórico.
+                    registrarRecusasSemRegistro(a, preapprovalId);
                     a.setMpStatus(MercadoPagoClient.STATUS_CANCELLED);
                     a.setMpUltimaSincronizacao(LocalDateTime.now(FusoHorario.ZONA));
                     assinaturaTenantRepository.save(a);
@@ -860,8 +863,9 @@ public class AssinaturaMercadoPagoService {
     }
 
     /**
-     * Sem o vínculo, o webhook da fatura recusada que chegar depois não acha a assinatura e a
-     * recusa sumiria do histórico. Por isso as recusas ainda sem registro são gravadas antes.
+     * Sem o vínculo (preapproval desvinculado ou trocado por um link novo), o webhook da fatura
+     * recusada que chegar depois não acha a assinatura e a recusa sumiria do histórico. Por isso
+     * as recusas ainda sem registro são gravadas antes.
      */
     private void registrarRecusasSemRegistro(AssinaturaTenant assinatura, String preapprovalId) {
         for (AuthorizedPaymentResponse fatura : mercadoPagoClient.buscarAuthorizedPaymentsDoPreapproval(preapprovalId)) {

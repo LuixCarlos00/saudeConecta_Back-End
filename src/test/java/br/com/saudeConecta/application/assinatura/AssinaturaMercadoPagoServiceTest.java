@@ -580,6 +580,33 @@ class AssinaturaMercadoPagoServiceTest {
     }
 
     @Test
+    @DisplayName("Pagar depois da recusa: a recusa do link cancelado vai para o histórico antes da troca")
+    void pendenteCanceladoRegistraRecusaAntesDaTroca() {
+        assinatura.setMpPreapprovalId("pa-recusado");
+        assinatura.setMpStatus("pending");
+        assinatura.setMpInitPoint("https://mp/checkout-morto");
+        when(mercadoPagoClient.buscarPreapproval("pa-recusado")).thenReturn(
+                new PreapprovalResponse("pa-recusado", "cancelled", null, EMAIL_ADMIN, null, null, null));
+        when(mercadoPagoClient.buscarAuthorizedPaymentsDoPreapproval("pa-recusado")).thenReturn(List.of(
+                new AuthorizedPaymentResponse("fat-rec", "pa-recusado", "recycling", BigDecimal.valueOf(549),
+                        new AuthorizedPaymentResponse.Payment(7L, "rejected", "cc_rejected_other_reason"))));
+        when(cobrancaTenantRepository.findByMpAuthorizedPaymentId("fat-rec")).thenReturn(Optional.empty());
+        when(mercadoPagoClient.criarPreapprovalPendente(any(), any(), any(), any()))
+                .thenReturn(new PreapprovalResponse(PREAPPROVAL_ID, "pending", INIT_POINT,
+                        EMAIL_ADMIN, "ASSINATURA-42", null, null));
+
+        LinkPagamentoResponse link = service.gerarLinkPagamento(assinatura);
+
+        ArgumentCaptor<CobrancaTenant> captor = ArgumentCaptor.forClass(CobrancaTenant.class);
+        verify(cobrancaTenantRepository).save(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo(StatusCobranca.RECUSADO);
+        assertThat(captor.getValue().getMpAuthorizedPaymentId()).isEqualTo("fat-rec");
+        assertThat(captor.getValue().getMotivoRecusa()).isEqualTo("cc_rejected_other_reason");
+        assertThat(link.initPoint()).isEqualTo(INIT_POINT);
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.TRIAL);
+    }
+
+    @Test
     @DisplayName("Pendente ainda pendente no MP: reaproveita o link sem criar outro")
     void pendenteAindaPendenteNoMpReaproveita() {
         assinatura.setMpPreapprovalId(PREAPPROVAL_ID);
