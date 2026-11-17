@@ -1,0 +1,59 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ================================================================ -->
+    <!-- RECUPERACAO DE SENHA POR LINK                                    -->
+    <!-- Antes a recuperacao trocava a senha na hora e mandava a nova     -->
+    <!-- por e-mail: qualquer um que digitasse o e-mail derrubava a senha -->
+    <!-- do dono. Agora vai um link com token de uso unico; a senha so    -->
+    <!-- muda quando o dono abre o link e escolhe a nova.                 -->
+    <!-- Guarda-se o SHA-256 do token, nunca o token: quem le o banco nao -->
+    <!-- consegue montar um link valido.                                  -->
+    <!-- Retrocompativel: tabela nova; a versao anterior a ignora.        -->
+    <!-- ================================================================ -->
+    <changeSet id="069-001-token-recuperacao-senha" author="equipe-sentinela">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="token_recuperacao_senha"/></not>
+        </preConditions>
+        <comment>Token de uso unico do link de recuperacao de senha</comment>
+
+        <createTable tableName="token_recuperacao_senha">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="usuario_id" type="BIGINT">
+                <constraints nullable="false"
+                             foreignKeyName="fk_token_recuperacao_usuario"
+                             referencedTableName="usuarios"
+                             referencedColumnNames="id"
+                             deleteCascade="true"/>
+            </column>
+            <column name="token_hash" type="CHAR(64)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_token_recuperacao_hash"/>
+            </column>
+            <column name="criado_em" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expira_em" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Preenchido quando o link e usado ou quando um pedido mais novo o substitui -->
+            <column name="usado_em" type="DATETIME">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <!-- Invalidacao dos tokens pendentes do usuario a cada novo pedido -->
+        <createIndex tableName="token_recuperacao_senha" indexName="idx_token_recuperacao_usuario_usado">
+            <column name="usuario_id"/>
+            <column name="usado_em"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="token_recuperacao_senha"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

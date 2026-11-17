@@ -29,6 +29,7 @@ public class TenantFilter extends OncePerRequestFilter {
     private static final List<String> PUBLIC_PATHS = Arrays.asList(
         "/Home/login",
         "/Home/esqueciMinhaSenha",
+        "/Home/redefinirSenha",
         "/cep",
         "/publico",
         "/planos"

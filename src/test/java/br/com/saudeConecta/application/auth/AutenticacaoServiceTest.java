@@ -1,6 +1,5 @@
 package br.com.saudeConecta.application.auth;
 
-import br.com.saudeConecta.application.usuario.HomeService;
 import br.com.saudeConecta.application.usuario.dto.DadosLoginUsuario;
 import br.com.saudeConecta.config.security.TokenService;
 import br.com.saudeConecta.domain.organizacao.Organizacao;
@@ -35,7 +34,6 @@ class AutenticacaoServiceTest {
 
     @Mock private AuthenticationManager authenticationManager;
     @Mock private TokenService tokenService;
-    @Mock private HomeService homeService;
     @Mock private ProfissionalRepository profissionalRepository;
     @Mock private AdminOrganizacaoRepository adminOrganizacaoRepository;
     @Mock private SecretariaRepository secretariaRepository;
@@ -256,33 +254,6 @@ class AutenticacaoServiceTest {
         when(tokenService.gerarToken(any(Usuario.class), any(), eq("Usuario"), any(), any())).thenReturn("jwt");
 
         assertThat(service.autenticar(new DadosLoginUsuario("gestor", "s", null), "ip").token()).isEqualTo("jwt");
-    }
-
-    @Test
-    @DisplayName("Esqueci senha: e-mail cadastrado delega ao HomeService")
-    void esqueciSenhaEmailCadastrado() {
-        service.solicitarRecuperacaoSenha("a@b.com");
-
-        verify(homeService).recuperarSenhaPorEmail("a@b.com");
-    }
-
-    @Test
-    @DisplayName("Esqueci senha: e-mail NÃO cadastrado não lança nada (o controller responde igual)")
-    void esqueciSenhaEmailNaoCadastradoNaoLanca() {
-        doThrow(new HomeService.EmailNaoEncontradoException("Email nao encontrado no sistema"))
-                .when(homeService).recuperarSenhaPorEmail("x@y.com");
-
-        service.solicitarRecuperacaoSenha("x@y.com");
-
-        verify(homeService).recuperarSenhaPorEmail("x@y.com");
-    }
-
-    @Test
-    @DisplayName("Esqueci senha: falha inesperada sobe (vira 500 no handler global)")
-    void esqueciSenhaFalhaInesperadaSobe() {
-        doThrow(new IllegalStateException("smtp fora")).when(homeService).recuperarSenhaPorEmail("a@b.com");
-
-        assertThatThrownBy(() -> service.solicitarRecuperacaoSenha("a@b.com")).isInstanceOf(IllegalStateException.class);
     }
 
     @Test

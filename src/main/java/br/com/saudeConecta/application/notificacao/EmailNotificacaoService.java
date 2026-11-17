@@ -38,7 +38,7 @@ public class EmailNotificacaoService {
     private static final String TEMPLATE_ATIVACAO_ASSINATURA = "email-ativacao-assinatura";
     private static final String ASSUNTO_ATIVACAO_ASSINATURA = "Saúde Conecta - Ative sua assinatura";
     private static final String ASSUNTO_CREDENCIAIS = "Bem-vindo ao Saúde Conecta - Suas credenciais de acesso";
-    private static final String ASSUNTO_RECUPERACAO = "Saúde Conecta - Recuperação de Senha";
+    private static final String ASSUNTO_RECUPERACAO = "DocClin - Redefinição de senha";
 
     private static final DateTimeFormatter FORMATO_DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
@@ -115,20 +115,18 @@ public class EmailNotificacaoService {
     }
 
     /**
-     * Envia email de recuperação de senha de forma assíncrona.
+     * Envia, de forma assíncrona, o e-mail com o link de redefinição de senha. O link carrega o
+     * token em claro, por isso nunca vai para o log.
      *
-     * @param email         email do destinatário
-     * @param nome          nome do usuário
-     * @param login         login do usuário
-     * @param novaSenha     nova senha gerada
-     * @param organizacaoId ID da organização (pode ser nulo)
+     * @param dados destinatário, login da conta, link com token e validade
      */
     @Async
-    public void enviarRecuperacaoSenha(String email, String nome, String login,
-                                        String novaSenha, Long organizacaoId) {
+    public void enviarLinkRecuperacaoSenha(DadosEmailRecuperacaoSenha dados) {
+        String email = dados.email();
+        String nome = dados.nome();
         if (!emailHabilitado) {
             log.warn("email.recuperacao negado motivo=EMAIL_DESABILITADO login={} email={}",
-                    MascaraLog.cpf(login), MascaraLog.email(email));
+                    MascaraLog.cpf(dados.login()), MascaraLog.email(email));
             return;
         }
 
@@ -136,14 +134,15 @@ public class EmailNotificacaoService {
             try {
                 Map<String, Object> variaveis = new HashMap<>();
                 variaveis.put("nome", nome);
-                variaveis.put("login", login);
-                variaveis.put("senha", novaSenha);
+                variaveis.put("login", dados.login());
+                variaveis.put("link", dados.link());
+                variaveis.put("validadeMinutos", dados.validadeMinutos());
 
                 String corpoHtml = emailTemplateService.renderizar(TEMPLATE_RECUPERACAO, variaveis);
 
                 emailRetryService.executarComRetry(
                         email, nome, ASSUNTO_RECUPERACAO, corpoHtml,
-                        "recuperacao", organizacaoId, null);
+                        "recuperacao", dados.organizacaoId(), null);
 
             } catch (Exception e) {
                 log.error("email.recuperacao falha email={}", MascaraLog.email(email), e);

@@ -1,6 +1,6 @@
 package br.com.saudeConecta.integration;
 
-import br.com.saudeConecta.application.usuario.HomeService;
+import br.com.saudeConecta.application.auth.RecuperacaoSenhaService;
 import br.com.saudeConecta.application.usuario.dto.DadosLoginUsuario;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.*;
@@ -31,7 +31,7 @@ class HomeControllerIntegrationTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private HomeService homeService;
+    private RecuperacaoSenhaService recuperacaoSenhaService;
 
     @MockBean
     private AuthenticationManager authenticationManager;
@@ -84,7 +84,7 @@ class HomeControllerIntegrationTest {
         @Test
         @DisplayName("Deve retornar 200 ao solicitar recuperação de senha para email válido")
         void deveRetornar200AoSolicitarRecuperacao() throws Exception {
-            doNothing().when(homeService).recuperarSenhaPorEmail("usuario@teste.com");
+            when(recuperacaoSenhaService.solicitar("usuario@teste.com")).thenReturn(1);
 
             mockMvc.perform(post("/Home/esqueciMinhaSenha")
                             .with(csrf())

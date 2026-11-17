@@ -2,7 +2,7 @@
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Recuperação de Senha - Saúde Conecta</title>
+    <title>Redefinição de senha - DocClin</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -81,48 +81,45 @@
 </head>
 <body>
     <div class="header">
-        <h1>🔐 Saúde Conecta</h1>
-        <p>Recuperação de Senha</p>
+        <h1>🔐 DocClin</h1>
+        <p>Redefinição de senha</p>
     </div>
-    
+
     <div class="content">
         <h2>Olá, <span th:text="${nome}">Usuário</span>!</h2>
-        
-        <p>Recebemos uma solicitação de recuperação de senha para sua conta. Abaixo estão suas novas credenciais de acesso:</p>
-        
+
+        <p>Recebemos um pedido para redefinir a senha da conta abaixo. Sua senha atual continua valendo até você criar uma nova.</p>
+
         <div class="credentials-box">
             <div class="credential-item">
-                <span class="credential-label">Login:</span><br>
+                <span class="credential-label">Login da conta:</span><br>
                 <span class="credential-value" th:text="${login}">usuario</span>
             </div>
-            <div class="credential-item">
-                <span class="credential-label">Nova Senha:</span><br>
-                <span class="credential-value" th:text="${senha}">********</span>
-            </div>
         </div>
-        
+
+        <p style="text-align: center;">
+            <a th:href="${link}" href="#" class="btn">Criar nova senha</a>
+        </p>
+
         <div class="warning">
             <strong>⚠️ Importante:</strong>
             <ul>
-                <li>Recomendamos que você altere esta senha após o primeiro acesso.</li>
-                <li>Não compartilhe suas credenciais com terceiros.</li>
-                <li>Se você não solicitou esta recuperação, entre em contato com o suporte imediatamente.</li>
+                <li>O link vale por <strong th:text="${validadeMinutos} + ' minutos'">30 minutos</strong> e só pode ser usado uma vez.</li>
+                <li>Se você pedir outro link, este deixa de funcionar.</li>
+                <li>Se você não pediu a redefinição, ignore este e-mail: sua senha não foi alterada.</li>
             </ul>
         </div>
-        
+
         <div class="info-box">
-            <strong>ℹ️ Dica de Segurança:</strong>
-            <p>Crie uma senha forte com pelo menos 8 caracteres, incluindo letras maiúsculas, minúsculas, números e símbolos.</p>
+            <strong>ℹ️ O botão não funcionou?</strong>
+            <p>Copie e cole este endereço no navegador:</p>
+            <p style="word-break: break-all;" th:text="${link}">https://...</p>
         </div>
-        
-        <p style="text-align: center;">
-            <a href="http://localhost:4200/login" class="btn">Acessar o Sistema</a>
-        </p>
     </div>
-    
+
     <div class="footer">
         <p>Este é um email automático. Por favor, não responda.</p>
-        <p>© 2024 Saúde Conecta - Todos os direitos reservados</p>
+        <p>© DocClin - Todos os direitos reservados</p>
     </div>
 </body>
 </html>

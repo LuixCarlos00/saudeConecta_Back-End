@@ -1,7 +1,6 @@
 package br.com.saudeConecta.application.auth;
 
 import br.com.saudeConecta.domain.FusoHorario;
-import br.com.saudeConecta.application.usuario.HomeService;
 import br.com.saudeConecta.application.usuario.dto.DadosLoginUsuario;
 import br.com.saudeConecta.config.logging.MascaraLog;
 import br.com.saudeConecta.config.security.TokenService;
@@ -31,13 +30,13 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 /**
- * Regra do login e da recuperação de senha (antes dentro do {@code HomeController}, fase B6).
+ * Regra do login (antes dentro do {@code HomeController}, fase B6). A recuperação de senha mora
+ * em {@link RecuperacaoSenhaService}.
  *
  * <p><b>Sem {@code @Transactional} de propósito</b>, como era no controller: a gravação da
  * auditoria da senha master roda na transação do próprio repository, e a falha dela é capturada
  * aqui para negar o acesso master. Uma transação em volta faria essa falha marcar tudo como
- * rollback-only; da mesma forma, a {@link HomeService.EmailNaoEncontradoException} sai da
- * transação do {@link HomeService} e é engolida aqui sem efeito colateral.
+ * rollback-only.
  */
 @Service
 @RequiredArgsConstructor
@@ -47,7 +46,6 @@ public class AutenticacaoService {
 
     private final AuthenticationManager authenticationManager;
     private final TokenService tokenService;
-    private final HomeService recuperacaoSenhaService;
     private final ProfissionalRepository profissionalRepository;
     private final AdminOrganizacaoRepository adminOrganizacaoRepository;
     private final SecretariaRepository secretariaRepository;
@@ -99,20 +97,6 @@ public class AutenticacaoService {
         }
 
         return gerarResultadoLogin(usuario);
-    }
-
-    /**
-     * Pede o envio de nova senha por e-mail. Não informa se o e-mail existe: o "não encontrado" é
-     * só registrado no log, para o controller responder sempre a mesma mensagem.
-     *
-     * @param email e-mail informado (já validado como não vazio)
-     */
-    public void solicitarRecuperacaoSenha(String email) {
-        try {
-            recuperacaoSenhaService.recuperarSenhaPorEmail(email);
-        } catch (HomeService.EmailNaoEncontradoException e) {
-            log.info("auth.senha.recuperar ignorado motivo=RESPOSTA_GENERICA email={}", MascaraLog.email(email));
-        }
     }
 
     /**

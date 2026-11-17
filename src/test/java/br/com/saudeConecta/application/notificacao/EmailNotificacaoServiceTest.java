@@ -172,22 +172,27 @@ class EmailNotificacaoServiceTest {
         }
     }
 
-    // ========== enviarRecuperacaoSenha ==========
+    // ========== enviarLinkRecuperacaoSenha ==========
 
     @Nested
-    @DisplayName("enviarRecuperacaoSenha")
-    class EnviarRecuperacaoSenha {
+    @DisplayName("enviarLinkRecuperacaoSenha")
+    class EnviarLinkRecuperacaoSenha {
 
         @Test
-        @DisplayName("Deve enviar email de recuperação quando habilitado")
+        @DisplayName("Deve enviar email com o link e a validade quando habilitado")
         void deveEnviarQuandoHabilitado() throws Exception {
             ReflectionTestUtils.setField(emailNotificacaoService, "emailHabilitado", true);
             when(emailTemplateService.renderizar(anyString(), anyMap())).thenReturn("<html>recuperacao</html>");
 
-            emailNotificacaoService.enviarRecuperacaoSenha(
-                    "user@email.com", "Carlos", "carlos@email.com", "novaSenha1", 1L);
+            emailNotificacaoService.enviarLinkRecuperacaoSenha(new DadosEmailRecuperacaoSenha(
+                    "user@email.com", "Carlos", "12345678900", "http://front/#/redefinir-senha?token=abc", 30, 1L));
 
-            verify(emailRetryService).executarComRetry(
+            verify(emailTemplateService, timeout(2000)).renderizar(eq("email-recuperacao-senha"), argThat(variaveis ->
+                    "http://front/#/redefinir-senha?token=abc".equals(variaveis.get("link"))
+                            && Long.valueOf(30).equals(variaveis.get("validadeMinutos"))
+                            && "12345678900".equals(variaveis.get("login"))
+                            && !variaveis.containsKey("senha")));
+            verify(emailRetryService, timeout(2000)).executarComRetry(
                     eq("user@email.com"), eq("Carlos"), anyString(), anyString(),
                     eq("recuperacao"), eq(1L), isNull());
         }
@@ -197,8 +202,8 @@ class EmailNotificacaoServiceTest {
         void naoDeveEnviarQuandoDesabilitado() {
             ReflectionTestUtils.setField(emailNotificacaoService, "emailHabilitado", false);
 
-            emailNotificacaoService.enviarRecuperacaoSenha(
-                    "user@email.com", "Carlos", "carlos@email.com", "novaSenha1", 1L);
+            emailNotificacaoService.enviarLinkRecuperacaoSenha(new DadosEmailRecuperacaoSenha(
+                    "user@email.com", "Carlos", "12345678900", "http://front/#/redefinir-senha?token=abc", 30, 1L));
 
             verifyNoInteractions(emailRetryService);
         }
@@ -275,9 +280,10 @@ class EmailNotificacaoServiceTest {
         }
 
         @Test
-        @DisplayName("Recuperação de senha: não deve logar a senha, o e-mail nem o CPF em claro (login mascarado)")
+        @DisplayName("Recuperação de senha: não deve logar o link com token, o e-mail nem o CPF em claro (login mascarado)")
         void recuperacaoNaoDeveLogarSenha() {
-            emailNotificacaoService.enviarRecuperacaoSenha(EMAIL, "Fulano", "12345678900", SENHA, 1L);
+            emailNotificacaoService.enviarLinkRecuperacaoSenha(new DadosEmailRecuperacaoSenha(
+                    EMAIL, "Fulano", "12345678900", "http://front/#/redefinir-senha?token=" + SENHA, 30, 1L));
 
             assertThat(mensagens()).isNotEmpty();
             assertThat(mensagens()).noneMatch(m -> m.contains(SENHA));

@@ -37,6 +37,7 @@ public class SecurityConfigurations {
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and().authorizeHttpRequests()
                 .requestMatchers(HttpMethod.POST, "/Home/esqueciMinhaSenha").permitAll()
+                .requestMatchers(HttpMethod.POST, "/Home/redefinirSenha", "/Home/redefinirSenha/validar").permitAll()
                 .requestMatchers(HttpMethod.POST, "/Home/login").permitAll()
                 .requestMatchers(HttpMethod.GET, "/cep/**").permitAll()
                 // Endpoints públicos explícitos — evita expor novos /publico/** por engano

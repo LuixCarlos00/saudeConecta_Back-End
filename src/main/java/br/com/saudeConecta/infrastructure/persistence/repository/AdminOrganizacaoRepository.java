@@ -29,6 +29,15 @@ public interface AdminOrganizacaoRepository extends JpaRepository<AdminOrganizac
 
     Optional<AdminOrganizacao> findByEmail(String email);
 
+    /**
+     * Todos os registros com o e-mail. A recuperação de senha usa a lista (e não o Optional de
+     * findByEmail) para não estourar quando houver e-mail repetido e mandar um link por conta.
+     *
+     * @param email e-mail informado na tela "esqueci minha senha"
+     * @return registros com o e-mail, vazio quando não há nenhum
+     */
+    List<AdminOrganizacao> findAllByEmail(String email);
+
     @Query("SELECT DISTINCT a FROM AdminOrganizacao a " +
            "LEFT JOIN FETCH a.usuario " +
            "LEFT JOIN FETCH a.organizacao o " +
